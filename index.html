@@ -34,10 +34,11 @@
         body { 
             background-color: #F4F7F9; 
             color: #333333;
+            -webkit-tap-highlight-color: transparent;
         }
         
         /* Custom Scrollbar */
-        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
         ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
         ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
@@ -59,7 +60,7 @@
             font-weight: 600;
         }
 
-        /* Print Styles - EXACTLY A6 Landscape (1/4 A4) matching image_b33085.jpg */
+        /* Print Styles - EXACTLY A6 Landscape (1/4 A4) */
         @media print {
             @page { size: A6 landscape; margin: 10mm; }
             body * { visibility: hidden; }
@@ -75,7 +76,7 @@
                 padding: 0;
                 margin: 0;
                 box-sizing: border-box;
-                font-family: Arial, Helvetica, sans-serif; /* Standard paper font */
+                font-family: Arial, Helvetica, sans-serif;
                 color: black;
             }
             .print-form table { border-collapse: collapse; width: 100%; }
@@ -107,73 +108,87 @@
 </head>
 <body class="h-screen overflow-hidden flex flex-col font-sans text-sm md:text-base">
 
-    <!-- LOGIN VIEW -->
+    <!-- LOGIN VIEW (60/40 Split Screen) -->
     <div id="loginView" class="h-full w-full flex absolute z-50 transition-opacity duration-500 bg-white">
         
-        <!-- Left Side: Factory Image & Text -->
-        <div class="hidden md:flex w-2/3 relative bg-cover bg-center" style="background-image: url('https://images.unsplash.com/photo-1587293852726-70cdb56c2866?q=80&w=2000&auto=format&fit=crop');">
-            <div class="absolute inset-0 bg-black bg-opacity-50"></div>
-            <div class="absolute bottom-1/4 left-16 text-white fade-in">
-                <h1 class="text-5xl font-bold tracking-tight mb-2">Gate Pass System</h1>
-                <h2 class="text-xl tracking-widest uppercase font-medium text-gray-300">Moriroku Philippines, Inc.</h2>
+        <!-- Left Side: Factory Image & Text (60%) -->
+        <div class="hidden md:flex md:w-[60%] relative bg-cover bg-center" style="background-image: url('https://images.unsplash.com/photo-1587293852726-70cdb56c2866?q=80&w=2000&auto=format&fit=crop');">
+            <!-- Light overlay -->
+            <div class="absolute inset-0 bg-black/40"></div>
+            <!-- Text Overlay -->
+            <div class="absolute bottom-1/4 left-12 lg:left-24 text-white fade-in z-10 pointer-events-none">
+                <h1 class="text-5xl lg:text-6xl font-extrabold tracking-tight mb-3 drop-shadow-xl">Gate Pass System</h1>
+                <h2 class="text-lg lg:text-xl tracking-widest uppercase font-semibold text-blue-100 drop-shadow-md">Moriroku Philippines, Inc.</h2>
+                <div class="w-24 h-1.5 bg-mpiAccent mt-6 rounded-full drop-shadow-lg opacity-80"></div>
             </div>
         </div>
 
-        <!-- Right Side: Login Form -->
-        <div class="w-full md:w-1/3 flex flex-col justify-center px-12 relative fade-in">
-            <div class="text-center mb-8">
-                <!-- Mockup MPI Logo -->
-                <div class="flex justify-center mb-4">
-                    <div class="border-4 border-mpiBlue rounded-full p-2">
-                        <div class="bg-mpiBlue text-white font-bold text-xl px-2 py-1 rounded">MPI</div>
-                    </div>
-                </div>
-                <h2 class="text-2xl font-bold text-gray-800">Welcome Back</h2>
-                <p class="text-sm text-gray-500 mt-1">Sign in to your account</p>
-            </div>
+        <!-- Right Side: Login Form (40%) -->
+        <div class="w-full md:w-[40%] flex flex-col justify-center items-center px-8 relative fade-in bg-white h-full overflow-y-auto">
             
-            <form id="loginForm" onsubmit="handleLogin(event)">
-                <div class="mb-5">
-                    <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2"><i class="fas fa-user mr-1"></i> Username / ID</label>
-                    <input type="text" id="empId" class="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:border-mpiBlue focus:ring-1 focus:ring-mpiBlue transition" placeholder="Enter your ID" required>
-                </div>
-                <div class="mb-6">
-                    <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2"><i class="fas fa-lock mr-1"></i> Password</label>
-                    <div class="relative">
-                        <input type="password" id="empPass" class="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:border-mpiBlue focus:ring-1 focus:ring-mpiBlue transition" placeholder="Enter your password" required>
-                        <i class="fas fa-eye absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 cursor-pointer"></i>
+            <!-- ADDED LIMITER HERE: max-w-md para hindi mag-stretch sa malaking screen -->
+            <div class="w-full max-w-md">
+                <div class="text-center mb-8 w-full mt-8 md:mt-0">
+                    <!-- MPI Logo -->
+                    <div class="flex justify-center mb-5">
+                        <div class="border-[4px] border-mpiBlue rounded-full p-2">
+                            <div class="bg-mpiBlue text-white font-bold text-2xl px-3 py-1.5 rounded-lg">MPI</div>
+                        </div>
                     </div>
-                    <p class="text-[11px] text-gray-400 mt-2 font-bold text-mpiBlue">Pass Hint: Date hired (MMDDYYYY)</p>
+                    <h2 class="text-2xl sm:text-3xl font-bold text-gray-800">Welcome Back</h2>
+                    <p class="text-sm text-gray-500 mt-2">Sign in to your account</p>
                 </div>
-                <button type="submit" class="w-full bg-mpiBlue text-white font-bold py-3 px-4 rounded-lg shadow hover:bg-mpiDark transition-colors flex items-center justify-center">
+                
+                <form id="loginForm" onsubmit="handleLogin(event)" class="w-full">
+                <div class="mb-5">
+                    <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2"><i class="fas fa-user mr-1 text-mpiBlue"></i> Username / ID</label>
+                    <input type="text" id="empId" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:bg-white focus:border-mpiBlue focus:ring-2 focus:ring-mpiLight transition" placeholder="Enter your ID" required>
+                </div>
+                <div class="mb-8">
+                    <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2"><i class="fas fa-lock mr-1 text-mpiBlue"></i> Password</label>
+                    <div class="relative">
+                        <input type="password" id="empPass" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:bg-white focus:border-mpiBlue focus:ring-2 focus:ring-mpiLight transition pr-10" placeholder="Enter your password" required>
+                        <i id="eyeIcon" class="fas fa-eye absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 cursor-pointer hover:text-mpiBlue transition" onclick="togglePassword()"></i>
+                    </div>
+                    <p class="text-xs text-mpiBlue mt-2 font-medium">Pass Hint: Date hired (MMDDYYYY)</p>
+                </div>
+                <button type="submit" class="w-full bg-mpiBlue text-white font-bold py-3.5 px-4 rounded-lg shadow-md hover:bg-mpiDark hover:shadow-lg transition-all flex items-center justify-center text-lg">
                     <i class="fas fa-sign-in-alt mr-2"></i> Sign In
                 </button>
             </form>
 
             <!-- Dev Quick Login Helpers -->
-            <div class="mt-8 pt-6 border-t border-gray-100">
-                <p class="text-[10px] text-center text-gray-400 mb-3 font-semibold uppercase tracking-wider">Quick Login (Testing)</p>
-                <div class="grid grid-cols-2 gap-2">
-                    <button onclick="quickLogin('ojt', '@mpi2026')" class="text-xs bg-gray-100 hover:bg-gray-200 py-2 rounded transition">IT Admin</button>
-                    <button onclick="quickLogin('PRES', '01012020')" class="text-xs bg-gray-100 hover:bg-gray-200 py-2 rounded transition">President</button>
-                    <button onclick="quickLogin('SUP-01', '01012020')" class="text-xs bg-gray-100 hover:bg-gray-200 py-2 rounded transition">Manager</button>
-                    <button onclick="quickLogin('HR', '01012020')" class="text-xs bg-gray-100 hover:bg-gray-200 py-2 rounded transition">Head HR</button>
-                    <button onclick="quickLogin('MPI-001', '06172026')" class="text-xs bg-gray-100 hover:bg-gray-200 py-2 rounded transition text-center">Employee</button>
-                    <button onclick="quickLogin('GUARD-1', '01012020')" class="text-xs bg-gray-100 hover:bg-gray-200 py-2 rounded transition text-center">Security Guard</button>
+            <div class="mt-8 pt-6 border-t border-gray-100 w-full">
+                <p class="text-[10px] text-center text-gray-400 mb-3 font-bold uppercase tracking-wider">Quick Login (Testing)</p>
+                <div class="grid grid-cols-2 lg:grid-cols-3 gap-2">
+                    <button onclick="quickLogin('ojt', '@mpi2026')" class="text-[10px] font-semibold bg-gray-100 hover:bg-gray-200 py-2 rounded transition">IT Admin</button>
+                    <button onclick="quickLogin('PRES', '01012020')" class="text-[10px] font-semibold bg-gray-100 hover:bg-gray-200 py-2 rounded transition">President</button>
+                    <button onclick="quickLogin('SUP-01', '01012020')" class="text-[10px] font-semibold bg-gray-100 hover:bg-gray-200 py-2 rounded transition">Manager</button>
+                    <button onclick="quickLogin('HR', '01012020')" class="text-[10px] font-semibold bg-gray-100 hover:bg-gray-200 py-2 rounded transition">Head HR</button>
+                    <button onclick="quickLogin('MPI-001', '06172026')" class="text-[10px] font-semibold bg-gray-100 hover:bg-gray-200 py-2 rounded transition">Employee</button>
+                    <button onclick="quickLogin('GUARD-1', '01012020')" class="text-[10px] font-semibold bg-gray-100 hover:bg-gray-200 py-2 rounded transition">Guard</button>
                 </div>
+            </div>
             </div>
         </div>
     </div>
 
     <!-- MAIN APP VIEW -->
-    <div id="appView" class="hidden h-full w-full flex bg-mpiLight">
+    <div id="appView" class="hidden h-full w-full flex bg-mpiLight relative overflow-hidden">
         
-        <!-- SIDEBAR -->
-        <aside class="w-64 bg-mpiBlue text-white shadow-xl flex flex-col z-20 flex-shrink-0">
+        <!-- Mobile Sidebar Overlay -->
+        <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-20 hidden md:hidden" onclick="toggleSidebar()"></div>
+
+        <!-- SIDEBAR (Responsive, hidden on mobile by default) -->
+        <aside id="sidebar" class="w-64 bg-mpiBlue text-white shadow-xl flex flex-col z-30 flex-shrink-0 fixed md:relative h-full transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out">
             <!-- Sidebar Header -->
-            <div class="p-5 flex items-center space-x-3 border-b border-white/10 bg-mpiDark/30">
-                <div class="bg-white text-mpiBlue font-bold p-1 px-2 rounded text-sm tracking-tighter">MPI</div>
-                <h2 class="font-bold text-sm leading-tight tracking-wide">Gate Pass System</h2>
+            <div class="p-5 flex items-center justify-between border-b border-white/10 bg-mpiDark/30">
+                <div class="flex items-center space-x-3">
+                    <div class="bg-white text-mpiBlue font-bold p-1 px-2 rounded text-sm tracking-tighter">MPI</div>
+                    <h2 class="font-bold text-sm leading-tight tracking-wide">Gate Pass System</h2>
+                </div>
+                <!-- Close Button on Mobile -->
+                <button class="md:hidden text-white/70 hover:text-white" onclick="toggleSidebar()"><i class="fas fa-times text-lg"></i></button>
             </div>
             
             <!-- Navigation Links -->
@@ -188,7 +203,7 @@
                     <i class="fas fa-file-signature w-6 text-left"></i> <span class="text-sm">Apply Gate Pass</span>
                 </a>
                 
-                <div id="navGroupApprovals" class="mt-4">
+                <div id="navGroupApprovals" class="mt-4 block">
                     <div class="px-6 py-2 text-[10px] font-bold text-blue-300 uppercase tracking-widest">Workflow</div>
                     <a href="#" class="nav-item px-6 py-3 transition text-white justify-between" data-target="approvals" onclick="switchSection('approvals')">
                         <div class="flex items-center">
@@ -205,14 +220,14 @@
                     </a>
                 </div>
 
-                <div id="navGroupSecurity" class="mt-4">
+                <div id="navGroupSecurity" class="mt-4 block">
                     <div class="px-6 py-2 text-[10px] font-bold text-blue-300 uppercase tracking-widest">Security</div>
                     <a href="#" class="nav-item px-6 py-3 transition text-white" data-target="guardScan" onclick="switchSection('guardScan')">
                         <i class="fas fa-qrcode w-6 text-left"></i> <span class="text-sm">QR Scanner</span>
                     </a>
                 </div>
 
-                <div id="navGroupAdmin" class="mt-4">
+                <div id="navGroupAdmin" class="mt-4 block">
                     <div class="px-6 py-2 text-[10px] font-bold text-blue-300 uppercase tracking-widest">System</div>
                     <a href="#" class="nav-item px-6 py-3 transition text-white" data-target="adminPanel" onclick="switchSection('adminPanel')">
                         <i class="fas fa-folder-open w-6 text-left"></i> <span class="text-sm" id="navAdminLabel">Logs & Records</span>
@@ -221,10 +236,10 @@
             </nav>
 
             <!-- Sidebar Footer (Logout) -->
-            <div class="p-4 border-t border-white/10 hover:bg-white/5 transition cursor-pointer" onclick="logout()">
+            <div class="p-6 border-t border-white/10 hover:bg-white/10 transition cursor-pointer" onclick="logout()">
                 <div class="flex items-center space-x-3 text-white px-2">
-                    <i class="fas fa-sign-out-alt w-6 text-left"></i>
-                    <span class="text-sm font-semibold">Log Out</span>
+                    <i class="fas fa-sign-out-alt text-xl w-8 text-left"></i>
+                    <span class="text-lg font-bold tracking-wide">Log Out</span>
                 </div>
             </div>
         </aside>
@@ -232,16 +247,19 @@
         <!-- MAIN CONTENT AREA -->
         <main class="flex-grow flex flex-col h-full overflow-hidden">
             <!-- Topbar -->
-            <header class="bg-white shadow-sm h-16 flex items-center justify-between px-6 z-10 flex-shrink-0">
+            <header class="bg-white shadow-sm h-16 flex items-center justify-between px-4 md:px-6 z-10 flex-shrink-0">
                 <div class="flex items-center space-x-4">
-                    <i class="fas fa-bars text-gray-400 cursor-pointer hover:text-gray-600"></i>
+                    <!-- Hamburger toggle for mobile -->
+                    <button class="md:hidden text-gray-500 hover:text-mpiBlue transition" onclick="toggleSidebar()">
+                        <i class="fas fa-bars text-xl"></i>
+                    </button>
                     <h1 id="pageTitle" class="text-lg font-bold text-gray-800">Dashboard</h1>
                 </div>
-                <div class="flex items-center space-x-6">
+                <div class="flex items-center space-x-4 md:space-x-6">
                     <div class="text-xs text-gray-500 font-medium hidden md:block" id="currentDateDisplay">Loading...</div>
-                    <div class="flex items-center space-x-2 border-l pl-6 border-gray-200">
-                        <i class="fas fa-user-circle text-gray-400 text-xl"></i>
-                        <div class="flex flex-col">
+                    <div class="flex items-center space-x-2 md:border-l md:pl-6 border-gray-200">
+                        <i class="fas fa-user-circle text-gray-400 text-2xl md:text-xl"></i>
+                        <div class="flex flex-col hidden sm:flex">
                             <span id="navUserName" class="text-sm font-bold text-gray-700 leading-tight">User Name</span>
                             <span id="navUserRole" class="text-[10px] text-gray-500">System Administrator</span>
                         </div>
@@ -250,18 +268,18 @@
             </header>
 
             <!-- Scrollable Content -->
-            <div class="p-6 overflow-y-auto flex-grow relative" id="mainContent">
+            <div class="p-4 md:p-6 overflow-y-auto flex-grow relative" id="mainContent">
                 
                 <!-- SECTION: DASHBOARD -->
                 <section id="sec-dashBoard" class="view-section fade-in max-w-7xl mx-auto">
                     
                     <!-- GUARD Dashboard Wrapper (Queue) -->
                     <div id="guardDashWrapper" class="hidden">
-                        <div class="bg-white p-6 rounded-lg shadow border border-gray-200 w-full relative overflow-hidden">
+                        <div class="bg-white p-4 md:p-6 rounded-lg shadow border border-gray-200 w-full relative overflow-hidden">
                             <h3 class="font-bold text-lg text-gray-800 mb-4"><i class="fas fa-users text-mpiBlue mr-2"></i> Live Gate Queue</h3>
                             <p class="text-xs text-gray-500 mb-4">Associates who are cleared to Time Out or expected to Time In today.</p>
                             <div class="overflow-x-auto">
-                                <table class="w-full text-left border-collapse">
+                                <table class="w-full text-left border-collapse min-w-max">
                                     <thead>
                                         <tr class="bg-gray-50 text-gray-500 text-[11px] uppercase tracking-wider border-b border-t">
                                             <th class="px-4 py-3 font-semibold">GP-ID</th>
@@ -281,38 +299,38 @@
                     <!-- STANDARD Dashboard Wrapper -->
                     <div id="standardDashWrapper">
                         <!-- HR Vehicle Fleet Tracking Widget -->
-                        <div id="hrFleetWidget" class="hidden mb-8 bg-white p-5 rounded-lg shadow-sm border border-gray-200">
+                        <div id="hrFleetWidget" class="hidden mb-8 bg-white p-4 md:p-5 rounded-lg shadow-sm border border-gray-200">
                             <h2 class="text-base font-bold text-gray-800 mb-4 border-b pb-2"><i class="fas fa-truck mr-2 text-mpiBlue"></i>Live Fleet Status</h2>
-                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" id="fleetGridContainer">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="fleetGridContainer">
                                 <!-- Populated via JS -->
                             </div>
                         </div>
 
                         <!-- Stat Cards -->
                         <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Overview of your passes</h2>
-                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                        <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 mb-8">
                             <div class="bg-white p-5 rounded-lg shadow-sm border-t-4 border-yellow-400 flex items-center justify-between">
-                                <div><p class="text-3xl font-bold text-gray-800" id="cntPending">0</p><h3 class="text-xs font-semibold text-gray-500 mt-1 uppercase">Pending Requests</h3></div>
+                                <div><p class="text-3xl font-bold text-gray-800" id="cntPending">0</p><h3 class="text-[10px] md:text-xs font-semibold text-gray-500 mt-1 uppercase">Pending Requests</h3></div>
                                 <div class="bg-yellow-50 text-yellow-500 p-3 rounded-full"><i class="fas fa-hourglass-half text-xl"></i></div>
                             </div>
                             <div class="bg-white p-5 rounded-lg shadow-sm border-t-4 border-green-500 flex items-center justify-between">
-                                <div><p class="text-3xl font-bold text-gray-800" id="cntApproved">0</p><h3 class="text-xs font-semibold text-gray-500 mt-1 uppercase">Approved / Ready</h3></div>
+                                <div><p class="text-3xl font-bold text-gray-800" id="cntApproved">0</p><h3 class="text-[10px] md:text-xs font-semibold text-gray-500 mt-1 uppercase">Approved / Ready</h3></div>
                                 <div class="bg-green-50 text-green-500 p-3 rounded-full"><i class="fas fa-check-double text-xl"></i></div>
                             </div>
                             <div class="bg-white p-5 rounded-lg shadow-sm border-t-4 border-gray-400 flex items-center justify-between">
-                                <div><p class="text-3xl font-bold text-gray-800" id="cntCompleted">0</p><h3 class="text-xs font-semibold text-gray-500 mt-1 uppercase">Completed Logs</h3></div>
+                                <div><p class="text-3xl font-bold text-gray-800" id="cntCompleted">0</p><h3 class="text-[10px] md:text-xs font-semibold text-gray-500 mt-1 uppercase">Completed Logs</h3></div>
                                 <div class="bg-gray-100 text-gray-500 p-3 rounded-full"><i class="fas fa-history text-xl"></i></div>
                             </div>
                         </div>
 
                         <!-- My Passes Table -->
                         <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                            <div class="px-5 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50/50">
+                            <div class="px-4 md:px-5 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50/50">
                                 <h2 class="font-bold text-gray-800">Recent Gate Passes</h2>
                                 <button onclick="switchSection('applyPass')" id="btnNewRequest" class="text-xs bg-mpiBlue text-white px-3 py-2 rounded hover:bg-mpiDark transition"><i class="fas fa-plus mr-1"></i> New Request</button>
                             </div>
                             <div class="overflow-x-auto">
-                                <table class="w-full text-left border-collapse">
+                                <table class="w-full text-left border-collapse min-w-max">
                                     <thead>
                                         <tr class="bg-white text-gray-500 text-[11px] uppercase tracking-wider border-b">
                                             <th class="px-5 py-3 font-semibold">GP ID</th>
@@ -334,18 +352,18 @@
                 <!-- SECTION: APPLY GATE PASS -->
                 <section id="sec-applyPass" class="view-section hidden fade-in max-w-3xl mx-auto">
                     <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                        <div class="px-6 py-5 border-b border-gray-200">
+                        <div class="px-4 md:px-6 py-5 border-b border-gray-200">
                             <h2 class="text-lg font-bold text-gray-800">Gate Pass Application Form</h2>
                             <p class="text-gray-500 text-xs mt-1">Fill out the required information to request exit clearance.</p>
                         </div>
                         
-                        <form id="applyForm" onsubmit="submitGatePass(event)" class="p-6 space-y-5">
+                        <form id="applyForm" onsubmit="submitGatePass(event)" class="p-4 md:p-6 space-y-5">
                             <div>
                                 <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Destination <span class="text-red-500">*</span></label>
                                 <input type="text" id="gpDestination" class="w-full border border-gray-300 p-2.5 rounded focus:ring-1 focus:ring-mpiBlue focus:border-mpiBlue transition text-sm" required>
                             </div>
 
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                            <div class="grid grid-cols-1 sm:grid-cols-2 gap-5">
                                 <div>
                                     <div class="flex justify-between items-end mb-2">
                                         <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider">From (Expected Out) <span class="text-red-500">*</span></label>
@@ -369,7 +387,7 @@
 
                             <div class="bg-yellow-50 border border-yellow-200 p-4 rounded relative overflow-hidden">
                                 <label class="block text-xs font-semibold text-gray-800 mb-2">Will you return to the company today?</label>
-                                <div class="flex space-x-6">
+                                <div class="flex flex-col sm:flex-row sm:space-x-6 space-y-2 sm:space-y-0">
                                     <label class="flex items-center space-x-2 cursor-pointer">
                                         <input type="radio" name="gpWillReturn" value="yes" checked class="text-mpiBlue focus:ring-mpiBlue w-4 h-4" onchange="toggleExpectedIn(true)">
                                         <span class="text-sm font-medium">Yes, I will return</span>
@@ -402,13 +420,13 @@
                                 </div>
                             </div>
 
-                            <div class="text-xs text-gray-500 bg-blue-50 p-3 rounded flex items-center">
+                            <div class="text-[10px] md:text-xs text-gray-500 bg-blue-50 p-3 rounded flex items-center">
                                 <i class="fas fa-route text-mpiBlue mr-2 text-lg"></i>
                                 <span><strong>Approval Flow:</strong> Immediate Superior <span id="routePresident" class="hidden text-mpiBlue font-bold">→ President</span> → PAS/HR</span>
                             </div>
 
-                            <div class="pt-2 flex justify-end">
-                                <button type="button" onclick="switchSection('dashBoard')" class="px-5 py-2 text-sm text-gray-600 font-medium hover:bg-gray-100 rounded transition mr-2">Cancel</button>
+                            <div class="pt-2 flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2">
+                                <button type="button" onclick="switchSection('dashBoard')" class="px-5 py-2 text-sm text-gray-600 font-medium hover:bg-gray-100 rounded transition">Cancel</button>
                                 <button type="submit" class="bg-mpiBlue text-white text-sm font-bold py-2 px-6 rounded shadow hover:bg-mpiDark transition">Submit Request</button>
                             </div>
                         </form>
@@ -424,8 +442,8 @@
                 </section>
 
                 <!-- SECTION: GUARD SCANNER -->
-                <section id="sec-guardScan" class="view-section hidden fade-in py-10 max-w-md mx-auto">
-                    <div class="bg-white p-8 rounded-lg shadow border border-gray-200 w-full text-center">
+                <section id="sec-guardScan" class="view-section hidden fade-in py-6 max-w-md mx-auto">
+                    <div class="bg-white p-6 md:p-8 rounded-lg shadow border border-gray-200 w-full text-center">
                         <i class="fas fa-shield-alt text-4xl text-mpiBlue mb-3"></i>
                         <h2 class="text-xl font-bold text-gray-800 mb-1">Security QR Scanner</h2>
                         <p class="text-xs text-gray-500 mb-6">Scan Gate Pass to Log Time Out / In</p>
@@ -439,8 +457,8 @@
                         <div class="text-left bg-gray-50 p-3 rounded border">
                             <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Manual Scan Override</label>
                             <div class="flex space-x-2">
-                                <input type="text" id="manualQrInput" placeholder="Enter GP-ID..." class="w-full flex-grow border border-gray-300 p-2 rounded text-sm focus:outline-none focus:border-mpiBlue">
-                                <button onclick="simulateQrScan()" class="flex-shrink-0 whitespace-nowrap bg-gray-800 text-white px-4 py-2 rounded text-sm font-bold hover:bg-black transition">Scan</button>
+                                <input type="text" id="manualQrInput" placeholder="Enter GP-ID..." class="w-full flex-grow border border-gray-300 p-2 rounded text-sm focus:outline-none focus:border-mpiBlue min-w-0">
+                                <button onclick="simulateQrScan()" class="w-auto flex-shrink-0 whitespace-nowrap bg-gray-800 text-white px-4 py-2 rounded text-sm font-bold hover:bg-black transition">Scan</button>
                             </div>
                         </div>
                     </div>
@@ -448,24 +466,24 @@
 
                 <!-- SECTION: ADMIN LOGS & MANAGEMENT -->
                 <section id="sec-adminPanel" class="view-section hidden fade-in max-w-7xl mx-auto">
-                    <!-- Admin Tabs Navigation -->
-                    <div class="flex space-x-1 border-b border-gray-200 mb-6" id="adminTabsContainer">
-                        <button onclick="switchAdminTab('logs')" id="tab-logs" class="admin-tab px-4 py-2 text-sm font-bold text-mpiBlue border-b-2 border-mpiBlue">Gate Pass Logs</button>
-                        <button onclick="switchAdminTab('users')" id="tab-users" class="admin-tab px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700">Manage Users</button>
-                        <button onclick="switchAdminTab('fleet')" id="tab-fleet" class="admin-tab px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700">Vehicles & Drivers</button>
-                        <button onclick="switchAdminTab('depts')" id="tab-depts" class="admin-tab px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700">Departments & Roles</button>
+                    <!-- Admin Tabs Navigation (Scrollable on mobile) -->
+                    <div class="flex overflow-x-auto whitespace-nowrap space-x-1 border-b border-gray-200 mb-6 pb-1" id="adminTabsContainer">
+                        <button onclick="switchAdminTab('logs')" id="tab-logs" class="admin-tab px-4 py-2 text-sm font-bold text-mpiBlue border-b-2 border-mpiBlue flex-shrink-0">Gate Pass Logs</button>
+                        <button onclick="switchAdminTab('users')" id="tab-users" class="admin-tab px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 flex-shrink-0">Manage Users</button>
+                        <button onclick="switchAdminTab('fleet')" id="tab-fleet" class="admin-tab px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 flex-shrink-0">Vehicles & Drivers</button>
+                        <button onclick="switchAdminTab('depts')" id="tab-depts" class="admin-tab px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 flex-shrink-0">Departments & Roles</button>
                     </div>
 
                     <!-- TAB CONTENT: LOGS -->
                     <div id="admin-logs" class="admin-tab-content bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden relative">
-                        <div class="p-5 border-b bg-gray-50 flex flex-wrap items-center gap-4">
-                            <div><label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Search ID/Name</label><input type="text" id="logFilterName" placeholder="Enter keyword..." class="border border-gray-300 p-2 rounded text-sm w-56 focus:outline-none focus:border-mpiBlue"></div>
-                            <div><label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Filter by Date</label><input type="date" id="logFilterDate" class="border border-gray-300 p-2 rounded text-sm text-gray-700 focus:outline-none focus:border-mpiBlue"></div>
-                            <div id="filterDeptContainer"><label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Department</label><select id="logFilterDept" class="border border-gray-300 p-2 rounded text-sm text-gray-700 focus:outline-none focus:border-mpiBlue"><option value="">All</option><option value="Production">Production</option><option value="HRAD">HRAD</option><option value="Finance & IT">Finance & IT</option><option value="Executive">Executive</option></select></div>
-                            <div class="flex items-end h-full"><button onclick="renderAdminLogs(1)" class="bg-mpiBlue text-white px-5 py-2 mt-4 rounded shadow text-sm font-bold hover:bg-mpiDark transition"><i class="fas fa-filter mr-2"></i>Apply Filters</button></div>
+                        <div class="p-4 md:p-5 border-b bg-gray-50 flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-end gap-4">
+                            <div class="w-full sm:w-auto"><label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Search ID/Name</label><input type="text" id="logFilterName" placeholder="Enter keyword..." class="w-full border border-gray-300 p-2 rounded text-sm sm:w-48 md:w-56 focus:outline-none focus:border-mpiBlue"></div>
+                            <div class="w-full sm:w-auto"><label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Filter by Date</label><input type="date" id="logFilterDate" class="w-full border border-gray-300 p-2 rounded text-sm text-gray-700 focus:outline-none focus:border-mpiBlue"></div>
+                            <div class="w-full sm:w-auto" id="filterDeptContainer"><label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Department</label><select id="logFilterDept" class="w-full border border-gray-300 p-2 rounded text-sm text-gray-700 focus:outline-none focus:border-mpiBlue"><option value="">All</option><option value="Production">Production</option><option value="HRAD">HRAD</option><option value="Finance & IT">Finance & IT</option><option value="Executive">Executive</option></select></div>
+                            <div class="w-full sm:w-auto"><button onclick="renderAdminLogs(1)" class="w-full bg-mpiBlue text-white px-5 py-2 rounded shadow text-sm font-bold hover:bg-mpiDark transition"><i class="fas fa-filter mr-2"></i>Apply Filters</button></div>
                         </div>
                         <div class="overflow-x-auto min-h-[300px]">
-                            <table class="w-full text-left border-collapse">
+                            <table class="w-full text-left border-collapse min-w-max">
                                 <thead>
                                     <tr class="bg-white text-gray-500 text-[11px] uppercase tracking-wider border-b">
                                         <th class="px-5 py-3 font-semibold">GP-ID</th><th class="px-5 py-3 font-semibold">Employee</th><th class="px-5 py-3 font-semibold">Dept</th><th class="px-5 py-3 font-semibold">1-Way?</th><th class="px-5 py-3 font-semibold">Actual Out</th><th class="px-5 py-3 font-semibold">Actual In</th><th class="px-5 py-3 font-semibold">Status</th>
@@ -474,10 +492,10 @@
                                 <tbody id="adminLogsTable" class="text-sm divide-y divide-gray-100"></tbody>
                             </table>
                         </div>
-                        <div class="px-5 py-4 border-t border-gray-200 bg-white flex justify-between items-center">
-                            <span class="text-sm text-gray-500" id="logPaginationInfo">Showing 1 to 5</span>
+                        <div class="px-4 py-3 md:px-5 md:py-4 border-t border-gray-200 bg-white flex flex-col sm:flex-row justify-between items-center gap-3">
+                            <span class="text-xs md:text-sm text-gray-500" id="logPaginationInfo">Showing 1 to 5</span>
                             <div class="flex space-x-2">
-                                <button id="btnPrevPage" onclick="changeLogPage(-1)" class="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-100 disabled:opacity-50">Previous</button>
+                                <button id="btnPrevPage" onclick="changeLogPage(-1)" class="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-100 disabled:opacity-50">Prev</button>
                                 <span id="logPageIndicator" class="px-3 py-1 bg-mpiBlue text-white rounded text-sm font-bold">1</span>
                                 <button id="btnNextPage" onclick="changeLogPage(1)" class="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-100 disabled:opacity-50">Next</button>
                             </div>
@@ -485,66 +503,70 @@
                     </div>
 
                     <!-- TAB CONTENT: USERS (Active/Archive) -->
-                    <div id="admin-users" class="admin-tab-content hidden bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                        <div class="flex justify-between items-center mb-4">
-                            <div><h3 class="font-bold text-gray-800 text-lg">User Management</h3><p class="text-sm text-gray-500">System accounts with login access.</p></div>
-                            <button onclick="showToast('Open Add User Form', 'info')" class="bg-mpiBlue text-white px-4 py-2 text-sm font-bold rounded shadow hover:bg-mpiDark transition"><i class="fas fa-user-plus mr-1"></i> Add User</button>
+                    <div id="admin-users" class="admin-tab-content hidden bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+                            <div><h3 class="font-bold text-gray-800 text-lg">User Management</h3><p class="text-xs md:text-sm text-gray-500">System accounts with login access.</p></div>
+                            <button onclick="showToast('Open Add User Form', 'info')" class="w-full sm:w-auto bg-mpiBlue text-white px-4 py-2 text-sm font-bold rounded shadow hover:bg-mpiDark transition"><i class="fas fa-user-plus mr-1"></i> Add User</button>
                         </div>
                         
                         <div class="flex space-x-4 mb-4 border-b border-gray-200 pb-2">
                             <button class="text-mpiBlue font-bold text-sm border-b-2 border-mpiBlue pb-1">Active Users</button>
                             <button class="text-gray-500 hover:text-gray-700 text-sm pb-1">Archived Records</button>
                         </div>
-                        <table class="w-full text-left border-collapse text-sm">
-                            <thead><tr class="bg-gray-50 border-y"><th class="p-3 font-semibold text-gray-600">ID</th><th class="p-3 font-semibold text-gray-600">Name</th><th class="p-3 font-semibold text-gray-600">Role</th><th class="p-3 font-semibold text-gray-600">Department</th><th class="p-3 font-semibold text-gray-600 text-right">Actions</th></tr></thead>
-                            <tbody id="adminUsersList" class="divide-y divide-gray-100"><!-- JS --></tbody>
-                        </table>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-sm min-w-max">
+                                <thead><tr class="bg-gray-50 border-y"><th class="p-3 font-semibold text-gray-600">ID</th><th class="p-3 font-semibold text-gray-600">Name</th><th class="p-3 font-semibold text-gray-600">Role</th><th class="p-3 font-semibold text-gray-600">Department</th><th class="p-3 font-semibold text-gray-600 text-right">Actions</th></tr></thead>
+                                <tbody id="adminUsersList" class="divide-y divide-gray-100"><!-- JS --></tbody>
+                            </table>
+                        </div>
                     </div>
 
                     <!-- TAB CONTENT: DEPARTMENTS & POSITIONS (Split View) -->
                     <div id="admin-depts" class="admin-tab-content hidden">
-                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
                             <!-- Departments -->
-                            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
+                            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-5">
                                 <div class="flex justify-between items-center mb-4">
                                     <h3 class="font-bold text-gray-800"><i class="far fa-building mr-2 text-mpiBlue"></i>Departments</h3>
                                     <button class="bg-blue-50 text-mpiBlue px-3 py-1.5 rounded text-xs font-bold hover:bg-blue-100"><i class="fas fa-plus mr-1"></i> Add Dept</button>
                                 </div>
                                 <div class="relative mb-3"><input type="text" placeholder="Search departments..." class="w-full border p-2 pl-8 rounded text-sm"><i class="fas fa-search absolute left-3 top-2.5 text-gray-400"></i></div>
                                 <ul class="divide-y divide-gray-100 text-sm">
-                                    <li class="py-3 flex justify-between items-center group"><span>ADMIN DEPARTMENT</span><div class="hidden group-hover:flex space-x-2 text-gray-400"><i class="fas fa-edit hover:text-mpiBlue cursor-pointer"></i><i class="fas fa-trash hover:text-red-500 cursor-pointer"></i></div></li>
-                                    <li class="py-3 flex justify-between items-center group"><span>FINANCE & IT DEPARTMENT</span><div class="hidden group-hover:flex space-x-2 text-gray-400"><i class="fas fa-edit hover:text-mpiBlue cursor-pointer"></i><i class="fas fa-trash hover:text-red-500 cursor-pointer"></i></div></li>
-                                    <li class="py-3 flex justify-between items-center group"><span>HRAD DEPARTMENT</span><div class="hidden group-hover:flex space-x-2 text-gray-400"><i class="fas fa-edit hover:text-mpiBlue cursor-pointer"></i><i class="fas fa-trash hover:text-red-500 cursor-pointer"></i></div></li>
-                                    <li class="py-3 flex justify-between items-center group"><span>PRODUCTION DEPARTMENT</span><div class="hidden group-hover:flex space-x-2 text-gray-400"><i class="fas fa-edit hover:text-mpiBlue cursor-pointer"></i><i class="fas fa-trash hover:text-red-500 cursor-pointer"></i></div></li>
+                                    <li class="py-3 flex justify-between items-center group"><span>ADMIN DEPARTMENT</span><div class="flex space-x-2 text-gray-400"><i class="fas fa-edit hover:text-mpiBlue cursor-pointer"></i><i class="fas fa-trash hover:text-red-500 cursor-pointer"></i></div></li>
+                                    <li class="py-3 flex justify-between items-center group"><span>FINANCE & IT DEPARTMENT</span><div class="flex space-x-2 text-gray-400"><i class="fas fa-edit hover:text-mpiBlue cursor-pointer"></i><i class="fas fa-trash hover:text-red-500 cursor-pointer"></i></div></li>
+                                    <li class="py-3 flex justify-between items-center group"><span>HRAD DEPARTMENT</span><div class="flex space-x-2 text-gray-400"><i class="fas fa-edit hover:text-mpiBlue cursor-pointer"></i><i class="fas fa-trash hover:text-red-500 cursor-pointer"></i></div></li>
+                                    <li class="py-3 flex justify-between items-center group"><span>PRODUCTION DEPARTMENT</span><div class="flex space-x-2 text-gray-400"><i class="fas fa-edit hover:text-mpiBlue cursor-pointer"></i><i class="fas fa-trash hover:text-red-500 cursor-pointer"></i></div></li>
                                 </ul>
                             </div>
                             
                             <!-- Positions -->
-                            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
+                            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-5">
                                 <div class="flex justify-between items-center mb-4">
                                     <h3 class="font-bold text-gray-800"><i class="fas fa-briefcase mr-2 text-mpiBlue"></i>Positions / Roles</h3>
                                     <button class="bg-blue-50 text-mpiBlue px-3 py-1.5 rounded text-xs font-bold hover:bg-blue-100"><i class="fas fa-plus mr-1"></i> Add Role</button>
                                 </div>
                                 <div class="relative mb-3"><input type="text" placeholder="Search roles..." class="w-full border p-2 pl-8 rounded text-sm"><i class="fas fa-search absolute left-3 top-2.5 text-gray-400"></i></div>
                                 <ul class="divide-y divide-gray-100 text-sm">
-                                    <li class="py-3 flex justify-between items-center group"><div class="flex flex-col"><span class="font-semibold">Manager</span><span class="text-[10px] text-gray-400">All Departments</span></div><div class="hidden group-hover:flex space-x-2 text-gray-400"><i class="fas fa-edit hover:text-mpiBlue cursor-pointer"></i><i class="fas fa-trash hover:text-red-500 cursor-pointer"></i></div></li>
-                                    <li class="py-3 flex justify-between items-center group"><div class="flex flex-col"><span class="font-semibold">Employee</span><span class="text-[10px] text-gray-400">All Departments</span></div><div class="hidden group-hover:flex space-x-2 text-gray-400"><i class="fas fa-edit hover:text-mpiBlue cursor-pointer"></i><i class="fas fa-trash hover:text-red-500 cursor-pointer"></i></div></li>
-                                    <li class="py-3 flex justify-between items-center group"><div class="flex flex-col"><span class="font-semibold">Security Guard</span><span class="text-[10px] text-gray-400">Agency</span></div><div class="hidden group-hover:flex space-x-2 text-gray-400"><i class="fas fa-edit hover:text-mpiBlue cursor-pointer"></i><i class="fas fa-trash hover:text-red-500 cursor-pointer"></i></div></li>
+                                    <li class="py-3 flex justify-between items-center group"><div class="flex flex-col"><span class="font-semibold">Manager</span><span class="text-[10px] text-gray-400">All Departments</span></div><div class="flex space-x-2 text-gray-400"><i class="fas fa-edit hover:text-mpiBlue cursor-pointer"></i><i class="fas fa-trash hover:text-red-500 cursor-pointer"></i></div></li>
+                                    <li class="py-3 flex justify-between items-center group"><div class="flex flex-col"><span class="font-semibold">Employee</span><span class="text-[10px] text-gray-400">All Departments</span></div><div class="flex space-x-2 text-gray-400"><i class="fas fa-edit hover:text-mpiBlue cursor-pointer"></i><i class="fas fa-trash hover:text-red-500 cursor-pointer"></i></div></li>
+                                    <li class="py-3 flex justify-between items-center group"><div class="flex flex-col"><span class="font-semibold">Security Guard</span><span class="text-[10px] text-gray-400">Agency</span></div><div class="flex space-x-2 text-gray-400"><i class="fas fa-edit hover:text-mpiBlue cursor-pointer"></i><i class="fas fa-trash hover:text-red-500 cursor-pointer"></i></div></li>
                                 </ul>
                             </div>
                         </div>
                     </div>
 
                     <!-- TAB CONTENT: FLEET -->
-                    <div id="admin-fleet" class="admin-tab-content hidden bg-white rounded-lg shadow-sm border border-gray-200 p-6">
-                        <div class="flex justify-between items-center mb-4">
-                            <div><h3 class="font-bold text-gray-800 text-lg">Vehicles & Drivers Database</h3><p class="text-sm text-gray-500">Manage company fleet and assigned drivers (No system login required for drivers).</p></div>
-                            <button onclick="showToast('Add Fleet Record', 'info')" class="bg-mpiBlue text-white px-4 py-2 text-sm font-bold rounded shadow hover:bg-mpiDark transition"><i class="fas fa-plus mr-1"></i> Add Record</button>
+                    <div id="admin-fleet" class="admin-tab-content hidden bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
+                        <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
+                            <div><h3 class="font-bold text-gray-800 text-lg">Vehicles & Drivers Database</h3><p class="text-xs md:text-sm text-gray-500">Manage company fleet and assigned drivers (No system login required for drivers).</p></div>
+                            <button onclick="showToast('Add Fleet Record', 'info')" class="w-full sm:w-auto bg-mpiBlue text-white px-4 py-2 text-sm font-bold rounded shadow hover:bg-mpiDark transition"><i class="fas fa-plus mr-1"></i> Add Record</button>
                         </div>
-                        <table class="w-full text-left border-collapse text-sm">
-                            <thead><tr class="bg-gray-50 border-y"><th class="p-3 font-semibold text-gray-600">Vehicle</th><th class="p-3 font-semibold text-gray-600">Plate No.</th><th class="p-3 font-semibold text-gray-600">Assigned Driver</th><th class="p-3 font-semibold text-gray-600">Current Status</th><th class="p-3 font-semibold text-gray-600 text-right">Actions</th></tr></thead>
-                            <tbody id="adminFleetList" class="divide-y divide-gray-100"><!-- JS --></tbody>
-                        </table>
+                        <div class="overflow-x-auto">
+                            <table class="w-full text-left border-collapse text-sm min-w-max">
+                                <thead><tr class="bg-gray-50 border-y"><th class="p-3 font-semibold text-gray-600">Vehicle</th><th class="p-3 font-semibold text-gray-600">Plate No.</th><th class="p-3 font-semibold text-gray-600">Assigned Driver</th><th class="p-3 font-semibold text-gray-600">Current Status</th><th class="p-3 font-semibold text-gray-600 text-right">Actions</th></tr></thead>
+                                <tbody id="adminFleetList" class="divide-y divide-gray-100"><!-- JS --></tbody>
+                            </table>
+                        </div>
                     </div>
                 </section>
 
@@ -553,14 +575,14 @@
     </div>
 
     <!-- CUSTOM TOAST NOTIFICATION -->
-    <div id="toastContainer" class="fixed top-6 right-6 z-50 flex flex-col space-y-3 pointer-events-none"></div>
+    <div id="toastContainer" class="fixed top-6 right-4 md:right-6 z-[60] flex flex-col space-y-3 pointer-events-none w-64 md:w-auto"></div>
 
     <!-- MODAL: PRINT/VIEW FORM & APPROVAL -->
-    <div id="printModal" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4 opacity-0 transition-opacity duration-300">
+    <div id="printModal" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm hidden flex items-center justify-center z-[70] p-4 opacity-0 transition-opacity duration-300">
         <div class="w-full max-w-4xl flex flex-col items-center max-h-[95vh] relative transform scale-95 transition-transform duration-300" id="printModalContent">
             
             <!-- Modal Header Toolbar -->
-            <div class="w-full max-w-[600px] bg-white rounded-t-lg border-b border-gray-200 p-4 px-6 flex justify-between items-center z-10 print-hide">
+            <div class="w-full max-w-[600px] bg-white rounded-t-lg border-b border-gray-200 p-4 flex justify-between items-center z-10 print-hide">
                 <h2 class="font-bold text-lg text-gray-800">Document Review</h2>
                 <div class="flex items-center space-x-2">
                     <button onclick="window.print()" class="text-sm font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded transition"><i class="fas fa-print mr-1"></i> Print</button>
@@ -569,7 +591,7 @@
             </div>
             
             <!-- Scrollable Content Area -->
-            <div class="w-full max-w-[600px] bg-gray-100 p-6 overflow-y-auto print:p-0 print:overflow-visible">
+            <div class="w-full max-w-[600px] bg-gray-100 p-4 md:p-6 overflow-y-auto print:p-0 print:overflow-visible">
                 
                 <!-- THE ACTUAL PRINT FORM (A6 Layout matching image_b33085.jpg) -->
                 <div id="printableArea" class="print-form-preview print:print-form shadow-lg">
@@ -661,14 +683,14 @@
             </div>
 
             <!-- Approval Action Area (E-Signature Input) -->
-            <div id="approvalActionArea" class="w-full max-w-[600px] bg-white border-t border-gray-200 p-5 print-hide hidden rounded-b-lg flex-col space-y-4">
+            <div id="approvalActionArea" class="w-full max-w-[600px] bg-white border-t border-gray-200 p-4 md:p-5 print-hide hidden rounded-b-lg flex-col space-y-4">
                 <div class="bg-blue-50 border border-blue-200 p-3 rounded">
                     <h3 class="font-bold text-mpiBlue text-sm mb-1"><i class="fas fa-pen-nib mr-1"></i> Digital Signature</h3>
                     <p class="text-xs text-gray-600 mb-2">Attach your signature image or proceed with a default text signature. Your name will be automatically printed.</p>
                     <input type="file" id="sigUpload" accept="image/png, image/jpeg" class="text-xs w-full mb-2">
                 </div>
                 
-                <div class="flex justify-end space-x-2">
+                <div class="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2">
                     <button onclick="closeModal()" class="px-4 py-2 rounded border border-gray-300 text-sm font-medium hover:bg-gray-200 transition">Cancel</button>
                     <button onclick="approveCurrentPass()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded shadow text-sm font-bold transition"><i class="fas fa-check-circle mr-1"></i> Approve Request</button>
                 </div>
@@ -677,7 +699,15 @@
     </div>
 
     <script>
-        // Topbar Date Format
+        // Sidebar Mobile Toggle
+        function toggleSidebar() {
+            const sidebar = document.getElementById('sidebar');
+            const overlay = document.getElementById('sidebarOverlay');
+            sidebar.classList.toggle('-translate-x-full');
+            overlay.classList.toggle('hidden');
+        }
+
+        // Topbar Date Format logic
         const updateDate = () => {
             const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
             document.getElementById('currentDateDisplay').innerText = new Date().toLocaleDateString('en-US', options);
@@ -711,12 +741,27 @@
         let currentUser = null;
         let gatePasses = []; 
         let currentViewedPassId = null;
-
-        // Pagination Variables for Admin Logs
+        
         let currentLogPage = 1;
         const logsPerPage = 5;
 
-        // Custom Toast
+        // Toggle Password Visibility
+        function togglePassword() {
+            const passInput = document.getElementById('empPass');
+            const eyeIcon = document.getElementById('eyeIcon');
+            
+            if (passInput.type === 'password') {
+                passInput.type = 'text';
+                eyeIcon.classList.remove('fa-eye');
+                eyeIcon.classList.add('fa-eye-slash');
+            } else {
+                passInput.type = 'password';
+                eyeIcon.classList.remove('fa-eye-slash');
+                eyeIcon.classList.add('fa-eye');
+            }
+        }
+
+        // Custom Toast Notification (Replaces Alert)
         function showToast(message, type = 'success') {
             const container = document.getElementById('toastContainer');
             const toast = document.createElement('div');
@@ -777,59 +822,65 @@
             document.getElementById('appView').classList.add('hidden');
             document.getElementById('loginView').classList.remove('hidden');
             document.getElementById('loginForm').reset();
+            if(window.innerWidth < 768 && !document.getElementById('sidebar').classList.contains('-translate-x-full')) {
+                toggleSidebar(); // close sidebar if open on mobile
+            }
         }
 
         function setupRoleAccess(user) {
-            // Reset all menu items to hidden initially
-            ['navItemApply', 'navGroupApprovals', 'navGroupSecurity', 'navGroupAdmin', 'navGroupHR'].forEach(id => {
-                document.getElementById(id).style.display = 'none';
-            });
+            // Reset visibility
+            document.getElementById('navItemApply').style.display = 'flex';
+            document.getElementById('navGroupApprovals').style.display = 'block';
+            document.getElementById('navGroupSecurity').style.display = 'block';
+            document.getElementById('navGroupAdmin').style.display = 'block';
+            document.getElementById('navGroupHR').style.display = 'none';
             
             // Un-hide all admin tabs by default
-            ['tab-users', 'tab-fleet', 'tab-depts'].forEach(id => document.getElementById(id).style.display = 'inline-block');
+            document.getElementById('tab-users').style.display = 'inline-block';
+            document.getElementById('tab-fleet').style.display = 'inline-block';
+            document.getElementById('tab-depts').style.display = 'inline-block';
 
             if (user.role === 'Security') {
-                // Guard: Only sees Dashboard (Live Queue) and QR Scanner
-                document.getElementById('navGroupSecurity').style.display = 'block';
-                switchSection('dashBoard');
+                document.querySelector('[data-target="dashBoard"]').style.display = 'none';
+                document.getElementById('navItemApply').style.display = 'none';
+                document.getElementById('navGroupApprovals').style.display = 'none';
+                document.getElementById('navGroupAdmin').style.display = 'none';
+                switchSection('guardScan');
             } 
             else if (user.role === 'IT Admin') {
-                // IT Admin: Sees Apply, Config Panel
-                document.getElementById('navItemApply').style.display = 'flex';
-                document.getElementById('navGroupAdmin').style.display = 'block';
+                document.getElementById('navGroupApprovals').style.display = 'none';
+                document.getElementById('navGroupSecurity').style.display = 'none';
                 document.getElementById('navAdminLabel').innerText = "System Configuration";
-                document.getElementById('filterDeptContainer').style.display = 'block';
+                document.getElementById('filterDeptContainer').style.display = 'block'; 
                 switchSection('adminPanel');
             } 
             else if (user.role === 'President') {
-                // President Exception: No Apply Gate Pass. Sees Dashboard, Approvals, Logs
-                document.getElementById('navGroupApprovals').style.display = 'block';
-                document.getElementById('navGroupAdmin').style.display = 'block';
+                document.getElementById('navItemApply').style.display = 'none'; // No form for president
+                document.getElementById('navGroupSecurity').style.display = 'none';
                 document.getElementById('navAdminLabel').innerText = "Department Logs";
-                
-                ['tab-users', 'tab-fleet', 'tab-depts'].forEach(id => document.getElementById(id).style.display = 'none');
-                document.getElementById('filterDeptContainer').style.display = 'none';
+                document.getElementById('tab-users').style.display = 'none';
+                document.getElementById('tab-fleet').style.display = 'none';
+                document.getElementById('tab-depts').style.display = 'none';
+                document.getElementById('filterDeptContainer').style.display = 'none'; 
                 switchSection('dashBoard');
             }
             else {
                 // Employees / Managers / HR
-                document.getElementById('navItemApply').style.display = 'flex';
+                document.getElementById('navGroupSecurity').style.display = 'none';
                 
                 if (user.role === 'Employee') {
-                    // Employee: Dashboard, Apply
+                    document.getElementById('navGroupApprovals').style.display = 'none';
+                    document.getElementById('navGroupAdmin').style.display = 'none';
                 } else {
-                    // Manager / Head HR: Dashboard, Apply, Approvals, Logs
-                    document.getElementById('navGroupApprovals').style.display = 'block';
                     document.getElementById('navGroupAdmin').style.display = 'block';
                     document.getElementById('navAdminLabel').innerText = "Department Logs";
-                    
-                    ['tab-users', 'tab-fleet', 'tab-depts'].forEach(id => document.getElementById(id).style.display = 'none');
+                    document.getElementById('tab-users').style.display = 'none';
+                    document.getElementById('tab-fleet').style.display = 'none';
+                    document.getElementById('tab-depts').style.display = 'none';
                     document.getElementById('filterDeptContainer').style.display = 'none'; 
                     
-                    // Special HR Fleet Tab
                     if(user.isPAS) {
                         document.getElementById('navGroupHR').style.display = 'block';
-                        // Make Fleet tab visible in admin area for HR
                         document.getElementById('tab-fleet').style.display = 'inline-block';
                     }
                 }
@@ -841,6 +892,11 @@
             document.querySelectorAll('.nav-item').forEach(link => link.classList.remove('active'));
             const targetLink = document.querySelector(`.nav-item[data-target="${targetId}"]`);
             if(targetLink) targetLink.classList.add('active');
+
+            // auto close sidebar on mobile after clicking
+            if(window.innerWidth < 768 && !document.getElementById('sidebar').classList.contains('-translate-x-full')) {
+                toggleSidebar();
+            }
 
             const titles = { 
                 'dashBoard':'Overview Dashboard', 'applyPass':'New Gate Pass', 
@@ -954,10 +1010,10 @@
                 
                 document.getElementById('myPassesTableBody').innerHTML = myPasses.slice().reverse().map(p => `
                     <tr class="hover:bg-gray-50 transition border-b cursor-pointer" onclick="viewPass('${p.id}')">
-                        <td class="px-5 py-3 font-mono text-mpiBlue text-xs font-bold">${p.id}</td>
-                        <td class="px-5 py-3">${p.dateFiled}</td><td class="px-5 py-3 truncate max-w-[200px]">${p.destination}</td>
-                        <td class="px-5 py-3"><span class="px-2 py-1 rounded text-[10px] font-bold ${p.status==='Approved'?'bg-green-100 text-green-800':(p.status==='Completed'?'bg-gray-200':'bg-yellow-100 text-yellow-800')}">${p.status}</span></td>
-                        <td class="px-5 py-3 text-right"><button class="text-mpiBlue hover:underline text-xs"><i class="fas fa-eye"></i></button></td>
+                        <td class="px-4 md:px-5 py-3 font-mono text-mpiBlue text-xs font-bold">${p.id}</td>
+                        <td class="px-4 md:px-5 py-3">${p.dateFiled}</td><td class="px-4 md:px-5 py-3 truncate max-w-[150px] md:max-w-[200px]">${p.destination}</td>
+                        <td class="px-4 md:px-5 py-3"><span class="px-2 py-1 rounded text-[10px] font-bold ${p.status==='Approved'?'bg-green-100 text-green-800':(p.status==='Completed'?'bg-gray-200':'bg-yellow-100 text-yellow-800')}">${p.status}</span></td>
+                        <td class="px-4 md:px-5 py-3 text-right"><button class="text-mpiBlue hover:underline text-xs"><i class="fas fa-eye"></i></button></td>
                     </tr>
                 `).join('') || `<tr><td colspan="5" class="px-5 py-8 text-center text-gray-400">No records found.</td></tr>`;
             }
@@ -1049,7 +1105,6 @@
         function viewPass(id, isReviewing = false) {
             const p = gatePasses.find(x => x.id === id); if(!p) return; currentViewedPassId = id;
             
-            document.getElementById('vGpNo').innerText = p.id; 
             document.getElementById('vDateF').innerText = p.dateFiled;
             document.getElementById('vName').innerText = p.userName; 
             document.getElementById('vDest').innerText = p.destination;
@@ -1062,7 +1117,7 @@
             document.getElementById('vPlate').innerText = p.vehicle ? p.vehicle.plate : 'N/A';
             document.getElementById('vDriver').innerText = p.vehicle ? p.vehicle.driver : 'N/A';
 
-            // Signatures handling (Image or Name fallback)
+            // Signatures handling
             ['sigImm', 'sigPres', 'sigHR'].forEach(id => {
                 document.getElementById(id).innerHTML = '';
                 document.getElementById(id+'Name').innerText = '';
@@ -1095,7 +1150,7 @@
             const actionArea = document.getElementById('approvalActionArea');
             if(isReviewing) {
                 actionArea.style.display = 'flex';
-                document.getElementById('sigUpload').value = ''; // clear previous upload
+                document.getElementById('sigUpload').value = ''; 
             } else {
                 actionArea.style.display = 'none';
             }
@@ -1113,7 +1168,6 @@
             if(currentUser.role === 'IT Admin') return; 
             const p = gatePasses.find(x => x.id === currentViewedPassId);
             
-            // Handle Signature Upload
             const fileInput = document.getElementById('sigUpload');
             let imgData = null;
             
@@ -1132,7 +1186,7 @@
                 reader.onload = function(e) { imgData = e.target.result; finalizeApproval(); };
                 reader.readAsDataURL(fileInput.files[0]);
             } else {
-                finalizeApproval(); // Proceed with text signature
+                finalizeApproval();
             }
         }
 
