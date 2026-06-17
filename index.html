@@ -132,8 +132,54 @@
 
         /* Signature Object Fit */
         .sig-image-container img { max-height: 100%; object-fit: contain; margin: 0 auto; display: block; }
+        .signature-img { max-height: 34px; object-fit: contain; }
 
         /* Resizable / draggable document review modal */
+        .document-modal {
+            width: min(96vw, 960px);
+            height: min(92vh, 760px);
+            max-height: calc(100vh - 2rem);
+            overflow: hidden;
+            border-radius: 0.5rem;
+            will-change: left, top, width, height;
+        }
+        .document-modal:not(.is-floating) {
+            margin: auto;
+        }
+        .document-modal.is-floating {
+            position: fixed !important;
+            margin: 0 !important;
+            max-width: none !important;
+            max-height: none !important;
+            transform: none !important;
+            z-index: 75;
+        }
+        .document-modal.is-dragging,
+        .document-modal.is-resizing {
+            user-select: none;
+            transition: none !important;
+        }
+        .document-modal.is-dragging {
+            box-shadow: 0 24px 80px rgba(15, 23, 42, 0.35);
+        }
+        .document-modal.is-resizing {
+            box-shadow: 0 18px 70px rgba(15, 23, 42, 0.30);
+        }
+        .modal-scroll-area {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow: auto;
+            overscroll-behavior: contain;
+        }
+        #approvalActionArea {
+            flex: 0 0 auto;
+            max-height: min(42vh, 420px);
+            overflow-y: auto;
+        }
+        .modal-no-select {
+            user-select: none;
+            cursor: grabbing;
+        }
         .resizable-modal {
             overflow: auto;
             position: relative;
@@ -156,6 +202,7 @@
             background: linear-gradient(135deg, transparent 50%, #155CA2 50%);
             cursor: se-resize;
             z-index: 100;
+            touch-action: none;
         }
         .resize-handle::after {
             content: "";
@@ -175,6 +222,9 @@
             gap: 0.5rem;
             margin-bottom: 0.75rem;
         }
+        .signature-source-toggle button {
+            min-height: 34px;
+        }
         .signature-pad-canvas {
             width: 100%;
             height: 170px;
@@ -191,6 +241,19 @@
                               linear-gradient(-45deg, transparent 75%, #f8fafc 75%);
             background-size: 16px 16px;
             background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+        }
+        .signature-upload-zone {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            padding: 0.75rem;
+            background: #ffffff;
+            border: 1px dashed #93c5fd;
+            border-radius: 0.5rem;
+        }
+        .signature-upload-zone input[type="file"] {
+            max-width: 100%;
         }
     </style>
 </head>
@@ -676,7 +739,7 @@
     <!-- MODAL: PRINT/VIEW FORM & APPROVAL -->
     <div id="printModal" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm hidden items-center justify-center z-[70] p-4 opacity-0 transition-opacity duration-300">
         <div class="document-modal flex flex-col items-center relative transform scale-95 transition-transform duration-300" id="printModalContent">
-            <div class="resize-handle" id="resizeHandle"></div>
+            <div class="resize-handle" id="resizeHandle" title="Resize document window"></div>
 
             <!-- Modal Header Toolbar -->
             <div class="w-full bg-white rounded-t-lg border-b border-gray-200 p-4 flex justify-between items-center z-10 print-hide cursor-move" id="modalDragHandle">
@@ -697,7 +760,7 @@
             </div>
 
             <!-- Scrollable Content Area -->
-            <div class="modal-scroll-area w-full bg-gray-100 p-4 md:p-6 print:p-0 print:overflow-visible">
+            <div class="modal-scroll-area w-full bg-gray-100 p-4 md:p-6 print:p-0 print:overflow-visible" id="modalScrollArea">
 
                 <!-- THE ACTUAL PRINT FORM (A6 Layout precisely matched to image_b33085.jpg) -->
                 <div id="printableArea" class="print-form shadow-lg">
@@ -827,13 +890,20 @@
                     </div>
 
                     <div id="sigUploadPanel" class="space-y-3">
-                        <input type="file" id="sigUpload" accept="image/png, image/jpeg" class="text-xs w-full">
+                        <div class="signature-upload-zone">
+                            <label for="sigUpload" class="text-xs font-bold bg-white border border-blue-200 text-mpiBlue px-3 py-2 rounded hover:bg-blue-50 cursor-pointer">
+                                <i class="fas fa-image mr-1"></i> Choose Signature Image
+                            </label>
+                            <input type="file" id="sigUpload" accept="image/png, image/jpeg" class="text-xs">
+                            <span id="sigFileName" class="text-xs text-gray-500">No image selected.</span>
+                        </div>
+                        <p id="sigStatus" class="text-[10px] text-gray-500 leading-relaxed">Upload a PNG/JPG signature, or switch to Draw Signature.</p>
 
                         <!-- Background Removal Options -->
                         <div id="sigBgOptions" class="hidden p-3 bg-white border border-blue-100 rounded space-y-3">
                             <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                                 <div>
-                                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Background Removal</label>
+                                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Optional Background Removal</label>
                                     <select id="sigBgMode" class="w-full border border-gray-300 p-2 rounded text-xs focus:outline-none focus:border-mpiBlue">
                                         <option value="none">Do not remove background</option>
                                         <option value="autoSmart" selected>Auto detect blue or white background</option>
@@ -851,7 +921,7 @@
                                 </div>
                             </div>
                             <p class="text-[10px] text-gray-500 leading-relaxed">
-                                <strong>Auto</strong> checks the image corners and chooses blue or white mode. Use strength around <strong>20</strong> for clean blue ID or white paper backgrounds. AI mode uses your local Python server, not an external API.
+                                <strong>Auto</strong> checks the image corners and chooses blue or white mode. Use strength around <strong>20</strong> for clean blue ID or white paper backgrounds. AI mode uses your local Python server at <strong>127.0.0.1:8000</strong>, not an external API.
                             </p>
                         </div>
                     </div>
@@ -1147,6 +1217,28 @@
             targetDiv.innerHTML = `<img src="${dataUrl}" id="liveDocumentSig" class="signature-img" style="width: ${width}%; margin-bottom: ${y}px;">`;
         }
 
+        function setSignatureStatus(message, type = 'muted') {
+            const status = document.getElementById('sigStatus');
+            if (!status) return;
+
+            status.className = 'text-[10px] leading-relaxed';
+            if (type === 'success') status.classList.add('text-green-700', 'font-semibold');
+            else if (type === 'error') status.classList.add('text-red-600', 'font-semibold');
+            else if (type === 'info') status.classList.add('text-mpiBlue', 'font-semibold');
+            else status.classList.add('text-gray-500');
+
+            status.innerText = message;
+        }
+
+        function setSignatureBusy(isBusy) {
+            const bgMode = document.getElementById('sigBgMode');
+            const bgThreshold = document.getElementById('sigBgThreshold');
+            const upload = document.getElementById('sigUpload');
+            if (bgMode) bgMode.disabled = isBusy;
+            if (bgThreshold) bgThreshold.disabled = isBusy;
+            if (upload) upload.disabled = isBusy;
+        }
+
         const PYTHON_BG_REMOVAL_ENDPOINT = 'http://127.0.0.1:8000/remove-background';
 
         function detectSimpleBackgroundMode(img) {
@@ -1216,6 +1308,9 @@
             const currentY = document.getElementById('sigY')?.value || 0;
 
             try {
+                setSignatureBusy(true);
+                setSignatureStatus(mode === 'aiServer' ? 'Processing with local Python remover...' : 'Processing signature preview...', 'info');
+
                 if (mode === 'none') {
                     currentUploadedSig = currentOriginalSignatureData;
                 } else if (mode === 'aiServer') {
@@ -1235,6 +1330,13 @@
                 document.getElementById('sigControls')?.classList.remove('hidden');
                 document.getElementById('saveDefaultSig').checked = true;
 
+                const statusMessage = mode === 'none'
+                    ? 'Signature image attached. Background removal is off.'
+                    : mode === 'aiServer'
+                        ? 'Local Python background removal applied.'
+                        : `Background removal preview applied: ${mode}, strength ${threshold}.`;
+                setSignatureStatus(statusMessage, 'success');
+
                 if (showMessage) {
                     const message = mode === 'none'
                         ? 'Image attached without background removal.'
@@ -1250,7 +1352,10 @@
                 renderSignatureImage(currentUploadedSig, currentWidth, currentY);
                 document.getElementById('sigBgOptions')?.classList.remove('hidden');
                 document.getElementById('sigControls')?.classList.remove('hidden');
+                setSignatureStatus('Python remover unavailable. Local auto remover was used instead.', 'error');
                 showToast('AI server unavailable. Used local auto remover instead.', 'error');
+            } finally {
+                setSignatureBusy(false);
             }
         }
 
@@ -1267,7 +1372,8 @@
                 drawBtn?.classList.remove('bg-white', 'text-mpiBlue', 'border');
                 uploadBtn?.classList.remove('bg-mpiBlue', 'text-white');
                 uploadBtn?.classList.add('bg-white', 'text-mpiBlue', 'border', 'border-blue-200');
-                resizeSignatureCanvas();
+                requestAnimationFrame(resizeSignatureCanvas);
+                setSignatureStatus('Draw your signature, then click Use Drawn Signature.', 'info');
             } else {
                 drawPanel?.classList.add('hidden');
                 uploadPanel?.classList.remove('hidden');
@@ -1275,6 +1381,9 @@
                 uploadBtn?.classList.remove('bg-white', 'text-mpiBlue', 'border');
                 drawBtn?.classList.remove('bg-mpiBlue', 'text-white');
                 drawBtn?.classList.add('bg-white', 'text-mpiBlue', 'border', 'border-blue-200');
+                if (!currentOriginalSignatureData && !currentUploadedSig) {
+                    setSignatureStatus('Upload a PNG/JPG signature, or switch to Draw Signature.', 'muted');
+                }
             }
         }
 
@@ -1348,23 +1457,40 @@
             }
         }
 
+        function isSignatureCanvasBlank(canvas) {
+            const ctx = canvas.getContext('2d');
+            const data = ctx.getImageData(0, 0, canvas.width, canvas.height).data;
+            for (let i = 3; i < data.length; i += 4) {
+                if (data[i] !== 0) return false;
+            }
+            return true;
+        }
+
         function clearSignaturePad() {
             const canvas = document.getElementById('signaturePad');
             if (!canvas) return;
             const ctx = canvas.getContext('2d');
             ctx.clearRect(0, 0, canvas.width, canvas.height);
+            setSignatureStatus('Signature pad cleared.', 'muted');
         }
 
         function useDrawnSignature() {
             const canvas = document.getElementById('signaturePad');
             if (!canvas) return;
+            if (isSignatureCanvasBlank(canvas)) {
+                setSignatureStatus('Draw a signature before using it.', 'error');
+                showToast('Please draw a signature first.', 'error');
+                return;
+            }
             currentOriginalSignatureData = null;
             currentUploadedSig = canvas.toDataURL('image/png');
             document.getElementById('sigSize').value = 100;
             document.getElementById('sigY').value = 0;
             renderSignatureImage(currentUploadedSig, 100, 0);
+            document.getElementById('sigBgOptions')?.classList.add('hidden');
             document.getElementById('sigControls')?.classList.remove('hidden');
             document.getElementById('saveDefaultSig').checked = true;
+            setSignatureStatus('Drawn signature added. Adjust size or vertical offset if needed.', 'success');
             showToast('Drawn signature added to document.', 'success');
         }
 
@@ -1379,9 +1505,35 @@
         let modalStartWidth = 0;
         let modalStartHeight = 0;
         let modalRestoreLayout = null;
+        let modalFrameRequest = null;
+        let pendingModalBox = null;
 
         function clamp(value, min, max) {
             return Math.min(Math.max(value, min), max);
+        }
+
+        function scheduleModalBoxUpdate(modal, box) {
+            pendingModalBox = { ...(pendingModalBox || {}), ...box };
+            if (modalFrameRequest) return;
+
+            modalFrameRequest = requestAnimationFrame(() => {
+                if (!pendingModalBox) return;
+                if (pendingModalBox.left !== undefined) modal.style.left = pendingModalBox.left + 'px';
+                if (pendingModalBox.top !== undefined) modal.style.top = pendingModalBox.top + 'px';
+                if (pendingModalBox.width !== undefined) modal.style.width = pendingModalBox.width + 'px';
+                if (pendingModalBox.height !== undefined) modal.style.height = pendingModalBox.height + 'px';
+                pendingModalBox = null;
+                modalFrameRequest = null;
+            });
+        }
+
+        function setModalInteractionState(mode, enabled) {
+            const modal = document.getElementById('printModalContent');
+            if (!modal) return;
+
+            modal.classList.toggle('is-dragging', enabled && mode === 'drag');
+            modal.classList.toggle('is-resizing', enabled && mode === 'resize');
+            document.body.classList.toggle('modal-no-select', enabled);
         }
 
         function prepareModalForFloating(modal) {
@@ -1395,6 +1547,8 @@
             modal.style.top = rect.top + 'px';
             modal.style.width = rect.width + 'px';
             modal.style.height = rect.height + 'px';
+            modal.style.maxWidth = 'none';
+            modal.style.maxHeight = 'none';
         }
 
         function resetDocumentModalLayout() {
@@ -1406,6 +1560,13 @@
             isResizing = false;
             isMaximized = false;
             modalRestoreLayout = null;
+            pendingModalBox = null;
+            if (modalFrameRequest) {
+                cancelAnimationFrame(modalFrameRequest);
+                modalFrameRequest = null;
+            }
+            setModalInteractionState('drag', false);
+            setModalInteractionState('resize', false);
 
             modal.classList.remove('is-floating', 'w-screen', 'h-screen', 'm-0', 'scale-100');
             modal.classList.add('scale-95');
@@ -1416,6 +1577,9 @@
             modal.style.height = '';
             modal.style.maxWidth = '';
             modal.style.maxHeight = '';
+            modal.style.borderRadius = '';
+            const scrollArea = document.getElementById('modalScrollArea');
+            if (scrollArea) scrollArea.scrollTop = 0;
 
             printModal.classList.remove('p-0');
             printModal.classList.add('p-4');
@@ -1445,6 +1609,7 @@
 
                 dragHandle.setPointerCapture?.(e.pointerId);
                 dragHandle.style.cursor = 'grabbing';
+                setModalInteractionState('drag', true);
             });
 
             resizeHandle.addEventListener('pointerdown', (e) => {
@@ -1464,42 +1629,56 @@
                 modalStartHeight = rect.height;
 
                 resizeHandle.setPointerCapture?.(e.pointerId);
+                setModalInteractionState('resize', true);
             });
 
             document.addEventListener('pointermove', (e) => {
                 if (isDragging && !isMaximized) {
-                    const nextLeft = clamp(modalStartLeft + (e.clientX - modalStartX), 0, window.innerWidth - modalStartWidth);
-                    const nextTop = clamp(modalStartTop + (e.clientY - modalStartY), 0, window.innerHeight - 80);
+                    e.preventDefault();
+                    const maxLeft = Math.max(0, window.innerWidth - modalStartWidth);
+                    const maxTop = Math.max(0, window.innerHeight - modalStartHeight);
+                    const nextLeft = clamp(modalStartLeft + (e.clientX - modalStartX), 0, maxLeft);
+                    const nextTop = clamp(modalStartTop + (e.clientY - modalStartY), 0, maxTop);
 
-                    modal.style.left = nextLeft + 'px';
-                    modal.style.top = nextTop + 'px';
+                    scheduleModalBoxUpdate(modal, { left: nextLeft, top: nextTop });
                 }
 
                 if (isResizing && !isMaximized) {
-                    const minWidth = Math.min(420, window.innerWidth - 20);
-                    const minHeight = 360;
-                    const maxWidth = window.innerWidth - modalStartLeft - 10;
-                    const maxHeight = window.innerHeight - modalStartTop - 10;
+                    e.preventDefault();
+                    const minWidth = Math.min(460, Math.max(320, window.innerWidth - modalStartLeft - 10));
+                    const minHeight = Math.min(420, Math.max(280, window.innerHeight - modalStartTop - 10));
+                    const maxWidth = Math.max(minWidth, window.innerWidth - modalStartLeft - 10);
+                    const maxHeight = Math.max(minHeight, window.innerHeight - modalStartTop - 10);
 
                     const nextWidth = clamp(modalStartWidth + (e.clientX - modalStartX), minWidth, maxWidth);
                     const nextHeight = clamp(modalStartHeight + (e.clientY - modalStartY), minHeight, maxHeight);
 
-                    modal.style.width = nextWidth + 'px';
-                    modal.style.height = nextHeight + 'px';
+                    scheduleModalBoxUpdate(modal, { width: nextWidth, height: nextHeight });
                 }
-            });
+            }, { passive: false });
 
             document.addEventListener('pointerup', () => {
                 isDragging = false;
                 isResizing = false;
                 dragHandle.style.cursor = 'move';
+                setModalInteractionState('drag', false);
+                setModalInteractionState('resize', false);
             });
 
             window.addEventListener('resize', () => {
                 if (!modal.classList.contains('is-floating') || isMaximized) return;
                 const rect = modal.getBoundingClientRect();
-                modal.style.left = clamp(rect.left, 0, Math.max(0, window.innerWidth - rect.width)) + 'px';
-                modal.style.top = clamp(rect.top, 0, Math.max(0, window.innerHeight - 80)) + 'px';
+                scheduleModalBoxUpdate(modal, {
+                    left: clamp(rect.left, 0, Math.max(0, window.innerWidth - rect.width)),
+                    top: clamp(rect.top, 0, Math.max(0, window.innerHeight - rect.height)),
+                    width: Math.min(rect.width, window.innerWidth),
+                    height: Math.min(rect.height, window.innerHeight)
+                });
+            });
+
+            dragHandle.addEventListener('dblclick', (e) => {
+                if (e.target.closest('button, input, select, textarea, a, label')) return;
+                toggleMaximizeModal();
             });
         }
 
@@ -1513,6 +1692,7 @@
                 modal.classList.remove('w-screen', 'h-screen', 'm-0');
                 printModal.classList.remove('p-0');
                 printModal.classList.add('p-4');
+                modal.style.borderRadius = '';
 
                 if (modalRestoreLayout) {
                     modal.classList.add('is-floating');
@@ -1538,6 +1718,7 @@
                 modal.style.height = '100vh';
                 modal.style.maxWidth = '100vw';
                 modal.style.maxHeight = '100vh';
+                modal.style.borderRadius = '0';
                 printModal.classList.remove('p-4');
                 printModal.classList.add('p-0');
             }
@@ -1573,17 +1754,20 @@
             // Signature Edit Listeners with optional background removal
             document.getElementById('sigUpload').addEventListener('change', function(e) {
                 if (this.files && this.files[0]) {
+                    const selectedFile = this.files[0];
                     const r = new FileReader();
                     r.onload = function(ev) {
                         currentOriginalSignatureData = ev.target.result;
                         document.getElementById('sigSize').value = 100;
                         document.getElementById('sigY').value = 0;
-                        document.getElementById('sigBgMode').value = 'autoSmart';
+                        document.getElementById('sigBgMode').value = 'none';
                         document.getElementById('sigBgThreshold').value = 20;
                         document.getElementById('sigBgThresholdValue').innerText = '20';
+                        document.getElementById('sigBgOptions')?.classList.remove('hidden');
+                        document.getElementById('sigFileName').innerText = selectedFile.name;
                         processAndRenderSignature();
                     };
-                    r.readAsDataURL(this.files[0]);
+                    r.readAsDataURL(selectedFile);
                 }
             });
 
@@ -1593,7 +1777,9 @@
 
             document.getElementById('sigBgThreshold')?.addEventListener('input', function() {
                 document.getElementById('sigBgThresholdValue').innerText = this.value;
-                processAndRenderSignature(false);
+                if (document.getElementById('sigBgMode')?.value !== 'none') {
+                    processAndRenderSignature(false);
+                }
             });
 
             const applySigStyles = () => {
@@ -2110,6 +2296,8 @@
                 if(isReviewing) {
                     actionArea.style.display = 'flex';
                     document.getElementById('sigUpload').value = '';
+                    document.getElementById('sigFileName').innerText = 'No image selected.';
+                    showSignatureSource('upload');
 
                     // PRE-FILL USERNAME FOR TRUE LIVE PREVIEW ALIGNMENT
                     let targetContainerId = null;
@@ -2143,19 +2331,22 @@
                         document.getElementById('sigSize').value = currentUser.savedSignature.w || 100;
                         document.getElementById('sigY').value = currentUser.savedSignature.y || 0;
 
+                        document.getElementById('sigBgOptions').classList.add('hidden');
                         document.getElementById('sigControls').classList.remove('hidden');
                         document.getElementById('saveDefaultSig').checked = true;
+                        setSignatureStatus('Saved default signature loaded. Adjust size or upload/draw a replacement if needed.', 'success');
                     } else {
                         currentUploadedSig = null;
                         currentOriginalSignatureData = null;
                         document.getElementById('sigSize').value = 100;
                         document.getElementById('sigY').value = 0;
                         document.getElementById('sigBgMode').value = 'none';
-                        document.getElementById('sigBgThreshold').value = 78;
-                        document.getElementById('sigBgThresholdValue').innerText = '78';
+                        document.getElementById('sigBgThreshold').value = 20;
+                        document.getElementById('sigBgThresholdValue').innerText = '20';
                         document.getElementById('sigBgOptions').classList.add('hidden');
                         document.getElementById('sigControls').classList.add('hidden');
                         document.getElementById('saveDefaultSig').checked = false;
+                        setSignatureStatus('Upload a PNG/JPG signature, or switch to Draw Signature.', 'muted');
                     }
                 } else {
                     actionArea.style.display = 'none';
