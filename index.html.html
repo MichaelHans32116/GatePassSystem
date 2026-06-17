@@ -1,0 +1,1168 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>MPI - Gate Pass System</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- FontAwesome for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- QR Code Generator -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        mpiBlue: '#155CA2', 
+                        mpiDark: '#0D3D6E',
+                        mpiLight: '#F4F7F9',
+                        mpiAccent: '#2178D1'
+                    },
+                    fontFamily: {
+                        sans: ['Inter', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+        
+        body { 
+            background-color: #F4F7F9; 
+            color: #333333;
+        }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 8px; height: 8px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Animations */
+        .fade-in { animation: fadeIn 0.3s ease-in-out forwards; }
+        @keyframes fadeIn { 
+            from { opacity: 0; transform: translateY(5px); } 
+            to { opacity: 1; transform: translateY(0); } 
+        }
+
+        /* Sidebar Nav Item active state (Edge-to-edge layout) */
+        .nav-item { opacity: 0.7; border-left: 4px solid transparent; display: flex; align-items: center; }
+        .nav-item:hover { opacity: 1; background-color: rgba(255,255,255,0.05); }
+        .nav-item.active {
+            opacity: 1;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-left: 4px solid #ffffff;
+            font-weight: 600;
+        }
+
+        /* Print Styles - EXACTLY A6 Landscape (1/4 A4) matching image_b33085.jpg */
+        @media print {
+            @page { size: A6 landscape; margin: 10mm; }
+            body * { visibility: hidden; }
+            #printModal, #printModal * { visibility: visible; }
+            #printModal { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: white; margin: 0; padding: 0; }
+            .print-hide { display: none !important; }
+            
+            /* Enforce exact box styling on print */
+            .print-form {
+                width: 148mm; /* A6 width */
+                height: 105mm; /* A6 height */
+                border: 2px solid black;
+                padding: 0;
+                margin: 0;
+                box-sizing: border-box;
+                font-family: Arial, Helvetica, sans-serif; /* Standard paper font */
+                color: black;
+            }
+            .print-form table { border-collapse: collapse; width: 100%; }
+            .print-form td { border: 1px solid black; padding: 4px 6px; font-size: 10px; vertical-align: top; }
+            .print-form .header-cell { text-align: center; border-bottom: 2px solid black; padding: 8px; }
+            .print-header-title { font-weight: bold; font-size: 14px; margin: 0; letter-spacing: 1px; }
+            .print-header-sub { font-size: 8px; margin: 2px 0 6px 0; }
+            .print-title-box { font-weight: bold; font-size: 12px; text-align: center; border-top: 1px solid black; padding: 4px; background: #f0f0f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact;}
+            
+            .input-label { font-size: 8px; text-transform: uppercase; color: #333; margin-bottom: 4px; display: block; }
+            .input-value { font-size: 11px; font-weight: bold; min-height: 14px; }
+        }
+        
+        /* Screen preview of the print form */
+        .print-form-preview {
+            width: 100%; max-width: 600px; margin: 0 auto;
+            border: 2px solid black; background: white; color: black;
+            font-family: Arial, sans-serif;
+        }
+        .print-form-preview table { border-collapse: collapse; width: 100%; }
+        .print-form-preview td { border: 1px solid black; padding: 6px; font-size: 12px; vertical-align: top; }
+        .print-form-preview .header-cell { text-align: center; border-bottom: 2px solid black; padding: 12px; }
+        .print-form-preview .input-label { font-size: 10px; text-transform: uppercase; color: #555; margin-bottom: 4px; display: block; }
+        .print-form-preview .input-value { font-size: 14px; font-weight: bold; min-height: 20px; }
+        .print-form-preview .print-title-box { font-weight: bold; font-size: 16px; text-align: center; padding: 6px; background: #f0f0f0; border-top: 1px solid black; }
+        
+        .sig-image-container img { max-height: 40px; margin: 0 auto; display: block; }
+    </style>
+</head>
+<body class="h-screen overflow-hidden flex flex-col font-sans text-sm md:text-base">
+
+    <!-- LOGIN VIEW -->
+    <div id="loginView" class="h-full w-full flex absolute z-50 transition-opacity duration-500 bg-white">
+        
+        <!-- Left Side: Factory Image & Text -->
+        <div class="hidden md:flex w-2/3 relative bg-cover bg-center" style="background-image: url('https://images.unsplash.com/photo-1587293852726-70cdb56c2866?q=80&w=2000&auto=format&fit=crop');">
+            <div class="absolute inset-0 bg-black bg-opacity-50"></div>
+            <div class="absolute bottom-1/4 left-16 text-white fade-in">
+                <h1 class="text-5xl font-bold tracking-tight mb-2">Gate Pass System</h1>
+                <h2 class="text-xl tracking-widest uppercase font-medium text-gray-300">Moriroku Philippines, Inc.</h2>
+            </div>
+        </div>
+
+        <!-- Right Side: Login Form -->
+        <div class="w-full md:w-1/3 flex flex-col justify-center px-12 relative fade-in">
+            <div class="text-center mb-8">
+                <!-- Mockup MPI Logo -->
+                <div class="flex justify-center mb-4">
+                    <div class="border-4 border-mpiBlue rounded-full p-2">
+                        <div class="bg-mpiBlue text-white font-bold text-xl px-2 py-1 rounded">MPI</div>
+                    </div>
+                </div>
+                <h2 class="text-2xl font-bold text-gray-800">Welcome Back</h2>
+                <p class="text-sm text-gray-500 mt-1">Sign in to your account</p>
+            </div>
+            
+            <form id="loginForm" onsubmit="handleLogin(event)">
+                <div class="mb-5">
+                    <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2"><i class="fas fa-user mr-1"></i> Username / ID</label>
+                    <input type="text" id="empId" class="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:border-mpiBlue focus:ring-1 focus:ring-mpiBlue transition" placeholder="Enter your ID" required>
+                </div>
+                <div class="mb-6">
+                    <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2"><i class="fas fa-lock mr-1"></i> Password</label>
+                    <div class="relative">
+                        <input type="password" id="empPass" class="w-full px-4 py-3 bg-white border border-gray-300 rounded-lg focus:outline-none focus:border-mpiBlue focus:ring-1 focus:ring-mpiBlue transition" placeholder="Enter your password" required>
+                        <i class="fas fa-eye absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 cursor-pointer"></i>
+                    </div>
+                    <p class="text-[11px] text-gray-400 mt-2 font-bold text-mpiBlue">Pass Hint: Date hired (MMDDYYYY)</p>
+                </div>
+                <button type="submit" class="w-full bg-mpiBlue text-white font-bold py-3 px-4 rounded-lg shadow hover:bg-mpiDark transition-colors flex items-center justify-center">
+                    <i class="fas fa-sign-in-alt mr-2"></i> Sign In
+                </button>
+            </form>
+
+            <!-- Dev Quick Login Helpers -->
+            <div class="mt-8 pt-6 border-t border-gray-100">
+                <p class="text-[10px] text-center text-gray-400 mb-3 font-semibold uppercase tracking-wider">Quick Login (Testing)</p>
+                <div class="grid grid-cols-2 gap-2">
+                    <button onclick="quickLogin('ojt', '@mpi2026')" class="text-xs bg-gray-100 hover:bg-gray-200 py-2 rounded transition">IT Admin</button>
+                    <button onclick="quickLogin('PRES', '01012020')" class="text-xs bg-gray-100 hover:bg-gray-200 py-2 rounded transition">President</button>
+                    <button onclick="quickLogin('SUP-01', '01012020')" class="text-xs bg-gray-100 hover:bg-gray-200 py-2 rounded transition">Manager</button>
+                    <button onclick="quickLogin('HR', '01012020')" class="text-xs bg-gray-100 hover:bg-gray-200 py-2 rounded transition">Head HR</button>
+                    <button onclick="quickLogin('MPI-001', '06172026')" class="text-xs bg-gray-100 hover:bg-gray-200 py-2 rounded transition text-center">Employee</button>
+                    <button onclick="quickLogin('GUARD-1', '01012020')" class="text-xs bg-gray-100 hover:bg-gray-200 py-2 rounded transition text-center">Security Guard</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- MAIN APP VIEW -->
+    <div id="appView" class="hidden h-full w-full flex bg-mpiLight">
+        
+        <!-- SIDEBAR -->
+        <aside class="w-64 bg-mpiBlue text-white shadow-xl flex flex-col z-20 flex-shrink-0">
+            <!-- Sidebar Header -->
+            <div class="p-5 flex items-center space-x-3 border-b border-white/10 bg-mpiDark/30">
+                <div class="bg-white text-mpiBlue font-bold p-1 px-2 rounded text-sm tracking-tighter">MPI</div>
+                <h2 class="font-bold text-sm leading-tight tracking-wide">Gate Pass System</h2>
+            </div>
+            
+            <!-- Navigation Links -->
+            <nav class="flex-grow space-y-1 overflow-y-auto pt-4" id="sideNav">
+                <div class="px-6 pb-2 text-[10px] font-bold text-blue-300 uppercase tracking-widest">Main Menu</div>
+                
+                <a href="#" class="nav-item px-6 py-3 transition text-white" data-target="dashBoard" onclick="switchSection('dashBoard')">
+                    <i class="fas fa-home w-6 text-left"></i> <span class="text-sm">Dashboard</span>
+                </a>
+                
+                <a href="#" class="nav-item px-6 py-3 transition text-white" data-target="applyPass" onclick="switchSection('applyPass')" id="navItemApply">
+                    <i class="fas fa-file-signature w-6 text-left"></i> <span class="text-sm">Apply Gate Pass</span>
+                </a>
+                
+                <div id="navGroupApprovals" class="mt-4">
+                    <div class="px-6 py-2 text-[10px] font-bold text-blue-300 uppercase tracking-widest">Workflow</div>
+                    <a href="#" class="nav-item px-6 py-3 transition text-white justify-between" data-target="approvals" onclick="switchSection('approvals')">
+                        <div class="flex items-center">
+                            <i class="fas fa-check-double w-6 text-left"></i> <span class="text-sm">Approvals</span>
+                        </div>
+                        <span id="navApprovalBadge" class="bg-red-500 text-white text-xs font-bold px-2 py-0.5 rounded-full hidden">0</span>
+                    </a>
+                </div>
+
+                <div id="navGroupHR" class="mt-4 hidden">
+                    <div class="px-6 py-2 text-[10px] font-bold text-blue-300 uppercase tracking-widest">Operations</div>
+                    <a href="#" class="nav-item px-6 py-3 transition text-white" data-target="fleetManagement" onclick="switchSection('adminPanel'); switchAdminTab('fleet');">
+                        <i class="fas fa-truck w-6 text-left"></i> <span class="text-sm">Vehicles & Drivers</span>
+                    </a>
+                </div>
+
+                <div id="navGroupSecurity" class="mt-4">
+                    <div class="px-6 py-2 text-[10px] font-bold text-blue-300 uppercase tracking-widest">Security</div>
+                    <a href="#" class="nav-item px-6 py-3 transition text-white" data-target="guardScan" onclick="switchSection('guardScan')">
+                        <i class="fas fa-qrcode w-6 text-left"></i> <span class="text-sm">QR Scanner</span>
+                    </a>
+                </div>
+
+                <div id="navGroupAdmin" class="mt-4">
+                    <div class="px-6 py-2 text-[10px] font-bold text-blue-300 uppercase tracking-widest">System</div>
+                    <a href="#" class="nav-item px-6 py-3 transition text-white" data-target="adminPanel" onclick="switchSection('adminPanel')">
+                        <i class="fas fa-folder-open w-6 text-left"></i> <span class="text-sm" id="navAdminLabel">Logs & Records</span>
+                    </a>
+                </div>
+            </nav>
+
+            <!-- Sidebar Footer (Logout) -->
+            <div class="p-4 border-t border-white/10 hover:bg-white/5 transition cursor-pointer" onclick="logout()">
+                <div class="flex items-center space-x-3 text-white px-2">
+                    <i class="fas fa-sign-out-alt w-6 text-left"></i>
+                    <span class="text-sm font-semibold">Log Out</span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- MAIN CONTENT AREA -->
+        <main class="flex-grow flex flex-col h-full overflow-hidden">
+            <!-- Topbar -->
+            <header class="bg-white shadow-sm h-16 flex items-center justify-between px-6 z-10 flex-shrink-0">
+                <div class="flex items-center space-x-4">
+                    <i class="fas fa-bars text-gray-400 cursor-pointer hover:text-gray-600"></i>
+                    <h1 id="pageTitle" class="text-lg font-bold text-gray-800">Dashboard</h1>
+                </div>
+                <div class="flex items-center space-x-6">
+                    <div class="text-xs text-gray-500 font-medium hidden md:block" id="currentDateDisplay">Loading...</div>
+                    <div class="flex items-center space-x-2 border-l pl-6 border-gray-200">
+                        <i class="fas fa-user-circle text-gray-400 text-xl"></i>
+                        <div class="flex flex-col">
+                            <span id="navUserName" class="text-sm font-bold text-gray-700 leading-tight">User Name</span>
+                            <span id="navUserRole" class="text-[10px] text-gray-500">System Administrator</span>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Scrollable Content -->
+            <div class="p-6 overflow-y-auto flex-grow relative" id="mainContent">
+                
+                <!-- SECTION: DASHBOARD -->
+                <section id="sec-dashBoard" class="view-section fade-in max-w-7xl mx-auto">
+                    
+                    <!-- GUARD Dashboard Wrapper (Queue) -->
+                    <div id="guardDashWrapper" class="hidden">
+                        <div class="bg-white p-6 rounded-lg shadow border border-gray-200 w-full relative overflow-hidden">
+                            <h3 class="font-bold text-lg text-gray-800 mb-4"><i class="fas fa-users text-mpiBlue mr-2"></i> Live Gate Queue</h3>
+                            <p class="text-xs text-gray-500 mb-4">Associates who are cleared to Time Out or expected to Time In today.</p>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="bg-gray-50 text-gray-500 text-[11px] uppercase tracking-wider border-b border-t">
+                                            <th class="px-4 py-3 font-semibold">GP-ID</th>
+                                            <th class="px-4 py-3 font-semibold">Associate Name</th>
+                                            <th class="px-4 py-3 font-semibold">Will Return?</th>
+                                            <th class="px-4 py-3 font-semibold">Current Queue Status</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="guardQueueList" class="text-sm divide-y divide-gray-100">
+                                        <!-- JS populated -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- STANDARD Dashboard Wrapper -->
+                    <div id="standardDashWrapper">
+                        <!-- HR Vehicle Fleet Tracking Widget -->
+                        <div id="hrFleetWidget" class="hidden mb-8 bg-white p-5 rounded-lg shadow-sm border border-gray-200">
+                            <h2 class="text-base font-bold text-gray-800 mb-4 border-b pb-2"><i class="fas fa-truck mr-2 text-mpiBlue"></i>Live Fleet Status</h2>
+                            <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4" id="fleetGridContainer">
+                                <!-- Populated via JS -->
+                            </div>
+                        </div>
+
+                        <!-- Stat Cards -->
+                        <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Overview of your passes</h2>
+                        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-8">
+                            <div class="bg-white p-5 rounded-lg shadow-sm border-t-4 border-yellow-400 flex items-center justify-between">
+                                <div><p class="text-3xl font-bold text-gray-800" id="cntPending">0</p><h3 class="text-xs font-semibold text-gray-500 mt-1 uppercase">Pending Requests</h3></div>
+                                <div class="bg-yellow-50 text-yellow-500 p-3 rounded-full"><i class="fas fa-hourglass-half text-xl"></i></div>
+                            </div>
+                            <div class="bg-white p-5 rounded-lg shadow-sm border-t-4 border-green-500 flex items-center justify-between">
+                                <div><p class="text-3xl font-bold text-gray-800" id="cntApproved">0</p><h3 class="text-xs font-semibold text-gray-500 mt-1 uppercase">Approved / Ready</h3></div>
+                                <div class="bg-green-50 text-green-500 p-3 rounded-full"><i class="fas fa-check-double text-xl"></i></div>
+                            </div>
+                            <div class="bg-white p-5 rounded-lg shadow-sm border-t-4 border-gray-400 flex items-center justify-between">
+                                <div><p class="text-3xl font-bold text-gray-800" id="cntCompleted">0</p><h3 class="text-xs font-semibold text-gray-500 mt-1 uppercase">Completed Logs</h3></div>
+                                <div class="bg-gray-100 text-gray-500 p-3 rounded-full"><i class="fas fa-history text-xl"></i></div>
+                            </div>
+                        </div>
+
+                        <!-- My Passes Table -->
+                        <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                            <div class="px-5 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50/50">
+                                <h2 class="font-bold text-gray-800">Recent Gate Passes</h2>
+                                <button onclick="switchSection('applyPass')" id="btnNewRequest" class="text-xs bg-mpiBlue text-white px-3 py-2 rounded hover:bg-mpiDark transition"><i class="fas fa-plus mr-1"></i> New Request</button>
+                            </div>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse">
+                                    <thead>
+                                        <tr class="bg-white text-gray-500 text-[11px] uppercase tracking-wider border-b">
+                                            <th class="px-5 py-3 font-semibold">GP ID</th>
+                                            <th class="px-5 py-3 font-semibold">Date Filed</th>
+                                            <th class="px-5 py-3 font-semibold">Destination</th>
+                                            <th class="px-5 py-3 font-semibold">Status</th>
+                                            <th class="px-5 py-3 font-semibold text-right">Action</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="myPassesTableBody" class="text-sm divide-y divide-gray-100">
+                                        <!-- Populated via JS -->
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SECTION: APPLY GATE PASS -->
+                <section id="sec-applyPass" class="view-section hidden fade-in max-w-3xl mx-auto">
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
+                        <div class="px-6 py-5 border-b border-gray-200">
+                            <h2 class="text-lg font-bold text-gray-800">Gate Pass Application Form</h2>
+                            <p class="text-gray-500 text-xs mt-1">Fill out the required information to request exit clearance.</p>
+                        </div>
+                        
+                        <form id="applyForm" onsubmit="submitGatePass(event)" class="p-6 space-y-5">
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Destination <span class="text-red-500">*</span></label>
+                                <input type="text" id="gpDestination" class="w-full border border-gray-300 p-2.5 rounded focus:ring-1 focus:ring-mpiBlue focus:border-mpiBlue transition text-sm" required>
+                            </div>
+
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-5">
+                                <div>
+                                    <div class="flex justify-between items-end mb-2">
+                                        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider">From (Expected Out) <span class="text-red-500">*</span></label>
+                                        <button type="button" onclick="setNowTime('gpExpectedOut')" class="text-[10px] bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 py-1 rounded transition">Set Now</button>
+                                    </div>
+                                    <input type="time" id="gpExpectedOut" class="w-full border border-gray-300 p-2.5 rounded focus:ring-1 focus:ring-mpiBlue focus:border-mpiBlue transition text-sm" required>
+                                </div>
+                                <div>
+                                    <div class="flex justify-between items-end mb-2">
+                                        <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider">To (Expected In) <span class="text-red-500">*</span></label>
+                                        <button type="button" onclick="setNowTime('gpExpectedIn')" class="text-[10px] bg-gray-200 hover:bg-gray-300 text-gray-700 px-2 py-1 rounded transition">Set Now</button>
+                                    </div>
+                                    <input type="time" id="gpExpectedIn" class="w-full border border-gray-300 p-2.5 rounded focus:ring-1 focus:ring-mpiBlue focus:border-mpiBlue transition text-sm" required>
+                                </div>
+                            </div>
+                            
+                            <div>
+                                <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Purpose <span class="text-red-500">*</span></label>
+                                <textarea id="gpPurpose" class="w-full border border-gray-300 p-2.5 rounded focus:ring-1 focus:ring-mpiBlue focus:border-mpiBlue transition text-sm h-20 resize-none" required></textarea>
+                            </div>
+
+                            <div class="bg-yellow-50 border border-yellow-200 p-4 rounded relative overflow-hidden">
+                                <label class="block text-xs font-semibold text-gray-800 mb-2">Will you return to the company today?</label>
+                                <div class="flex space-x-6">
+                                    <label class="flex items-center space-x-2 cursor-pointer">
+                                        <input type="radio" name="gpWillReturn" value="yes" checked class="text-mpiBlue focus:ring-mpiBlue w-4 h-4" onchange="toggleExpectedIn(true)">
+                                        <span class="text-sm font-medium">Yes, I will return</span>
+                                    </label>
+                                    <label class="flex items-center space-x-2 cursor-pointer">
+                                        <input type="radio" name="gpWillReturn" value="no" class="text-mpiBlue focus:ring-mpiBlue w-4 h-4" onchange="toggleExpectedIn(false)">
+                                        <span class="text-sm font-medium">No (Requires Time Out Only)</span>
+                                    </label>
+                                </div>
+                            </div>
+                            
+                            <!-- Vehicle Option -->
+                            <div class="bg-gray-50 rounded border border-gray-200 p-4">
+                                <label class="flex items-center space-x-3 cursor-pointer select-none">
+                                    <input type="checkbox" id="gpNeedVehicle" onchange="toggleVehicleFields()" class="w-4 h-4 text-mpiBlue rounded border-gray-300 focus:ring-mpiBlue">
+                                    <span class="font-semibold text-sm text-gray-800">Company Vehicle Needed</span>
+                                </label>
+                                
+                                <div id="vehicleFields" class="hidden mt-4 pt-4 border-t border-gray-200 grid grid-cols-1 md:grid-cols-2 gap-4">
+                                    <div>
+                                        <label class="block text-[11px] font-semibold text-gray-500 uppercase mb-1">Select Vehicle</label>
+                                        <select id="gpVehicle" class="w-full bg-white border border-gray-300 p-2 rounded text-sm focus:ring-1 focus:ring-mpiBlue">
+                                            <!-- Populated JS -->
+                                        </select>
+                                    </div>
+                                    <div>
+                                        <label class="block text-[11px] font-semibold text-gray-500 uppercase mb-1">Assigned Driver</label>
+                                        <input type="text" id="gpDriver" class="w-full bg-gray-100 border border-gray-300 p-2 rounded text-sm text-gray-500" readonly placeholder="Auto-filled">
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="text-xs text-gray-500 bg-blue-50 p-3 rounded flex items-center">
+                                <i class="fas fa-route text-mpiBlue mr-2 text-lg"></i>
+                                <span><strong>Approval Flow:</strong> Immediate Superior <span id="routePresident" class="hidden text-mpiBlue font-bold">→ President</span> → PAS/HR</span>
+                            </div>
+
+                            <div class="pt-2 flex justify-end">
+                                <button type="button" onclick="switchSection('dashBoard')" class="px-5 py-2 text-sm text-gray-600 font-medium hover:bg-gray-100 rounded transition mr-2">Cancel</button>
+                                <button type="submit" class="bg-mpiBlue text-white text-sm font-bold py-2 px-6 rounded shadow hover:bg-mpiDark transition">Submit Request</button>
+                            </div>
+                        </form>
+                    </div>
+                </section>
+
+                <!-- SECTION: APPROVALS -->
+                <section id="sec-approvals" class="view-section hidden fade-in max-w-5xl mx-auto">
+                    <h2 class="text-lg font-bold text-gray-800 mb-4">Pending Approvals Requiring Your Action</h2>
+                    <div id="approvalList" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Populated via JS -->
+                    </div>
+                </section>
+
+                <!-- SECTION: GUARD SCANNER -->
+                <section id="sec-guardScan" class="view-section hidden fade-in py-10 max-w-md mx-auto">
+                    <div class="bg-white p-8 rounded-lg shadow border border-gray-200 w-full text-center">
+                        <i class="fas fa-shield-alt text-4xl text-mpiBlue mb-3"></i>
+                        <h2 class="text-xl font-bold text-gray-800 mb-1">Security QR Scanner</h2>
+                        <p class="text-xs text-gray-500 mb-6">Scan Gate Pass to Log Time Out / In</p>
+                        
+                        <div class="w-full h-48 bg-gray-100 rounded flex items-center justify-center border-2 border-dashed border-gray-300 mb-4 relative overflow-hidden">
+                            <div class="absolute top-0 left-0 w-full h-1 bg-green-500 animate-[pulse_1s_ease-in-out_infinite] shadow-[0_0_10px_#22c55e]"></div>
+                            <i class="fas fa-qrcode text-5xl text-gray-300"></i>
+                            <p class="absolute bottom-2 text-[10px] text-gray-400">Camera Feed Simulated</p>
+                        </div>
+                        
+                        <div class="text-left bg-gray-50 p-3 rounded border">
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Manual Scan Override</label>
+                            <div class="flex space-x-2">
+                                <input type="text" id="manualQrInput" placeholder="Enter GP-ID..." class="w-full flex-grow border border-gray-300 p-2 rounded text-sm focus:outline-none focus:border-mpiBlue">
+                                <button onclick="simulateQrScan()" class="flex-shrink-0 whitespace-nowrap bg-gray-800 text-white px-4 py-2 rounded text-sm font-bold hover:bg-black transition">Scan</button>
+                            </div>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- SECTION: ADMIN LOGS & MANAGEMENT -->
+                <section id="sec-adminPanel" class="view-section hidden fade-in max-w-7xl mx-auto">
+                    <!-- Admin Tabs Navigation -->
+                    <div class="flex space-x-1 border-b border-gray-200 mb-6" id="adminTabsContainer">
+                        <button onclick="switchAdminTab('logs')" id="tab-logs" class="admin-tab px-4 py-2 text-sm font-bold text-mpiBlue border-b-2 border-mpiBlue">Gate Pass Logs</button>
+                        <button onclick="switchAdminTab('users')" id="tab-users" class="admin-tab px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700">Manage Users</button>
+                        <button onclick="switchAdminTab('fleet')" id="tab-fleet" class="admin-tab px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700">Vehicles & Drivers</button>
+                        <button onclick="switchAdminTab('depts')" id="tab-depts" class="admin-tab px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700">Departments & Roles</button>
+                    </div>
+
+                    <!-- TAB CONTENT: LOGS -->
+                    <div id="admin-logs" class="admin-tab-content bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden relative">
+                        <div class="p-5 border-b bg-gray-50 flex flex-wrap items-center gap-4">
+                            <div><label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Search ID/Name</label><input type="text" id="logFilterName" placeholder="Enter keyword..." class="border border-gray-300 p-2 rounded text-sm w-56 focus:outline-none focus:border-mpiBlue"></div>
+                            <div><label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Filter by Date</label><input type="date" id="logFilterDate" class="border border-gray-300 p-2 rounded text-sm text-gray-700 focus:outline-none focus:border-mpiBlue"></div>
+                            <div id="filterDeptContainer"><label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Department</label><select id="logFilterDept" class="border border-gray-300 p-2 rounded text-sm text-gray-700 focus:outline-none focus:border-mpiBlue"><option value="">All</option><option value="Production">Production</option><option value="HRAD">HRAD</option><option value="Finance & IT">Finance & IT</option><option value="Executive">Executive</option></select></div>
+                            <div class="flex items-end h-full"><button onclick="renderAdminLogs(1)" class="bg-mpiBlue text-white px-5 py-2 mt-4 rounded shadow text-sm font-bold hover:bg-mpiDark transition"><i class="fas fa-filter mr-2"></i>Apply Filters</button></div>
+                        </div>
+                        <div class="overflow-x-auto min-h-[300px]">
+                            <table class="w-full text-left border-collapse">
+                                <thead>
+                                    <tr class="bg-white text-gray-500 text-[11px] uppercase tracking-wider border-b">
+                                        <th class="px-5 py-3 font-semibold">GP-ID</th><th class="px-5 py-3 font-semibold">Employee</th><th class="px-5 py-3 font-semibold">Dept</th><th class="px-5 py-3 font-semibold">1-Way?</th><th class="px-5 py-3 font-semibold">Actual Out</th><th class="px-5 py-3 font-semibold">Actual In</th><th class="px-5 py-3 font-semibold">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="adminLogsTable" class="text-sm divide-y divide-gray-100"></tbody>
+                            </table>
+                        </div>
+                        <div class="px-5 py-4 border-t border-gray-200 bg-white flex justify-between items-center">
+                            <span class="text-sm text-gray-500" id="logPaginationInfo">Showing 1 to 5</span>
+                            <div class="flex space-x-2">
+                                <button id="btnPrevPage" onclick="changeLogPage(-1)" class="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-100 disabled:opacity-50">Previous</button>
+                                <span id="logPageIndicator" class="px-3 py-1 bg-mpiBlue text-white rounded text-sm font-bold">1</span>
+                                <button id="btnNextPage" onclick="changeLogPage(1)" class="px-3 py-1 border border-gray-300 rounded text-sm hover:bg-gray-100 disabled:opacity-50">Next</button>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB CONTENT: USERS (Active/Archive) -->
+                    <div id="admin-users" class="admin-tab-content hidden bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <div><h3 class="font-bold text-gray-800 text-lg">User Management</h3><p class="text-sm text-gray-500">System accounts with login access.</p></div>
+                            <button onclick="showToast('Open Add User Form', 'info')" class="bg-mpiBlue text-white px-4 py-2 text-sm font-bold rounded shadow hover:bg-mpiDark transition"><i class="fas fa-user-plus mr-1"></i> Add User</button>
+                        </div>
+                        
+                        <div class="flex space-x-4 mb-4 border-b border-gray-200 pb-2">
+                            <button class="text-mpiBlue font-bold text-sm border-b-2 border-mpiBlue pb-1">Active Users</button>
+                            <button class="text-gray-500 hover:text-gray-700 text-sm pb-1">Archived Records</button>
+                        </div>
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead><tr class="bg-gray-50 border-y"><th class="p-3 font-semibold text-gray-600">ID</th><th class="p-3 font-semibold text-gray-600">Name</th><th class="p-3 font-semibold text-gray-600">Role</th><th class="p-3 font-semibold text-gray-600">Department</th><th class="p-3 font-semibold text-gray-600 text-right">Actions</th></tr></thead>
+                            <tbody id="adminUsersList" class="divide-y divide-gray-100"><!-- JS --></tbody>
+                        </table>
+                    </div>
+
+                    <!-- TAB CONTENT: DEPARTMENTS & POSITIONS (Split View) -->
+                    <div id="admin-depts" class="admin-tab-content hidden">
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                            <!-- Departments -->
+                            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
+                                <div class="flex justify-between items-center mb-4">
+                                    <h3 class="font-bold text-gray-800"><i class="far fa-building mr-2 text-mpiBlue"></i>Departments</h3>
+                                    <button class="bg-blue-50 text-mpiBlue px-3 py-1.5 rounded text-xs font-bold hover:bg-blue-100"><i class="fas fa-plus mr-1"></i> Add Dept</button>
+                                </div>
+                                <div class="relative mb-3"><input type="text" placeholder="Search departments..." class="w-full border p-2 pl-8 rounded text-sm"><i class="fas fa-search absolute left-3 top-2.5 text-gray-400"></i></div>
+                                <ul class="divide-y divide-gray-100 text-sm">
+                                    <li class="py-3 flex justify-between items-center group"><span>ADMIN DEPARTMENT</span><div class="hidden group-hover:flex space-x-2 text-gray-400"><i class="fas fa-edit hover:text-mpiBlue cursor-pointer"></i><i class="fas fa-trash hover:text-red-500 cursor-pointer"></i></div></li>
+                                    <li class="py-3 flex justify-between items-center group"><span>FINANCE & IT DEPARTMENT</span><div class="hidden group-hover:flex space-x-2 text-gray-400"><i class="fas fa-edit hover:text-mpiBlue cursor-pointer"></i><i class="fas fa-trash hover:text-red-500 cursor-pointer"></i></div></li>
+                                    <li class="py-3 flex justify-between items-center group"><span>HRAD DEPARTMENT</span><div class="hidden group-hover:flex space-x-2 text-gray-400"><i class="fas fa-edit hover:text-mpiBlue cursor-pointer"></i><i class="fas fa-trash hover:text-red-500 cursor-pointer"></i></div></li>
+                                    <li class="py-3 flex justify-between items-center group"><span>PRODUCTION DEPARTMENT</span><div class="hidden group-hover:flex space-x-2 text-gray-400"><i class="fas fa-edit hover:text-mpiBlue cursor-pointer"></i><i class="fas fa-trash hover:text-red-500 cursor-pointer"></i></div></li>
+                                </ul>
+                            </div>
+                            
+                            <!-- Positions -->
+                            <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-5">
+                                <div class="flex justify-between items-center mb-4">
+                                    <h3 class="font-bold text-gray-800"><i class="fas fa-briefcase mr-2 text-mpiBlue"></i>Positions / Roles</h3>
+                                    <button class="bg-blue-50 text-mpiBlue px-3 py-1.5 rounded text-xs font-bold hover:bg-blue-100"><i class="fas fa-plus mr-1"></i> Add Role</button>
+                                </div>
+                                <div class="relative mb-3"><input type="text" placeholder="Search roles..." class="w-full border p-2 pl-8 rounded text-sm"><i class="fas fa-search absolute left-3 top-2.5 text-gray-400"></i></div>
+                                <ul class="divide-y divide-gray-100 text-sm">
+                                    <li class="py-3 flex justify-between items-center group"><div class="flex flex-col"><span class="font-semibold">Manager</span><span class="text-[10px] text-gray-400">All Departments</span></div><div class="hidden group-hover:flex space-x-2 text-gray-400"><i class="fas fa-edit hover:text-mpiBlue cursor-pointer"></i><i class="fas fa-trash hover:text-red-500 cursor-pointer"></i></div></li>
+                                    <li class="py-3 flex justify-between items-center group"><div class="flex flex-col"><span class="font-semibold">Employee</span><span class="text-[10px] text-gray-400">All Departments</span></div><div class="hidden group-hover:flex space-x-2 text-gray-400"><i class="fas fa-edit hover:text-mpiBlue cursor-pointer"></i><i class="fas fa-trash hover:text-red-500 cursor-pointer"></i></div></li>
+                                    <li class="py-3 flex justify-between items-center group"><div class="flex flex-col"><span class="font-semibold">Security Guard</span><span class="text-[10px] text-gray-400">Agency</span></div><div class="hidden group-hover:flex space-x-2 text-gray-400"><i class="fas fa-edit hover:text-mpiBlue cursor-pointer"></i><i class="fas fa-trash hover:text-red-500 cursor-pointer"></i></div></li>
+                                </ul>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- TAB CONTENT: FLEET -->
+                    <div id="admin-fleet" class="admin-tab-content hidden bg-white rounded-lg shadow-sm border border-gray-200 p-6">
+                        <div class="flex justify-between items-center mb-4">
+                            <div><h3 class="font-bold text-gray-800 text-lg">Vehicles & Drivers Database</h3><p class="text-sm text-gray-500">Manage company fleet and assigned drivers (No system login required for drivers).</p></div>
+                            <button onclick="showToast('Add Fleet Record', 'info')" class="bg-mpiBlue text-white px-4 py-2 text-sm font-bold rounded shadow hover:bg-mpiDark transition"><i class="fas fa-plus mr-1"></i> Add Record</button>
+                        </div>
+                        <table class="w-full text-left border-collapse text-sm">
+                            <thead><tr class="bg-gray-50 border-y"><th class="p-3 font-semibold text-gray-600">Vehicle</th><th class="p-3 font-semibold text-gray-600">Plate No.</th><th class="p-3 font-semibold text-gray-600">Assigned Driver</th><th class="p-3 font-semibold text-gray-600">Current Status</th><th class="p-3 font-semibold text-gray-600 text-right">Actions</th></tr></thead>
+                            <tbody id="adminFleetList" class="divide-y divide-gray-100"><!-- JS --></tbody>
+                        </table>
+                    </div>
+                </section>
+
+            </div>
+        </main>
+    </div>
+
+    <!-- CUSTOM TOAST NOTIFICATION -->
+    <div id="toastContainer" class="fixed top-6 right-6 z-50 flex flex-col space-y-3 pointer-events-none"></div>
+
+    <!-- MODAL: PRINT/VIEW FORM & APPROVAL -->
+    <div id="printModal" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm hidden flex items-center justify-center z-50 p-4 opacity-0 transition-opacity duration-300">
+        <div class="w-full max-w-4xl flex flex-col items-center max-h-[95vh] relative transform scale-95 transition-transform duration-300" id="printModalContent">
+            
+            <!-- Modal Header Toolbar -->
+            <div class="w-full max-w-[600px] bg-white rounded-t-lg border-b border-gray-200 p-4 px-6 flex justify-between items-center z-10 print-hide">
+                <h2 class="font-bold text-lg text-gray-800">Document Review</h2>
+                <div class="flex items-center space-x-2">
+                    <button onclick="window.print()" class="text-sm font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded transition"><i class="fas fa-print mr-1"></i> Print</button>
+                    <button onclick="closeModal()" class="w-8 h-8 rounded hover:bg-red-50 hover:text-red-600 text-gray-500 flex items-center justify-center transition"><i class="fas fa-times"></i></button>
+                </div>
+            </div>
+            
+            <!-- Scrollable Content Area -->
+            <div class="w-full max-w-[600px] bg-gray-100 p-6 overflow-y-auto print:p-0 print:overflow-visible">
+                
+                <!-- THE ACTUAL PRINT FORM (A6 Layout matching image_b33085.jpg) -->
+                <div id="printableArea" class="print-form-preview print:print-form shadow-lg">
+                    <!-- Header Row -->
+                    <table style="border: none;">
+                        <tr>
+                            <td style="width: 30%; border: none; border-bottom: 2px solid black; padding: 4px; text-align: center; vertical-align: middle;">
+                                <!-- Logo Placeholder -->
+                                <div style="display:inline-block; border:1px dashed #999; padding:10px 20px; font-weight:bold; color:#666; font-size:16px;">MPI LOGO</div>
+                            </td>
+                            <td class="header-cell" style="width: 70%; text-align: left; padding-left: 10px;">
+                                <h1 class="print-header-title">MORIROKU PHILIPPINES, INC.</h1>
+                                <p class="print-header-sub">115 North Science Avenue, Laguna Technopark 4024, Biñan, Laguna Philippines</p>
+                            </td>
+                        </tr>
+                    </table>
+                    
+                    <div class="print-title-box">GATE PASS FOR ASSOCIATES</div>
+                    
+                    <!-- Main Fields -->
+                    <table>
+                        <tr>
+                            <td style="width: 70%;" rowspan="2">
+                                <span class="input-label">NAME OF ASSOCIATES</span>
+                                <div class="input-value" id="vName"></div>
+                            </td>
+                            <td style="width: 30%;">
+                                <span class="input-label">DATE FILED</span>
+                                <div class="input-value" id="vDateF"></div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <span class="input-label">DRIVER:</span>
+                                <div class="input-value" id="vDriver"></div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2">
+                                <span class="input-label">DESTINATION</span>
+                                <div class="input-value" id="vDest"></div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2">
+                                <span class="input-label">PURPOSE</span>
+                                <div class="input-value" id="vPurp"></div>
+                            </td>
+                        </tr>
+                        <!-- Additional system info inserted cleanly -->
+                        <tr>
+                            <td><span class="input-label">WILL RETURN?</span><div class="input-value" id="vReturn"></div></td>
+                            <td><span class="input-label">VEHICLE & PLATE</span><div class="input-value" id="vPlate"></div></td>
+                        </tr>
+                        <tr>
+                            <td>
+                                <span class="input-label">FROM (EXPECTED OUT)</span>
+                                <div class="input-value" id="vExpOut"></div>
+                            </td>
+                            <td>
+                                <span class="input-label">TO (EXPECTED IN)</span>
+                                <div class="input-value" id="vExpInLabel"></div>
+                            </td>
+                        </tr>
+                        <!-- Signature Area -->
+                        <tr>
+                            <td style="height: 60px; text-align: center; vertical-align: bottom; position: relative;">
+                                <span class="input-label" style="position:absolute; top:4px; left:6px;">APPROVED BY</span>
+                                <div id="sigImm" class="sig-image-container" style="height:40px; margin-bottom: 2px;"></div>
+                                <span style="font-weight:bold; font-size: 11px; text-transform:uppercase; text-decoration: underline;" id="sigImmName"></span><br>
+                                <span style="font-size: 9px;">IMMEDIATE SUPERIOR</span>
+                            </td>
+                            <td style="height: 60px; text-align: center; vertical-align: bottom; position: relative;">
+                                <span class="input-label" style="position:absolute; top:4px; left:6px;">NOTED BY</span>
+                                <div id="sigPres" class="sig-image-container" style="height:40px; margin-bottom: 2px;"></div>
+                                <span style="font-weight:bold; font-size: 11px; text-transform:uppercase; text-decoration: underline;" id="sigPresName"></span><br>
+                                <span style="font-size: 9px;">PRESIDENT/V-PRES</span>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td colspan="2" style="height: 60px; text-align: center; vertical-align: bottom; position: relative; border-top: none;">
+                                <div id="sigHR" class="sig-image-container" style="height:40px; margin-bottom: 2px; position:absolute; right: 20%; bottom: 15px;"></div>
+                                <span style="font-weight:bold; font-size: 11px; text-transform:uppercase; text-decoration: underline; position:absolute; right: 20%; bottom: 10px;" id="sigHRName"></span>
+                                <span style="font-size: 9px; position:absolute; right: 5px; bottom: 5px;">PAS</span>
+                            </td>
+                        </tr>
+                    </table>
+                </div>
+            </div>
+
+            <!-- Approval Action Area (E-Signature Input) -->
+            <div id="approvalActionArea" class="w-full max-w-[600px] bg-white border-t border-gray-200 p-5 print-hide hidden rounded-b-lg flex-col space-y-4">
+                <div class="bg-blue-50 border border-blue-200 p-3 rounded">
+                    <h3 class="font-bold text-mpiBlue text-sm mb-1"><i class="fas fa-pen-nib mr-1"></i> Digital Signature</h3>
+                    <p class="text-xs text-gray-600 mb-2">Attach your signature image or proceed with a default text signature. Your name will be automatically printed.</p>
+                    <input type="file" id="sigUpload" accept="image/png, image/jpeg" class="text-xs w-full mb-2">
+                </div>
+                
+                <div class="flex justify-end space-x-2">
+                    <button onclick="closeModal()" class="px-4 py-2 rounded border border-gray-300 text-sm font-medium hover:bg-gray-200 transition">Cancel</button>
+                    <button onclick="approveCurrentPass()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded shadow text-sm font-bold transition"><i class="fas fa-check-circle mr-1"></i> Approve Request</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // Topbar Date Format
+        const updateDate = () => {
+            const options = { weekday: 'short', year: 'numeric', month: 'short', day: 'numeric', hour: '2-digit', minute: '2-digit' };
+            document.getElementById('currentDateDisplay').innerText = new Date().toLocaleDateString('en-US', options);
+        };
+        updateDate(); setInterval(updateDate, 60000);
+
+        function setNowTime(inputId) {
+            const now = new Date();
+            const timeStr = now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
+            document.getElementById(inputId).value = timeStr;
+        }
+
+        // MOCK DATABASE 
+        const mockUsers = [
+            { id: "MPI-001", name: "Juan Dela Cruz", role: "Employee", dept: "Production", pass: "06172026" },
+            { id: "SUP-01", name: "Niel Vega", role: "Manager", dept: "Production", pass: "01012020" },
+            { id: "PRES", name: "Tomoaki Maekawa", role: "President", dept: "Executive", pass: "01012020" },
+            { id: "HR", name: "Joy", role: "Head HR", dept: "HRAD", pass: "01012020", isPAS: true },
+            { id: "ADMIN", name: "Miss Babes", role: "Admin", dept: "Admin", pass: "01012020", isPAS: true },
+            { id: "ojt", name: "OJT IT", role: "IT Admin", dept: "IT", pass: "@mpi2026" },
+            { id: "GUARD-1", name: "Agency Guard", role: "Security", dept: "Agency", pass: "01012020" },
+        ];
+
+        const mockVehicles = [
+            { id: "V1", name: "Honda CRV", plate: "XYZ 123", driver: "Assigned Driver A", status: "Inside" },
+            { id: "V2", name: "Honda Accord", plate: "ABC 456", driver: "Assigned Driver B", status: "Outside" },
+            { id: "V3", name: "Toyota Innova", plate: "QWE 789", driver: "Assigned Driver C", status: "Inside" },
+            { id: "V4", name: "Isuzu Truck", plate: "TRK 001", driver: "John Neil Valencia", status: "Inside" }
+        ];
+
+        let currentUser = null;
+        let gatePasses = []; 
+        let currentViewedPassId = null;
+
+        // Pagination Variables for Admin Logs
+        let currentLogPage = 1;
+        const logsPerPage = 5;
+
+        // Custom Toast
+        function showToast(message, type = 'success') {
+            const container = document.getElementById('toastContainer');
+            const toast = document.createElement('div');
+            const colors = type === 'success' ? 'bg-green-600' : (type === 'error' ? 'bg-red-600' : 'bg-gray-800');
+            const icon = type === 'success' ? 'fa-check' : (type === 'error' ? 'fa-exclamation' : 'fa-info');
+            toast.className = `${colors} text-white px-5 py-3 rounded shadow-lg flex items-center space-x-3 transform transition-all duration-300 translate-x-full opacity-0 pointer-events-auto`;
+            toast.innerHTML = `<i class="fas ${icon}"></i> <span class="text-sm font-medium">${message}</span>`;
+            container.appendChild(toast);
+            setTimeout(() => toast.classList.remove('translate-x-full', 'opacity-0'), 10);
+            setTimeout(() => {
+                toast.classList.add('translate-x-full', 'opacity-0');
+                setTimeout(() => toast.remove(), 300);
+            }, 3000);
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const vSelect = document.getElementById('gpVehicle');
+            vSelect.innerHTML = `<option value="">-- Select --</option>` + mockVehicles.map(v => `<option value="${v.id}">${v.name} (${v.plate})</option>`).join('');
+            vSelect.addEventListener('change', (e) => {
+                const s = mockVehicles.find(v => v.id === e.target.value);
+                document.getElementById('gpDriver').value = s ? s.driver : '';
+            });
+            renderAdminTables();
+        });
+
+        function quickLogin(id, pass) {
+            document.getElementById('empId').value = id;
+            document.getElementById('empPass').value = pass;
+            document.getElementById('loginForm').dispatchEvent(new Event('submit'));
+        }
+
+        function handleLogin(e) {
+            e.preventDefault();
+            const id = document.getElementById('empId').value;
+            const pass = document.getElementById('empPass').value;
+            const user = mockUsers.find(u => u.id === id && u.pass === pass);
+            
+            if (user) {
+                currentUser = user;
+                document.getElementById('loginView').style.opacity = '0';
+                setTimeout(() => {
+                    document.getElementById('loginView').classList.add('hidden');
+                    document.getElementById('appView').classList.remove('hidden');
+                    document.getElementById('loginView').style.opacity = '1';
+                }, 500);
+                
+                document.getElementById('navUserName').innerText = user.name;
+                document.getElementById('navUserRole').innerText = user.role;
+                setupRoleAccess(user);
+                showToast(`Signed in as ${user.name}`);
+            } else {
+                showToast('Invalid ID or Password.', 'error');
+            }
+        }
+
+        function logout() {
+            currentUser = null;
+            document.getElementById('appView').classList.add('hidden');
+            document.getElementById('loginView').classList.remove('hidden');
+            document.getElementById('loginForm').reset();
+        }
+
+        function setupRoleAccess(user) {
+            // Reset all menu items to hidden initially
+            ['navItemApply', 'navGroupApprovals', 'navGroupSecurity', 'navGroupAdmin', 'navGroupHR'].forEach(id => {
+                document.getElementById(id).style.display = 'none';
+            });
+            
+            // Un-hide all admin tabs by default
+            ['tab-users', 'tab-fleet', 'tab-depts'].forEach(id => document.getElementById(id).style.display = 'inline-block');
+
+            if (user.role === 'Security') {
+                // Guard: Only sees Dashboard (Live Queue) and QR Scanner
+                document.getElementById('navGroupSecurity').style.display = 'block';
+                switchSection('dashBoard');
+            } 
+            else if (user.role === 'IT Admin') {
+                // IT Admin: Sees Apply, Config Panel
+                document.getElementById('navItemApply').style.display = 'flex';
+                document.getElementById('navGroupAdmin').style.display = 'block';
+                document.getElementById('navAdminLabel').innerText = "System Configuration";
+                document.getElementById('filterDeptContainer').style.display = 'block';
+                switchSection('adminPanel');
+            } 
+            else if (user.role === 'President') {
+                // President Exception: No Apply Gate Pass. Sees Dashboard, Approvals, Logs
+                document.getElementById('navGroupApprovals').style.display = 'block';
+                document.getElementById('navGroupAdmin').style.display = 'block';
+                document.getElementById('navAdminLabel').innerText = "Department Logs";
+                
+                ['tab-users', 'tab-fleet', 'tab-depts'].forEach(id => document.getElementById(id).style.display = 'none');
+                document.getElementById('filterDeptContainer').style.display = 'none';
+                switchSection('dashBoard');
+            }
+            else {
+                // Employees / Managers / HR
+                document.getElementById('navItemApply').style.display = 'flex';
+                
+                if (user.role === 'Employee') {
+                    // Employee: Dashboard, Apply
+                } else {
+                    // Manager / Head HR: Dashboard, Apply, Approvals, Logs
+                    document.getElementById('navGroupApprovals').style.display = 'block';
+                    document.getElementById('navGroupAdmin').style.display = 'block';
+                    document.getElementById('navAdminLabel').innerText = "Department Logs";
+                    
+                    ['tab-users', 'tab-fleet', 'tab-depts'].forEach(id => document.getElementById(id).style.display = 'none');
+                    document.getElementById('filterDeptContainer').style.display = 'none'; 
+                    
+                    // Special HR Fleet Tab
+                    if(user.isPAS) {
+                        document.getElementById('navGroupHR').style.display = 'block';
+                        // Make Fleet tab visible in admin area for HR
+                        document.getElementById('tab-fleet').style.display = 'inline-block';
+                    }
+                }
+                switchSection('dashBoard');
+            }
+        }
+
+        function switchSection(targetId) {
+            document.querySelectorAll('.nav-item').forEach(link => link.classList.remove('active'));
+            const targetLink = document.querySelector(`.nav-item[data-target="${targetId}"]`);
+            if(targetLink) targetLink.classList.add('active');
+
+            const titles = { 
+                'dashBoard':'Overview Dashboard', 'applyPass':'New Gate Pass', 
+                'approvals':'Workflow Approvals', 'guardScan':'Security QR Scanner', 
+                'fleetManagement': 'Vehicles & Drivers',
+                'adminPanel': currentUser && currentUser.role === 'IT Admin' ? 'System Configuration' : 'Department Logs' 
+            };
+            document.getElementById('pageTitle').innerText = titles[targetId] || 'System';
+
+            document.querySelectorAll('.view-section').forEach(sec => sec.classList.add('hidden'));
+            const targetSec = document.getElementById('sec-' + targetId);
+            if(targetSec) {
+                targetSec.classList.remove('hidden');
+                targetSec.classList.remove('fade-in'); void targetSec.offsetWidth; targetSec.classList.add('fade-in');
+            }
+            
+            refreshDashboards();
+            if(targetId === 'adminPanel') {
+                if(targetLink && targetLink.dataset.target === 'fleetManagement') {
+                    switchAdminTab('fleet');
+                } else {
+                    switchAdminTab('logs');
+                    renderAdminLogs(1);
+                }
+            }
+        }
+
+        function toggleExpectedIn(show) {
+            document.getElementById('gpExpectedIn').required = show;
+            document.getElementById('gpExpectedIn').disabled = !show;
+            if(!show) document.getElementById('gpExpectedIn').value = '';
+        }
+
+        function toggleVehicleFields() {
+            const isNeeded = document.getElementById('gpNeedVehicle').checked;
+            document.getElementById('vehicleFields').style.display = isNeeded ? 'grid' : 'none';
+            document.getElementById('routePresident').style.display = isNeeded ? 'inline' : 'none';
+            document.getElementById('gpVehicle').required = isNeeded;
+        }
+
+        function submitGatePass(e) {
+            e.preventDefault();
+            const isV = document.getElementById('gpNeedVehicle').checked;
+            const willReturnBool = document.querySelector('input[name="gpWillReturn"]:checked').value === 'yes';
+
+            const newPass = {
+                id: 'GP-' + Math.floor(100000 + Math.random() * 900000),
+                userId: currentUser.id, userName: currentUser.name, userDept: currentUser.dept,
+                dateFiled: new Date().toLocaleDateString(),
+                destination: document.getElementById('gpDestination').value,
+                expectedOut: document.getElementById('gpExpectedOut').value,
+                expectedIn: document.getElementById('gpExpectedIn').value || 'N/A',
+                purpose: document.getElementById('gpPurpose').value,
+                vehicle: (isV ? mockVehicles.find(v => v.id === document.getElementById('gpVehicle').value) : null),
+                status: (['Manager', 'President'].includes(currentUser.role) ? (isV ? 'Pending President' : 'Pending HR') : 'Pending Superior'),
+                signatures: { imm: (['Manager', 'President'].includes(currentUser.role) ? {name: currentUser.name, img: null} : null), pres: null, hr: null },
+                scanCount: 0, actualOut: null, actualIn: null,
+                willReturn: willReturnBool 
+            };
+            gatePasses.push(newPass); e.target.reset(); toggleVehicleFields();
+            showToast("Request Submitted!"); switchSection('dashBoard');
+        }
+
+        function refreshDashboards() {
+            const guardWrapper = document.getElementById('guardDashWrapper');
+            const stdWrapper = document.getElementById('standardDashWrapper');
+            
+            if (currentUser.role === 'Security') {
+                stdWrapper.classList.add('hidden');
+                guardWrapper.classList.remove('hidden');
+                
+                // Guard Live Queue 
+                const queueItems = gatePasses.filter(p => p.status === 'Approved' || p.status === 'Out');
+                document.getElementById('guardQueueList').innerHTML = queueItems.map(p => {
+                    let badgeColor = p.status === 'Approved' ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800';
+                    let qStatus = p.status === 'Approved' ? 'Waiting OUT' : 'Waiting IN';
+                    return `
+                        <tr class="border-b hover:bg-gray-50">
+                            <td class="px-4 py-2 text-xs font-mono font-bold text-mpiBlue">${p.id}</td>
+                            <td class="px-4 py-2 text-sm font-semibold">${p.userName}</td>
+                            <td class="px-4 py-2 text-xs">${p.willReturn ? '<span class="text-green-600 font-bold">Yes</span>' : '<span class="text-red-500 font-bold">No (1-Way)</span>'}</td>
+                            <td class="px-4 py-2"><span class="px-2 py-1 rounded text-[10px] font-bold ${badgeColor}">${qStatus}</span></td>
+                        </tr>
+                    `;
+                }).join('') || '<tr><td colspan="4" class="px-4 py-6 text-center text-gray-400 text-xs">Queue is empty.</td></tr>';
+
+            } else {
+                stdWrapper.classList.remove('hidden');
+                guardWrapper.classList.add('hidden');
+
+                // HR Fleet Tracker Widget
+                const fleetWidget = document.getElementById('hrFleetWidget');
+                if (currentUser.isPAS) {
+                    fleetWidget.classList.remove('hidden');
+                    document.getElementById('fleetGridContainer').innerHTML = mockVehicles.map(v => `
+                        <div class="border rounded p-3 text-sm flex justify-between items-center ${v.status === 'Inside' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}">
+                            <div><p class="font-bold text-gray-800">${v.name}</p><p class="text-[10px] text-gray-500">${v.driver}</p></div>
+                            <span class="text-[10px] font-bold px-2 py-1 rounded ${v.status === 'Inside' ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'}">${v.status}</span>
+                        </div>
+                    `).join('');
+                } else { fleetWidget.classList.add('hidden'); }
+                
+                // Hide "New Request" button on dashboard for President
+                document.getElementById('btnNewRequest').style.display = currentUser.role === 'President' ? 'none' : 'block';
+
+                // My Passes
+                const myPasses = gatePasses.filter(p => p.userId === currentUser.id);
+                document.getElementById('cntPending').innerText = myPasses.filter(p => p.status.includes('Pending')).length;
+                document.getElementById('cntApproved').innerText = myPasses.filter(p => p.status === 'Approved').length;
+                document.getElementById('cntCompleted').innerText = myPasses.filter(p => p.status === 'Completed').length;
+                
+                document.getElementById('myPassesTableBody').innerHTML = myPasses.slice().reverse().map(p => `
+                    <tr class="hover:bg-gray-50 transition border-b cursor-pointer" onclick="viewPass('${p.id}')">
+                        <td class="px-5 py-3 font-mono text-mpiBlue text-xs font-bold">${p.id}</td>
+                        <td class="px-5 py-3">${p.dateFiled}</td><td class="px-5 py-3 truncate max-w-[200px]">${p.destination}</td>
+                        <td class="px-5 py-3"><span class="px-2 py-1 rounded text-[10px] font-bold ${p.status==='Approved'?'bg-green-100 text-green-800':(p.status==='Completed'?'bg-gray-200':'bg-yellow-100 text-yellow-800')}">${p.status}</span></td>
+                        <td class="px-5 py-3 text-right"><button class="text-mpiBlue hover:underline text-xs"><i class="fas fa-eye"></i></button></td>
+                    </tr>
+                `).join('') || `<tr><td colspan="5" class="px-5 py-8 text-center text-gray-400">No records found.</td></tr>`;
+            }
+
+            // Approvals Logic
+            let toApprove = [];
+            if (['Manager'].includes(currentUser.role)) toApprove = toApprove.concat(gatePasses.filter(p => p.status === 'Pending Superior' && p.userDept === currentUser.dept));
+            if (currentUser.role === 'President') toApprove = toApprove.concat(gatePasses.filter(p => p.status === 'Pending President'));
+            if (currentUser.isPAS) toApprove = toApprove.concat(gatePasses.filter(p => p.status === 'Pending HR'));
+
+            const badge = document.getElementById('navApprovalBadge');
+            if(toApprove.length > 0) { badge.innerText = toApprove.length; badge.classList.remove('hidden'); } else badge.classList.add('hidden');
+
+            document.getElementById('approvalList').innerHTML = toApprove.map(p => `
+                <div class="bg-white border p-4 rounded shadow-sm flex flex-col justify-between">
+                    <div class="mb-3">
+                        <div class="flex justify-between"><h3 class="font-bold text-sm">${p.userName}</h3><span class="text-[9px] bg-yellow-100 px-1 rounded">${p.status}</span></div>
+                        <p class="text-xs text-gray-500 mb-1">Dest: ${p.destination}</p><p class="text-xs text-gray-500">Vehicle: ${p.vehicle ? p.vehicle.name : 'N/A'}</p>
+                    </div>
+                    <button onclick="viewPass('${p.id}', true)" class="w-full bg-blue-50 text-mpiBlue text-xs font-bold py-2 rounded hover:bg-mpiBlue hover:text-white transition">Review Document</button>
+                </div>
+            `).join('') || '<div class="col-span-2 text-center py-10 text-gray-400">No pending approvals.</div>';
+        }
+
+        function renderAdminLogs(page = 1) {
+            currentLogPage = page;
+            const searchVal = document.getElementById('logFilterName').value.toLowerCase();
+            const rawDateVal = document.getElementById('logFilterDate').value; 
+            const deptVal = document.getElementById('logFilterDept').value;
+            
+            let formattedDate = "";
+            if (rawDateVal) formattedDate = new Date(rawDateVal).toLocaleDateString(); 
+
+            let filteredList = gatePasses.slice().reverse().filter(p => {
+                const matchesSearch = p.userName.toLowerCase().includes(searchVal) || p.id.toLowerCase().includes(searchVal);
+                const matchesDate = formattedDate === "" || p.dateFiled === formattedDate;
+                let matchesDept = true;
+                if (currentUser.role === 'IT Admin') matchesDept = deptVal === "" || p.userDept === deptVal;
+                else matchesDept = p.userDept === currentUser.dept;
+                return matchesSearch && matchesDate && matchesDept;
+            });
+
+            const totalItems = filteredList.length;
+            const totalPages = Math.ceil(totalItems / logsPerPage) || 1;
+            if (currentLogPage < 1) currentLogPage = 1;
+            if (currentLogPage > totalPages) currentLogPage = totalPages;
+
+            const startIndex = (currentLogPage - 1) * logsPerPage;
+            const paginatedList = filteredList.slice(startIndex, startIndex + logsPerPage);
+
+            document.getElementById('adminLogsTable').innerHTML = paginatedList.map(p => `
+                <tr class="hover:bg-gray-50 transition border-b cursor-pointer" onclick="viewPass('${p.id}')">
+                    <td class="px-5 py-2 font-mono text-xs">${p.id}</td>
+                    <td class="px-5 py-2 font-semibold">${p.userName}</td>
+                    <td class="px-5 py-2 text-gray-500 text-xs">${p.userDept}</td>
+                    <td class="px-5 py-2 text-xs font-bold ${p.willReturn ? 'text-gray-400' : 'text-red-500'}">${p.willReturn ? 'No' : 'Yes'}</td>
+                    <td class="px-5 py-2 text-blue-600 font-mono text-xs">${p.actualOut || '--:--'}</td>
+                    <td class="px-5 py-2 text-green-600 font-mono text-xs">${p.actualIn || '--:--'}</td>
+                    <td class="px-5 py-2 text-[10px]"><span class="px-2 py-1 rounded bg-gray-100">${p.status}</span></td>
+                </tr>
+            `).join('') || '<tr><td colspan="7" class="text-center py-6 text-gray-400">No logs match your filter.</td></tr>';
+
+            const endItem = Math.min(startIndex + logsPerPage, totalItems);
+            document.getElementById('logPaginationInfo').innerText = totalItems > 0 ? `Showing ${startIndex + 1} to ${endItem} of ${totalItems} entries` : 'Showing 0 entries';
+            document.getElementById('logPageIndicator').innerText = currentLogPage;
+            document.getElementById('btnPrevPage').disabled = currentLogPage === 1;
+            document.getElementById('btnNextPage').disabled = currentLogPage === totalPages;
+        }
+
+        function changeLogPage(step) { renderAdminLogs(currentLogPage + step); }
+
+        function switchAdminTab(tabId) {
+            document.querySelectorAll('.admin-tab').forEach(b => { b.classList.remove('text-mpiBlue', 'border-b-2', 'border-mpiBlue'); b.classList.add('text-gray-500'); });
+            const btn = document.getElementById('tab-' + tabId);
+            if(btn) btn.classList.add('text-mpiBlue', 'border-b-2', 'border-mpiBlue');
+            document.querySelectorAll('.admin-tab-content').forEach(c => c.classList.add('hidden'));
+            document.getElementById('admin-' + tabId).classList.remove('hidden');
+        }
+
+        function renderAdminTables() {
+            document.getElementById('adminUsersList').innerHTML = mockUsers.map(u => `
+                <tr class="border-b"><td class="p-3 text-xs font-mono">${u.id}</td><td class="p-3 font-semibold text-sm">${u.name}</td><td class="p-3 text-xs">${u.role}</td><td class="p-3 text-xs">${u.dept}</td><td class="p-3 text-right"><button class="text-blue-500 hover:text-blue-700 text-xs mr-3 border border-blue-200 px-2 py-1 rounded"><i class="fas fa-edit"></i> Edit</button> <button class="text-red-500 hover:text-red-700 text-xs border border-red-200 px-2 py-1 rounded"><i class="fas fa-archive"></i> Archive</button></td></tr>
+            `).join('');
+            document.getElementById('adminFleetList').innerHTML = mockVehicles.map(v => `
+                <tr class="border-b"><td class="p-3 font-semibold text-sm">${v.name}</td><td class="p-3 text-xs font-mono">${v.plate}</td><td class="p-3 text-xs text-gray-600">${v.driver}</td><td class="p-3 text-xs">${v.status}</td><td class="p-3 text-right"><button class="text-blue-500 hover:text-blue-700 text-xs mr-3 border border-blue-200 px-2 py-1 rounded"><i class="fas fa-edit"></i> Edit</button> <button class="text-red-500 hover:text-red-700 text-xs border border-red-200 px-2 py-1 rounded"><i class="fas fa-trash"></i></button></td></tr>
+            `).join('');
+        }
+
+        function viewPass(id, isReviewing = false) {
+            const p = gatePasses.find(x => x.id === id); if(!p) return; currentViewedPassId = id;
+            
+            document.getElementById('vGpNo').innerText = p.id; 
+            document.getElementById('vDateF').innerText = p.dateFiled;
+            document.getElementById('vName').innerText = p.userName; 
+            document.getElementById('vDest').innerText = p.destination;
+            document.getElementById('vPurp').innerText = p.purpose; 
+            document.getElementById('vExpOut').innerText = p.expectedOut;
+            document.getElementById('vExpInLabel').innerText = p.expectedIn;
+            document.getElementById('vReturn').innerText = p.willReturn ? 'Yes' : 'No';
+            
+            document.getElementById('vVehicle').innerText = p.vehicle ? p.vehicle.name : 'N/A';
+            document.getElementById('vPlate').innerText = p.vehicle ? p.vehicle.plate : 'N/A';
+            document.getElementById('vDriver').innerText = p.vehicle ? p.vehicle.driver : 'N/A';
+
+            // Signatures handling (Image or Name fallback)
+            ['sigImm', 'sigPres', 'sigHR'].forEach(id => {
+                document.getElementById(id).innerHTML = '';
+                document.getElementById(id+'Name').innerText = '';
+            });
+
+            if(p.signatures.imm) {
+                document.getElementById('sigImmName').innerText = p.signatures.imm.name;
+                if(p.signatures.imm.img) document.getElementById('sigImm').innerHTML = `<img src="${p.signatures.imm.img}">`;
+                else document.getElementById('sigImm').innerHTML = `<span style="font-family: serif; font-style: italic; font-size: 14px; color: blue;">Digitally Signed</span>`;
+            }
+            if(p.signatures.pres) {
+                document.getElementById('sigPresName').innerText = p.signatures.pres.name;
+                if(p.signatures.pres.img) document.getElementById('sigPres').innerHTML = `<img src="${p.signatures.pres.img}">`;
+                else document.getElementById('sigPres').innerHTML = `<span style="font-family: serif; font-style: italic; font-size: 14px; color: blue;">Digitally Signed</span>`;
+            }
+            if(p.signatures.hr) {
+                document.getElementById('sigHRName').innerText = p.signatures.hr.name;
+                if(p.signatures.hr.img) document.getElementById('sigHR').innerHTML = `<img src="${p.signatures.hr.img}">`;
+                else document.getElementById('sigHR').innerHTML = `<span style="font-family: serif; font-style: italic; font-size: 14px; color: blue;">Digitally Signed</span>`;
+            }
+
+            const modal = document.getElementById('printModal');
+            modal.classList.remove('hidden'); 
+            setTimeout(() => { 
+                modal.classList.remove('opacity-0'); 
+                document.getElementById('printModalContent').classList.remove('scale-95'); 
+                document.getElementById('printModalContent').classList.add('scale-100'); 
+            }, 10);
+            
+            const actionArea = document.getElementById('approvalActionArea');
+            if(isReviewing) {
+                actionArea.style.display = 'flex';
+                document.getElementById('sigUpload').value = ''; // clear previous upload
+            } else {
+                actionArea.style.display = 'none';
+            }
+        }
+
+        function closeModal() {
+            const modal = document.getElementById('printModal');
+            modal.classList.add('opacity-0'); 
+            document.getElementById('printModalContent').classList.remove('scale-100'); 
+            document.getElementById('printModalContent').classList.add('scale-95');
+            setTimeout(() => { modal.classList.add('hidden'); currentViewedPassId = null; }, 300);
+        }
+
+        function approveCurrentPass() {
+            if(currentUser.role === 'IT Admin') return; 
+            const p = gatePasses.find(x => x.id === currentViewedPassId);
+            
+            // Handle Signature Upload
+            const fileInput = document.getElementById('sigUpload');
+            let imgData = null;
+            
+            const finalizeApproval = () => {
+                const sigObj = { name: currentUser.name, img: imgData };
+                
+                if (p.status === 'Pending Superior') { p.signatures.imm = sigObj; p.status = p.vehicle ? 'Pending President' : 'Pending HR'; } 
+                else if (p.status === 'Pending President') { p.signatures.pres = sigObj; p.status = 'Pending HR'; }
+                else if (p.status === 'Pending HR') { p.signatures.hr = sigObj; p.status = 'Approved'; }
+                
+                showToast("Document Approved!"); closeModal(); refreshDashboards();
+            };
+
+            if (fileInput.files && fileInput.files[0]) {
+                const reader = new FileReader();
+                reader.onload = function(e) { imgData = e.target.result; finalizeApproval(); };
+                reader.readAsDataURL(fileInput.files[0]);
+            } else {
+                finalizeApproval(); // Proceed with text signature
+            }
+        }
+
+        function simulateQrScan() {
+            if(currentUser.role !== 'Security') return; 
+            const gpId = document.getElementById('manualQrInput').value; const p = gatePasses.find(x => x.id === gpId);
+            if (!p) { showToast('Invalid ID', 'error'); return; }
+            
+            const nowTime = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
+            if (p.status === 'Approved' && p.scanCount === 0) {
+                p.scanCount = 1; p.actualOut = nowTime; 
+                if (p.willReturn) {
+                    p.status = 'Out';
+                    if(p.vehicle) p.vehicle.status = 'Outside'; 
+                    showToast(`TIME OUT RECORDED: ${p.userName}. Waiting for return.`);
+                } else {
+                    p.status = 'Completed'; 
+                    showToast(`1-WAY PASS: ${p.userName} Time Out Recorded. Closed.`);
+                }
+            } 
+            else if (p.status === 'Out' && p.scanCount === 1) {
+                p.scanCount = 2; p.actualIn = nowTime; p.status = 'Completed';
+                if(p.vehicle) p.vehicle.status = 'Inside'; 
+                showToast(`TIME IN RECORDED. Closed.`);
+            }
+            else showToast(`Transaction Failed. Status: ${p.status}`, 'error');
+            
+            document.getElementById('manualQrInput').value = ''; 
+            refreshDashboards(); 
+        }
+    </script>
+</body>
+</html>
