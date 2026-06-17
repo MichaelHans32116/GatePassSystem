@@ -67,43 +67,26 @@
             #printModal, #printModal * { visibility: visible; }
             #printModal { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: white; margin: 0; padding: 0; }
             .print-hide { display: none !important; }
-            
-            /* Enforce exact box styling on print */
-            .print-form {
-                width: 148mm; /* A6 width */
-                height: 105mm; /* A6 height */
-                border: 2px solid black;
-                padding: 0;
-                margin: 0;
-                box-sizing: border-box;
-                font-family: Arial, Helvetica, sans-serif;
-                color: black;
-            }
-            .print-form table { border-collapse: collapse; width: 100%; }
-            .print-form td { border: 1px solid black; padding: 4px 6px; font-size: 10px; vertical-align: top; }
-            .print-form .header-cell { text-align: center; border-bottom: 2px solid black; padding: 8px; }
-            .print-header-title { font-weight: bold; font-size: 14px; margin: 0; letter-spacing: 1px; }
-            .print-header-sub { font-size: 8px; margin: 2px 0 6px 0; }
-            .print-title-box { font-weight: bold; font-size: 12px; text-align: center; border-top: 1px solid black; padding: 4px; background: #f0f0f0 !important; -webkit-print-color-adjust: exact; print-color-adjust: exact;}
-            
-            .input-label { font-size: 8px; text-transform: uppercase; color: #333; margin-bottom: 4px; display: block; }
-            .input-value { font-size: 11px; font-weight: bold; min-height: 14px; }
         }
-        
-        /* Screen preview of the print form */
-        .print-form-preview {
-            width: 100%; max-width: 600px; margin: 0 auto;
-            border: 2px solid black; background: white; color: black;
-            font-family: Arial, sans-serif;
+
+        /* Enforce exact box styling for screen preview AND print */
+        .print-form {
+            width: 148mm; /* A6 width */
+            height: 105mm; /* A6 height */
+            border: 2px solid black;
+            padding: 0;
+            margin: 0 auto;
+            box-sizing: border-box;
+            font-family: Arial, Helvetica, sans-serif;
+            color: black;
+            background: white;
+            position: relative;
         }
-        .print-form-preview table { border-collapse: collapse; width: 100%; }
-        .print-form-preview td { border: 1px solid black; padding: 6px; font-size: 12px; vertical-align: top; }
-        .print-form-preview .header-cell { text-align: center; border-bottom: 2px solid black; padding: 12px; }
-        .print-form-preview .input-label { font-size: 10px; text-transform: uppercase; color: #555; margin-bottom: 4px; display: block; }
-        .print-form-preview .input-value { font-size: 14px; font-weight: bold; min-height: 20px; }
-        .print-form-preview .print-title-box { font-weight: bold; font-size: 16px; text-align: center; padding: 6px; background: #f0f0f0; border-top: 1px solid black; }
+        .print-form table { border-collapse: collapse; width: 100%; }
+        .print-form td { border: 1px solid black; padding: 4px; font-size: 10px; vertical-align: top; }
         
-        .sig-image-container img { max-height: 40px; margin: 0 auto; display: block; }
+        /* Signature Object Fit */
+        .sig-image-container img { max-height: 100%; object-fit: contain; margin: 0 auto; display: block; }
     </style>
 </head>
 <body class="h-screen overflow-hidden flex flex-col font-sans text-sm md:text-base">
@@ -126,7 +109,6 @@
         <!-- Right Side: Login Form (40%) -->
         <div class="w-full md:w-[40%] flex flex-col justify-center items-center px-8 relative fade-in bg-white h-full overflow-y-auto">
             
-            <!-- ADDED LIMITER HERE: max-w-md para hindi mag-stretch sa malaking screen -->
             <div class="w-full max-w-md">
                 <div class="text-center mb-8 w-full mt-8 md:mt-0">
                     <!-- MPI Logo -->
@@ -179,23 +161,20 @@
         <!-- Mobile Sidebar Overlay -->
         <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-20 hidden md:hidden" onclick="toggleSidebar()"></div>
 
-        <!-- SIDEBAR (Responsive, hidden on mobile by default) -->
+        <!-- SIDEBAR -->
         <aside id="sidebar" class="w-64 bg-mpiBlue text-white shadow-xl flex flex-col z-30 flex-shrink-0 fixed md:relative h-full transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out">
-            <!-- Sidebar Header -->
             <div class="p-5 flex items-center justify-between border-b border-white/10 bg-mpiDark/30">
                 <div class="flex items-center space-x-3">
                     <div class="bg-white text-mpiBlue font-bold p-1 px-2 rounded text-sm tracking-tighter">MPI</div>
                     <h2 class="font-bold text-sm leading-tight tracking-wide">Gate Pass System</h2>
                 </div>
-                <!-- Close Button on Mobile -->
                 <button class="md:hidden text-white/70 hover:text-white" onclick="toggleSidebar()"><i class="fas fa-times text-lg"></i></button>
             </div>
             
-            <!-- Navigation Links -->
             <nav class="flex-grow space-y-1 overflow-y-auto pt-4" id="sideNav">
                 <div class="px-6 pb-2 text-[10px] font-bold text-blue-300 uppercase tracking-widest">Main Menu</div>
                 
-                <a href="#" class="nav-item px-6 py-3 transition text-white" data-target="dashBoard" onclick="switchSection('dashBoard')">
+                <a href="#" class="nav-item px-6 py-3 transition text-white" data-target="dashBoard" onclick="switchSection('dashBoard')" id="navItemDashboard">
                     <i class="fas fa-home w-6 text-left"></i> <span class="text-sm">Dashboard</span>
                 </a>
                 
@@ -235,7 +214,6 @@
                 </div>
             </nav>
 
-            <!-- Sidebar Footer (Logout) -->
             <div class="p-6 border-t border-white/10 hover:bg-white/10 transition cursor-pointer" onclick="logout()">
                 <div class="flex items-center space-x-3 text-white px-2">
                     <i class="fas fa-sign-out-alt text-xl w-8 text-left"></i>
@@ -249,7 +227,6 @@
             <!-- Topbar -->
             <header class="bg-white shadow-sm h-16 flex items-center justify-between px-4 md:px-6 z-10 flex-shrink-0">
                 <div class="flex items-center space-x-4">
-                    <!-- Hamburger toggle for mobile -->
                     <button class="md:hidden text-gray-500 hover:text-mpiBlue transition" onclick="toggleSidebar()">
                         <i class="fas fa-bars text-xl"></i>
                     </button>
@@ -277,7 +254,7 @@
                     <div id="guardDashWrapper" class="hidden">
                         <div class="bg-white p-4 md:p-6 rounded-lg shadow border border-gray-200 w-full relative overflow-hidden">
                             <h3 class="font-bold text-lg text-gray-800 mb-4"><i class="fas fa-users text-mpiBlue mr-2"></i> Live Gate Queue</h3>
-                            <p class="text-xs text-gray-500 mb-4">Associates who are cleared to Time Out or expected to Time In today.</p>
+                            <p class="text-xs text-gray-500 mb-4">Associates who are cleared to Time Out or expected to Time In today. (Completed records are archived to Admin Logs).</p>
                             <div class="overflow-x-auto">
                                 <table class="w-full text-left border-collapse min-w-max">
                                     <thead>
@@ -406,16 +383,30 @@
                                     <span class="font-semibold text-sm text-gray-800">Company Vehicle Needed</span>
                                 </label>
                                 
-                                <div id="vehicleFields" class="hidden mt-4 pt-4 border-t border-gray-200 grid grid-cols-1 md:grid-cols-2 gap-4">
-                                    <div>
-                                        <label class="block text-[11px] font-semibold text-gray-500 uppercase mb-1">Select Vehicle</label>
-                                        <select id="gpVehicle" class="w-full bg-white border border-gray-300 p-2 rounded text-sm focus:ring-1 focus:ring-mpiBlue">
-                                            <!-- Populated JS -->
-                                        </select>
+                                <div id="vehicleFields" class="hidden mt-4 pt-4 border-t border-gray-200 flex-col space-y-4">
+                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                        <div>
+                                            <label class="block text-[11px] font-semibold text-gray-500 uppercase mb-1">Select Vehicle</label>
+                                            <select id="gpVehicle" class="w-full bg-white border border-gray-300 p-2 rounded text-sm focus:ring-1 focus:ring-mpiBlue" onchange="handleVehicleChange(this)">
+                                                <!-- Populated JS -->
+                                            </select>
+                                        </div>
+                                        <div>
+                                            <label class="block text-[11px] font-semibold text-gray-500 uppercase mb-1">Assigned Driver</label>
+                                            <input type="text" id="gpDriver" class="w-full bg-gray-100 border border-gray-300 p-2 rounded text-sm text-gray-500" readonly placeholder="Auto-filled">
+                                        </div>
                                     </div>
-                                    <div>
-                                        <label class="block text-[11px] font-semibold text-gray-500 uppercase mb-1">Assigned Driver</label>
-                                        <input type="text" id="gpDriver" class="w-full bg-gray-100 border border-gray-300 p-2 rounded text-sm text-gray-500" readonly placeholder="Auto-filled">
+                                    
+                                    <!-- Manual Vehicle Entry (Appears when "Others" is selected) -->
+                                    <div id="manualVehicleFields" class="hidden grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-3 border border-blue-200 rounded">
+                                        <div>
+                                            <label class="block text-[10px] font-bold text-mpiBlue uppercase mb-1">Manual Vehicle / Plate No.</label>
+                                            <input type="text" id="gpManualVehicle" class="w-full border border-gray-300 p-2 rounded text-sm focus:ring-1 focus:ring-mpiBlue" placeholder="e.g. Toyota Vios [ABC 123]">
+                                        </div>
+                                        <div>
+                                            <label class="block text-[10px] font-bold text-mpiBlue uppercase mb-1">Manual Driver Name</label>
+                                            <input type="text" id="gpManualDriver" class="w-full border border-gray-300 p-2 rounded text-sm focus:ring-1 focus:ring-mpiBlue" placeholder="e.g. John Doe">
+                                        </div>
                                     </div>
                                 </div>
                             </div>
@@ -434,9 +425,9 @@
                 </section>
 
                 <!-- SECTION: APPROVALS -->
-                <section id="sec-approvals" class="view-section hidden fade-in max-w-5xl mx-auto">
+                <section id="sec-approvals" class="view-section hidden fade-in w-full">
                     <h2 class="text-lg font-bold text-gray-800 mb-4">Pending Approvals Requiring Your Action</h2>
-                    <div id="approvalList" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div id="approvalList" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
                         <!-- Populated via JS -->
                     </div>
                 </section>
@@ -575,119 +566,173 @@
     </div>
 
     <!-- CUSTOM TOAST NOTIFICATION -->
-    <div id="toastContainer" class="fixed top-6 right-4 md:right-6 z-[60] flex flex-col space-y-3 pointer-events-none w-64 md:w-auto"></div>
+    <div id="toastContainer" class="fixed top-6 right-4 md:right-6 z-[80] flex flex-col space-y-3 pointer-events-none w-64 md:w-auto"></div>
 
     <!-- MODAL: PRINT/VIEW FORM & APPROVAL -->
-    <div id="printModal" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm hidden flex items-center justify-center z-[70] p-4 opacity-0 transition-opacity duration-300">
-        <div class="w-full max-w-4xl flex flex-col items-center max-h-[95vh] relative transform scale-95 transition-transform duration-300" id="printModalContent">
+    <div id="printModal" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm hidden items-center justify-center z-[70] p-4 opacity-0 transition-opacity duration-300">
+        <div class="w-full max-w-3xl flex flex-col items-center max-h-[95vh] relative transform scale-95 transition-transform duration-300" id="printModalContent">
             
             <!-- Modal Header Toolbar -->
-            <div class="w-full max-w-[600px] bg-white rounded-t-lg border-b border-gray-200 p-4 flex justify-between items-center z-10 print-hide">
+            <div class="w-full bg-white rounded-t-lg border-b border-gray-200 p-4 flex justify-between items-center z-10 print-hide">
                 <h2 class="font-bold text-lg text-gray-800">Document Review</h2>
                 <div class="flex items-center space-x-2">
                     <button onclick="window.print()" class="text-sm font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded transition"><i class="fas fa-print mr-1"></i> Print</button>
-                    <button onclick="closeModal()" class="w-8 h-8 rounded hover:bg-red-50 hover:text-red-600 text-gray-500 flex items-center justify-center transition"><i class="fas fa-times"></i></button>
+                    <button onclick="closeModal()" class="w-8 h-8 rounded hover:bg-red-50 hover:text-red-600 text-gray-500 flex items-center justify-center transition"><i class="fas fa-times text-xl"></i></button>
                 </div>
             </div>
             
+            <!-- IT ADMIN WORKFLOW TRACKER -->
+            <div id="workflowTracker" class="w-full bg-blue-50 border-b border-blue-200 p-3 print-hide hidden">
+                <h3 class="font-bold text-xs text-mpiBlue mb-1 uppercase tracking-wider">Approval Progress Monitor</h3>
+                <div class="flex items-center space-x-2 text-xs" id="workflowSteps">
+                    <!-- JS Injected Workflow status -->
+                </div>
+            </div>
+
             <!-- Scrollable Content Area -->
-            <div class="w-full max-w-[600px] bg-gray-100 p-4 md:p-6 overflow-y-auto print:p-0 print:overflow-visible">
+            <div class="w-full bg-gray-100 p-4 md:p-6 overflow-y-auto print:p-0 print:overflow-visible">
                 
-                <!-- THE ACTUAL PRINT FORM (A6 Layout matching image_b33085.jpg) -->
-                <div id="printableArea" class="print-form-preview print:print-form shadow-lg">
-                    <!-- Header Row -->
-                    <table style="border: none;">
+                <!-- THE ACTUAL PRINT FORM (A6 Layout precisely matched to image_b33085.jpg) -->
+                <div id="printableArea" class="print-form shadow-lg">
+                    <table class="w-full border-collapse">
+                        <!-- Header -->
                         <tr>
-                            <td style="width: 30%; border: none; border-bottom: 2px solid black; padding: 4px; text-align: center; vertical-align: middle;">
-                                <!-- Logo Placeholder -->
-                                <div style="display:inline-block; border:1px dashed #999; padding:10px 20px; font-weight:bold; color:#666; font-size:16px;">MPI LOGO</div>
+                            <td colspan="4" class="text-center p-2" style="border-bottom: 2px solid black; border-top: none; border-left: none; border-right: none;">
+                                <div class="flex items-center justify-center space-x-3">
+                                    <div class="font-bold text-xl italic" style="border: 2px solid black; border-radius: 50%; padding: 0px 8px; line-height: 1.2;">MPI</div>
+                                    <div class="text-left">
+                                        <h1 class="font-bold text-sm m-0" style="letter-spacing: 0.5px;">MORIROKU PHILIPPINES, INC.</h1>
+                                        <p class="text-[7px] m-0">115 North Science Avenue, Laguna Technopark 4024, Biñan, Laguna Philippines</p>
+                                    </div>
+                                </div>
                             </td>
-                            <td class="header-cell" style="width: 70%; text-align: left; padding-left: 10px;">
-                                <h1 class="print-header-title">MORIROKU PHILIPPINES, INC.</h1>
-                                <p class="print-header-sub">115 North Science Avenue, Laguna Technopark 4024, Biñan, Laguna Philippines</p>
+                        </tr>
+                        <!-- Title -->
+                        <tr>
+                            <td colspan="4" class="text-center font-bold text-xs py-1" style="background-color: #e5e7eb; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+                                GATE PASS FOR ASSOCIATES
+                            </td>
+                        </tr>
+                        <!-- Name & Date -->
+                        <tr>
+                            <td colspan="3" class="w-[70%] h-10 align-top">
+                                <div class="text-[7px] uppercase">NAME OF ASSOCIATES</div>
+                                <div id="vName" class="font-bold text-xs uppercase pl-2 pt-1"></div>
+                            </td>
+                            <td class="w-[30%] h-10 align-top">
+                                <div class="text-[7px] uppercase">DATE FILED</div>
+                                <div id="vDateF" class="font-bold text-[10px] pl-2"></div>
+                            </td>
+                        </tr>
+                        <!-- Destination & Driver -->
+                        <tr>
+                            <td colspan="3" rowspan="2" class="align-top h-10">
+                                <div class="text-[7px] uppercase">DESTINATION</div>
+                                <div id="vDest" class="font-bold text-xs pl-2 pt-1"></div>
+                            </td>
+                            <td class="align-top h-5">
+                                <div class="text-[7px] uppercase">DRIVER:</div>
+                                <div id="vDriver" class="font-bold text-[9px] pl-2"></div>
+                            </td>
+                        </tr>
+                        <tr>
+                            <td class="align-top h-5">
+                                <div class="text-[7px] uppercase">VEHICLE & PLATE</div>
+                                <div id="vPlate" class="font-bold text-[8px] pl-2"></div>
+                            </td>
+                        </tr>
+                        <!-- Purpose -->
+                        <tr>
+                            <td colspan="4" class="align-top h-12">
+                                <div class="text-[7px] uppercase">PURPOSE</div>
+                                <div id="vPurp" class="font-bold text-xs pl-2 pt-1"></div>
+                            </td>
+                        </tr>
+                        <!-- From / To -->
+                        <tr>
+                            <td colspan="4" class="align-middle py-2">
+                                <div class="flex justify-around items-center w-full">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="text-[10px] font-bold">FROM</span>
+                                        <div id="vExpOut" class="border border-black w-20 h-5 flex items-center justify-center font-bold text-[10px]"></div>
+                                    </div>
+                                    <div class="flex items-center space-x-2">
+                                        <span class="text-[10px] font-bold">TO</span>
+                                        <div id="vExpInLabel" class="border border-black w-20 h-5 flex items-center justify-center font-bold text-[10px]"></div>
+                                    </div>
+                                    <div class="flex items-center space-x-2">
+                                        <span class="text-[10px] font-bold text-gray-500">RETURN?</span>
+                                        <div id="vReturn" class="border border-gray-300 bg-gray-50 w-10 h-5 flex items-center justify-center font-bold text-[10px]"></div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
+                        <!-- Signatures Layout Modified to give more space for image -->
+                        <tr>
+                            <td colspan="2" class="align-top h-14 relative w-1/2">
+                                <div class="text-[7px] uppercase absolute top-1 left-1">APPROVED BY</div>
+                                <div class="absolute bottom-[16px] w-full flex justify-center items-end" style="height: 35px;">
+                                    <div id="sigImm" class="w-full flex justify-center items-end"></div>
+                                </div>
+                                <div class="absolute bottom-1 w-full text-center leading-none">
+                                    <span id="sigImmName" class="font-bold text-[8px] uppercase underline hidden block mb-[1px]"></span>
+                                    <span class="text-[7px]">IMMEDIATE SUPERIOR</span>
+                                </div>
+                            </td>
+                            <td class="align-top h-14 relative w-1/4 border-l-0">
+                                <div class="absolute bottom-[16px] w-full flex justify-center items-end" style="height: 35px;">
+                                    <div id="sigPres" class="w-full flex justify-center items-end"></div>
+                                </div>
+                                <div class="absolute bottom-1 w-full text-center leading-none">
+                                    <span id="sigPresName" class="font-bold text-[8px] uppercase underline hidden block mb-[1px]"></span>
+                                    <span class="text-[7px]">PRESIDENT/V-PRES</span>
+                                </div>
+                            </td>
+                            <td class="align-top h-14 relative w-1/4">
+                                <div class="text-[7px] uppercase absolute top-1 left-1">NOTED BY</div>
+                                <div class="absolute bottom-[16px] w-full flex justify-center items-end" style="height: 35px;">
+                                    <div id="sigHR" class="w-full flex justify-center items-end"></div>
+                                </div>
+                                <div class="absolute bottom-1 w-full text-center leading-none">
+                                    <span id="sigHRName" class="font-bold text-[8px] uppercase underline hidden block mb-[1px]"></span>
+                                    <span class="text-[7px]">PAS</span>
+                                </div>
                             </td>
                         </tr>
                     </table>
                     
-                    <div class="print-title-box">GATE PASS FOR ASSOCIATES</div>
-                    
-                    <!-- Main Fields -->
-                    <table>
-                        <tr>
-                            <td style="width: 70%;" rowspan="2">
-                                <span class="input-label">NAME OF ASSOCIATES</span>
-                                <div class="input-value" id="vName"></div>
-                            </td>
-                            <td style="width: 30%;">
-                                <span class="input-label">DATE FILED</span>
-                                <div class="input-value" id="vDateF"></div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td>
-                                <span class="input-label">DRIVER:</span>
-                                <div class="input-value" id="vDriver"></div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td colspan="2">
-                                <span class="input-label">DESTINATION</span>
-                                <div class="input-value" id="vDest"></div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td colspan="2">
-                                <span class="input-label">PURPOSE</span>
-                                <div class="input-value" id="vPurp"></div>
-                            </td>
-                        </tr>
-                        <!-- Additional system info inserted cleanly -->
-                        <tr>
-                            <td><span class="input-label">WILL RETURN?</span><div class="input-value" id="vReturn"></div></td>
-                            <td><span class="input-label">VEHICLE & PLATE</span><div class="input-value" id="vPlate"></div></td>
-                        </tr>
-                        <tr>
-                            <td>
-                                <span class="input-label">FROM (EXPECTED OUT)</span>
-                                <div class="input-value" id="vExpOut"></div>
-                            </td>
-                            <td>
-                                <span class="input-label">TO (EXPECTED IN)</span>
-                                <div class="input-value" id="vExpInLabel"></div>
-                            </td>
-                        </tr>
-                        <!-- Signature Area -->
-                        <tr>
-                            <td style="height: 60px; text-align: center; vertical-align: bottom; position: relative;">
-                                <span class="input-label" style="position:absolute; top:4px; left:6px;">APPROVED BY</span>
-                                <div id="sigImm" class="sig-image-container" style="height:40px; margin-bottom: 2px;"></div>
-                                <span style="font-weight:bold; font-size: 11px; text-transform:uppercase; text-decoration: underline;" id="sigImmName"></span><br>
-                                <span style="font-size: 9px;">IMMEDIATE SUPERIOR</span>
-                            </td>
-                            <td style="height: 60px; text-align: center; vertical-align: bottom; position: relative;">
-                                <span class="input-label" style="position:absolute; top:4px; left:6px;">NOTED BY</span>
-                                <div id="sigPres" class="sig-image-container" style="height:40px; margin-bottom: 2px;"></div>
-                                <span style="font-weight:bold; font-size: 11px; text-transform:uppercase; text-decoration: underline;" id="sigPresName"></span><br>
-                                <span style="font-size: 9px;">PRESIDENT/V-PRES</span>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td colspan="2" style="height: 60px; text-align: center; vertical-align: bottom; position: relative; border-top: none;">
-                                <div id="sigHR" class="sig-image-container" style="height:40px; margin-bottom: 2px; position:absolute; right: 20%; bottom: 15px;"></div>
-                                <span style="font-weight:bold; font-size: 11px; text-transform:uppercase; text-decoration: underline; position:absolute; right: 20%; bottom: 10px;" id="sigHRName"></span>
-                                <span style="font-size: 9px; position:absolute; right: 5px; bottom: 5px;">PAS</span>
-                            </td>
-                        </tr>
-                    </table>
+                    <!-- QR Code Overlay for Printing -->
+                    <div class="absolute top-2 left-2 opacity-90 scale-[0.65] transform origin-top-left z-20">
+                        <div id="qrCodeDisplay"></div>
+                    </div>
                 </div>
             </div>
 
             <!-- Approval Action Area (E-Signature Input) -->
-            <div id="approvalActionArea" class="w-full max-w-[600px] bg-white border-t border-gray-200 p-4 md:p-5 print-hide hidden rounded-b-lg flex-col space-y-4">
+            <div id="approvalActionArea" class="w-full bg-white border-t border-gray-200 p-4 md:p-5 print-hide hidden rounded-b-lg flex-col space-y-4">
                 <div class="bg-blue-50 border border-blue-200 p-3 rounded">
-                    <h3 class="font-bold text-mpiBlue text-sm mb-1"><i class="fas fa-pen-nib mr-1"></i> Digital Signature</h3>
-                    <p class="text-xs text-gray-600 mb-2">Attach your signature image or proceed with a default text signature. Your name will be automatically printed.</p>
+                    <h3 class="font-bold text-mpiBlue text-sm mb-1"><i class="fas fa-pen-nib mr-1"></i> Digital Signature Attachment</h3>
+                    <p class="text-xs text-gray-600 mb-2">Upload your signature and adjust its placement. The document above will update live. Alternatively, approve without an image to use a text signature.</p>
                     <input type="file" id="sigUpload" accept="image/png, image/jpeg" class="text-xs w-full mb-2">
+                    
+                    <!-- Signature Editing Controls -->
+                    <div id="sigControls" class="hidden mt-3 p-3 bg-white border border-blue-100 rounded grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Scale / Size (10% to 300%)</label>
+                            <input type="range" id="sigSize" min="10" max="300" value="100" class="w-full">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Vertical Offset</label>
+                            <input type="range" id="sigY" min="-40" max="40" value="0" class="w-full">
+                        </div>
+                        <!-- SAVE DEFAULT CHECKBOX -->
+                        <div class="col-span-1 md:col-span-2 flex items-center justify-end pt-2 border-t border-gray-100 mt-2">
+                            <label class="flex items-center space-x-2 text-sm font-bold text-mpiBlue cursor-pointer bg-white px-3 py-2 border border-blue-200 rounded shadow-sm hover:bg-blue-50 transition">
+                                <input type="checkbox" id="saveDefaultSig" class="rounded text-mpiBlue focus:ring-mpiBlue w-4 h-4">
+                                <span>Save Signature, Size & Placement as Default</span>
+                            </label>
+                        </div>
+                    </div>
                 </div>
                 
                 <div class="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2">
@@ -741,6 +786,7 @@
         let currentUser = null;
         let gatePasses = []; 
         let currentViewedPassId = null;
+        let currentUploadedSig = null; // Global cache for base64 signature image
         
         let currentLogPage = 1;
         const logsPerPage = 5;
@@ -778,14 +824,69 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
+            // Updated Dropdown to include "Others"
             const vSelect = document.getElementById('gpVehicle');
-            vSelect.innerHTML = `<option value="">-- Select --</option>` + mockVehicles.map(v => `<option value="${v.id}">${v.name} (${v.plate})</option>`).join('');
-            vSelect.addEventListener('change', (e) => {
-                const s = mockVehicles.find(v => v.id === e.target.value);
-                document.getElementById('gpDriver').value = s ? s.driver : '';
-            });
+            vSelect.innerHTML = `<option value="">-- Select --</option>` + mockVehicles.map(v => `<option value="${v.id}">${v.name} (${v.plate})</option>`).join('') + `<option value="others" class="font-bold text-mpiBlue">Others (Manual Entry)</option>`;
+            
             renderAdminTables();
+
+            // Signature Edit Listeners
+            document.getElementById('sigUpload').addEventListener('change', function(e) {
+                if(this.files && this.files[0]) {
+                    const r = new FileReader();
+                    r.onload = function(ev) {
+                        currentUploadedSig = ev.target.result;
+                        
+                        // Determine which container to update based on user role
+                        let targetContainerId = null;
+                        if (currentUser.role === 'President') targetContainerId = 'sigPres';
+                        else if (currentUser.isPAS) targetContainerId = 'sigHR';
+                        else targetContainerId = 'sigImm';
+
+                        const targetDiv = document.getElementById(targetContainerId);
+                        if (targetDiv) {
+                            targetDiv.innerHTML = `<img src="${currentUploadedSig}" id="liveDocumentSig" style="width: 100%; margin-bottom: 0px;">`;
+                        }
+                        
+                        // Reset sliders
+                        document.getElementById('sigSize').value = 100;
+                        document.getElementById('sigY').value = 0;
+                        
+                        document.getElementById('sigControls').classList.remove('hidden');
+                        document.getElementById('saveDefaultSig').checked = true; // Auto-check for convenience
+                    };
+                    r.readAsDataURL(this.files[0]);
+                }
+            });
+
+            const applySigStyles = () => {
+                const liveSig = document.getElementById('liveDocumentSig');
+                if (liveSig) {
+                    const w = document.getElementById('sigSize').value;
+                    const y = document.getElementById('sigY').value;
+                    liveSig.style.width = w + '%';
+                    liveSig.style.marginBottom = y + 'px';
+                }
+            };
+
+            document.getElementById('sigSize').addEventListener('input', applySigStyles);
+            document.getElementById('sigY').addEventListener('input', applySigStyles);
         });
+
+        function handleVehicleChange(sel) {
+            if(sel.value === 'others') {
+                document.getElementById('gpDriver').value = '';
+                document.getElementById('manualVehicleFields').classList.remove('hidden');
+                document.getElementById('gpManualVehicle').required = true;
+                document.getElementById('gpManualDriver').required = true;
+            } else {
+                document.getElementById('manualVehicleFields').classList.add('hidden');
+                document.getElementById('gpManualVehicle').required = false;
+                document.getElementById('gpManualDriver').required = false;
+                const s = mockVehicles.find(v => v.id === sel.value);
+                document.getElementById('gpDriver').value = s ? s.driver : '';
+            }
+        }
 
         function quickLogin(id, pass) {
             document.getElementById('empId').value = id;
@@ -834,6 +935,7 @@
             document.getElementById('navGroupSecurity').style.display = 'block';
             document.getElementById('navGroupAdmin').style.display = 'block';
             document.getElementById('navGroupHR').style.display = 'none';
+            document.getElementById('navItemDashboard').style.display = 'flex';
             
             // Un-hide all admin tabs by default
             document.getElementById('tab-users').style.display = 'inline-block';
@@ -841,11 +943,11 @@
             document.getElementById('tab-depts').style.display = 'inline-block';
 
             if (user.role === 'Security') {
-                document.querySelector('[data-target="dashBoard"]').style.display = 'none';
+                document.getElementById('navItemDashboard').style.display = 'flex'; 
                 document.getElementById('navItemApply').style.display = 'none';
                 document.getElementById('navGroupApprovals').style.display = 'none';
                 document.getElementById('navGroupAdmin').style.display = 'none';
-                switchSection('guardScan');
+                switchSection('dashBoard'); 
             } 
             else if (user.role === 'IT Admin') {
                 document.getElementById('navGroupApprovals').style.display = 'none';
@@ -932,15 +1034,34 @@
 
         function toggleVehicleFields() {
             const isNeeded = document.getElementById('gpNeedVehicle').checked;
-            document.getElementById('vehicleFields').style.display = isNeeded ? 'grid' : 'none';
+            document.getElementById('vehicleFields').style.display = isNeeded ? 'flex' : 'none';
             document.getElementById('routePresident').style.display = isNeeded ? 'inline' : 'none';
             document.getElementById('gpVehicle').required = isNeeded;
+            if(!isNeeded) {
+                document.getElementById('gpVehicle').value = '';
+                handleVehicleChange(document.getElementById('gpVehicle'));
+            }
         }
 
         function submitGatePass(e) {
             e.preventDefault();
             const isV = document.getElementById('gpNeedVehicle').checked;
             const willReturnBool = document.querySelector('input[name="gpWillReturn"]:checked').value === 'yes';
+            
+            const selectedV = document.getElementById('gpVehicle').value;
+            let customVehicleInfo = null;
+
+            if (isV && selectedV === 'others') {
+                customVehicleInfo = {
+                    id: 'MANUAL',
+                    name: document.getElementById('gpManualVehicle').value,
+                    plate: 'N/A', // handled inside name
+                    driver: document.getElementById('gpManualDriver').value,
+                    status: 'Outside'
+                };
+            } else if (isV) {
+                customVehicleInfo = mockVehicles.find(v => v.id === selectedV);
+            }
 
             const newPass = {
                 id: 'GP-' + Math.floor(100000 + Math.random() * 900000),
@@ -950,7 +1071,7 @@
                 expectedOut: document.getElementById('gpExpectedOut').value,
                 expectedIn: document.getElementById('gpExpectedIn').value || 'N/A',
                 purpose: document.getElementById('gpPurpose').value,
-                vehicle: (isV ? mockVehicles.find(v => v.id === document.getElementById('gpVehicle').value) : null),
+                vehicle: customVehicleInfo,
                 status: (['Manager', 'President'].includes(currentUser.role) ? (isV ? 'Pending President' : 'Pending HR') : 'Pending Superior'),
                 signatures: { imm: (['Manager', 'President'].includes(currentUser.role) ? {name: currentUser.name, img: null} : null), pres: null, hr: null },
                 scanCount: 0, actualOut: null, actualIn: null,
@@ -968,7 +1089,7 @@
                 stdWrapper.classList.add('hidden');
                 guardWrapper.classList.remove('hidden');
                 
-                // Guard Live Queue 
+                // Guard Live Queue (Only Pending Outs and Ins are shown)
                 const queueItems = gatePasses.filter(p => p.status === 'Approved' || p.status === 'Out');
                 document.getElementById('guardQueueList').innerHTML = queueItems.map(p => {
                     let badgeColor = p.status === 'Approved' ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800';
@@ -981,7 +1102,7 @@
                             <td class="px-4 py-2"><span class="px-2 py-1 rounded text-[10px] font-bold ${badgeColor}">${qStatus}</span></td>
                         </tr>
                     `;
-                }).join('') || '<tr><td colspan="4" class="px-4 py-6 text-center text-gray-400 text-xs">Queue is empty.</td></tr>';
+                }).join('') || '<tr><td colspan="4" class="px-4 py-6 text-center text-gray-400 text-xs">Queue is empty. No pending scans.</td></tr>';
 
             } else {
                 stdWrapper.classList.remove('hidden');
@@ -1069,7 +1190,7 @@
                     <td class="px-5 py-2 font-mono text-xs">${p.id}</td>
                     <td class="px-5 py-2 font-semibold">${p.userName}</td>
                     <td class="px-5 py-2 text-gray-500 text-xs">${p.userDept}</td>
-                    <td class="px-5 py-2 text-xs font-bold ${p.willReturn ? 'text-gray-400' : 'text-red-500'}">${p.willReturn ? 'No' : 'Yes'}</td>
+                    <td class="px-5 py-2 text-xs font-bold ${p.willReturn ? 'text-gray-400' : 'text-red-500'}">${p.willReturn ? 'Yes' : 'No'}</td>
                     <td class="px-5 py-2 text-blue-600 font-mono text-xs">${p.actualOut || '--:--'}</td>
                     <td class="px-5 py-2 text-green-600 font-mono text-xs">${p.actualIn || '--:--'}</td>
                     <td class="px-5 py-2 text-[10px]"><span class="px-2 py-1 rounded bg-gray-100">${p.status}</span></td>
@@ -1105,54 +1226,157 @@
         function viewPass(id, isReviewing = false) {
             const p = gatePasses.find(x => x.id === id); if(!p) return; currentViewedPassId = id;
             
-            document.getElementById('vDateF').innerText = p.dateFiled;
-            document.getElementById('vName').innerText = p.userName; 
-            document.getElementById('vDest').innerText = p.destination;
-            document.getElementById('vPurp').innerText = p.purpose; 
-            document.getElementById('vExpOut').innerText = p.expectedOut;
-            document.getElementById('vExpInLabel').innerText = p.expectedIn;
-            document.getElementById('vReturn').innerText = p.willReturn ? 'Yes' : 'No';
+            const setVal = (elemId, val) => {
+                const el = document.getElementById(elemId);
+                if (el) el.innerText = val;
+            };
+
+            setVal('vDateF', p.dateFiled);
+            setVal('vName', p.userName); 
+            setVal('vDest', p.destination);
+            setVal('vPurp', p.purpose); 
+            setVal('vExpOut', p.expectedOut);
+            setVal('vExpInLabel', p.expectedIn);
+            setVal('vReturn', p.willReturn ? 'Yes' : 'No');
             
-            document.getElementById('vVehicle').innerText = p.vehicle ? p.vehicle.name : 'N/A';
-            document.getElementById('vPlate').innerText = p.vehicle ? p.vehicle.plate : 'N/A';
-            document.getElementById('vDriver').innerText = p.vehicle ? p.vehicle.driver : 'N/A';
+            // Format vehicle rendering
+            let vehicleString = 'N/A';
+            if (p.vehicle) {
+                if (p.vehicle.id === 'MANUAL') vehicleString = p.vehicle.name;
+                else vehicleString = `${p.vehicle.name} [${p.vehicle.plate}]`;
+            }
+            setVal('vDriver', p.vehicle ? p.vehicle.driver : 'N/A');
+            setVal('vPlate', vehicleString);
 
             // Signatures handling
-            ['sigImm', 'sigPres', 'sigHR'].forEach(id => {
-                document.getElementById(id).innerHTML = '';
-                document.getElementById(id+'Name').innerText = '';
+            ['sigImm', 'sigPres', 'sigHR'].forEach(idPrefix => {
+                const sigDiv = document.getElementById(idPrefix);
+                const nameSpan = document.getElementById(idPrefix + 'Name');
+                if(sigDiv) sigDiv.innerHTML = '';
+                if(nameSpan) { nameSpan.innerText = ''; nameSpan.classList.add('hidden'); }
             });
 
-            if(p.signatures.imm) {
-                document.getElementById('sigImmName').innerText = p.signatures.imm.name;
-                if(p.signatures.imm.img) document.getElementById('sigImm').innerHTML = `<img src="${p.signatures.imm.img}">`;
-                else document.getElementById('sigImm').innerHTML = `<span style="font-family: serif; font-style: italic; font-size: 14px; color: blue;">Digitally Signed</span>`;
+            const handleSig = (sigData, idPrefix) => {
+                if(!sigData) return;
+                const nameSpan = document.getElementById(idPrefix + 'Name');
+                const sigDiv = document.getElementById(idPrefix);
+                
+                if(nameSpan) {
+                    nameSpan.innerText = sigData.name;
+                    nameSpan.classList.remove('hidden');
+                }
+                if(sigDiv) {
+                    if(sigData.img) {
+                        const w = sigData.w || 100;
+                        const y = sigData.y || 0;
+                        sigDiv.innerHTML = `<img src="${sigData.img}" style="width: ${w}%; margin-bottom: ${y}px;">`;
+                    }
+                    else {
+                        sigDiv.innerHTML = `<span style="font-family: serif; font-style: italic; font-size: 14px; color: blue;">Digitally Signed</span>`;
+                    }
+                }
+            };
+
+            handleSig(p.signatures.imm, 'sigImm');
+            handleSig(p.signatures.pres, 'sigPres');
+            handleSig(p.signatures.hr, 'sigHR');
+
+            const qrContainer = document.getElementById('qrCodeDisplay'); 
+            if(qrContainer) {
+                qrContainer.innerHTML = '';
+                if (p.status === 'Approved' || p.status === 'Out') new QRCode(qrContainer, { text: p.id, width: 60, height: 60 });
             }
-            if(p.signatures.pres) {
-                document.getElementById('sigPresName').innerText = p.signatures.pres.name;
-                if(p.signatures.pres.img) document.getElementById('sigPres').innerHTML = `<img src="${p.signatures.pres.img}">`;
-                else document.getElementById('sigPres').innerHTML = `<span style="font-family: serif; font-style: italic; font-size: 14px; color: blue;">Digitally Signed</span>`;
-            }
-            if(p.signatures.hr) {
-                document.getElementById('sigHRName').innerText = p.signatures.hr.name;
-                if(p.signatures.hr.img) document.getElementById('sigHR').innerHTML = `<img src="${p.signatures.hr.img}">`;
-                else document.getElementById('sigHR').innerHTML = `<span style="font-family: serif; font-style: italic; font-size: 14px; color: blue;">Digitally Signed</span>`;
+
+            // IT Admin Progress Tracker
+            const wf = document.getElementById('workflowTracker');
+            if (currentUser.role === 'IT Admin' || ['President','Manager','Head HR'].includes(currentUser.role)) {
+                wf.classList.remove('hidden');
+                let stepsHTML = '';
+                
+                const hasImm = p.signatures.imm ? 'text-green-600 font-bold' : 'text-gray-400';
+                const hasPres = p.signatures.pres ? 'text-green-600 font-bold' : 'text-gray-400';
+                const hasHr = p.signatures.hr ? 'text-green-600 font-bold' : 'text-gray-400';
+                const reqPres = p.vehicle != null; 
+
+                stepsHTML += `<span class="${hasImm}"><i class="fas ${p.signatures.imm ? 'fa-check-circle' : 'fa-circle'}"></i> 1. Supervisor</span>`;
+                stepsHTML += ` <i class="fas fa-chevron-right text-gray-300 mx-2"></i> `;
+                
+                if (reqPres) {
+                    stepsHTML += `<span class="${hasPres}"><i class="fas ${p.signatures.pres ? 'fa-check-circle' : 'fa-circle'}"></i> 2. President</span>`;
+                    stepsHTML += ` <i class="fas fa-chevron-right text-gray-300 mx-2"></i> `;
+                }
+                stepsHTML += `<span class="${hasHr}"><i class="fas ${p.signatures.hr ? 'fa-check-circle' : 'fa-circle'}"></i> ${reqPres?'3':'2'}. PAS/HR</span>`;
+                
+                document.getElementById('workflowSteps').innerHTML = stepsHTML;
+            } else {
+                wf.classList.add('hidden');
             }
 
             const modal = document.getElementById('printModal');
-            modal.classList.remove('hidden'); 
-            setTimeout(() => { 
-                modal.classList.remove('opacity-0'); 
-                document.getElementById('printModalContent').classList.remove('scale-95'); 
-                document.getElementById('printModalContent').classList.add('scale-100'); 
-            }, 10);
+            if(modal) {
+                modal.classList.remove('hidden'); 
+                modal.classList.add('flex'); 
+                setTimeout(() => { 
+                    modal.classList.remove('opacity-0'); 
+                    const content = document.getElementById('printModalContent');
+                    if(content) {
+                        content.classList.remove('scale-95'); 
+                        content.classList.add('scale-100'); 
+                    }
+                }, 10);
+            }
             
+            // ACTION AREA & DEFAULT SIGNATURE LOADING
             const actionArea = document.getElementById('approvalActionArea');
-            if(isReviewing) {
-                actionArea.style.display = 'flex';
-                document.getElementById('sigUpload').value = ''; 
-            } else {
-                actionArea.style.display = 'none';
+            if(actionArea) {
+                if(isReviewing) {
+                    actionArea.style.display = 'flex';
+                    document.getElementById('sigUpload').value = ''; 
+                    
+                    // PRE-FILL USERNAME FOR TRUE LIVE PREVIEW ALIGNMENT
+                    let targetContainerId = null;
+                    if (p.status === 'Pending Superior') targetContainerId = 'sigImm';
+                    else if (p.status === 'Pending President') targetContainerId = 'sigPres';
+                    else if (p.status === 'Pending HR') targetContainerId = 'sigHR';
+
+                    if (targetContainerId) {
+                        const nameSpan = document.getElementById(targetContainerId + 'Name');
+                        if (nameSpan) {
+                            nameSpan.innerText = currentUser.name;
+                            nameSpan.classList.remove('hidden');
+                        }
+                    }
+
+                    // Load saved default signature if it exists
+                    if (currentUser.savedSignature) {
+                        currentUploadedSig = currentUser.savedSignature.img;
+                        
+                        // Determine which container to update based on user role
+                        let targetContainerId = null;
+                        if (currentUser.role === 'President') targetContainerId = 'sigPres';
+                        else if (currentUser.isPAS) targetContainerId = 'sigHR';
+                        else targetContainerId = 'sigImm';
+
+                        const targetDiv = document.getElementById(targetContainerId);
+                        if (targetDiv) {
+                             targetDiv.innerHTML = `<img src="${currentUploadedSig}" id="liveDocumentSig" style="width: ${currentUser.savedSignature.w || 100}%; margin-bottom: ${currentUser.savedSignature.y || 0}px;">`;
+                        }
+
+                        document.getElementById('sigSize').value = currentUser.savedSignature.w || 100;
+                        document.getElementById('sigY').value = currentUser.savedSignature.y || 0;
+                        
+                        document.getElementById('sigControls').classList.remove('hidden');
+                        document.getElementById('saveDefaultSig').checked = true;
+                    } else {
+                        currentUploadedSig = null;
+                        document.getElementById('sigSize').value = 100;
+                        document.getElementById('sigY').value = 0;
+                        document.getElementById('sigControls').classList.add('hidden');
+                        document.getElementById('saveDefaultSig').checked = false;
+                    }
+                } else {
+                    actionArea.style.display = 'none';
+                }
             }
         }
 
@@ -1161,33 +1385,44 @@
             modal.classList.add('opacity-0'); 
             document.getElementById('printModalContent').classList.remove('scale-100'); 
             document.getElementById('printModalContent').classList.add('scale-95');
-            setTimeout(() => { modal.classList.add('hidden'); currentViewedPassId = null; }, 300);
+            setTimeout(() => { 
+                modal.classList.add('hidden'); 
+                modal.classList.remove('flex'); 
+                currentViewedPassId = null; 
+            }, 300);
         }
 
         function approveCurrentPass() {
             if(currentUser.role === 'IT Admin') return; 
             const p = gatePasses.find(x => x.id === currentViewedPassId);
             
-            const fileInput = document.getElementById('sigUpload');
-            let imgData = null;
-            
-            const finalizeApproval = () => {
-                const sigObj = { name: currentUser.name, img: imgData };
-                
-                if (p.status === 'Pending Superior') { p.signatures.imm = sigObj; p.status = p.vehicle ? 'Pending President' : 'Pending HR'; } 
-                else if (p.status === 'Pending President') { p.signatures.pres = sigObj; p.status = 'Pending HR'; }
-                else if (p.status === 'Pending HR') { p.signatures.hr = sigObj; p.status = 'Approved'; }
-                
-                showToast("Document Approved!"); closeModal(); refreshDashboards();
-            };
+            const sigWidth = document.getElementById('sigSize').value;
+            const sigY = document.getElementById('sigY').value;
+            const saveCheck = document.getElementById('saveDefaultSig');
 
-            if (fileInput.files && fileInput.files[0]) {
-                const reader = new FileReader();
-                reader.onload = function(e) { imgData = e.target.result; finalizeApproval(); };
-                reader.readAsDataURL(fileInput.files[0]);
+            // Save settings as default if checked
+            if (saveCheck && saveCheck.checked) {
+                currentUser.savedSignature = {
+                    img: currentUploadedSig,
+                    w: sigWidth,
+                    y: sigY
+                };
             } else {
-                finalizeApproval();
+                currentUser.savedSignature = null;
             }
+
+            const sigObj = { 
+                name: currentUser.name, 
+                img: currentUploadedSig,
+                w: sigWidth,
+                y: sigY
+            };
+            
+            if (p.status === 'Pending Superior') { p.signatures.imm = sigObj; p.status = p.vehicle ? 'Pending President' : 'Pending HR'; } 
+            else if (p.status === 'Pending President') { p.signatures.pres = sigObj; p.status = 'Pending HR'; }
+            else if (p.status === 'Pending HR') { p.signatures.hr = sigObj; p.status = 'Approved'; }
+            
+            showToast("Document Approved!"); closeModal(); refreshDashboards();
         }
 
         function simulateQrScan() {
