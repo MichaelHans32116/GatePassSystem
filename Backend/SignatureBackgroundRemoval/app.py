@@ -11,12 +11,7 @@ app = FastAPI(title="Gate Pass Signature Background Removal")
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=[
-        "http://127.0.0.1:5500",
-        "http://localhost:5500",
-        "http://127.0.0.1:8000",
-        "http://localhost:8000",
-    ],
+    allow_origin_regex=r"^https?://(127\.0\.0\.1|localhost)(:\d+)?$",
     allow_methods=["GET", "POST", "OPTIONS"],
     allow_headers=["*"],
 )

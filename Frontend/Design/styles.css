@@ -1,0 +1,226 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
+
+        body {
+            background-color: #F4F7F9;
+            color: #333333;
+            -webkit-tap-highlight-color: transparent;
+        }
+
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: transparent; }
+        ::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+        ::-webkit-scrollbar-thumb:hover { background: #94a3b8; }
+
+        /* Animations */
+        .fade-in { animation: fadeIn 0.3s ease-in-out forwards; }
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* Sidebar Nav Item active state (Edge-to-edge layout) */
+        .nav-item { opacity: 0.7; border-left: 4px solid transparent; display: flex; align-items: center; }
+        .nav-item:hover { opacity: 1; background-color: rgba(255,255,255,0.05); }
+        .nav-item.active {
+            opacity: 1;
+            background-color: rgba(255, 255, 255, 0.1);
+            border-left: 4px solid #ffffff;
+            font-weight: 600;
+        }
+
+        /* Print Styles - A4 paper friendly, with the A6 gate pass centered on the page */
+        @media print {
+            @page { size: A4 portrait; margin: 10mm; }
+            html, body {
+                width: 210mm;
+                min-height: 297mm;
+                background: white !important;
+                overflow: visible !important;
+            }
+            body * { visibility: hidden; }
+            #printModal, #printModal * { visibility: visible; }
+            #printModal {
+                position: static !important;
+                display: block !important;
+                width: auto !important;
+                height: auto !important;
+                min-height: 0 !important;
+                background: white !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                opacity: 1 !important;
+                overflow: visible !important;
+            }
+            #printModalContent,
+            #printModalContent.is-floating,
+            .document-modal {
+                position: static !important;
+                display: block !important;
+                width: 100% !important;
+                height: auto !important;
+                max-width: none !important;
+                max-height: none !important;
+                margin: 0 !important;
+                transform: none !important;
+                overflow: visible !important;
+            }
+            .modal-scroll-area {
+                display: block !important;
+                padding: 0 !important;
+                background: white !important;
+                overflow: visible !important;
+            }
+            #printableArea {
+                width: 148mm !important;
+                height: 105mm !important;
+                margin: 0 auto !important;
+                box-shadow: none !important;
+                page-break-inside: avoid;
+                break-inside: avoid;
+                overflow: hidden;
+            }
+            .print-hide { display: none !important; }
+        }
+
+        /* Enforce exact box styling for screen preview AND print */
+        .print-form {
+            width: 148mm; /* A6 width */
+            height: 105mm; /* A6 height */
+            border: 2px solid black;
+            padding: 0;
+            margin: 0 auto;
+            box-sizing: border-box;
+            font-family: Arial, Helvetica, sans-serif;
+            color: black;
+            background: white;
+            position: relative;
+        }
+        .print-form table { border-collapse: collapse; width: 100%; }
+        .print-form td { border: 1px solid black; padding: 4px; font-size: 10px; vertical-align: top; }
+
+        /* Signature Object Fit */
+        .sig-image-container img { max-height: 100%; object-fit: contain; margin: 0 auto; display: block; }
+        .signature-img { max-height: 34px; object-fit: contain; }
+
+        /* Resizable / draggable document review modal */
+        .document-modal {
+            width: min(96vw, 960px);
+            height: min(92vh, 760px);
+            max-height: calc(100vh - 2rem);
+            overflow: hidden;
+            border-radius: 0.5rem;
+            will-change: left, top, width, height;
+        }
+        .document-modal:not(.is-floating) {
+            margin: auto;
+        }
+        .document-modal.is-floating {
+            position: fixed !important;
+            margin: 0 !important;
+            max-width: none !important;
+            max-height: none !important;
+            transform: none !important;
+            z-index: 75;
+        }
+        .document-modal.is-dragging,
+        .document-modal.is-resizing {
+            user-select: none;
+            transition: none !important;
+        }
+        .document-modal.is-dragging {
+            box-shadow: 0 24px 80px rgba(15, 23, 42, 0.35);
+        }
+        .document-modal.is-resizing {
+            box-shadow: 0 18px 70px rgba(15, 23, 42, 0.30);
+        }
+        .modal-scroll-area {
+            flex: 1 1 auto;
+            min-height: 0;
+            overflow: auto;
+            overscroll-behavior: contain;
+        }
+        #approvalActionArea {
+            flex: 0 0 auto;
+            max-height: min(42vh, 420px);
+            overflow-y: auto;
+        }
+        .modal-no-select {
+            user-select: none;
+            cursor: grabbing;
+        }
+        .resizable-modal {
+            overflow: auto;
+            position: relative;
+            touch-action: none;
+        }
+        .resizable-modal.is-floating {
+            position: fixed !important;
+            margin: 0 !important;
+            max-width: none !important;
+            max-height: none !important;
+            transform: none !important;
+            z-index: 75;
+        }
+        .resize-handle {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(135deg, transparent 50%, #155CA2 50%);
+            cursor: se-resize;
+            z-index: 100;
+            touch-action: none;
+        }
+        .resize-handle::after {
+            content: "";
+            position: absolute;
+            right: 4px;
+            bottom: 4px;
+            width: 9px;
+            height: 9px;
+            border-right: 2px solid white;
+            border-bottom: 2px solid white;
+            opacity: 0.9;
+        }
+
+        .signature-source-toggle {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+        .signature-source-toggle button {
+            min-height: 34px;
+        }
+        .signature-pad-canvas {
+            width: 100%;
+            height: 170px;
+            background: #ffffff;
+            border: 1px dashed #94a3b8;
+            border-radius: 0.5rem;
+            touch-action: none;
+            cursor: crosshair;
+        }
+        .signature-pad-bg {
+            background-image: linear-gradient(45deg, #f8fafc 25%, transparent 25%),
+                              linear-gradient(-45deg, #f8fafc 25%, transparent 25%),
+                              linear-gradient(45deg, transparent 75%, #f8fafc 75%),
+                              linear-gradient(-45deg, transparent 75%, #f8fafc 75%);
+            background-size: 16px 16px;
+            background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+        }
+        .signature-upload-zone {
+            display: flex;
+            align-items: center;
+            gap: 0.75rem;
+            flex-wrap: wrap;
+            padding: 0.75rem;
+            background: #ffffff;
+            border: 1px dashed #93c5fd;
+            border-radius: 0.5rem;
+        }
+        .signature-upload-zone input[type="file"] {
+            max-width: 100%;
+        }
