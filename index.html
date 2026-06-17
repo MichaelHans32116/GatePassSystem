@@ -16,7 +16,7 @@
             theme: {
                 extend: {
                     colors: {
-                        mpiBlue: '#155CA2', 
+                        mpiBlue: '#155CA2',
                         mpiDark: '#0D3D6E',
                         mpiLight: '#F4F7F9',
                         mpiAccent: '#2178D1'
@@ -30,13 +30,13 @@
     </script>
     <style>
         @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap');
-        
-        body { 
-            background-color: #F4F7F9; 
+
+        body {
+            background-color: #F4F7F9;
             color: #333333;
             -webkit-tap-highlight-color: transparent;
         }
-        
+
         /* Custom Scrollbar */
         ::-webkit-scrollbar { width: 6px; height: 6px; }
         ::-webkit-scrollbar-track { background: transparent; }
@@ -45,9 +45,9 @@
 
         /* Animations */
         .fade-in { animation: fadeIn 0.3s ease-in-out forwards; }
-        @keyframes fadeIn { 
-            from { opacity: 0; transform: translateY(5px); } 
-            to { opacity: 1; transform: translateY(0); } 
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(5px); }
+            to { opacity: 1; transform: translateY(0); }
         }
 
         /* Sidebar Nav Item active state (Edge-to-edge layout) */
@@ -60,12 +60,57 @@
             font-weight: 600;
         }
 
-        /* Print Styles - EXACTLY A6 Landscape (1/4 A4) */
+        /* Print Styles - A4 paper friendly, with the A6 gate pass centered on the page */
         @media print {
-            @page { size: A6 landscape; margin: 10mm; }
+            @page { size: A4 portrait; margin: 10mm; }
+            html, body {
+                width: 210mm;
+                min-height: 297mm;
+                background: white !important;
+                overflow: visible !important;
+            }
             body * { visibility: hidden; }
             #printModal, #printModal * { visibility: visible; }
-            #printModal { position: absolute; left: 0; top: 0; width: 100%; height: 100%; background: white; margin: 0; padding: 0; }
+            #printModal {
+                position: static !important;
+                display: block !important;
+                width: auto !important;
+                height: auto !important;
+                min-height: 0 !important;
+                background: white !important;
+                margin: 0 !important;
+                padding: 0 !important;
+                opacity: 1 !important;
+                overflow: visible !important;
+            }
+            #printModalContent,
+            #printModalContent.is-floating,
+            .document-modal {
+                position: static !important;
+                display: block !important;
+                width: 100% !important;
+                height: auto !important;
+                max-width: none !important;
+                max-height: none !important;
+                margin: 0 !important;
+                transform: none !important;
+                overflow: visible !important;
+            }
+            .modal-scroll-area {
+                display: block !important;
+                padding: 0 !important;
+                background: white !important;
+                overflow: visible !important;
+            }
+            #printableArea {
+                width: 148mm !important;
+                height: 105mm !important;
+                margin: 0 auto !important;
+                box-shadow: none !important;
+                page-break-inside: avoid;
+                break-inside: avoid;
+                overflow: hidden;
+            }
             .print-hide { display: none !important; }
         }
 
@@ -84,16 +129,76 @@
         }
         .print-form table { border-collapse: collapse; width: 100%; }
         .print-form td { border: 1px solid black; padding: 4px; font-size: 10px; vertical-align: top; }
-        
+
         /* Signature Object Fit */
         .sig-image-container img { max-height: 100%; object-fit: contain; margin: 0 auto; display: block; }
+
+        /* Resizable / draggable document review modal */
+        .resizable-modal {
+            overflow: auto;
+            position: relative;
+            touch-action: none;
+        }
+        .resizable-modal.is-floating {
+            position: fixed !important;
+            margin: 0 !important;
+            max-width: none !important;
+            max-height: none !important;
+            transform: none !important;
+            z-index: 75;
+        }
+        .resize-handle {
+            position: absolute;
+            bottom: 0;
+            right: 0;
+            width: 24px;
+            height: 24px;
+            background: linear-gradient(135deg, transparent 50%, #155CA2 50%);
+            cursor: se-resize;
+            z-index: 100;
+        }
+        .resize-handle::after {
+            content: "";
+            position: absolute;
+            right: 4px;
+            bottom: 4px;
+            width: 9px;
+            height: 9px;
+            border-right: 2px solid white;
+            border-bottom: 2px solid white;
+            opacity: 0.9;
+        }
+
+        .signature-source-toggle {
+            display: flex;
+            flex-wrap: wrap;
+            gap: 0.5rem;
+            margin-bottom: 0.75rem;
+        }
+        .signature-pad-canvas {
+            width: 100%;
+            height: 170px;
+            background: #ffffff;
+            border: 1px dashed #94a3b8;
+            border-radius: 0.5rem;
+            touch-action: none;
+            cursor: crosshair;
+        }
+        .signature-pad-bg {
+            background-image: linear-gradient(45deg, #f8fafc 25%, transparent 25%),
+                              linear-gradient(-45deg, #f8fafc 25%, transparent 25%),
+                              linear-gradient(45deg, transparent 75%, #f8fafc 75%),
+                              linear-gradient(-45deg, transparent 75%, #f8fafc 75%);
+            background-size: 16px 16px;
+            background-position: 0 0, 0 8px, 8px -8px, -8px 0px;
+        }
     </style>
 </head>
 <body class="h-screen overflow-hidden flex flex-col font-sans text-sm md:text-base">
 
     <!-- LOGIN VIEW (60/40 Split Screen) -->
     <div id="loginView" class="h-full w-full flex absolute z-50 transition-opacity duration-500 bg-white">
-        
+
         <!-- Left Side: Factory Image & Text (60%) -->
         <div class="hidden md:flex md:w-[60%] relative bg-cover bg-center" style="background-image: url('https://images.unsplash.com/photo-1587293852726-70cdb56c2866?q=80&w=2000&auto=format&fit=crop');">
             <!-- Light overlay -->
@@ -108,7 +213,7 @@
 
         <!-- Right Side: Login Form (40%) -->
         <div class="w-full md:w-[40%] flex flex-col justify-center items-center px-8 relative fade-in bg-white h-full overflow-y-auto">
-            
+
             <div class="w-full max-w-md">
                 <div class="text-center mb-8 w-full mt-8 md:mt-0">
                     <!-- MPI Logo -->
@@ -120,7 +225,7 @@
                     <h2 class="text-2xl sm:text-3xl font-bold text-gray-800">Welcome Back</h2>
                     <p class="text-sm text-gray-500 mt-2">Sign in to your account</p>
                 </div>
-                
+
                 <form id="loginForm" onsubmit="handleLogin(event)" class="w-full">
                 <div class="mb-5">
                     <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2"><i class="fas fa-user mr-1 text-mpiBlue"></i> Username / ID</label>
@@ -143,11 +248,11 @@
             <div class="mt-8 pt-6 border-t border-gray-100 w-full">
                 <p class="text-[10px] text-center text-gray-400 mb-3 font-bold uppercase tracking-wider">Quick Login (Testing)</p>
                 <div class="grid grid-cols-2 lg:grid-cols-3 gap-2">
-                    <button onclick="quickLogin('ojt', '@mpi2026')" class="text-[10px] font-semibold bg-gray-100 hover:bg-gray-200 py-2 rounded transition">IT Admin</button>
+                    <button onclick="quickLogin('ojt', 'demo-password')" class="text-[10px] font-semibold bg-gray-100 hover:bg-gray-200 py-2 rounded transition">System Admin</button>
                     <button onclick="quickLogin('PRES', '01012020')" class="text-[10px] font-semibold bg-gray-100 hover:bg-gray-200 py-2 rounded transition">President</button>
-                    <button onclick="quickLogin('SUP-01', '01012020')" class="text-[10px] font-semibold bg-gray-100 hover:bg-gray-200 py-2 rounded transition">Manager</button>
-                    <button onclick="quickLogin('HR', '01012020')" class="text-[10px] font-semibold bg-gray-100 hover:bg-gray-200 py-2 rounded transition">Head HR</button>
-                    <button onclick="quickLogin('MPI-001', '06172026')" class="text-[10px] font-semibold bg-gray-100 hover:bg-gray-200 py-2 rounded transition">Employee</button>
+                    <button onclick="quickLogin('SUP-01', '01012020')" class="text-[10px] font-semibold bg-gray-100 hover:bg-gray-200 py-2 rounded transition">Immediate Superior</button>
+                    <button onclick="quickLogin('HR', '01012020')" class="text-[10px] font-semibold bg-gray-100 hover:bg-gray-200 py-2 rounded transition">PAS / HR Admin</button>
+                    <button onclick="quickLogin('MPI-001', '06172026')" class="text-[10px] font-semibold bg-gray-100 hover:bg-gray-200 py-2 rounded transition">Associate</button>
                     <button onclick="quickLogin('GUARD-1', '01012020')" class="text-[10px] font-semibold bg-gray-100 hover:bg-gray-200 py-2 rounded transition">Guard</button>
                 </div>
             </div>
@@ -157,7 +262,7 @@
 
     <!-- MAIN APP VIEW -->
     <div id="appView" class="hidden h-full w-full flex bg-mpiLight relative overflow-hidden">
-        
+
         <!-- Mobile Sidebar Overlay -->
         <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-20 hidden md:hidden" onclick="toggleSidebar()"></div>
 
@@ -170,18 +275,18 @@
                 </div>
                 <button class="md:hidden text-white/70 hover:text-white" onclick="toggleSidebar()"><i class="fas fa-times text-lg"></i></button>
             </div>
-            
+
             <nav class="flex-grow space-y-1 overflow-y-auto pt-4" id="sideNav">
                 <div class="px-6 pb-2 text-[10px] font-bold text-blue-300 uppercase tracking-widest">Main Menu</div>
-                
+
                 <a href="#" class="nav-item px-6 py-3 transition text-white" data-target="dashBoard" onclick="switchSection('dashBoard')" id="navItemDashboard">
                     <i class="fas fa-home w-6 text-left"></i> <span class="text-sm">Dashboard</span>
                 </a>
-                
+
                 <a href="#" class="nav-item px-6 py-3 transition text-white" data-target="applyPass" onclick="switchSection('applyPass')" id="navItemApply">
                     <i class="fas fa-file-signature w-6 text-left"></i> <span class="text-sm">Apply Gate Pass</span>
                 </a>
-                
+
                 <div id="navGroupApprovals" class="mt-4 block">
                     <div class="px-6 py-2 text-[10px] font-bold text-blue-300 uppercase tracking-widest">Workflow</div>
                     <a href="#" class="nav-item px-6 py-3 transition text-white justify-between" data-target="approvals" onclick="switchSection('approvals')">
@@ -246,15 +351,15 @@
 
             <!-- Scrollable Content -->
             <div class="p-4 md:p-6 overflow-y-auto flex-grow relative" id="mainContent">
-                
+
                 <!-- SECTION: DASHBOARD -->
                 <section id="sec-dashBoard" class="view-section fade-in max-w-7xl mx-auto">
-                    
+
                     <!-- GUARD Dashboard Wrapper (Queue) -->
                     <div id="guardDashWrapper" class="hidden">
                         <div class="bg-white p-4 md:p-6 rounded-lg shadow border border-gray-200 w-full relative overflow-hidden">
                             <h3 class="font-bold text-lg text-gray-800 mb-4"><i class="fas fa-users text-mpiBlue mr-2"></i> Live Gate Queue</h3>
-                            <p class="text-xs text-gray-500 mb-4">Associates who are cleared to Time Out or expected to Time In today. (Completed records are archived to Admin Logs).</p>
+                            <p class="text-xs text-gray-500 mb-4">Associates who are cleared to Time Out or expected to Time In today. (Returned / closed records are archived to Admin Logs).</p>
                             <div class="overflow-x-auto">
                                 <table class="w-full text-left border-collapse min-w-max">
                                     <thead>
@@ -295,7 +400,7 @@
                                 <div class="bg-green-50 text-green-500 p-3 rounded-full"><i class="fas fa-check-double text-xl"></i></div>
                             </div>
                             <div class="bg-white p-5 rounded-lg shadow-sm border-t-4 border-gray-400 flex items-center justify-between">
-                                <div><p class="text-3xl font-bold text-gray-800" id="cntCompleted">0</p><h3 class="text-[10px] md:text-xs font-semibold text-gray-500 mt-1 uppercase">Completed Logs</h3></div>
+                                <div><p class="text-3xl font-bold text-gray-800" id="cntCompleted">0</p><h3 class="text-[10px] md:text-xs font-semibold text-gray-500 mt-1 uppercase">Returned / Closed Logs</h3></div>
                                 <div class="bg-gray-100 text-gray-500 p-3 rounded-full"><i class="fas fa-history text-xl"></i></div>
                             </div>
                         </div>
@@ -333,7 +438,7 @@
                             <h2 class="text-lg font-bold text-gray-800">Gate Pass Application Form</h2>
                             <p class="text-gray-500 text-xs mt-1">Fill out the required information to request exit clearance.</p>
                         </div>
-                        
+
                         <form id="applyForm" onsubmit="submitGatePass(event)" class="p-4 md:p-6 space-y-5">
                             <div>
                                 <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Destination <span class="text-red-500">*</span></label>
@@ -356,7 +461,7 @@
                                     <input type="time" id="gpExpectedIn" class="w-full border border-gray-300 p-2.5 rounded focus:ring-1 focus:ring-mpiBlue focus:border-mpiBlue transition text-sm" required>
                                 </div>
                             </div>
-                            
+
                             <div>
                                 <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Purpose <span class="text-red-500">*</span></label>
                                 <textarea id="gpPurpose" class="w-full border border-gray-300 p-2.5 rounded focus:ring-1 focus:ring-mpiBlue focus:border-mpiBlue transition text-sm h-20 resize-none" required></textarea>
@@ -375,14 +480,14 @@
                                     </label>
                                 </div>
                             </div>
-                            
+
                             <!-- Vehicle Option -->
                             <div class="bg-gray-50 rounded border border-gray-200 p-4">
                                 <label class="flex items-center space-x-3 cursor-pointer select-none">
                                     <input type="checkbox" id="gpNeedVehicle" onchange="toggleVehicleFields()" class="w-4 h-4 text-mpiBlue rounded border-gray-300 focus:ring-mpiBlue">
                                     <span class="font-semibold text-sm text-gray-800">Company Vehicle Needed</span>
                                 </label>
-                                
+
                                 <div id="vehicleFields" class="hidden mt-4 pt-4 border-t border-gray-200 flex-col space-y-4">
                                     <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                         <div>
@@ -396,7 +501,7 @@
                                             <input type="text" id="gpDriver" class="w-full bg-gray-100 border border-gray-300 p-2 rounded text-sm text-gray-500" readonly placeholder="Auto-filled">
                                         </div>
                                     </div>
-                                    
+
                                     <!-- Manual Vehicle Entry (Appears when "Others" is selected) -->
                                     <div id="manualVehicleFields" class="hidden grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-3 border border-blue-200 rounded">
                                         <div>
@@ -413,7 +518,7 @@
 
                             <div class="text-[10px] md:text-xs text-gray-500 bg-blue-50 p-3 rounded flex items-center">
                                 <i class="fas fa-route text-mpiBlue mr-2 text-lg"></i>
-                                <span><strong>Approval Flow:</strong> Immediate Superior <span id="routePresident" class="hidden text-mpiBlue font-bold">→ President</span> → PAS/HR</span>
+                                <span><strong>Approval Flow:</strong> <span id="routeApprovalText">Immediate Superior → PAS / HR</span></span>
                             </div>
 
                             <div class="pt-2 flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2">
@@ -438,13 +543,13 @@
                         <i class="fas fa-shield-alt text-4xl text-mpiBlue mb-3"></i>
                         <h2 class="text-xl font-bold text-gray-800 mb-1">Security QR Scanner</h2>
                         <p class="text-xs text-gray-500 mb-6">Scan Gate Pass to Log Time Out / In</p>
-                        
+
                         <div class="w-full h-48 bg-gray-100 rounded flex items-center justify-center border-2 border-dashed border-gray-300 mb-4 relative overflow-hidden">
                             <div class="absolute top-0 left-0 w-full h-1 bg-green-500 animate-[pulse_1s_ease-in-out_infinite] shadow-[0_0_10px_#22c55e]"></div>
                             <i class="fas fa-qrcode text-5xl text-gray-300"></i>
                             <p class="absolute bottom-2 text-[10px] text-gray-400">Camera Feed Simulated</p>
                         </div>
-                        
+
                         <div class="text-left bg-gray-50 p-3 rounded border">
                             <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Manual Scan Override</label>
                             <div class="flex space-x-2">
@@ -477,7 +582,7 @@
                             <table class="w-full text-left border-collapse min-w-max">
                                 <thead>
                                     <tr class="bg-white text-gray-500 text-[11px] uppercase tracking-wider border-b">
-                                        <th class="px-5 py-3 font-semibold">GP-ID</th><th class="px-5 py-3 font-semibold">Employee</th><th class="px-5 py-3 font-semibold">Dept</th><th class="px-5 py-3 font-semibold">1-Way?</th><th class="px-5 py-3 font-semibold">Actual Out</th><th class="px-5 py-3 font-semibold">Actual In</th><th class="px-5 py-3 font-semibold">Status</th>
+                                        <th class="px-5 py-3 font-semibold">GP-ID</th><th class="px-5 py-3 font-semibold">Associate</th><th class="px-5 py-3 font-semibold">Dept</th><th class="px-5 py-3 font-semibold">1-Way?</th><th class="px-5 py-3 font-semibold">Actual Out</th><th class="px-5 py-3 font-semibold">Actual In</th><th class="px-5 py-3 font-semibold">Status</th>
                                     </tr>
                                 </thead>
                                 <tbody id="adminLogsTable" class="text-sm divide-y divide-gray-100"></tbody>
@@ -499,7 +604,7 @@
                             <div><h3 class="font-bold text-gray-800 text-lg">User Management</h3><p class="text-xs md:text-sm text-gray-500">System accounts with login access.</p></div>
                             <button onclick="showToast('Open Add User Form', 'info')" class="w-full sm:w-auto bg-mpiBlue text-white px-4 py-2 text-sm font-bold rounded shadow hover:bg-mpiDark transition"><i class="fas fa-user-plus mr-1"></i> Add User</button>
                         </div>
-                        
+
                         <div class="flex space-x-4 mb-4 border-b border-gray-200 pb-2">
                             <button class="text-mpiBlue font-bold text-sm border-b-2 border-mpiBlue pb-1">Active Users</button>
                             <button class="text-gray-500 hover:text-gray-700 text-sm pb-1">Archived Records</button>
@@ -529,7 +634,7 @@
                                     <li class="py-3 flex justify-between items-center group"><span>PRODUCTION DEPARTMENT</span><div class="flex space-x-2 text-gray-400"><i class="fas fa-edit hover:text-mpiBlue cursor-pointer"></i><i class="fas fa-trash hover:text-red-500 cursor-pointer"></i></div></li>
                                 </ul>
                             </div>
-                            
+
                             <!-- Positions -->
                             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-5">
                                 <div class="flex justify-between items-center mb-4">
@@ -538,8 +643,8 @@
                                 </div>
                                 <div class="relative mb-3"><input type="text" placeholder="Search roles..." class="w-full border p-2 pl-8 rounded text-sm"><i class="fas fa-search absolute left-3 top-2.5 text-gray-400"></i></div>
                                 <ul class="divide-y divide-gray-100 text-sm">
-                                    <li class="py-3 flex justify-between items-center group"><div class="flex flex-col"><span class="font-semibold">Manager</span><span class="text-[10px] text-gray-400">All Departments</span></div><div class="flex space-x-2 text-gray-400"><i class="fas fa-edit hover:text-mpiBlue cursor-pointer"></i><i class="fas fa-trash hover:text-red-500 cursor-pointer"></i></div></li>
-                                    <li class="py-3 flex justify-between items-center group"><div class="flex flex-col"><span class="font-semibold">Employee</span><span class="text-[10px] text-gray-400">All Departments</span></div><div class="flex space-x-2 text-gray-400"><i class="fas fa-edit hover:text-mpiBlue cursor-pointer"></i><i class="fas fa-trash hover:text-red-500 cursor-pointer"></i></div></li>
+                                    <li class="py-3 flex justify-between items-center group"><div class="flex flex-col"><span class="font-semibold">Immediate Superior</span><span class="text-[10px] text-gray-400">All Departments</span></div><div class="flex space-x-2 text-gray-400"><i class="fas fa-edit hover:text-mpiBlue cursor-pointer"></i><i class="fas fa-trash hover:text-red-500 cursor-pointer"></i></div></li>
+                                    <li class="py-3 flex justify-between items-center group"><div class="flex flex-col"><span class="font-semibold">Associate</span><span class="text-[10px] text-gray-400">All Departments</span></div><div class="flex space-x-2 text-gray-400"><i class="fas fa-edit hover:text-mpiBlue cursor-pointer"></i><i class="fas fa-trash hover:text-red-500 cursor-pointer"></i></div></li>
                                     <li class="py-3 flex justify-between items-center group"><div class="flex flex-col"><span class="font-semibold">Security Guard</span><span class="text-[10px] text-gray-400">Agency</span></div><div class="flex space-x-2 text-gray-400"><i class="fas fa-edit hover:text-mpiBlue cursor-pointer"></i><i class="fas fa-trash hover:text-red-500 cursor-pointer"></i></div></li>
                                 </ul>
                             </div>
@@ -570,17 +675,19 @@
 
     <!-- MODAL: PRINT/VIEW FORM & APPROVAL -->
     <div id="printModal" class="fixed inset-0 bg-gray-900/80 backdrop-blur-sm hidden items-center justify-center z-[70] p-4 opacity-0 transition-opacity duration-300">
-        <div class="w-full max-w-3xl flex flex-col items-center max-h-[95vh] relative transform scale-95 transition-transform duration-300" id="printModalContent">
-            
+        <div class="document-modal flex flex-col items-center relative transform scale-95 transition-transform duration-300" id="printModalContent">
+            <div class="resize-handle" id="resizeHandle"></div>
+
             <!-- Modal Header Toolbar -->
-            <div class="w-full bg-white rounded-t-lg border-b border-gray-200 p-4 flex justify-between items-center z-10 print-hide">
-                <h2 class="font-bold text-lg text-gray-800">Document Review</h2>
+            <div class="w-full bg-white rounded-t-lg border-b border-gray-200 p-4 flex justify-between items-center z-10 print-hide cursor-move" id="modalDragHandle">
+                <h2 class="font-bold text-lg text-gray-800"><i class="fas fa-arrows-alt mr-2 text-gray-400"></i>Document Review</h2>
                 <div class="flex items-center space-x-2">
+                    <button onclick="toggleMaximizeModal()" class="text-sm font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded transition" title="Maximize/Restore"><i class="fas fa-window-maximize mr-1"></i> Expand</button>
                     <button onclick="window.print()" class="text-sm font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded transition"><i class="fas fa-print mr-1"></i> Print</button>
                     <button onclick="closeModal()" class="w-8 h-8 rounded hover:bg-red-50 hover:text-red-600 text-gray-500 flex items-center justify-center transition"><i class="fas fa-times text-xl"></i></button>
                 </div>
             </div>
-            
+
             <!-- IT ADMIN WORKFLOW TRACKER -->
             <div id="workflowTracker" class="w-full bg-blue-50 border-b border-blue-200 p-3 print-hide hidden">
                 <h3 class="font-bold text-xs text-mpiBlue mb-1 uppercase tracking-wider">Approval Progress Monitor</h3>
@@ -590,8 +697,8 @@
             </div>
 
             <!-- Scrollable Content Area -->
-            <div class="w-full bg-gray-100 p-4 md:p-6 overflow-y-auto print:p-0 print:overflow-visible">
-                
+            <div class="modal-scroll-area w-full bg-gray-100 p-4 md:p-6 print:p-0 print:overflow-visible">
+
                 <!-- THE ACTUAL PRINT FORM (A6 Layout precisely matched to image_b33085.jpg) -->
                 <div id="printableArea" class="print-form shadow-lg">
                     <table class="w-full border-collapse">
@@ -624,11 +731,11 @@
                                 <div id="vDateF" class="font-bold text-[10px] pl-2"></div>
                             </td>
                         </tr>
-                        <!-- Destination & Driver -->
+                        <!-- Purpose & Driver -->
                         <tr>
-                            <td colspan="3" rowspan="2" class="align-top h-10">
-                                <div class="text-[7px] uppercase">DESTINATION</div>
-                                <div id="vDest" class="font-bold text-xs pl-2 pt-1"></div>
+                            <td colspan="3" rowspan="2" class="align-top h-12">
+                                <div class="text-[7px] uppercase">PURPOSE</div>
+                                <div id="vPurp" class="font-bold text-xs pl-2 pt-1 leading-tight"></div>
                             </td>
                             <td class="align-top h-5">
                                 <div class="text-[7px] uppercase">DRIVER:</div>
@@ -641,11 +748,11 @@
                                 <div id="vPlate" class="font-bold text-[8px] pl-2"></div>
                             </td>
                         </tr>
-                        <!-- Purpose -->
+                        <!-- Destination -->
                         <tr>
-                            <td colspan="4" class="align-top h-12">
-                                <div class="text-[7px] uppercase">PURPOSE</div>
-                                <div id="vPurp" class="font-bold text-xs pl-2 pt-1"></div>
+                            <td colspan="4" class="align-top h-10">
+                                <div class="text-[7px] uppercase">DESTINATION</div>
+                                <div id="vDest" class="font-bold text-xs pl-2 pt-1"></div>
                             </td>
                         </tr>
                         <!-- From / To -->
@@ -691,16 +798,16 @@
                             <td class="align-top h-14 relative w-1/4">
                                 <div class="text-[7px] uppercase absolute top-1 left-1">NOTED BY</div>
                                 <div class="absolute bottom-[16px] w-full flex justify-center items-end" style="height: 35px;">
-                                    <div id="sigHR" class="w-full flex justify-center items-end"></div>
+                                    <div id="sigPAS" class="w-full flex justify-center items-end"></div>
                                 </div>
                                 <div class="absolute bottom-1 w-full text-center leading-none">
-                                    <span id="sigHRName" class="font-bold text-[8px] uppercase underline hidden block mb-[1px]"></span>
+                                    <span id="sigPASName" class="font-bold text-[8px] uppercase underline hidden block mb-[1px]"></span>
                                     <span class="text-[7px]">PAS</span>
                                 </div>
                             </td>
                         </tr>
                     </table>
-                    
+
                     <!-- QR Code Overlay for Printing -->
                     <div class="absolute top-2 left-2 opacity-90 scale-[0.65] transform origin-top-left z-20">
                         <div id="qrCodeDisplay"></div>
@@ -712,9 +819,56 @@
             <div id="approvalActionArea" class="w-full bg-white border-t border-gray-200 p-4 md:p-5 print-hide hidden rounded-b-lg flex-col space-y-4">
                 <div class="bg-blue-50 border border-blue-200 p-3 rounded">
                     <h3 class="font-bold text-mpiBlue text-sm mb-1"><i class="fas fa-pen-nib mr-1"></i> Digital Signature Attachment</h3>
-                    <p class="text-xs text-gray-600 mb-2">Upload your signature and adjust its placement. The document above will update live. Alternatively, approve without an image to use a text signature.</p>
-                    <input type="file" id="sigUpload" accept="image/png, image/jpeg" class="text-xs w-full mb-2">
-                    
+                    <p class="text-xs text-gray-600 mb-3">Attach a signature image, remove simple blue/white backgrounds locally, use the optional Python AI remover, or draw a signature directly using mouse/touch.</p>
+
+                    <div class="signature-source-toggle">
+                        <button type="button" onclick="showSignatureSource('upload')" id="btnSigUploadPanel" class="text-xs font-bold bg-mpiBlue text-white px-3 py-2 rounded"><i class="fas fa-upload mr-1"></i> Upload Image</button>
+                        <button type="button" onclick="showSignatureSource('draw')" id="btnSigDrawPanel" class="text-xs font-bold bg-white border border-blue-200 text-mpiBlue px-3 py-2 rounded hover:bg-blue-50"><i class="fas fa-pen mr-1"></i> Draw Signature</button>
+                    </div>
+
+                    <div id="sigUploadPanel" class="space-y-3">
+                        <input type="file" id="sigUpload" accept="image/png, image/jpeg" class="text-xs w-full">
+
+                        <!-- Background Removal Options -->
+                        <div id="sigBgOptions" class="hidden p-3 bg-white border border-blue-100 rounded space-y-3">
+                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <div>
+                                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Background Removal</label>
+                                    <select id="sigBgMode" class="w-full border border-gray-300 p-2 rounded text-xs focus:outline-none focus:border-mpiBlue">
+                                        <option value="none">Do not remove background</option>
+                                        <option value="autoSmart" selected>Auto detect blue or white background</option>
+                                        <option value="blue">Blue ID background / chroma key</option>
+                                        <option value="white">White paper background</option>
+                                        <option value="aiServer">AI remove bg via local Python server</option>
+                                    </select>
+                                </div>
+                                <div>
+                                    <label class="flex justify-between text-[10px] font-bold text-gray-500 uppercase mb-1">
+                                        <span>Removal Strength</span>
+                                        <span id="sigBgThresholdValue" class="text-mpiBlue">20</span>
+                                    </label>
+                                    <input type="range" id="sigBgThreshold" min="10" max="140" value="20" class="w-full">
+                                </div>
+                            </div>
+                            <p class="text-[10px] text-gray-500 leading-relaxed">
+                                <strong>Auto</strong> checks the image corners and chooses blue or white mode. Use strength around <strong>20</strong> for clean blue ID or white paper backgrounds. AI mode uses your local Python server, not an external API.
+                            </p>
+                        </div>
+                    </div>
+
+                    <div id="sigDrawPanel" class="hidden p-3 bg-white border border-blue-100 rounded space-y-3">
+                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+                            <p class="text-xs text-gray-600">Draw your signature below. The canvas is transparent when placed on the form.</p>
+                            <div class="flex gap-2">
+                                <button type="button" onclick="clearSignaturePad()" class="text-xs px-3 py-1.5 rounded border border-gray-300 hover:bg-gray-100">Clear</button>
+                                <button type="button" onclick="useDrawnSignature()" class="text-xs px-3 py-1.5 rounded bg-mpiBlue text-white font-bold hover:bg-mpiDark">Use Drawn Signature</button>
+                            </div>
+                        </div>
+                        <div class="signature-pad-bg p-2 rounded">
+                            <canvas id="signaturePad" class="signature-pad-canvas"></canvas>
+                        </div>
+                    </div>
+
                     <!-- Signature Editing Controls -->
                     <div id="sigControls" class="hidden mt-3 p-3 bg-white border border-blue-100 rounded grid grid-cols-1 md:grid-cols-2 gap-4">
                         <div>
@@ -734,7 +888,7 @@
                         </div>
                     </div>
                 </div>
-                
+
                 <div class="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2">
                     <button onclick="closeModal()" class="px-4 py-2 rounded border border-gray-300 text-sm font-medium hover:bg-gray-200 transition">Cancel</button>
                     <button onclick="approveCurrentPass()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded shadow text-sm font-bold transition"><i class="fas fa-check-circle mr-1"></i> Approve Request</button>
@@ -765,29 +919,30 @@
             document.getElementById(inputId).value = timeStr;
         }
 
-        // MOCK DATABASE 
+        // MOCK DATABASE
         const mockUsers = [
-            { id: "MPI-001", name: "Juan Dela Cruz", role: "Employee", dept: "Production", pass: "06172026" },
-            { id: "SUP-01", name: "Niel Vega", role: "Manager", dept: "Production", pass: "01012020" },
-            { id: "PRES", name: "Tomoaki Maekawa", role: "President", dept: "Executive", pass: "01012020" },
-            { id: "HR", name: "Joy", role: "Head HR", dept: "HRAD", pass: "01012020", isPAS: true },
-            { id: "ADMIN", name: "Miss Babes", role: "Admin", dept: "Admin", pass: "01012020", isPAS: true },
-            { id: "ojt", name: "OJT IT", role: "IT Admin", dept: "IT", pass: "@mpi2026" },
-            { id: "GUARD-1", name: "Agency Guard", role: "Security", dept: "Agency", pass: "01012020" },
+            { id: "MPI-001", name: "Ana Dela Cruz", role: "Associate", dept: "Production", password: "06172026" },
+            { id: "SUP-01", name: "Roberto Santos", role: "Immediate Superior", dept: "Production", password: "01012020" },
+            { id: "PRES", name: "President User", role: "President", dept: "Executive", password: "01012020" },
+            { id: "HR", name: "PAS / HR Admin User", role: "PAS / HR Admin", dept: "HRAD", password: "01012020", canNoteGatePass: true },
+            { id: "ADMIN", name: "Admin User", role: "Admin", dept: "Admin", password: "01012020", canNoteGatePass: true },
+            { id: "ojt", name: "OJT System Admin", role: "System Admin", dept: "IT", password: "demo-password" },
+            { id: "GUARD-1", name: "Agency Guard", role: "Security", dept: "Agency", password: "01012020" },
         ];
 
         const mockVehicles = [
-            { id: "V1", name: "Honda CRV", plate: "XYZ 123", driver: "Assigned Driver A", status: "Inside" },
-            { id: "V2", name: "Honda Accord", plate: "ABC 456", driver: "Assigned Driver B", status: "Outside" },
-            { id: "V3", name: "Toyota Innova", plate: "QWE 789", driver: "Assigned Driver C", status: "Inside" },
-            { id: "V4", name: "Isuzu Truck", plate: "TRK 001", driver: "John Neil Valencia", status: "Inside" }
+            { id: "V1", name: "Honda CRV", plate: "XYZ 123", driver: "Assigned Driver A", status: "Available" },
+            { id: "V2", name: "Honda Accord", plate: "ABC 456", driver: "Assigned Driver B", status: "In Use" },
+            { id: "V3", name: "Toyota Innova", plate: "QWE 789", driver: "Assigned Driver C", status: "Available" },
+            { id: "V4", name: "Isuzu Truck", plate: "TRK 001", driver: "Assigned Driver D", status: "Available" }
         ];
 
         let currentUser = null;
-        let gatePasses = []; 
+        let gatePasses = [];
         let currentViewedPassId = null;
-        let currentUploadedSig = null; // Global cache for base64 signature image
-        
+        let currentUploadedSig = null; // Processed base64 signature image used for approval
+        let currentOriginalSignatureData = null; // Original uploaded image before optional background removal
+
         let currentLogPage = 1;
         const logsPerPage = 5;
 
@@ -795,7 +950,7 @@
         function togglePassword() {
             const passInput = document.getElementById('empPass');
             const eyeIcon = document.getElementById('eyeIcon');
-            
+
             if (passInput.type === 'password') {
                 passInput.type = 'text';
                 eyeIcon.classList.remove('fa-eye');
@@ -804,6 +959,587 @@
                 passInput.type = 'password';
                 eyeIcon.classList.remove('fa-eye-slash');
                 eyeIcon.classList.add('fa-eye');
+            }
+        }
+
+        // Optional signature background removal.
+        // This is client-side only. It does not upload the signature/image to any external API.
+        // It is NOT remove.bg-level AI segmentation. It is a local chroma-key/background-color remover.
+        function removeSignatureBackground(img, options = {}) {
+            let mode = options.mode || 'autoSmart';
+            const threshold = Number(options.threshold || 20);
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+
+            canvas.width = img.naturalWidth || img.width;
+            canvas.height = img.naturalHeight || img.height;
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+            const width = canvas.width;
+            const height = canvas.height;
+
+            let bg = sampleCornerBackground(data, width, height);
+            if (mode === 'white') bg = { r: 255, g: 255, b: 255 };
+            if (mode === 'blue') {
+                // Use the sampled corner if it is blue-ish; otherwise use a standard ID-photo blue.
+                const sampledHue = rgbToHue(bg.r, bg.g, bg.b);
+                const sampledSat = Math.max(bg.r, bg.g, bg.b) - Math.min(bg.r, bg.g, bg.b);
+                if (!(sampledHue >= 185 && sampledHue <= 250 && sampledSat > 25)) {
+                    bg = { r: 8, g: 59, b: 115 };
+                }
+            }
+            if (mode === 'autoSmart') {
+                const max = Math.max(bg.r, bg.g, bg.b);
+                const min = Math.min(bg.r, bg.g, bg.b);
+                const saturation = max - min;
+                const brightness = (bg.r + bg.g + bg.b) / 3;
+                const hue = rgbToHue(bg.r, bg.g, bg.b);
+                if (brightness > 210 && saturation < 45) {
+                    mode = 'white';
+                    bg = { r: 255, g: 255, b: 255 };
+                } else if (hue >= 180 && hue <= 255 && saturation > 25) {
+                    mode = 'blue';
+                } else {
+                    mode = 'auto';
+                }
+            }
+
+            const softEdge = Math.max(12, threshold * 0.45);
+
+            for (let i = 0; i < data.length; i += 4) {
+                const r = data[i];
+                const g = data[i + 1];
+                const b = data[i + 2];
+                const a = data[i + 3];
+
+                const max = Math.max(r, g, b);
+                const min = Math.min(r, g, b);
+                const saturation = max - min;
+                const brightness = (r + g + b) / 3;
+                const hue = rgbToHue(r, g, b);
+                const distance = colorDistance({ r, g, b }, bg);
+
+                let removeScore = 0;
+
+                if (mode === 'white') {
+                    const whiteDistance = colorDistance({ r, g, b }, { r: 255, g: 255, b: 255 });
+                    if (brightness > 245 && saturation < 22) removeScore = 1;
+                    else if (brightness > 205 && saturation < 45) removeScore = Math.max(removeScore, 1 - (whiteDistance / (threshold + softEdge)));
+                } else if (mode === 'blue') {
+                    const isBlueHue = hue >= 180 && hue <= 255;
+                    const isMostlyBlue = b >= r + 18 || (b >= g - 8 && b > r + 8);
+                    if (distance <= threshold && isBlueHue && saturation > 25) removeScore = 1;
+                    else if (distance <= threshold + softEdge && isMostlyBlue && saturation > 18) {
+                        removeScore = Math.max(removeScore, 1 - ((distance - threshold) / softEdge));
+                    }
+                } else {
+                    // Auto mode: remove pixels similar to the image-corner background.
+                    if (distance <= threshold) removeScore = 1;
+                    else if (distance <= threshold + softEdge) removeScore = Math.max(removeScore, 1 - ((distance - threshold) / softEdge));
+
+                    // Also catch plain white paper if the uploaded item is a scanned signature.
+                    if (brightness > 245 && saturation < 20) removeScore = 1;
+                }
+
+                removeScore = Math.max(0, Math.min(1, removeScore));
+                if (removeScore >= 0.98) {
+                    data[i + 3] = 0;
+                } else if (removeScore > 0) {
+                    data[i + 3] = Math.round(a * (1 - removeScore));
+                }
+            }
+
+            // Clean small blue/white halo around the subject/signature.
+            featherAlphaEdges(data, width, height);
+
+            ctx.putImageData(imageData, 0, 0);
+            return canvas.toDataURL('image/png');
+        }
+
+        function colorDistance(c1, c2) {
+            return Math.sqrt(
+                Math.pow(c1.r - c2.r, 2) +
+                Math.pow(c1.g - c2.g, 2) +
+                Math.pow(c1.b - c2.b, 2)
+            );
+        }
+
+        function rgbToHue(r, g, b) {
+            r /= 255; g /= 255; b /= 255;
+            const max = Math.max(r, g, b);
+            const min = Math.min(r, g, b);
+            const d = max - min;
+            if (d === 0) return 0;
+            let h;
+            if (max === r) h = ((g - b) / d) % 6;
+            else if (max === g) h = (b - r) / d + 2;
+            else h = (r - g) / d + 4;
+            h *= 60;
+            if (h < 0) h += 360;
+            return h;
+        }
+
+        function sampleCornerBackground(data, width, height) {
+            const sampleSize = Math.max(8, Math.floor(Math.min(width, height) * 0.06));
+            const points = [];
+
+            const collect = (xStart, yStart) => {
+                for (let y = yStart; y < yStart + sampleSize; y++) {
+                    for (let x = xStart; x < xStart + sampleSize; x++) {
+                        const clampedX = Math.max(0, Math.min(width - 1, x));
+                        const clampedY = Math.max(0, Math.min(height - 1, y));
+                        const idx = (clampedY * width + clampedX) * 4;
+                        points.push([data[idx], data[idx + 1], data[idx + 2]]);
+                    }
+                }
+            };
+
+            collect(0, 0);
+            collect(width - sampleSize, 0);
+            collect(0, height - sampleSize);
+            collect(width - sampleSize, height - sampleSize);
+
+            // Median is more stable than average if a shoulder/hair accidentally touches a corner.
+            const median = (arr) => {
+                const sorted = arr.slice().sort((a, b) => a - b);
+                return sorted[Math.floor(sorted.length / 2)];
+            };
+
+            return {
+                r: median(points.map(p => p[0])),
+                g: median(points.map(p => p[1])),
+                b: median(points.map(p => p[2]))
+            };
+        }
+
+        function featherAlphaEdges(data, width, height) {
+            const alpha = new Uint8ClampedArray(width * height);
+            for (let i = 0, p = 0; i < data.length; i += 4, p++) alpha[p] = data[i + 3];
+
+            for (let y = 1; y < height - 1; y++) {
+                for (let x = 1; x < width - 1; x++) {
+                    const p = y * width + x;
+                    if (alpha[p] === 0 || alpha[p] === 255) continue;
+
+                    const neighbors = [
+                        alpha[p - 1], alpha[p + 1],
+                        alpha[p - width], alpha[p + width]
+                    ];
+                    const avg = neighbors.reduce((a, b) => a + b, 0) / neighbors.length;
+                    data[p * 4 + 3] = Math.round((alpha[p] + avg) / 2);
+                }
+            }
+        }
+
+        function getSignatureTargetContainerId() {
+            if (!currentUser) return 'sigImm';
+            if (currentUser.role === 'President') return 'sigPres';
+            if (currentUser.canNoteGatePass) return 'sigPAS';
+            return 'sigImm';
+        }
+
+        function renderSignatureImage(dataUrl, width = 100, y = 0) {
+            const targetDiv = document.getElementById(getSignatureTargetContainerId());
+            if (!targetDiv) return;
+
+            targetDiv.innerHTML = `<img src="${dataUrl}" id="liveDocumentSig" class="signature-img" style="width: ${width}%; margin-bottom: ${y}px;">`;
+        }
+
+        const PYTHON_BG_REMOVAL_ENDPOINT = 'http://127.0.0.1:8000/remove-background';
+
+        function detectSimpleBackgroundMode(img) {
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            canvas.width = img.naturalWidth || img.width;
+            canvas.height = img.naturalHeight || img.height;
+            ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const bg = sampleCornerBackground(imageData.data, canvas.width, canvas.height);
+            const max = Math.max(bg.r, bg.g, bg.b);
+            const min = Math.min(bg.r, bg.g, bg.b);
+            const saturation = max - min;
+            const brightness = (bg.r + bg.g + bg.b) / 3;
+            const hue = rgbToHue(bg.r, bg.g, bg.b);
+            if (brightness > 210 && saturation < 45) return 'white';
+            if (hue >= 180 && hue <= 255 && saturation > 25) return 'blue';
+            return 'auto';
+        }
+
+        function dataUrlToBlob(dataUrl) {
+            const parts = dataUrl.split(',');
+            const mime = (parts[0].match(/:(.*?);/) || [])[1] || 'image/png';
+            const binary = atob(parts[1]);
+            const bytes = new Uint8Array(binary.length);
+            for (let i = 0; i < binary.length; i++) bytes[i] = binary.charCodeAt(i);
+            return new Blob([bytes], { type: mime });
+        }
+
+        async function removeBackgroundWithPython(dataUrl) {
+            const formData = new FormData();
+            formData.append('file', dataUrlToBlob(dataUrl), 'signature.png');
+
+            const response = await fetch(PYTHON_BG_REMOVAL_ENDPOINT, {
+                method: 'POST',
+                body: formData
+            });
+
+            if (!response.ok) {
+                throw new Error('Python background remover failed: ' + response.status);
+            }
+
+            const blob = await response.blob();
+            return await new Promise((resolve) => {
+                const reader = new FileReader();
+                reader.onload = () => resolve(reader.result);
+                reader.readAsDataURL(blob);
+            });
+        }
+
+        function loadImageFromDataUrl(dataUrl) {
+            return new Promise((resolve, reject) => {
+                const img = new Image();
+                img.onload = () => resolve(img);
+                img.onerror = reject;
+                img.src = dataUrl;
+            });
+        }
+
+        async function processAndRenderSignature(showMessage = true) {
+            if (!currentOriginalSignatureData) return;
+
+            let mode = document.getElementById('sigBgMode')?.value || 'none';
+            const threshold = parseInt(document.getElementById('sigBgThreshold')?.value || '20', 10);
+
+            const currentWidth = document.getElementById('sigSize')?.value || 100;
+            const currentY = document.getElementById('sigY')?.value || 0;
+
+            try {
+                if (mode === 'none') {
+                    currentUploadedSig = currentOriginalSignatureData;
+                } else if (mode === 'aiServer') {
+                    showToast('Processing with local Python AI remover...', 'info');
+                    currentUploadedSig = await removeBackgroundWithPython(currentOriginalSignatureData);
+                } else {
+                    const img = await loadImageFromDataUrl(currentOriginalSignatureData);
+                    let effectiveMode = mode;
+                    if (mode === 'autoSmart') {
+                        effectiveMode = detectSimpleBackgroundMode(img);
+                    }
+                    currentUploadedSig = removeSignatureBackground(img, { mode: effectiveMode, threshold });
+                }
+
+                renderSignatureImage(currentUploadedSig, currentWidth, currentY);
+                document.getElementById('sigBgOptions')?.classList.remove('hidden');
+                document.getElementById('sigControls')?.classList.remove('hidden');
+                document.getElementById('saveDefaultSig').checked = true;
+
+                if (showMessage) {
+                    const message = mode === 'none'
+                        ? 'Image attached without background removal.'
+                        : mode === 'aiServer'
+                            ? 'AI background removal applied from local Python server.'
+                            : `Background removal applied: ${mode} at strength ${threshold}.`;
+                    showToast(message, 'success');
+                }
+            } catch (error) {
+                console.error(error);
+                const img = await loadImageFromDataUrl(currentOriginalSignatureData);
+                currentUploadedSig = removeSignatureBackground(img, { mode: 'autoSmart', threshold });
+                renderSignatureImage(currentUploadedSig, currentWidth, currentY);
+                document.getElementById('sigBgOptions')?.classList.remove('hidden');
+                document.getElementById('sigControls')?.classList.remove('hidden');
+                showToast('AI server unavailable. Used local auto remover instead.', 'error');
+            }
+        }
+
+        function showSignatureSource(source) {
+            const uploadPanel = document.getElementById('sigUploadPanel');
+            const drawPanel = document.getElementById('sigDrawPanel');
+            const uploadBtn = document.getElementById('btnSigUploadPanel');
+            const drawBtn = document.getElementById('btnSigDrawPanel');
+
+            if (source === 'draw') {
+                uploadPanel?.classList.add('hidden');
+                drawPanel?.classList.remove('hidden');
+                drawBtn?.classList.add('bg-mpiBlue', 'text-white');
+                drawBtn?.classList.remove('bg-white', 'text-mpiBlue', 'border');
+                uploadBtn?.classList.remove('bg-mpiBlue', 'text-white');
+                uploadBtn?.classList.add('bg-white', 'text-mpiBlue', 'border', 'border-blue-200');
+                resizeSignatureCanvas();
+            } else {
+                drawPanel?.classList.add('hidden');
+                uploadPanel?.classList.remove('hidden');
+                uploadBtn?.classList.add('bg-mpiBlue', 'text-white');
+                uploadBtn?.classList.remove('bg-white', 'text-mpiBlue', 'border');
+                drawBtn?.classList.remove('bg-mpiBlue', 'text-white');
+                drawBtn?.classList.add('bg-white', 'text-mpiBlue', 'border', 'border-blue-200');
+            }
+        }
+
+        let signaturePadState = { drawing: false, lastX: 0, lastY: 0 };
+
+        function setupSignaturePad() {
+            const canvas = document.getElementById('signaturePad');
+            if (!canvas) return;
+            resizeSignatureCanvas();
+
+            const getPoint = (event) => {
+                const rect = canvas.getBoundingClientRect();
+                return {
+                    x: event.clientX - rect.left,
+                    y: event.clientY - rect.top
+                };
+            };
+
+            const start = (event) => {
+                event.preventDefault();
+                signaturePadState.drawing = true;
+                const p = getPoint(event);
+                signaturePadState.lastX = p.x;
+                signaturePadState.lastY = p.y;
+            };
+
+            const move = (event) => {
+                if (!signaturePadState.drawing) return;
+                event.preventDefault();
+                const ctx = canvas.getContext('2d');
+                const p = getPoint(event);
+                ctx.lineWidth = 2.2;
+                ctx.lineCap = 'round';
+                ctx.lineJoin = 'round';
+                ctx.strokeStyle = '#111827';
+                ctx.beginPath();
+                ctx.moveTo(signaturePadState.lastX, signaturePadState.lastY);
+                ctx.lineTo(p.x, p.y);
+                ctx.stroke();
+                signaturePadState.lastX = p.x;
+                signaturePadState.lastY = p.y;
+            };
+
+            const end = () => {
+                signaturePadState.drawing = false;
+            };
+
+            canvas.addEventListener('pointerdown', start);
+            canvas.addEventListener('pointermove', move);
+            canvas.addEventListener('pointerup', end);
+            canvas.addEventListener('pointerleave', end);
+            window.addEventListener('resize', resizeSignatureCanvas);
+        }
+
+        function resizeSignatureCanvas() {
+            const canvas = document.getElementById('signaturePad');
+            if (!canvas) return;
+            const existing = canvas.toDataURL('image/png');
+            const rect = canvas.getBoundingClientRect();
+            const dpr = window.devicePixelRatio || 1;
+            if (rect.width <= 0) return;
+            canvas.width = Math.floor(rect.width * dpr);
+            canvas.height = Math.floor(170 * dpr);
+            canvas.style.height = '170px';
+            const ctx = canvas.getContext('2d');
+            ctx.scale(dpr, dpr);
+            if (existing && existing.length > 1000) {
+                const img = new Image();
+                img.onload = () => ctx.drawImage(img, 0, 0, rect.width, 170);
+                img.src = existing;
+            }
+        }
+
+        function clearSignaturePad() {
+            const canvas = document.getElementById('signaturePad');
+            if (!canvas) return;
+            const ctx = canvas.getContext('2d');
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+        }
+
+        function useDrawnSignature() {
+            const canvas = document.getElementById('signaturePad');
+            if (!canvas) return;
+            currentOriginalSignatureData = null;
+            currentUploadedSig = canvas.toDataURL('image/png');
+            document.getElementById('sigSize').value = 100;
+            document.getElementById('sigY').value = 0;
+            renderSignatureImage(currentUploadedSig, 100, 0);
+            document.getElementById('sigControls')?.classList.remove('hidden');
+            document.getElementById('saveDefaultSig').checked = true;
+            showToast('Drawn signature added to document.', 'success');
+        }
+
+        // Modal Drag and Resize Functions
+        let isDragging = false;
+        let isResizing = false;
+        let isMaximized = false;
+        let modalStartX = 0;
+        let modalStartY = 0;
+        let modalStartLeft = 0;
+        let modalStartTop = 0;
+        let modalStartWidth = 0;
+        let modalStartHeight = 0;
+        let modalRestoreLayout = null;
+
+        function clamp(value, min, max) {
+            return Math.min(Math.max(value, min), max);
+        }
+
+        function prepareModalForFloating(modal) {
+            const rect = modal.getBoundingClientRect();
+
+            modal.classList.add('is-floating');
+            modal.classList.remove('scale-95');
+            modal.classList.add('scale-100');
+
+            modal.style.left = rect.left + 'px';
+            modal.style.top = rect.top + 'px';
+            modal.style.width = rect.width + 'px';
+            modal.style.height = rect.height + 'px';
+        }
+
+        function resetDocumentModalLayout() {
+            const modal = document.getElementById('printModalContent');
+            const printModal = document.getElementById('printModal');
+            if (!modal || !printModal) return;
+
+            isDragging = false;
+            isResizing = false;
+            isMaximized = false;
+            modalRestoreLayout = null;
+
+            modal.classList.remove('is-floating', 'w-screen', 'h-screen', 'm-0', 'scale-100');
+            modal.classList.add('scale-95');
+
+            modal.style.left = '';
+            modal.style.top = '';
+            modal.style.width = '';
+            modal.style.height = '';
+            modal.style.maxWidth = '';
+            modal.style.maxHeight = '';
+
+            printModal.classList.remove('p-0');
+            printModal.classList.add('p-4');
+        }
+
+        function initializeModalDragResize() {
+            const modal = document.getElementById('printModalContent');
+            const dragHandle = document.getElementById('modalDragHandle');
+            const resizeHandle = document.getElementById('resizeHandle');
+            if (!modal || !dragHandle || !resizeHandle) return;
+
+            dragHandle.addEventListener('pointerdown', (e) => {
+                if (isMaximized) return;
+                if (e.target.closest('button, input, select, textarea, a, label')) return;
+
+                e.preventDefault();
+                prepareModalForFloating(modal);
+
+                const rect = modal.getBoundingClientRect();
+                isDragging = true;
+                modalStartX = e.clientX;
+                modalStartY = e.clientY;
+                modalStartLeft = rect.left;
+                modalStartTop = rect.top;
+                modalStartWidth = rect.width;
+                modalStartHeight = rect.height;
+
+                dragHandle.setPointerCapture?.(e.pointerId);
+                dragHandle.style.cursor = 'grabbing';
+            });
+
+            resizeHandle.addEventListener('pointerdown', (e) => {
+                if (isMaximized) return;
+
+                e.preventDefault();
+                e.stopPropagation();
+                prepareModalForFloating(modal);
+
+                const rect = modal.getBoundingClientRect();
+                isResizing = true;
+                modalStartX = e.clientX;
+                modalStartY = e.clientY;
+                modalStartLeft = rect.left;
+                modalStartTop = rect.top;
+                modalStartWidth = rect.width;
+                modalStartHeight = rect.height;
+
+                resizeHandle.setPointerCapture?.(e.pointerId);
+            });
+
+            document.addEventListener('pointermove', (e) => {
+                if (isDragging && !isMaximized) {
+                    const nextLeft = clamp(modalStartLeft + (e.clientX - modalStartX), 0, window.innerWidth - modalStartWidth);
+                    const nextTop = clamp(modalStartTop + (e.clientY - modalStartY), 0, window.innerHeight - 80);
+
+                    modal.style.left = nextLeft + 'px';
+                    modal.style.top = nextTop + 'px';
+                }
+
+                if (isResizing && !isMaximized) {
+                    const minWidth = Math.min(420, window.innerWidth - 20);
+                    const minHeight = 360;
+                    const maxWidth = window.innerWidth - modalStartLeft - 10;
+                    const maxHeight = window.innerHeight - modalStartTop - 10;
+
+                    const nextWidth = clamp(modalStartWidth + (e.clientX - modalStartX), minWidth, maxWidth);
+                    const nextHeight = clamp(modalStartHeight + (e.clientY - modalStartY), minHeight, maxHeight);
+
+                    modal.style.width = nextWidth + 'px';
+                    modal.style.height = nextHeight + 'px';
+                }
+            });
+
+            document.addEventListener('pointerup', () => {
+                isDragging = false;
+                isResizing = false;
+                dragHandle.style.cursor = 'move';
+            });
+
+            window.addEventListener('resize', () => {
+                if (!modal.classList.contains('is-floating') || isMaximized) return;
+                const rect = modal.getBoundingClientRect();
+                modal.style.left = clamp(rect.left, 0, Math.max(0, window.innerWidth - rect.width)) + 'px';
+                modal.style.top = clamp(rect.top, 0, Math.max(0, window.innerHeight - 80)) + 'px';
+            });
+        }
+
+        function toggleMaximizeModal() {
+            const modal = document.getElementById('printModalContent');
+            const printModal = document.getElementById('printModal');
+            if (!modal || !printModal) return;
+
+            if (isMaximized) {
+                isMaximized = false;
+                modal.classList.remove('w-screen', 'h-screen', 'm-0');
+                printModal.classList.remove('p-0');
+                printModal.classList.add('p-4');
+
+                if (modalRestoreLayout) {
+                    modal.classList.add('is-floating');
+                    modal.style.left = modalRestoreLayout.left;
+                    modal.style.top = modalRestoreLayout.top;
+                    modal.style.width = modalRestoreLayout.width;
+                    modal.style.height = modalRestoreLayout.height;
+                }
+            } else {
+                const rect = modal.getBoundingClientRect();
+                modalRestoreLayout = {
+                    left: modal.style.left || rect.left + 'px',
+                    top: modal.style.top || rect.top + 'px',
+                    width: modal.style.width || rect.width + 'px',
+                    height: modal.style.height || rect.height + 'px'
+                };
+
+                isMaximized = true;
+                modal.classList.add('is-floating', 'w-screen', 'h-screen', 'm-0');
+                modal.style.left = '0px';
+                modal.style.top = '0px';
+                modal.style.width = '100vw';
+                modal.style.height = '100vh';
+                modal.style.maxWidth = '100vw';
+                modal.style.maxHeight = '100vh';
+                printModal.classList.remove('p-4');
+                printModal.classList.add('p-0');
             }
         }
 
@@ -824,39 +1560,40 @@
         }
 
         document.addEventListener('DOMContentLoaded', () => {
+            // Initialize drag/resize functionality
+            initializeModalDragResize();
+            setupSignaturePad();
+
             // Updated Dropdown to include "Others"
             const vSelect = document.getElementById('gpVehicle');
             vSelect.innerHTML = `<option value="">-- Select --</option>` + mockVehicles.map(v => `<option value="${v.id}">${v.name} (${v.plate})</option>`).join('') + `<option value="others" class="font-bold text-mpiBlue">Others (Manual Entry)</option>`;
-            
+
             renderAdminTables();
 
-            // Signature Edit Listeners
+            // Signature Edit Listeners with optional background removal
             document.getElementById('sigUpload').addEventListener('change', function(e) {
-                if(this.files && this.files[0]) {
+                if (this.files && this.files[0]) {
                     const r = new FileReader();
                     r.onload = function(ev) {
-                        currentUploadedSig = ev.target.result;
-                        
-                        // Determine which container to update based on user role
-                        let targetContainerId = null;
-                        if (currentUser.role === 'President') targetContainerId = 'sigPres';
-                        else if (currentUser.isPAS) targetContainerId = 'sigHR';
-                        else targetContainerId = 'sigImm';
-
-                        const targetDiv = document.getElementById(targetContainerId);
-                        if (targetDiv) {
-                            targetDiv.innerHTML = `<img src="${currentUploadedSig}" id="liveDocumentSig" style="width: 100%; margin-bottom: 0px;">`;
-                        }
-                        
-                        // Reset sliders
+                        currentOriginalSignatureData = ev.target.result;
                         document.getElementById('sigSize').value = 100;
                         document.getElementById('sigY').value = 0;
-                        
-                        document.getElementById('sigControls').classList.remove('hidden');
-                        document.getElementById('saveDefaultSig').checked = true; // Auto-check for convenience
+                        document.getElementById('sigBgMode').value = 'autoSmart';
+                        document.getElementById('sigBgThreshold').value = 20;
+                        document.getElementById('sigBgThresholdValue').innerText = '20';
+                        processAndRenderSignature();
                     };
                     r.readAsDataURL(this.files[0]);
                 }
+            });
+
+            document.getElementById('sigBgMode')?.addEventListener('change', function() {
+                processAndRenderSignature();
+            });
+
+            document.getElementById('sigBgThreshold')?.addEventListener('input', function() {
+                document.getElementById('sigBgThresholdValue').innerText = this.value;
+                processAndRenderSignature(false);
             });
 
             const applySigStyles = () => {
@@ -888,18 +1625,18 @@
             }
         }
 
-        function quickLogin(id, pass) {
+        function quickLogin(id, password) {
             document.getElementById('empId').value = id;
-            document.getElementById('empPass').value = pass;
+            document.getElementById('empPass').value = password;
             document.getElementById('loginForm').dispatchEvent(new Event('submit'));
         }
 
         function handleLogin(e) {
             e.preventDefault();
             const id = document.getElementById('empId').value;
-            const pass = document.getElementById('empPass').value;
-            const user = mockUsers.find(u => u.id === id && u.pass === pass);
-            
+            const password = document.getElementById('empPass').value;
+            const user = mockUsers.find(u => u.id === id && u.password === password);
+
             if (user) {
                 currentUser = user;
                 document.getElementById('loginView').style.opacity = '0';
@@ -908,7 +1645,7 @@
                     document.getElementById('appView').classList.remove('hidden');
                     document.getElementById('loginView').style.opacity = '1';
                 }, 500);
-                
+
                 document.getElementById('navUserName').innerText = user.name;
                 document.getElementById('navUserRole').innerText = user.role;
                 setupRoleAccess(user);
@@ -936,26 +1673,26 @@
             document.getElementById('navGroupAdmin').style.display = 'block';
             document.getElementById('navGroupHR').style.display = 'none';
             document.getElementById('navItemDashboard').style.display = 'flex';
-            
+
             // Un-hide all admin tabs by default
             document.getElementById('tab-users').style.display = 'inline-block';
             document.getElementById('tab-fleet').style.display = 'inline-block';
             document.getElementById('tab-depts').style.display = 'inline-block';
 
             if (user.role === 'Security') {
-                document.getElementById('navItemDashboard').style.display = 'flex'; 
+                document.getElementById('navItemDashboard').style.display = 'flex';
                 document.getElementById('navItemApply').style.display = 'none';
                 document.getElementById('navGroupApprovals').style.display = 'none';
                 document.getElementById('navGroupAdmin').style.display = 'none';
-                switchSection('dashBoard'); 
-            } 
-            else if (user.role === 'IT Admin') {
+                switchSection('dashBoard');
+            }
+            else if (user.role === 'System Admin') {
                 document.getElementById('navGroupApprovals').style.display = 'none';
                 document.getElementById('navGroupSecurity').style.display = 'none';
                 document.getElementById('navAdminLabel').innerText = "System Configuration";
-                document.getElementById('filterDeptContainer').style.display = 'block'; 
+                document.getElementById('filterDeptContainer').style.display = 'block';
                 switchSection('adminPanel');
-            } 
+            }
             else if (user.role === 'President') {
                 document.getElementById('navItemApply').style.display = 'none'; // No form for president
                 document.getElementById('navGroupSecurity').style.display = 'none';
@@ -963,14 +1700,14 @@
                 document.getElementById('tab-users').style.display = 'none';
                 document.getElementById('tab-fleet').style.display = 'none';
                 document.getElementById('tab-depts').style.display = 'none';
-                document.getElementById('filterDeptContainer').style.display = 'none'; 
+                document.getElementById('filterDeptContainer').style.display = 'none';
                 switchSection('dashBoard');
             }
             else {
-                // Employees / Managers / HR
+                // Associates / Immediate Superiors / HR
                 document.getElementById('navGroupSecurity').style.display = 'none';
-                
-                if (user.role === 'Employee') {
+
+                if (user.role === 'Associate') {
                     document.getElementById('navGroupApprovals').style.display = 'none';
                     document.getElementById('navGroupAdmin').style.display = 'none';
                 } else {
@@ -979,9 +1716,9 @@
                     document.getElementById('tab-users').style.display = 'none';
                     document.getElementById('tab-fleet').style.display = 'none';
                     document.getElementById('tab-depts').style.display = 'none';
-                    document.getElementById('filterDeptContainer').style.display = 'none'; 
-                    
-                    if(user.isPAS) {
+                    document.getElementById('filterDeptContainer').style.display = 'none';
+
+                    if(user.canNoteGatePass) {
                         document.getElementById('navGroupHR').style.display = 'block';
                         document.getElementById('tab-fleet').style.display = 'inline-block';
                     }
@@ -1000,11 +1737,11 @@
                 toggleSidebar();
             }
 
-            const titles = { 
-                'dashBoard':'Overview Dashboard', 'applyPass':'New Gate Pass', 
-                'approvals':'Workflow Approvals', 'guardScan':'Security QR Scanner', 
+            const titles = {
+                'dashBoard':'Overview Dashboard', 'applyPass':'New Gate Pass',
+                'approvals':'Workflow Approvals', 'guardScan':'Security QR Scanner',
                 'fleetManagement': 'Vehicles & Drivers',
-                'adminPanel': currentUser && currentUser.role === 'IT Admin' ? 'System Configuration' : 'Department Logs' 
+                'adminPanel': currentUser && currentUser.role === 'System Admin' ? 'System Configuration' : 'Department Logs'
             };
             document.getElementById('pageTitle').innerText = titles[targetId] || 'System';
 
@@ -1014,8 +1751,9 @@
                 targetSec.classList.remove('hidden');
                 targetSec.classList.remove('fade-in'); void targetSec.offsetWidth; targetSec.classList.add('fade-in');
             }
-            
+
             refreshDashboards();
+            if(targetId === 'applyPass') updateApprovalRoutePreview();
             if(targetId === 'adminPanel') {
                 if(targetLink && targetLink.dataset.target === 'fleetManagement') {
                     switchAdminTab('fleet');
@@ -1032,22 +1770,53 @@
             if(!show) document.getElementById('gpExpectedIn').value = '';
         }
 
+        function requiresSuperiorApproval(user) {
+            // Associates need their immediate superior first.
+            // Immediate Superiors do NOT approve their own request.
+            return user.role === 'Associate';
+        }
+
+        function requiresPresidentApproval(user, hasCompanyVehicle) {
+            // If an Immediate Superior applies, approval must go to the President/VP.
+            // Company vehicle usage also requires President/VP approval.
+            return user.role === 'Immediate Superior' || hasCompanyVehicle === true;
+        }
+
+        function getInitialRequestStatus(user, hasCompanyVehicle) {
+            if (requiresSuperiorApproval(user)) return 'Pending Superior';
+            if (requiresPresidentApproval(user, hasCompanyVehicle)) return 'Pending President';
+            return 'Pending PAS';
+        }
+
+        function updateApprovalRoutePreview() {
+            const isVehicleNeeded = document.getElementById('gpNeedVehicle').checked;
+            const routeText = document.getElementById('routeApprovalText');
+            if (!routeText || !currentUser) return;
+
+            const steps = [];
+            if (requiresSuperiorApproval(currentUser)) steps.push('Immediate Superior');
+            if (requiresPresidentApproval(currentUser, isVehicleNeeded)) steps.push('President / VP');
+            steps.push('PAS / HR');
+
+            routeText.innerText = steps.join(' → ');
+        }
+
         function toggleVehicleFields() {
             const isNeeded = document.getElementById('gpNeedVehicle').checked;
             document.getElementById('vehicleFields').style.display = isNeeded ? 'flex' : 'none';
-            document.getElementById('routePresident').style.display = isNeeded ? 'inline' : 'none';
             document.getElementById('gpVehicle').required = isNeeded;
             if(!isNeeded) {
                 document.getElementById('gpVehicle').value = '';
                 handleVehicleChange(document.getElementById('gpVehicle'));
             }
+            updateApprovalRoutePreview();
         }
 
         function submitGatePass(e) {
             e.preventDefault();
             const isV = document.getElementById('gpNeedVehicle').checked;
             const willReturnBool = document.querySelector('input[name="gpWillReturn"]:checked').value === 'yes';
-            
+
             const selectedV = document.getElementById('gpVehicle').value;
             let customVehicleInfo = null;
 
@@ -1057,7 +1826,7 @@
                     name: document.getElementById('gpManualVehicle').value,
                     plate: 'N/A', // handled inside name
                     driver: document.getElementById('gpManualDriver').value,
-                    status: 'Outside'
+                    status: 'In Use'
                 };
             } else if (isV) {
                 customVehicleInfo = mockVehicles.find(v => v.id === selectedV);
@@ -1072,10 +1841,12 @@
                 expectedIn: document.getElementById('gpExpectedIn').value || 'N/A',
                 purpose: document.getElementById('gpPurpose').value,
                 vehicle: customVehicleInfo,
-                status: (['Manager', 'President'].includes(currentUser.role) ? (isV ? 'Pending President' : 'Pending HR') : 'Pending Superior'),
-                signatures: { imm: (['Manager', 'President'].includes(currentUser.role) ? {name: currentUser.name, img: null} : null), pres: null, hr: null },
+                status: getInitialRequestStatus(currentUser, isV),
+                requiresSuperiorApproval: requiresSuperiorApproval(currentUser),
+                requiresPresidentApproval: requiresPresidentApproval(currentUser, isV),
+                signatures: { imm: null, pres: null, pas: null },
                 scanCount: 0, actualOut: null, actualIn: null,
-                willReturn: willReturnBool 
+                willReturn: willReturnBool
             };
             gatePasses.push(newPass); e.target.reset(); toggleVehicleFields();
             showToast("Request Submitted!"); switchSection('dashBoard');
@@ -1084,13 +1855,13 @@
         function refreshDashboards() {
             const guardWrapper = document.getElementById('guardDashWrapper');
             const stdWrapper = document.getElementById('standardDashWrapper');
-            
+
             if (currentUser.role === 'Security') {
                 stdWrapper.classList.add('hidden');
                 guardWrapper.classList.remove('hidden');
-                
+
                 // Guard Live Queue (Only Pending Outs and Ins are shown)
-                const queueItems = gatePasses.filter(p => p.status === 'Approved' || p.status === 'Out');
+                const queueItems = gatePasses.filter(p => p.status === 'Approved' || p.status === 'Outside');
                 document.getElementById('guardQueueList').innerHTML = queueItems.map(p => {
                     let badgeColor = p.status === 'Approved' ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800';
                     let qStatus = p.status === 'Approved' ? 'Waiting OUT' : 'Waiting IN';
@@ -1110,16 +1881,16 @@
 
                 // HR Fleet Tracker Widget
                 const fleetWidget = document.getElementById('hrFleetWidget');
-                if (currentUser.isPAS) {
+                if (currentUser.canNoteGatePass) {
                     fleetWidget.classList.remove('hidden');
                     document.getElementById('fleetGridContainer').innerHTML = mockVehicles.map(v => `
-                        <div class="border rounded p-3 text-sm flex justify-between items-center ${v.status === 'Inside' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}">
+                        <div class="border rounded p-3 text-sm flex justify-between items-center ${v.status === 'Available' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}">
                             <div><p class="font-bold text-gray-800">${v.name}</p><p class="text-[10px] text-gray-500">${v.driver}</p></div>
-                            <span class="text-[10px] font-bold px-2 py-1 rounded ${v.status === 'Inside' ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'}">${v.status}</span>
+                            <span class="text-[10px] font-bold px-2 py-1 rounded ${v.status === 'Available' ? 'bg-green-200 text-green-800' : 'bg-red-200 text-red-800'}">${v.status}</span>
                         </div>
                     `).join('');
                 } else { fleetWidget.classList.add('hidden'); }
-                
+
                 // Hide "New Request" button on dashboard for President
                 document.getElementById('btnNewRequest').style.display = currentUser.role === 'President' ? 'none' : 'block';
 
@@ -1127,13 +1898,13 @@
                 const myPasses = gatePasses.filter(p => p.userId === currentUser.id);
                 document.getElementById('cntPending').innerText = myPasses.filter(p => p.status.includes('Pending')).length;
                 document.getElementById('cntApproved').innerText = myPasses.filter(p => p.status === 'Approved').length;
-                document.getElementById('cntCompleted').innerText = myPasses.filter(p => p.status === 'Completed').length;
-                
+                document.getElementById('cntCompleted').innerText = myPasses.filter(p => p.status === 'Returned' || p.status === 'Closed').length;
+
                 document.getElementById('myPassesTableBody').innerHTML = myPasses.slice().reverse().map(p => `
                     <tr class="hover:bg-gray-50 transition border-b cursor-pointer" onclick="viewPass('${p.id}')">
                         <td class="px-4 md:px-5 py-3 font-mono text-mpiBlue text-xs font-bold">${p.id}</td>
                         <td class="px-4 md:px-5 py-3">${p.dateFiled}</td><td class="px-4 md:px-5 py-3 truncate max-w-[150px] md:max-w-[200px]">${p.destination}</td>
-                        <td class="px-4 md:px-5 py-3"><span class="px-2 py-1 rounded text-[10px] font-bold ${p.status==='Approved'?'bg-green-100 text-green-800':(p.status==='Completed'?'bg-gray-200':'bg-yellow-100 text-yellow-800')}">${p.status}</span></td>
+                        <td class="px-4 md:px-5 py-3"><span class="px-2 py-1 rounded text-[10px] font-bold ${['Approved'].includes(p.status)?'bg-green-100 text-green-800':(['Returned','Closed'].includes(p.status)?'bg-gray-200 text-gray-700':(p.status==='Outside'?'bg-blue-100 text-blue-800':'bg-yellow-100 text-yellow-800'))}">${p.status}</span></td>
                         <td class="px-4 md:px-5 py-3 text-right"><button class="text-mpiBlue hover:underline text-xs"><i class="fas fa-eye"></i></button></td>
                     </tr>
                 `).join('') || `<tr><td colspan="5" class="px-5 py-8 text-center text-gray-400">No records found.</td></tr>`;
@@ -1141,9 +1912,9 @@
 
             // Approvals Logic
             let toApprove = [];
-            if (['Manager'].includes(currentUser.role)) toApprove = toApprove.concat(gatePasses.filter(p => p.status === 'Pending Superior' && p.userDept === currentUser.dept));
+            if (['Immediate Superior'].includes(currentUser.role)) toApprove = toApprove.concat(gatePasses.filter(p => p.status === 'Pending Superior' && p.userDept === currentUser.dept));
             if (currentUser.role === 'President') toApprove = toApprove.concat(gatePasses.filter(p => p.status === 'Pending President'));
-            if (currentUser.isPAS) toApprove = toApprove.concat(gatePasses.filter(p => p.status === 'Pending HR'));
+            if (currentUser.canNoteGatePass) toApprove = toApprove.concat(gatePasses.filter(p => p.status === 'Pending PAS'));
 
             const badge = document.getElementById('navApprovalBadge');
             if(toApprove.length > 0) { badge.innerText = toApprove.length; badge.classList.remove('hidden'); } else badge.classList.add('hidden');
@@ -1162,17 +1933,17 @@
         function renderAdminLogs(page = 1) {
             currentLogPage = page;
             const searchVal = document.getElementById('logFilterName').value.toLowerCase();
-            const rawDateVal = document.getElementById('logFilterDate').value; 
+            const rawDateVal = document.getElementById('logFilterDate').value;
             const deptVal = document.getElementById('logFilterDept').value;
-            
+
             let formattedDate = "";
-            if (rawDateVal) formattedDate = new Date(rawDateVal).toLocaleDateString(); 
+            if (rawDateVal) formattedDate = new Date(rawDateVal).toLocaleDateString();
 
             let filteredList = gatePasses.slice().reverse().filter(p => {
                 const matchesSearch = p.userName.toLowerCase().includes(searchVal) || p.id.toLowerCase().includes(searchVal);
                 const matchesDate = formattedDate === "" || p.dateFiled === formattedDate;
                 let matchesDept = true;
-                if (currentUser.role === 'IT Admin') matchesDept = deptVal === "" || p.userDept === deptVal;
+                if (currentUser.role === 'System Admin') matchesDept = deptVal === "" || p.userDept === deptVal;
                 else matchesDept = p.userDept === currentUser.dept;
                 return matchesSearch && matchesDate && matchesDept;
             });
@@ -1225,20 +1996,20 @@
 
         function viewPass(id, isReviewing = false) {
             const p = gatePasses.find(x => x.id === id); if(!p) return; currentViewedPassId = id;
-            
+
             const setVal = (elemId, val) => {
                 const el = document.getElementById(elemId);
                 if (el) el.innerText = val;
             };
 
             setVal('vDateF', p.dateFiled);
-            setVal('vName', p.userName); 
+            setVal('vName', p.userName);
             setVal('vDest', p.destination);
-            setVal('vPurp', p.purpose); 
+            setVal('vPurp', p.purpose);
             setVal('vExpOut', p.expectedOut);
             setVal('vExpInLabel', p.expectedIn);
             setVal('vReturn', p.willReturn ? 'Yes' : 'No');
-            
+
             // Format vehicle rendering
             let vehicleString = 'N/A';
             if (p.vehicle) {
@@ -1249,7 +2020,7 @@
             setVal('vPlate', vehicleString);
 
             // Signatures handling
-            ['sigImm', 'sigPres', 'sigHR'].forEach(idPrefix => {
+            ['sigImm', 'sigPres', 'sigPAS'].forEach(idPrefix => {
                 const sigDiv = document.getElementById(idPrefix);
                 const nameSpan = document.getElementById(idPrefix + 'Name');
                 if(sigDiv) sigDiv.innerHTML = '';
@@ -1260,7 +2031,7 @@
                 if(!sigData) return;
                 const nameSpan = document.getElementById(idPrefix + 'Name');
                 const sigDiv = document.getElementById(idPrefix);
-                
+
                 if(nameSpan) {
                     nameSpan.innerText = sigData.name;
                     nameSpan.classList.remove('hidden');
@@ -1269,7 +2040,7 @@
                     if(sigData.img) {
                         const w = sigData.w || 100;
                         const y = sigData.y || 0;
-                        sigDiv.innerHTML = `<img src="${sigData.img}" style="width: ${w}%; margin-bottom: ${y}px;">`;
+                        sigDiv.innerHTML = `<img src="${sigData.img}" class="signature-img" style="width: ${w}%; margin-bottom: ${y}px;">`;
                     }
                     else {
                         sigDiv.innerHTML = `<span style="font-family: serif; font-style: italic; font-size: 14px; color: blue;">Digitally Signed</span>`;
@@ -1279,65 +2050,72 @@
 
             handleSig(p.signatures.imm, 'sigImm');
             handleSig(p.signatures.pres, 'sigPres');
-            handleSig(p.signatures.hr, 'sigHR');
+            handleSig(p.signatures.pas, 'sigPAS');
 
-            const qrContainer = document.getElementById('qrCodeDisplay'); 
+            const qrContainer = document.getElementById('qrCodeDisplay');
             if(qrContainer) {
                 qrContainer.innerHTML = '';
-                if (p.status === 'Approved' || p.status === 'Out') new QRCode(qrContainer, { text: p.id, width: 60, height: 60 });
+                if (p.status === 'Approved' || p.status === 'Outside') new QRCode(qrContainer, { text: p.id, width: 60, height: 60 });
             }
 
-            // IT Admin Progress Tracker
+            // System Admin Progress Tracker
             const wf = document.getElementById('workflowTracker');
-            if (currentUser.role === 'IT Admin' || ['President','Manager','Head HR'].includes(currentUser.role)) {
+            if (currentUser.role === 'System Admin' || ['President','Immediate Superior','PAS / HR Admin'].includes(currentUser.role)) {
                 wf.classList.remove('hidden');
                 let stepsHTML = '';
-                
+
                 const hasImm = p.signatures.imm ? 'text-green-600 font-bold' : 'text-gray-400';
                 const hasPres = p.signatures.pres ? 'text-green-600 font-bold' : 'text-gray-400';
-                const hasHr = p.signatures.hr ? 'text-green-600 font-bold' : 'text-gray-400';
-                const reqPres = p.vehicle != null; 
+                const hasPAS = p.signatures.pas ? 'text-green-600 font-bold' : 'text-gray-400';
+                const reqPres = p.requiresPresidentApproval === true;
 
-                stepsHTML += `<span class="${hasImm}"><i class="fas ${p.signatures.imm ? 'fa-check-circle' : 'fa-circle'}"></i> 1. Supervisor</span>`;
-                stepsHTML += ` <i class="fas fa-chevron-right text-gray-300 mx-2"></i> `;
-                
-                if (reqPres) {
-                    stepsHTML += `<span class="${hasPres}"><i class="fas ${p.signatures.pres ? 'fa-check-circle' : 'fa-circle'}"></i> 2. President</span>`;
+                const reqSuperior = p.requiresSuperiorApproval !== false;
+                let stepNo = 1;
+
+                if (reqSuperior) {
+                    stepsHTML += `<span class="${hasImm}"><i class="fas ${p.signatures.imm ? 'fa-check-circle' : 'fa-circle'}"></i> ${stepNo++}. Supervisor</span>`;
                     stepsHTML += ` <i class="fas fa-chevron-right text-gray-300 mx-2"></i> `;
                 }
-                stepsHTML += `<span class="${hasHr}"><i class="fas ${p.signatures.hr ? 'fa-check-circle' : 'fa-circle'}"></i> ${reqPres?'3':'2'}. PAS/HR</span>`;
-                
+
+                if (reqPres) {
+                    stepsHTML += `<span class="${hasPres}"><i class="fas ${p.signatures.pres ? 'fa-check-circle' : 'fa-circle'}"></i> ${stepNo++}. President / VP</span>`;
+                    stepsHTML += ` <i class="fas fa-chevron-right text-gray-300 mx-2"></i> `;
+                }
+                stepsHTML += `<span class="${hasPAS}"><i class="fas ${p.signatures.pas ? 'fa-check-circle' : 'fa-circle'}"></i> ${stepNo}. PAS / HR</span>`;
+
                 document.getElementById('workflowSteps').innerHTML = stepsHTML;
             } else {
                 wf.classList.add('hidden');
             }
 
+            resetDocumentModalLayout();
+
             const modal = document.getElementById('printModal');
             if(modal) {
-                modal.classList.remove('hidden'); 
-                modal.classList.add('flex'); 
-                setTimeout(() => { 
-                    modal.classList.remove('opacity-0'); 
+                modal.classList.remove('hidden');
+                modal.classList.add('flex');
+                setTimeout(() => {
+                    modal.classList.remove('opacity-0');
                     const content = document.getElementById('printModalContent');
                     if(content) {
-                        content.classList.remove('scale-95'); 
-                        content.classList.add('scale-100'); 
+                        content.classList.remove('scale-95');
+                        content.classList.add('scale-100');
                     }
                 }, 10);
             }
-            
+
             // ACTION AREA & DEFAULT SIGNATURE LOADING
             const actionArea = document.getElementById('approvalActionArea');
             if(actionArea) {
                 if(isReviewing) {
                     actionArea.style.display = 'flex';
-                    document.getElementById('sigUpload').value = ''; 
-                    
+                    document.getElementById('sigUpload').value = '';
+
                     // PRE-FILL USERNAME FOR TRUE LIVE PREVIEW ALIGNMENT
                     let targetContainerId = null;
                     if (p.status === 'Pending Superior') targetContainerId = 'sigImm';
                     else if (p.status === 'Pending President') targetContainerId = 'sigPres';
-                    else if (p.status === 'Pending HR') targetContainerId = 'sigHR';
+                    else if (p.status === 'Pending PAS') targetContainerId = 'sigPAS';
 
                     if (targetContainerId) {
                         const nameSpan = document.getElementById(targetContainerId + 'Name');
@@ -1350,27 +2128,32 @@
                     // Load saved default signature if it exists
                     if (currentUser.savedSignature) {
                         currentUploadedSig = currentUser.savedSignature.img;
-                        
+
                         // Determine which container to update based on user role
                         let targetContainerId = null;
                         if (currentUser.role === 'President') targetContainerId = 'sigPres';
-                        else if (currentUser.isPAS) targetContainerId = 'sigHR';
+                        else if (currentUser.canNoteGatePass) targetContainerId = 'sigPAS';
                         else targetContainerId = 'sigImm';
 
                         const targetDiv = document.getElementById(targetContainerId);
                         if (targetDiv) {
-                             targetDiv.innerHTML = `<img src="${currentUploadedSig}" id="liveDocumentSig" style="width: ${currentUser.savedSignature.w || 100}%; margin-bottom: ${currentUser.savedSignature.y || 0}px;">`;
+                             targetDiv.innerHTML = `<img src="${currentUploadedSig}" id="liveDocumentSig" class="signature-img" style="width: ${currentUser.savedSignature.w || 100}%; margin-bottom: ${currentUser.savedSignature.y || 0}px;">`;
                         }
 
                         document.getElementById('sigSize').value = currentUser.savedSignature.w || 100;
                         document.getElementById('sigY').value = currentUser.savedSignature.y || 0;
-                        
+
                         document.getElementById('sigControls').classList.remove('hidden');
                         document.getElementById('saveDefaultSig').checked = true;
                     } else {
                         currentUploadedSig = null;
+                        currentOriginalSignatureData = null;
                         document.getElementById('sigSize').value = 100;
                         document.getElementById('sigY').value = 0;
+                        document.getElementById('sigBgMode').value = 'none';
+                        document.getElementById('sigBgThreshold').value = 78;
+                        document.getElementById('sigBgThresholdValue').innerText = '78';
+                        document.getElementById('sigBgOptions').classList.add('hidden');
                         document.getElementById('sigControls').classList.add('hidden');
                         document.getElementById('saveDefaultSig').checked = false;
                     }
@@ -1382,20 +2165,21 @@
 
         function closeModal() {
             const modal = document.getElementById('printModal');
-            modal.classList.add('opacity-0'); 
-            document.getElementById('printModalContent').classList.remove('scale-100'); 
+            modal.classList.add('opacity-0');
+            document.getElementById('printModalContent').classList.remove('scale-100');
             document.getElementById('printModalContent').classList.add('scale-95');
-            setTimeout(() => { 
-                modal.classList.add('hidden'); 
-                modal.classList.remove('flex'); 
-                currentViewedPassId = null; 
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+                currentViewedPassId = null;
+                resetDocumentModalLayout();
             }, 300);
         }
 
         function approveCurrentPass() {
-            if(currentUser.role === 'IT Admin') return; 
+            if(currentUser.role === 'System Admin') return;
             const p = gatePasses.find(x => x.id === currentViewedPassId);
-            
+
             const sigWidth = document.getElementById('sigSize').value;
             const sigY = document.getElementById('sigY').value;
             const saveCheck = document.getElementById('saveDefaultSig');
@@ -1411,46 +2195,46 @@
                 currentUser.savedSignature = null;
             }
 
-            const sigObj = { 
-                name: currentUser.name, 
+            const sigObj = {
+                name: currentUser.name,
                 img: currentUploadedSig,
                 w: sigWidth,
                 y: sigY
             };
-            
-            if (p.status === 'Pending Superior') { p.signatures.imm = sigObj; p.status = p.vehicle ? 'Pending President' : 'Pending HR'; } 
-            else if (p.status === 'Pending President') { p.signatures.pres = sigObj; p.status = 'Pending HR'; }
-            else if (p.status === 'Pending HR') { p.signatures.hr = sigObj; p.status = 'Approved'; }
-            
+
+            if (p.status === 'Pending Superior') { p.signatures.imm = sigObj; p.status = p.requiresPresidentApproval ? 'Pending President' : 'Pending PAS'; }
+            else if (p.status === 'Pending President') { p.signatures.pres = sigObj; p.status = 'Pending PAS'; }
+            else if (p.status === 'Pending PAS') { p.signatures.pas = sigObj; p.status = 'Approved'; }
+
             showToast("Document Approved!"); closeModal(); refreshDashboards();
         }
 
         function simulateQrScan() {
-            if(currentUser.role !== 'Security') return; 
+            if(currentUser.role !== 'Security') return;
             const gpId = document.getElementById('manualQrInput').value; const p = gatePasses.find(x => x.id === gpId);
             if (!p) { showToast('Invalid ID', 'error'); return; }
-            
+
             const nowTime = new Date().toLocaleTimeString([], {hour: '2-digit', minute:'2-digit'});
             if (p.status === 'Approved' && p.scanCount === 0) {
-                p.scanCount = 1; p.actualOut = nowTime; 
+                p.scanCount = 1; p.actualOut = nowTime;
                 if (p.willReturn) {
-                    p.status = 'Out';
-                    if(p.vehicle) p.vehicle.status = 'Outside'; 
+                    p.status = 'Outside';
+                    if(p.vehicle) p.vehicle.status = 'In Use';
                     showToast(`TIME OUT RECORDED: ${p.userName}. Waiting for return.`);
                 } else {
-                    p.status = 'Completed'; 
+                    p.status = 'Closed';
                     showToast(`1-WAY PASS: ${p.userName} Time Out Recorded. Closed.`);
                 }
-            } 
-            else if (p.status === 'Out' && p.scanCount === 1) {
-                p.scanCount = 2; p.actualIn = nowTime; p.status = 'Completed';
-                if(p.vehicle) p.vehicle.status = 'Inside'; 
+            }
+            else if (p.status === 'Outside' && p.scanCount === 1) {
+                p.scanCount = 2; p.actualIn = nowTime; p.status = 'Returned';
+                if(p.vehicle) p.vehicle.status = 'Available';
                 showToast(`TIME IN RECORDED. Closed.`);
             }
             else showToast(`Transaction Failed. Status: ${p.status}`, 'error');
-            
-            document.getElementById('manualQrInput').value = ''; 
-            refreshDashboards(); 
+
+            document.getElementById('manualQrInput').value = '';
+            refreshDashboards();
         }
     </script>
 </body>
