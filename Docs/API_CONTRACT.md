@@ -25,13 +25,19 @@ Response:
   "user": {
     "id": 1,
     "employeeId": "MPI-001",
+    "username": "MPI-001",
     "fullName": "Sample Associate",
-    "role": "Associate",
     "department": "Production",
-    "permissions": ["gatepass.create", "gatepass.read.own"]
+    "position": "General Associate",
+    "mustChangePassword": true,
+    "roles": ["ASSOCIATE"],
+    "permissions": ["gatepass.create.own", "gatepass.read.own"]
   }
 }
 ```
+
+Accounts can have multiple roles. For example, an employee can remain an
+`ASSOCIATE` while also holding `IMMEDIATE_SUPERIOR` or `SYSTEM_ADMIN`.
 
 ### GET `/auth/me`
 

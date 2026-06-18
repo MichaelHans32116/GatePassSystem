@@ -1,0 +1,78 @@
+eto gagawin natin or masasabi natin pseudo code medyo magulo pero bare with me HAHAHAH.
+
+Okay eto yung sabi sa mga inenterview ko:
+
+Head HR Ms. Joy:
+1. dapat daw nakaka access yung users pero yung rerequest nila for gate pass is para lang sa kanila di sila pwede maging driver os something, wala ding vehicle so pag normal lang kunwari may need lumabas para may aasikasuhin normal yung ibibigay tulad ng name of associates destination purpose from to tapos date filed approved by immediate superior, pres/vpres, at noted by PAS(or yung main HR). Web app na dapat accessable sa laptop at cellphone na iba't ibang interface so dapat accessible sila sa loob ng server.
+
+Meaning dapat pag driver choice kung anong klase kang worker sa moriroku pag ginawan ng account pag driver may field na required yung vehicle at plate number no? tapos may option mag file as a driver(gagamit ng sasakyan para mag hatid) at as a regular worker(na di gagamit ng sasakyan kasi may sakit) and them makikita kung available yung mga sasakyan, so magdadagdag din tayo ng add users, add gate pass, then add vehicles na pweed ma edit info ng vehicles ng driver so bale ganito daw
+
+Sa interface ng user/driver:
+Mag apply ng gate pass at necessary info
+
+Sa immediate: i approve
+Sa : i approve (only if involved ang company car or yung mga inmmediate superior yung gusto mag leave)
+Sa HR head: i note na na approve na lahat
+
+Note na pwede din mag file ng gate pass yung mga admin para sa sarili nila para maka leave if needed nila kunwari pag may sakit or emergency. Kunwari mga immediate na superior na mismo sila, president nalang ang need nila hingan at head HR, pano naman kung head hr nalang edi yung immediate head nila and if wala president nalang or vp ang mag a approve.
+
+So need natin mag sort ng account mga immediate superior and pinalista ko na sila at kung anong department sila so pag mag aadd na pala tayo ng account para organizded is gawin natin
+
+Eto yung mga immediate superior na pwede mag approve plus yuhng department nila
+1. Niel Vega (Porduction and Assembly Injection Manager)
+2. Luzviminda Sola (Finance & IT)
+3.Alona Daquiaog (HRAD)
+4. Lorena De Veyra (PPC)
+5. Norma Sumagui (QA)
+6. Jeddah Manalo (QA new Model)
+7. Nerlita Rodulfo (Legal Sr.Manager)
+8. Precious Jusay (Purchasing Asst. Manager)
+9. Emmanuel Garcia (Engineering)
+10. Mary Ann Maliksi (Asst. Factory Manager)
+11. Edwin Belen (Production Assembly Assistant Manager)
+
+Note may kinuha akong export files ng 95 active members, sila gawin mong basehan ng totoong info yang 11 na yan ang mga immediate superior parin per dept. pero Mas mataas lagi yung department manager talaga yung position based sa export files ko
+
+sa noted by naman dalawa lang yan either mis luzminvida(IT & Finance) or misss babes(Admin) kapag wala either sa kanila is si miss joy(HR)
+
+eto naman yung president lang wala pala VP dito
+1. Tomoaki Maekawa
+
+Tapos yung kay president is kapag yung mga neeed lang niya ng approval sa kaniya kapag company vehicle ang ilalabas tulad ng honda crv, accord, hrv, brv, city at totyota innova tapos yung mga assigned driver na nasa pics yun yung mga naka assign doon sa loob ng mga vehiclke na iyon except si john neil Valencia, sa izusu trucks at iba pa wala ako data sa pwede dapat tayo mag add ng mga user/meber
+
+Sir gelo IT technical supervisor:
+1. Dapat maayos yung logical system at hierchy ng position ng imideate superior pag log in ng user, log out, database maayos, crucial since server natin yung gamit. Maging noob friendly yung user at nakabase doon sa needs natin na hierchy system at advanced pero basic simple ui tapos maganda at appealing yung animation. I base din natin sa color palette ng Moriuroku Philippines yung design ng kulay at gawing readable. So by that i mean diba may 11 ako bninigay na names tapos may position sila pag present both assistant manager at manager mas mag papa approve parin sa mas mataas pero kasi don sa 95 files mya mga ibang assistant manager din per mag babase tayo sa names diyan na binigay poag dating sa superior immediate tapos yung nasa files na ibibgay kong excel is yung gawin mong basehan para sa ilalagay nating position, id, names, atbp. MAy inactive din don ha pero ang pag babasehan natin is lahatn g active, tapos ang ilalagay natin sa system is active users not emploiyees kasi may maidadagdag na di naman employee tulad g security guards pero user parin sila as taga scan ng QR code or encode ng ID then di gagana yung QR code or ID kapag di pa approved sila sa lahat ng pass or kung wala naman silang request, ganon din sa pag input sasabihin "Gate pass verification of Time out not available" Ibig sabihin dalawang scan yun isang pag na scan time out and then time in ulet and dapat mababasa yun ng scanner ng qr para maayos via camera, na if qr scan count = 1 meaning time tapos pag 2 na time in naman na and then qrRead = false na since tapos na yung transaction niya pero pag dipa true parin. And then meron din kasi mga case na wala na sila na time in ulet kunwari half dale lang so may condition na time out lang talaga yung irerecord. BTW di na lalabas yung expected time in doon(magkakaroon lang ng expected time in hindi expected time out ha, kaapag may nilagay silang expected time in tsaka lang magkakaroon ng comparson sa expected time in vs actual time in = DATETIMENOW kasi minsan di na talaga sila babalik kunwari masama pakiramdam ganaon. Pagka scan ng qr ng security guard Lalo na pag time out lang finill up-an edi if scannedCount = 1 transactionCase = false na kasi tapos na so di na siya mag scan kasi time out lang nilagay parang gnaon ba yung logic.
+
+BTW don daw sa pag gagawa natin ng account yung username daw is yung ID nila and yung password is date hired,  lagyan din natin hint yung password is yung date hired in numbers tapos yung formatting kung pano natin finormat Kunwari nahire ako June 17,2026, then yung password ko ay 06172026, gano lalagay natin doon sa menu ng log in tapos sor background picture is yung morirokue Philippines na company na makikita natin sa google whic is yung inattach kong picture ng log in or sign in scree. BTW no need na mag sign in kasi may created na tayong account based dooon sa ginawa natin. Gawin din pala natin scalable yung system pag i edit yung ano yung role ni user, mag tanggal kapag nakaalis na siya or ilalagay natin sa archive as inactive na sila, and then sincew meron kasi na naporpromote pwede natin i edit yun, pwede i search yung uses, filter, by date time month week day exact day, exact week ng month or year, or search by name, id, date hired, or role sa company/position, at tsaka department. Pero may exception, di daw pala kasama yung mga guard sa MPI or moriroku Philippines inc at employee under agency daw sila tapos may kiosk daw sila doon na lalabas lang daw kung sino yung mga need mag approve na sa lahat so basically yung tinutukoy ni sir gelo is yung sa system natin sa part ng guard pero pag guard bawal natin sila lagyan ng pwede mag apply ng gate pass kasi di pala sila employee. So pag gagawan ko ng account sil doon sa admin part ng IT is pwede ako mag add account, ano username nila at kung ano password, ano roles, anong department at pwede magdagdag ng panibagong roles at department in case na wala so gawin nga nating scalable yung system. Sa admin part lang ng IT pwede mag add ng mga ganiyan ha Kahit si president bawal, tapos mga IT pag indi immediate superior bawal mag approve hanggang logs lang, Kahit yung logs lagyan ng page break at search ha para may resibo ng history.
+
+Tapos gumawa tayo ng multiple tables sa database at gawin nating object oriend mas effeienct via indexes, views, temp tables, at iba pa at maayos na CRUD sa backed at maayos na security. Gawin din nating encrypted yung password. Pero tingin ao ano mas maganda C# na sa backend or mag php parin tayo? Since di naman same ng backend yung sa system ng WIMS eh pero idudugtong ko parin, nakadikit lang tapos yung sa wims iba iba rin naman ng database base. Tingin mo aspi.net natayo para mas maayos or what? Para kasi di na legacy, panget kasi php based sa pag kakaalam ko.
+
+Sir Lyndon pinakahead ng it technical
+1. Maging QR based daw yung pag time in at out pero may website parin daw tapos yung mag time in at out na scan either manual or qr scanned po doon sa web or app ng associates or ng driver, gets ba? so may predicted sila nan time in at time out tapos vs actual in at out nila pag lalabas para may comparison sa paglabas at pag pasok. Dapat may data logs tayo na admin lang makakakita which is yung developer lang na account. So ibig sabihin sa guard lalabas yung pang scan ng qr bukod pa sa pwede sila mag apply ng gate pass, so ang tanong ko nga sa kanila isa paano kapag sila na yung nag apply ng gate pass sino yung time out at time in ulet, so for now other guard nalang ulet, and ako nalang mag dadagdag if wala tayo Nakita na guard position doon sa
+
+
+Ako na ojt ako muna sasalo sa programming hahahaha
+1. Basta wag lang magulo yung server kasi fragile, sabi ni sir  frontend backend at database tayo na dito lang muna local host bago i deploy sa server tas check natin sa server kung ano kasi 192.168.9.7/centralized-system yung ginagamit ni sir rod siya kasi yugn previous na developer at nag centralized nan tapos iba iba pa yung database walang centralized so ang gagawin na natin sa ating development now is ASPI.net na yung backened c# na gagamit tayo ng  organized folders frontend, backend database.
+
+Sa front end may html pages, design pages(css), function pages(js), tapos mag tailwind tayo at modern explicit design. The yung mga extra ay ilalagay sa ilalim ng src
+
+Sa backend naman is c# tapos may dalawang folder main isang Project isang controllers tapos sa project folder is main na tatlo repository, Services, at models na folder na taga declar taga gawa at taga get ng mga data sa database tapos gagamitin natin is MySQL para sa database mag gamit na rin tayo ng |Stored procedure para mapabilis ang ms at sobrang baba ng lag time para maging mas efficient. Gagamit din tayo ng mga indexing, views, at iba pa para mas maing efficient at mabilis ang code natin. Doon naman sa mga views ng logs, tingin ko need lagi natin ng mga page break, search, at filters para doon para di saying sa API call  at di mabigat sa backbend at database.
+
+Next is yung database naman natin ay MySQL pag finalized na at okay na edi i lalaunch na natin sa server ng company para native lang talaga ng system ng company server  nakalagay yung qr code na i scan pag nakapag approve ng ng in at out diba may iscan na qr si security guard yung qr or i approve yung time in at time out kapag diba na approve na ng immediate at ng PAS(tapos minsan ng president kapag nag labas ng company vehicle).
+
+BTW gawin nating english lahat wag filipino. Tapos gawin mong maayos na html, css, at js wag natin gawing react native pleaseeee. Tapos gumamit tayo ng tailwind at modern smooth transition kada action if okay lang. Then sa predicted time in at out lagyan natin option now?
+
+And then gagawin tayo na mag a-add ng gate pass is may format ng print yung parang ginawa natin na name of associates ganon na kapag ipeprint tapos lilitaw lang yung driver kapag need ng driver gawa ng vehicle pero alam ko kasi di talga nag rerequest yung driver, may employee talaga ang  mag rerequest, tapos siyemmpre katulad ng sinabi ko is marerecord if available yung saskyan based sa records. Tignan mo yung sinned kong picture magiging ganon yung itsura para pag ipiprint tapos yung mga mag piprintn on is mag auto lagay na kung sino ung imidiate na superior tapos pag i approve yun ng immediate superior at president kung yung nag request ng gate pass is immediate superior or may need  ng company car(need din yung license plate at name ng car at driver), meron na sila pwede ilagay na automatic na attach na pirma na image na inattached or ginawa mismo doon sa code natin na sila mismo mag handwrite through mouse nila tas ilalagay nalang doon sa ibabaw ng pangalan nila as per coded natin.dapat ganyang ganiyan ung itsura kung may magbabago is yung pag driver na need is may lalabas na driver na name base dun sa finill out na forms auto fill na yan kung baga view nalang talaga tapos lalabas yan habang nag e-edit ka ng or add ng iyong gate pass form to apply.
+
+BTW may picture na naka attach diyan ng assigned drivers at vehile at plate number may iba nga lang na di nakasulat gawin nalang natin scalable na add driver pero di sila user, kasi diba may add user tayo dapat may add driver tayto na di user na pwede pag pilian kasi si john neil valencia wala na so dapat pwede din tayo mag remove driver buklas sa add tapos may mga blangko siyan na di nakalagay driver kahit meron pa so ako na manually mag encode non sa website pag ganon.
+
+btw baka malito ka kunwari si sir neil is production manager, eh andamin production na department tapos siya ay manager ibig sabihin siya pinaka head tapos pag wala siya sa asst manager siya mag pa approve kasy sir bellen para sa immediate superior.
+
+
+Tapos dapat mag notify mismo sa desktop yung nontification minsan kasi di nakabukas yung website at busy mga immediate superior e tapos para sure dapat kaming admin na IT is need namin makita yung process kung sino nag apply sino na nag approve at need i approve, so bale lahat ng IT now is admin tapos idagdag mo nadin ako ang username ko is ojt. Set the password locally and do not commit it to Git.
+
+
+So, so far yan palang naman sa ngayon tapos ang need muna nati is UI/UX design na sobrang dali i naviaget pero maganda tignan.
+
+
+tapos ang request ko nga is yung nav bar na scroll up at down pero napipindot din, transparent background kung baga text lang at yung highlight na para bang option sa camera na nasa gitna malinaw sa taas is medyo blurred sa baba din ng gitna si medyo blured pero yung iba is di namakikita unless mag scroll, bale ganon nasa isip ko for now sa nav bar pero the rest is ikaw na bahala. Lagyan mo din ng user manual at screenshot based sa step by step process after ng final development. yung parang nasa ss kong binigay pero maayos, kung di mo kaya i screenshot kahit generated image mo nalang pero kamuka parin ng ating website na idedevelop.
