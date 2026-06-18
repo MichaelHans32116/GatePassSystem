@@ -12,6 +12,8 @@ This service uses `rembg` locally. It does not call an external API.
 
 ## Setup
 
+Double-click `start_backend.bat` for the Windows setup/start shortcut, or run manually:
+
 ```powershell
 cd "C:\Users\ivanlaurente\Desktop\Hans Files\GatePassSystem\Backend\SignatureBackgroundRemoval"
 python -m venv .venv
