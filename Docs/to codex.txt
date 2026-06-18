@@ -1,0 +1,644 @@
+Okay bro, UI/UX muna tayo. I’ll treat your notes as the source of truth: employee/associate gate pass, role-based approval, QR/manual time-out/time-in, vehicle availability, drivers as selectable records, guards as kiosk/security users, and IT/admin as system managers. Your uploaded notes also say the normal user requests only for themselves, company vehicle requests may need President approval, HR/PAS notes after approvals, guards scan QR/manual ID, and IT/admin manages users, roles, departments, vehicles, drivers, logs, and configuration.
+
+Big decision muna: design direction
+
+Ang gagawin nating UI/UX is not flashy app, kundi:
+
+Modern corporate admin system + noob-friendly kiosk flow + Moriroku blue branding.
+
+Meaning:
+
+Corporate
+Clean
+Readable
+Fast to navigate
+Mobile-accessible
+Desktop-first for HR/IT/admin
+Kiosk/mobile-friendly for guards
+
+Yung existing Employee Records System screenshot mo, magandang reference siya sa corporate style: blue sidebar, white cards, tables, filters, user manual modal. Pero mas gagawing modern, mas less cluttered, mas smooth.
+
+App name sa UI
+
+Use this sa design:
+
+Gate Pass Management System
+MORIROKU PHILIPPINES, INC.
+
+Alternative title:
+
+Employee Gate Pass & Vehicle Monitoring System
+
+Para hindi masyadong mahaba sa navbar, I suggest:
+
+Gate Pass System
+
+Then subtitle sa login:
+
+Moriroku Philippines, Inc.
+Recommended Figma structure
+
+Sa Figma, gumawa ka ng pages:
+
+01 - Design System
+02 - Login & Authentication
+03 - Associate Screens
+04 - Approval Screens
+05 - HR / PAS Admin Screens
+06 - Security Kiosk Screens
+07 - IT Admin Screens
+08 - Print Layouts
+09 - User Manual Screens
+10 - Prototype Flow
+
+Ganito para organized, hindi sabog.
+
+Role-based UI logic
+
+Same design language lahat, pero iba nav/actions.
+
+Role	Main UI Purpose
+Associate / Employee	Apply gate pass, view status, show QR
+Driver-capable Associate	Apply gate pass with vehicle/driver fields if allowed
+Immediate Superior	Approve/reject department requests
+President	Approve special requests, especially company vehicle or manager-level requests
+HR Head / PAS / Main HR	Final noting, monitoring, reports
+Security Guard / Kiosk User	Scan QR, manual ID lookup, time-out/time-in
+IT Admin / Developer	Manage users, roles, departments, vehicles, drivers, logs, settings
+
+Important UI rule:
+
+Users see only what their role needs.
+Same layout, different navigation.
+About your scroll-up/down transparent navbar idea
+
+Maganda siya visually, pero sa admin system, delikado kapag main navigation siya kasi baka malito ang HR, guard, or older users.
+
+So ito best implementation:
+
+Desktop admin layout
+
+Use normal left sidebar for clarity.
+
+Logo
+Dashboard
+Gate Pass Requests
+Approvals
+Currently Outside
+Vehicles
+Drivers
+Reports
+Users
+Settings
+User Manual
+Mobile / kiosk compact layout
+
+Use your idea as a vertical scroll selector:
+
+Blurred top items
+Centered active item
+Blurred bottom items
+Transparent background
+Active item has blue pill / focus highlight
+
+Best use case nito:
+
+Security Kiosk
+Mobile navigation
+Quick role menu
+Dashboard module switcher
+
+So hindi natin siya itatapon. Gagawin natin siyang Focus Wheel Navigation for compact screens, pero desktop still uses normal sidebar.
+
+Visual style guide
+
+Use this direction:
+
+Primary color: Moriroku blue
+Background: soft gray / near white
+Cards: white with subtle shadow
+Text: dark navy / charcoal
+Success: green
+Warning: amber
+Danger: red
+Info: blue
+Borders: light gray
+
+Typography:
+
+Headings: bold, clean
+Body: readable
+Tables: compact but not cramped
+Buttons: large enough for non-technical users
+
+Animations:
+
+Smooth hover
+Slide-in modal
+Soft page transition
+QR scan pulse
+Toast notification
+Approval success animation
+Loading skeleton for tables
+
+No overkill animations. Corporate pa rin.
+
+Master Figma AI prompt
+
+Copy-paste mo ito sa Figma AI / First Draft. This is the main prompt.
+
+Create a modern low-fidelity to mid-fidelity web application UI for a company Gate Pass Management System for MORIROKU PHILIPPINES, INC.
+
+The system digitizes a manual paper-based “Gate Pass for Associates” process. The paper form includes: Name of Associate, Date Filed, Destination, Vehicle, Purpose, From Time, To Time, Approved by Immediate Superior, Approved by President, and Noted by PAS / HR.
+
+Design goal:
+Create a clean, noob-friendly, corporate, role-based web app that works on desktop, laptop, tablet, and mobile. The design should look professional, readable, and aligned with a blue-and-white Moriroku corporate style.
+
+Core features:
+
+Associates can request a gate pass only for themselves.
+Some users may request gate passes involving company vehicles.
+Company vehicle requests require vehicle details, plate number, and driver selection.
+Immediate Superior approves first.
+President approves only when required, such as company vehicle use or higher-level request cases.
+HR / PAS performs final noting or validation.
+Security guards scan QR codes or manually search by ID to record Time Out and Time In.
+Some gate passes may be Time Out only if the associate will not return within the same schedule.
+The system tracks predicted time out, predicted time in, actual time out, and actual time in.
+The system shows who is currently outside, who has returned, who is overdue, and which vehicles are available, reserved, or in use.
+IT Admin manages users, roles, departments, vehicles, drivers, settings, and audit logs.
+
+Roles:
+
+Associate
+Driver-capable Associate
+Immediate Superior
+President
+HR / PAS Admin
+Security Guard / Kiosk User
+IT Admin / Developer
+
+Design screens:
+
+Login page with company building background and right-side login card
+Associate dashboard
+New gate pass request form
+Vehicle and driver selection section
+My gate pass requests page
+Approved QR gate pass page
+Immediate Superior approval queue
+President approval queue
+HR / PAS dashboard
+Final noting / validation page
+Security QR scanner / kiosk screen
+Manual ID verification screen
+Currently Outside monitoring page
+Vehicle availability dashboard
+Vehicle management page
+Driver management page
+Reports and logs page
+User management page
+Role and department management page
+Print-ready gate pass layout based on the original paper form
+User manual modal page with screenshot-style instructions
+
+Layout rules:
+
+Use a consistent topbar and sidebar layout for desktop.
+Use role-based navigation: same visual style, different menu items per role.
+Use white cards, blue accents, clean tables, filters, search fields, and status badges.
+Make forms easy to complete with clear labels and helper text.
+Make security guard screens large, simple, and fast to use.
+Add a compact mobile navigation concept using a vertical focus-wheel menu: the active item is centered and highlighted, while items above and below are blurred and faded.
+Use smooth transitions, subtle shadows, rounded corners, and corporate blue highlights.
+Avoid clutter. Prioritize usability and speed.
+
+Use dummy data only. Do not use real employee names, real signatures, or confidential company data.
+
+Screen-by-screen Figma prompt
+
+Use this after the master prompt kung gusto mong ipa-generate per section.
+
+Design the following screens for the Moriroku Gate Pass Management System using a consistent corporate blue-and-white UI style.
+
+Login Screen
+Left side: full-height company building photo with dark overlay
+Large title: “Gate Pass Management System”
+Subtitle: “MORIROKU PHILIPPINES, INC.”
+Right side: white login card
+Logo placeholder
+Username field with hint: “Employee ID or assigned username”
+Password field with hint: “Default password uses Date Hired format: MMDDYYYY”
+Sign In button
+Small helper text: “For account concerns, contact IT Administrator.”
+Associate Dashboard
+Welcome card
+Quick action: Apply for Gate Pass
+Status cards: Pending, Approved, Outside, Returned, Rejected
+Table: Recent Gate Pass Requests
+Columns: Request No., Destination, Purpose, Schedule, Status, Action
+New Gate Pass Request Form
+Auto-filled associate information
+Date Filed auto-generated
+Destination
+Purpose
+Predicted Time Out
+Expected Time In optional
+Return required toggle: Yes / No
+Vehicle use selection: No Vehicle, Private Vehicle, Company Vehicle
+If Company Vehicle is selected, show Vehicle, Plate Number, Driver, and Availability Status
+Submit Request button
+Live print-preview panel on the right showing the paper gate pass format
+Approval Queue
+For Immediate Superior and President roles
+Cards: Pending Approval, Approved Today, Rejected Today
+Table of requests needing approval
+Columns: Requester, Department, Destination, Vehicle, Schedule, Approval Level, Status, Action
+Action buttons: View, Approve, Reject
+Request detail modal with approval trail and remarks field
+HR / PAS Dashboard
+Cards: Pending Noting, Approved Today, Currently Outside, Overdue, Vehicles Available, Vehicles In Use
+Table: Requests waiting for final noting
+Monitoring panel: Associates currently outside
+Vehicle panel: Available / Reserved / In Use vehicles
+Reports shortcut
+Security Kiosk Screen
+Large QR scanner area
+Manual ID search field
+Result card: Valid, Invalid, Not Approved, Already Timed Out, Returned, Overdue
+Primary button changes based on status: Record Time Out or Record Time In
+Recent scan logs
+Large readable text for gate use
+Vehicle Availability Screen
+Status cards: Available, Reserved, In Use, Maintenance
+Vehicle table with Plate Number, Vehicle Type, Assigned Driver, Status, Current Request, Expected Return
+Filters by status, vehicle type, plate number
+Add/Edit Vehicle button for IT Admin only
+Reports and Logs
+Search and filters by employee ID, name, department, status, date, week, month, year, vehicle, driver
+Paginated table
+Export button
+Audit log view for IT Admin only
+Print-ready Gate Pass
+Match the original paper form layout
+Include company header, title, name of associate, date filed, destination, vehicle, driver if applicable, purpose, predicted time out, expected time in, approved by immediate superior, approved by president if applicable, noted by HR/PAS
+Include QR code section
+Include approval names and signature placeholders
+Design system / component prompt
+
+Use this para consistent lahat ng components.
+
+Create a design system for the Moriroku Gate Pass Management System.
+
+Brand style:
+
+Corporate blue and white theme
+Clean admin dashboard aesthetic
+Professional, simple, readable, and noob-friendly
+Suitable for HR, IT, security guards, managers, and associates
+
+Components to design:
+
+Sidebar navigation
+Topbar with user profile, role badge, notifications, and logout
+Dashboard cards
+Data tables with search, filters, pagination, and action buttons
+Status badges:
+Draft
+Pending Superior Approval
+Pending President Approval
+Pending HR/PAS Noting
+Approved
+Rejected
+Outside
+Returned
+Overdue
+Expired
+Vehicle status badges:
+Available
+Reserved
+In Use
+Maintenance
+Unavailable
+Form fields
+Select dropdowns
+Date and time pickers
+Toggle switches
+Approval trail timeline
+QR code card
+Scanner result card
+Toast notifications
+Confirmation modal
+User manual modal
+Print preview card
+Compact mobile focus-wheel navigation
+
+Navigation concept:
+
+Desktop uses a clear left sidebar.
+Mobile and kiosk screens can use a vertical focus-wheel navigation where the active item is centered and highlighted, while items above and below are blurred and faded.
+
+Interaction style:
+
+Smooth hover states
+Subtle transitions
+Clear loading state
+Clear success and error feedback
+Accessible contrast and readable font sizes
+Exact screens to create first in Figma
+
+Bro, wag mo muna gawin lahat. Start with MVP design set:
+
+1. Login
+2. Associate Dashboard
+3. New Gate Pass Request
+4. My Requests
+5. Approval Queue
+6. HR/PAS Dashboard
+7. Security Scanner
+8. Currently Outside
+9. Vehicle Availability
+10. Print Gate Pass Preview
+
+Pag okay na yan, saka:
+
+11. User Management
+12. Driver Management
+13. Vehicle Management
+14. Reports & Logs
+15. User Manual
+Desktop sidebar per role
+Associate sidebar
+Dashboard
+Apply Gate Pass
+My Requests
+My QR Pass
+History
+User Manual
+Immediate Superior sidebar
+Dashboard
+Approval Queue
+Approved Requests
+Team Outside
+History
+User Manual
+President sidebar
+Dashboard
+President Approval
+Approved Requests
+History
+User Manual
+HR / PAS sidebar
+Dashboard
+Pending Noting
+All Requests
+Currently Outside
+Vehicle Availability
+Reports
+User Manual
+Security sidebar
+Scanner
+Manual Verification
+Currently Outside
+Vehicles In Use
+Recent Logs
+User Manual
+IT Admin sidebar
+Dashboard
+Users
+Roles
+Departments
+Vehicles
+Drivers
+All Requests
+Reports & Logs
+Audit Logs
+System Settings
+User Manual
+New Gate Pass form layout
+
+Make this the heart of the design.
+
+Section 1: Associate Information
+- Employee ID
+- Full Name
+- Department
+- Position
+- Immediate Superior
+
+Section 2: Gate Pass Details
+- Date Filed
+- Destination
+- Purpose
+- Predicted Time Out
+- Expected Time In
+- Return Required: Yes / No
+
+Section 3: Vehicle Details
+- Vehicle Use: No Vehicle / Private Vehicle / Company Vehicle
+- Vehicle Name
+- Plate Number
+- Driver
+- Availability Status
+
+Section 4: Approval Route Preview
+- Immediate Superior
+- President if required
+- HR/PAS Noting
+
+Section 5: Live Print Preview
+- Paper gate pass style
+- QR placeholder
+
+Important: Expected Time In optional. Kapag Return Required = No, huwag pilitin maglagay ng expected time in.
+
+Security scanner UX logic
+
+Dapat sobrang simple:
+
+Scan QR or Enter Employee ID
+↓
+System checks latest approved active gate pass
+↓
+If valid and not yet timed out:
+    Show Record Time Out
+If already timed out and return is required:
+    Show Record Time In
+If time-out only:
+    Show Completed after Time Out
+If not approved:
+    Show Not Available
+If already completed:
+    Show Already Completed
+
+Error messages sa UI:
+
+Gate pass verification is not available.
+This request is not yet fully approved.
+This QR code has already been completed.
+This gate pass is expired.
+No active approved gate pass found.
+
+Success messages:
+
+Time Out recorded successfully.
+Time In recorded successfully.
+Gate pass transaction completed.
+Print preview design
+
+Ito dapat kamukha ng paper form mo, pero digital and printable.
+
+Include:
+
+MORIROKU PHILIPPINES, INC.
+GATE PASS FOR ASSOCIATES
+
+Name of Associate
+Date Filed
+Driver, if applicable
+Vehicle
+Plate Number, if applicable
+Destination
+Purpose
+From
+To / Expected Time In
+Approved By Immediate Superior
+Approved By President, if required
+Noted By HR / PAS
+QR Code
+Gate Pass No.
+
+Design rule:
+
+If no company vehicle:
+    Hide Driver and Plate Number fields
+
+If company vehicle:
+    Show Driver, Vehicle, Plate Number
+
+If no president approval required:
+    Show “Not Required” or hide President section depending on company preference
+
+For Figma, mas okay show section but mark “Not Required” para consistent sa layout.
+
+Dashboard card labels
+
+Use these exact English labels:
+
+Pending Requests
+Pending My Approval
+Pending HR/PAS Noting
+Approved Today
+Currently Outside
+Overdue Returns
+Available Vehicles
+Reserved Vehicles
+Vehicles In Use
+Completed Transactions
+
+Statuses:
+
+Pending Superior Approval
+Pending President Approval
+Pending HR/PAS Noting
+Approved
+Rejected
+Timed Out
+Returned
+Overdue
+Expired
+Completed
+User manual feature
+
+Since may screenshot ka ng manual sa current system, gayahin natin yung pattern pero cleaner.
+
+User Manual modal:
+
+Title: User Manual
+Left side: Step title and instructions
+Right side: screenshot preview
+Bottom: Previous / Next / Close
+Progress: Page 1 of 10
+
+Manual topics:
+
+1. How to Sign In
+2. How to Apply for Gate Pass
+3. How to Select Vehicle and Driver
+4. How to Track Request Status
+5. How to Approve a Request
+6. How HR/PAS Notes a Request
+7. How Security Scans QR
+8. How to Record Time Out and Time In
+9. How to View Currently Outside Associates
+10. How to Generate Reports
+
+For Figma muna, use placeholder screenshots. Later after final development, real screenshots.
+
+Best first Figma flow
+
+Gawin mo prototype flow like this:
+
+Login
+→ Associate Dashboard
+→ Apply Gate Pass
+→ Submit
+→ My Requests: Pending Superior Approval
+→ Immediate Superior Approval Queue
+→ Approve
+→ President Approval Queue, only if required
+→ HR/PAS Pending Noting
+→ Note / Validate
+→ QR Gate Pass Generated
+→ Security Scanner
+→ Record Time Out
+→ Currently Outside
+→ Record Time In
+→ Returned / Completed
+One important correction sa UI wording
+
+Huwag gamitin masyado yung “leave” kasi baka malito sa HR leave system. Use:
+
+Gate Pass Request
+Exit Authorization
+Time Out
+Time In
+Currently Outside
+Expected Return
+
+Mas bagay sa company gatepass.
+
+Figma execution plan
+
+Ganito gawin mo ngayon:
+
+Step 1:
+Create Figma file named:
+Moriroku Gate Pass Management System - UI UX
+
+Step 2:
+Paste Master Prompt sa Figma AI / First Draft.
+
+Step 3:
+Generate desktop admin layout first.
+
+Step 4:
+Duplicate the generated style and manually create:
+- Security Scanner
+- Print Gate Pass Preview
+- Mobile Focus Wheel Navigation
+
+Step 5:
+Send mo sakin screenshots ng generated screens.
+
+Step 6:
+I-audit natin:
+- clarity
+- navigation
+- role separation
+- form completeness
+- approval flow
+- noob-friendly ba
+- bagay ba sa Moriroku
+
+My strong advice: unang ipagawa mo sa Figma AI yung desktop web app, then ikaw manually gumawa ng print preview kasi kailangan kamukha talaga ng actual paper gatepass.

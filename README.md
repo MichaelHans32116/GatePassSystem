@@ -12,7 +12,8 @@ The repository now contains:
 - `Docs/API_CONTRACT.md`: first draft of backend endpoints.
 - `Database/schema.sql`: normalized MySQL schema draft.
 - `Frontend/`: target structure for the future modular frontend.
-- `Backend/`: target structure for the future ASP.NET Core Web API.
+- `Backend/`: working .NET 8 ASP.NET Core Web API foundation with JWT login,
+  MariaDB connectivity, dependency injection, and a sanitized employee importer.
 
 ## Planned Features
 
@@ -30,7 +31,10 @@ The repository now contains:
 ## Development Notes
 
 - The current prototype uses browser-only mock data and hardcoded test users.
-- Production implementation must use backend authentication, password hashing, database storage, and server-side authorization.
+- The backend foundation now uses password hashing, database-backed accounts,
+  multiple role assignments, and server-side JWT claims.
+- The raw employee workbook is excluded from Git. The importer reads only
+  Employee ID, Full Name, Department, Position, Date Hired, and Employment Status.
 - Keep real employee data, passwords, and server credentials out of Git.
 
 ## Repository

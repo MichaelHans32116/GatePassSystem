@@ -62,7 +62,7 @@
                     <p class="text-sm text-gray-500 mt-2">Sign in to your account</p>
                 </div>
 
-                <form id="loginForm" onsubmit="handleLogin(event)" class="w-full">
+                <form id="loginForm" class="w-full">
                 <div class="mb-5">
                     <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2"><i class="fas fa-user mr-1 text-mpiBlue"></i> Username / ID</label>
                     <input type="text" id="empId" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:bg-white focus:border-mpiBlue focus:ring-2 focus:ring-mpiLight transition" placeholder="Enter your ID" required>
@@ -80,18 +80,6 @@
                 </button>
             </form>
 
-            <!-- Dev Quick Login Helpers -->
-            <div class="mt-8 pt-6 border-t border-gray-100 w-full">
-                <p class="text-[10px] text-center text-gray-400 mb-3 font-bold uppercase tracking-wider">Quick Login (Testing)</p>
-                <div class="grid grid-cols-2 lg:grid-cols-3 gap-2">
-                    <button onclick="quickLogin('ojt', 'demo-password')" class="text-[10px] font-semibold bg-gray-100 hover:bg-gray-200 py-2 rounded transition">System Admin</button>
-                    <button onclick="quickLogin('PRES', '01012020')" class="text-[10px] font-semibold bg-gray-100 hover:bg-gray-200 py-2 rounded transition">President</button>
-                    <button onclick="quickLogin('SUP-01', '01012020')" class="text-[10px] font-semibold bg-gray-100 hover:bg-gray-200 py-2 rounded transition">Immediate Superior</button>
-                    <button onclick="quickLogin('HR', '01012020')" class="text-[10px] font-semibold bg-gray-100 hover:bg-gray-200 py-2 rounded transition">PAS / HR Admin</button>
-                    <button onclick="quickLogin('MPI-001', '06172026')" class="text-[10px] font-semibold bg-gray-100 hover:bg-gray-200 py-2 rounded transition">Associate</button>
-                    <button onclick="quickLogin('GUARD-1', '01012020')" class="text-[10px] font-semibold bg-gray-100 hover:bg-gray-200 py-2 rounded transition">Guard</button>
-                </div>
-            </div>
             </div>
         </div>
     </div>
@@ -155,12 +143,12 @@
                 </div>
             </nav>
 
-            <div class="p-6 border-t border-white/10 hover:bg-white/10 transition cursor-pointer" onclick="logout()">
+            <button id="logoutButton" type="button" class="w-full p-6 border-t border-white/10 hover:bg-white/10 transition cursor-pointer text-left">
                 <div class="flex items-center space-x-3 text-white px-2">
                     <i class="fas fa-sign-out-alt text-xl w-8 text-left"></i>
                     <span class="text-lg font-bold tracking-wide">Log Out</span>
                 </div>
-            </div>
+            </button>
         </aside>
 
         <!-- MAIN CONTENT AREA -->
@@ -740,16 +728,16 @@
         </div>
     </div>
 
-        <script src="Frontend/Functions/mock-data.js"></script>
-    <script src="Frontend/Connectors/api-client.js"></script>
+    <script src="Frontend/Functions/mock-data.js?v=20260619-auth-api-3"></script>
+    <script src="Frontend/Connectors/api-client.js?v=20260619-auth-api-2"></script>
     <script src="Frontend/Functions/signature.js"></script>
     <script src="Frontend/Functions/modal.js"></script>
     <script src="Frontend/Functions/gatepass.js"></script>
     <script src="Frontend/Functions/approvals.js"></script>
     <script src="Frontend/Functions/scanner.js"></script>
-    <script src="Frontend/Functions/admin.js"></script>
+    <script src="Frontend/Functions/admin.js?v=20260619-auth-api-3"></script>
     <script src="Frontend/Functions/navigation.js"></script>
-    <script src="Frontend/Functions/auth.js"></script>
+    <script src="Frontend/Functions/auth.js?v=20260619-auth-api-4"></script>
     <script src="Frontend/Functions/app.js"></script>
 </body>
 </html>
