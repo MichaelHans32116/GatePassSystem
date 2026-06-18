@@ -73,11 +73,21 @@ async function handleLogin(e) {
     const submitButton = form.querySelector('button[type="submit"]');
     const username = document.getElementById('empId').value.trim();
     const password = document.getElementById('empPass').value;
+    const mockUser = mockUsers.find(
+        user => user.id === username && user.password === password
+    );
 
     submitButton.disabled = true;
     submitButton.classList.add('opacity-60', 'cursor-wait');
 
     try {
+        if (mockUser) {
+            ApiClient.clearAccessToken();
+            form.reset();
+            showAuthenticatedApp({ ...mockUser, roles: [], permissions: [] });
+            return;
+        }
+
         const result = await ApiClient.request('/auth/login', {
             method: 'POST',
             body: JSON.stringify({ username, password })
@@ -125,6 +135,7 @@ function logout() {
 }
 
 document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('loginForm')?.addEventListener('submit', handleLogin);
     document.getElementById('logoutButton')?.addEventListener('click', logout);
     restoreAuthenticatedSession();
 });

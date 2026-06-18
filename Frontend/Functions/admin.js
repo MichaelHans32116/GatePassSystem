@@ -56,13 +56,9 @@ function switchAdminTab(tabId) {
         }
 
 function renderAdminTables() {
-            document.getElementById('adminUsersList').innerHTML = `
-                <tr>
-                    <td colspan="5" class="p-6 text-center text-sm text-gray-400">
-                        Employee accounts are now managed by the database. User administration will be connected in the next backend phase.
-                    </td>
-                </tr>
-            `;
+            document.getElementById('adminUsersList').innerHTML = mockUsers.map(u => `
+                <tr class="border-b"><td class="p-3 text-xs font-mono">${u.id}</td><td class="p-3 font-semibold text-sm">${u.name}</td><td class="p-3 text-xs">${u.role}</td><td class="p-3 text-xs">${u.dept}</td><td class="p-3 text-right"><button class="text-blue-500 hover:text-blue-700 text-xs mr-3 border border-blue-200 px-2 py-1 rounded"><i class="fas fa-edit"></i> Edit</button> <button class="text-red-500 hover:text-red-700 text-xs border border-red-200 px-2 py-1 rounded"><i class="fas fa-archive"></i> Archive</button></td></tr>
+            `).join('');
             document.getElementById('adminFleetList').innerHTML = mockVehicles.map(v => `
                 <tr class="border-b"><td class="p-3 font-semibold text-sm">${v.name}</td><td class="p-3 text-xs font-mono">${v.plate}</td><td class="p-3 text-xs text-gray-600">${v.driver}</td><td class="p-3 text-xs">${v.status}</td><td class="p-3 text-right"><button class="text-blue-500 hover:text-blue-700 text-xs mr-3 border border-blue-200 px-2 py-1 rounded"><i class="fas fa-edit"></i> Edit</button> <button class="text-red-500 hover:text-red-700 text-xs border border-red-200 px-2 py-1 rounded"><i class="fas fa-trash"></i></button></td></tr>
             `).join('');
