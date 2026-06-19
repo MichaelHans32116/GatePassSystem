@@ -63,3 +63,8 @@ public sealed record SecurityScanResult(
     string? RequestStatus,
     DateTimeOffset? RecordedAt);
 
+public sealed record QrTokenResponse(
+    long GatePassId,
+    string GatePassNo,
+    string QrToken,
+    DateTimeOffset? ExpiresAt);

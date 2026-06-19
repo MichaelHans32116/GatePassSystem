@@ -188,6 +188,7 @@ public sealed class GatePassRepository(
                 vehicle.plate_number AS PlateNumber,
                 request_row.driver_id AS DriverId,
                 driver.full_name AS DriverName,
+                request_row.qr_expires_at AS QrExpiresAt,
                 request_row.version_no AS VersionNo
             FROM view_gate_pass_records records
             JOIN tbl_gate_pass_requests request_row
@@ -357,6 +358,7 @@ public sealed class GatePassRepository(
             PlateNumber = source.PlateNumber,
             DriverId = source.DriverId,
             DriverName = source.DriverName,
+            QrExpiresAt = source.QrExpiresAt,
             VersionNo = source.VersionNo,
             ApprovalSteps = steps,
             Scans = scans

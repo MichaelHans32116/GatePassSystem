@@ -50,6 +50,7 @@ public sealed class GatePassDetail : GatePassRecord
     public string? PlateNumber { get; init; }
     public long? DriverId { get; init; }
     public string? DriverName { get; init; }
+    public DateTime? QrExpiresAt { get; init; }
     public int VersionNo { get; init; }
     public IReadOnlyList<ApprovalStepRecord> ApprovalSteps { get; init; } = [];
     public IReadOnlyList<GatePassScanRecord> Scans { get; init; } = [];

@@ -24,5 +24,8 @@ public interface IGatePassService
     Task<PagedResult<GatePassRecord>> GetAllAsync(
         GatePassQuery query,
         CancellationToken cancellationToken = default);
-}
 
+    Task<ServiceResult<QrTokenResponse>> GetQrTokenAsync(
+        long gatePassId,
+        CancellationToken cancellationToken = default);
+}

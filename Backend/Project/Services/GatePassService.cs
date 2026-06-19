@@ -10,7 +10,8 @@ public sealed class GatePassService(
     IEmployeeRepository employeeRepository,
     IGatePassRepository gatePassRepository,
     IFleetRepository fleetRepository,
-    IOperationsRepository operationsRepository) : IGatePassService
+    IOperationsRepository operationsRepository,
+    IQrTokenService qrTokenService) : IGatePassService
 {
     public async Task<ServiceResult<GatePassCreationResult>> CreateAsync(
         long requesterUserId,
@@ -156,6 +157,42 @@ public sealed class GatePassService(
         CancellationToken cancellationToken = default) =>
         gatePassRepository.GetPagedAsync(query, null, cancellationToken);
 
+    public async Task<ServiceResult<QrTokenResponse>> GetQrTokenAsync(
+        long gatePassId,
+        CancellationToken cancellationToken = default)
+    {
+        var detail = await gatePassRepository.GetDetailAsync(
+            gatePassId,
+            cancellationToken);
+        if (detail is null)
+        {
+            return ServiceResult<QrTokenResponse>.Failure(
+                "GATE_PASS_NOT_FOUND",
+                "Gate pass was not found.");
+        }
+
+        if (detail.ApprovedAt is null ||
+            detail.GatePassStatusCode is
+                "REJECTED" or "CANCELLED" or "EXPIRED" or "DRAFT")
+        {
+            return ServiceResult<QrTokenResponse>.Failure(
+                "QR_NOT_AVAILABLE",
+                "QR is available only after final approval.");
+        }
+
+        return ServiceResult<QrTokenResponse>.Success(
+            new QrTokenResponse(
+                detail.GatePassId,
+                detail.GatePassNo,
+                qrTokenService.CreateToken(detail.GatePassId),
+                detail.QrExpiresAt.HasValue
+                    ? new DateTimeOffset(
+                        DateTime.SpecifyKind(
+                            detail.QrExpiresAt.Value,
+                            DateTimeKind.Utc))
+                    : null));
+    }
+
     private static string? Validate(CreateGatePassRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.Destination) ||
@@ -200,4 +237,3 @@ public sealed class GatePassService(
         return null;
     }
 }
-

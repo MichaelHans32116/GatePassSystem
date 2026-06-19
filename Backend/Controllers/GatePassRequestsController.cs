@@ -1,0 +1,104 @@
+using GatePassSystem.Api.Infrastructure;
+using GatePassSystem.Api.Infrastructure.Authorization;
+using GatePassSystem.Project.DTOs.GatePass;
+using GatePassSystem.Project.Models;
+using GatePassSystem.Project.Services;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
+
+namespace GatePassSystem.Api.Controllers;
+
+[ApiController]
+[Authorize]
+[Route("api/gate-pass-requests")]
+public sealed class GatePassRequestsController(
+    IGatePassService gatePassService) : ApiControllerBase
+{
+    [Authorize(Policy = GatePassPermissions.CreateOwn)]
+    [HttpPost]
+    public async Task<ActionResult<ApiResponse<GatePassCreationResult>>> Create(
+        [FromBody] CreateGatePassRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await gatePassService.CreateAsync(
+            CurrentUserId,
+            request,
+            HttpContext.TraceIdentifier,
+            cancellationToken);
+        return result.IsSuccess
+            ? Success(result.Value!, "Gate pass submitted successfully.")
+            : ServiceFailure(result);
+    }
+
+    [Authorize(Policy = GatePassPermissions.ReadOwn)]
+    [HttpGet("my")]
+    public async Task<ActionResult<PagedApiResponse<GatePassRecord>>> My(
+        [FromQuery] GatePassQuery query,
+        CancellationToken cancellationToken) =>
+        Paged(await gatePassService.GetMyRequestsAsync(
+            CurrentUserId,
+            query,
+            cancellationToken));
+
+    [Authorize(Policy = GatePassPermissions.ReadAll)]
+    [HttpGet]
+    public async Task<ActionResult<PagedApiResponse<GatePassRecord>>> All(
+        [FromQuery] GatePassQuery query,
+        CancellationToken cancellationToken) =>
+        Paged(await gatePassService.GetAllAsync(query, cancellationToken));
+
+    [HttpGet("{id:long}")]
+    public async Task<ActionResult<ApiResponse<GatePassDetail>>> Detail(
+        long id,
+        CancellationToken cancellationToken)
+    {
+        var detail = await gatePassService.GetDetailAsync(id, cancellationToken);
+        if (detail is null)
+        {
+            return NotFound(new ApiErrorResponse(
+                "GATE_PASS_NOT_FOUND",
+                "Gate pass was not found.",
+                null,
+                HttpContext.TraceIdentifier));
+        }
+
+        var canRead =
+            detail.RequesterUserId == CurrentUserId ||
+            HasPermission(GatePassPermissions.ReadAll) ||
+            detail.ApprovalSteps.Any(
+                step => step.AssignedApproverUserId == CurrentUserId);
+
+        return canRead
+            ? Success(detail)
+            : NotFound(new ApiErrorResponse(
+                "GATE_PASS_NOT_FOUND",
+                "Gate pass was not found.",
+                null,
+                HttpContext.TraceIdentifier));
+    }
+
+    [HttpGet("{id:long}/qr")]
+    public async Task<ActionResult<ApiResponse<QrTokenResponse>>> Qr(
+        long id,
+        CancellationToken cancellationToken)
+    {
+        var detail = await gatePassService.GetDetailAsync(id, cancellationToken);
+        if (detail is null ||
+            (detail.RequesterUserId != CurrentUserId &&
+             !HasPermission(GatePassPermissions.ReadAll)))
+        {
+            return NotFound(new ApiErrorResponse(
+                "GATE_PASS_NOT_FOUND",
+                "Gate pass was not found.",
+                null,
+                HttpContext.TraceIdentifier));
+        }
+
+        var result = await gatePassService.GetQrTokenAsync(
+            id,
+            cancellationToken);
+        return result.IsSuccess
+            ? Success(result.Value!)
+            : ServiceFailure(result);
+    }
+}

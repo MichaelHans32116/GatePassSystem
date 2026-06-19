@@ -5,6 +5,7 @@ env/
 node_modules/
 **/bin/
 **/obj/
+Backend/Data/signatures/
 .env
 LocalData/
 *.xlsx

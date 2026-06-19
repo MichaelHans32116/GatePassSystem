@@ -30,6 +30,7 @@ public static class DependencyInjection
         services.AddScoped<ISignatureRepository, SignatureRepository>();
         services.AddScoped<IOperationsRepository, OperationsRepository>();
         services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
+        services.AddSingleton<IQrTokenService, QrTokenService>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddScoped<IAuthService, AuthService>();
         services.AddScoped<IGatePassService, GatePassService>();

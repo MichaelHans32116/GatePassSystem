@@ -1,10 +1,16 @@
 using System.Text;
 using System.Threading.RateLimiting;
+using GatePassSystem.Api.Infrastructure;
+using GatePassSystem.Api.Infrastructure.Authorization;
 using GatePassSystem.Project;
 using GatePassSystem.Project.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
+using MySqlConnector;
 
 const string FrontendCorsPolicy = "FrontendCors";
 const string GeneralRateLimitPolicy = "General";
@@ -40,10 +46,49 @@ builder.Services
     .ValidateOnStart();
 
 builder.Services.AddGatePassProject(connectionString);
-builder.Services.AddControllers();
+builder.Services
+    .AddControllers()
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        options.InvalidModelStateResponseFactory = context =>
+            new BadRequestObjectResult(new ApiErrorResponse(
+                "INVALID_REQUEST",
+                "One or more request fields are invalid.",
+                context.ModelState
+                    .Where(entry => entry.Value?.Errors.Count > 0)
+                    .ToDictionary(
+                        entry => entry.Key,
+                        entry => entry.Value!.Errors
+                            .Select(error => error.ErrorMessage)
+                            .ToArray()),
+                context.HttpContext.TraceIdentifier));
+    });
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.AddSecurityDefinition(
+        "Bearer",
+        new OpenApiSecurityScheme
+        {
+            Type = SecuritySchemeType.Http,
+            Scheme = "bearer",
+            BearerFormat = "JWT",
+            Description = "Enter the JWT access token."
+        });
+    options.AddSecurityRequirement(document =>
+        new OpenApiSecurityRequirement
+        {
+            [new OpenApiSecuritySchemeReference("Bearer", document)] = []
+        });
+});
 builder.Services.AddResponseCompression();
+builder.Services.Configure<SignatureStorageOptions>(
+    builder.Configuration.GetSection("SignatureStorage"));
+builder.Services.AddSingleton<ISignatureStorage, SignatureStorage>();
+builder.Services.AddHttpClient("SignatureBackgroundRemoval", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(45);
+});
 
 var defaultOrigins = new[]
 {
@@ -103,7 +148,17 @@ builder.Services
         };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
+builder.Services.AddAuthorization(options =>
+{
+    foreach (var permission in GatePassPermissions.All)
+    {
+        options.AddPolicy(
+            permission,
+            policy => policy.Requirements.Add(
+                new PermissionRequirement(permission)));
+    }
+});
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -149,12 +204,28 @@ app.UseExceptionHandler(errorApp =>
             "Unhandled API exception. traceId={TraceId}",
             context.TraceIdentifier);
 
-        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-        await context.Response.WriteAsJsonAsync(new
+        var (status, code, message) = feature?.Error switch
         {
-            error = "Internal server error.",
-            traceId = context.TraceIdentifier
-        });
+            InvalidOperationException invalid =>
+                (StatusCodes.Status409Conflict,
+                 "WORKFLOW_CONFLICT",
+                 invalid.Message),
+            MySqlException { SqlState: "45000" } database =>
+                (StatusCodes.Status409Conflict,
+                 "DATABASE_WORKFLOW_CONFLICT",
+                 database.Message),
+            _ =>
+                (StatusCodes.Status500InternalServerError,
+                 "INTERNAL_SERVER_ERROR",
+                 "Internal server error.")
+        };
+
+        context.Response.StatusCode = status;
+        await context.Response.WriteAsJsonAsync(new ApiErrorResponse(
+            code,
+            message,
+            null,
+            context.TraceIdentifier));
     });
 });
 

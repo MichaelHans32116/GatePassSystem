@@ -1,5 +1,3 @@
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using GatePassSystem.Project.DTOs.Common;
 using GatePassSystem.Project.DTOs.GatePass;
@@ -10,7 +8,8 @@ namespace GatePassSystem.Project.Services;
 
 public sealed class SecurityService(
     ISecurityRepository securityRepository,
-    IOperationsRepository operationsRepository) : ISecurityService
+    IOperationsRepository operationsRepository,
+    IQrTokenService qrTokenService) : ISecurityService
 {
     public Task<IReadOnlyList<SecurityQueueItem>> GetQueueAsync(
         CancellationToken cancellationToken = default) =>
@@ -34,7 +33,7 @@ public sealed class SecurityService(
         var normalized = hasQr
             ? request.QrToken!.Trim()
             : request.ManualGatePassNo!.Trim().ToUpperInvariant();
-        var identifierHash = Sha256(normalized);
+        var identifierHash = qrTokenService.HashToken(normalized);
 
         var result = await securityRepository.ScanAsync(
             guardUserId,
@@ -61,9 +60,4 @@ public sealed class SecurityService(
 
         return ServiceResult<SecurityScanResult>.Success(result);
     }
-
-    private static string Sha256(string value) =>
-        Convert.ToHexString(
-            SHA256.HashData(Encoding.UTF8.GetBytes(value)));
 }
-

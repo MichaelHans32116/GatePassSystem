@@ -1,5 +1,3 @@
-using System.Security.Cryptography;
-using System.Text;
 using System.Text.Json;
 using GatePassSystem.Project.DTOs.Common;
 using GatePassSystem.Project.DTOs.GatePass;
@@ -11,6 +9,7 @@ namespace GatePassSystem.Project.Services;
 public sealed class ApprovalService(
     IApprovalRepository approvalRepository,
     IOperationsRepository operationsRepository,
+    IQrTokenService qrTokenService,
     TimeProvider timeProvider) : IApprovalService
 {
     public Task<IReadOnlyList<ApprovalQueueItem>> GetQueueAsync(
@@ -36,9 +35,11 @@ public sealed class ApprovalService(
         }
 
         var rawQrToken = approve
-            ? Convert.ToHexString(RandomNumberGenerator.GetBytes(32))
+            ? qrTokenService.CreateToken(gatePassId)
             : null;
-        var qrHash = rawQrToken is null ? null : Sha256(rawQrToken);
+        var qrHash = rawQrToken is null
+            ? null
+            : qrTokenService.HashToken(rawQrToken);
         DateTime? qrExpiresAt = approve
             ? timeProvider.GetUtcNow().AddDays(7).UtcDateTime
             : null;
@@ -89,7 +90,4 @@ public sealed class ApprovalService(
                 issuedQrToken));
     }
 
-    private static string Sha256(string value) =>
-        Convert.ToHexString(
-            SHA256.HashData(Encoding.UTF8.GetBytes(value)));
 }
