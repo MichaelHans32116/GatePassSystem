@@ -1,0 +1,14 @@
+.git
+.gitignore
+.env
+.venv
+**/.venv
+**/__pycache__
+**/*.pyc
+**/bin
+**/obj
+node_modules
+LocalData
+Backend/Data
+*.xlsx
+*.xls

@@ -1,5 +1,11 @@
 (function() {
-    const API_BASE_URL = 'http://127.0.0.1:5087/api';
+    const configuredApiBaseUrl = window.GatePassConfig?.apiBaseUrl;
+    const fallbackApiBaseUrl =
+        window.location.protocol === 'file:'
+            ? 'http://127.0.0.1:5087/api'
+            : `${window.location.protocol}//${window.location.hostname}:5087/api`;
+    const API_BASE_URL = (configuredApiBaseUrl || fallbackApiBaseUrl)
+        .replace(/\/+$/, '');
     const ACCESS_TOKEN_KEY = 'gatePassAccessToken';
 
     class ApiError extends Error {

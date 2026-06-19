@@ -1,12 +1,23 @@
-param([switch]$NoBrowser, [switch]$SkipBuild)
+param(
+    [switch]$NoBrowser,
+    [switch]$SkipBuild,
+    [switch]$UseXamppApache
+)
 
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $MyInvocation.MyCommand.Path
-$apiUrl = 'http://127.0.0.1:5087'
-$frontendUrl = 'http://127.0.0.1:5500'
+$apiHealthUrl = 'http://127.0.0.1:5087'
+$apiListenUrl = 'http://0.0.0.0:5087'
+$frontendUrl = if ($UseXamppApache) {
+    'http://127.0.0.1/GatePassSystem/'
+} else {
+    'http://127.0.0.1:5500'
+}
 $mysql = 'C:\xampp\mysql\bin\mysql.exe'
 $mysqld = 'C:\xampp\mysql\bin\mysqld.exe'
 $php = 'C:\xampp\php\php.exe'
+$apache = 'C:\xampp\apache\bin\httpd.exe'
+$htdocs = 'C:\xampp\htdocs'
 
 function Test-LocalPort([int]$Port) {
     $client = [System.Net.Sockets.TcpClient]::new()
@@ -35,6 +46,8 @@ if (-not (Test-LocalPort 3306)) {
     throw 'MariaDB did not start on port 3306.'
 }
 
+& (Join-Path $repo 'Database\setup-xampp.ps1')
+
 if (-not (Test-LocalPort 5087)) {
     if (-not $SkipBuild) {
         & dotnet build "$repo\Backend\GatePassSystem.sln" `
@@ -54,8 +67,9 @@ if (-not (Test-LocalPort 5087)) {
 
     $apiCommand = @"
 `$env:ASPNETCORE_ENVIRONMENT='Development'
-`$env:ASPNETCORE_URLS='$apiUrl'
+`$env:ASPNETCORE_URLS='$apiListenUrl'
 `$env:GATEPASS_DB_CONNECTION='Server=127.0.0.1;Port=3306;Database=gate_pass_system;User ID=root;Password=;Allow User Variables=True;SslMode=None'
+`$env:Cors__AllowAnyOrigin='true'
 Set-Location '$apiDirectory'
 & '$apiExe'
 "@
@@ -64,15 +78,41 @@ Set-Location '$apiDirectory'
         -WindowStyle Hidden
 }
 
-if (-not (Test-Path $php)) {
-    throw 'XAMPP PHP was not found under C:\xampp\php.'
-}
+if ($UseXamppApache) {
+    if (-not (Test-Path $apache) -or -not (Test-Path $htdocs)) {
+        throw 'XAMPP Apache or htdocs was not found under C:\xampp.'
+    }
 
-if (-not (Test-LocalPort 5500)) {
-    Start-Process -FilePath $php `
-        -ArgumentList @('-S', '127.0.0.1:5500', '-t', $repo) `
-        -WorkingDirectory $repo `
-        -WindowStyle Hidden
+    $xamppTarget = Join-Path $htdocs 'GatePassSystem'
+    $xamppFrontendTarget = Join-Path $xamppTarget 'Frontend'
+    New-Item -ItemType Directory -Force -Path $xamppFrontendTarget | Out-Null
+    Copy-Item (Join-Path $repo 'index.html') $xamppTarget -Force
+    Copy-Item (Join-Path $repo 'Frontend\*') $xamppFrontendTarget -Recurse -Force
+
+    if (-not (Test-LocalPort 80)) {
+        Start-Process -FilePath $apache -WindowStyle Hidden
+        for ($attempt = 0; $attempt -lt 20; $attempt++) {
+            if (Test-LocalPort 80) {
+                break
+            }
+            Start-Sleep -Milliseconds 500
+        }
+    }
+
+    if (-not (Test-LocalPort 80)) {
+        throw 'XAMPP Apache did not start on port 80.'
+    }
+} else {
+    if (-not (Test-Path $php)) {
+        throw 'XAMPP PHP was not found under C:\xampp\php.'
+    }
+
+    if (-not (Test-LocalPort 5500)) {
+        Start-Process -FilePath $php `
+            -ArgumentList @('-S', '0.0.0.0:5500', '-t', $repo) `
+            -WorkingDirectory $repo `
+            -WindowStyle Hidden
+    }
 }
 
 $signaturePython = Join-Path $repo 'Backend\SignatureBackgroundRemoval\.venv\Scripts\python.exe'
@@ -87,7 +127,7 @@ if ((Test-Path $signaturePython) -and
 $healthy = $false
 for ($attempt = 0; $attempt -lt 20; $attempt++) {
     try {
-        $health = Invoke-RestMethod -Uri "$apiUrl/api/health" -TimeoutSec 2
+        $health = Invoke-RestMethod -Uri "$apiHealthUrl/api/health" -TimeoutSec 2
         if ($health.status -eq 'Healthy') {
             $healthy = $true
             break
@@ -103,8 +143,24 @@ if (-not $healthy) {
 
 Write-Host 'Gate Pass local stack is ready.' -ForegroundColor Green
 Write-Host "Frontend: $frontendUrl"
-Write-Host "API health: $apiUrl/api/health"
-Write-Host "Swagger: $apiUrl/swagger"
+Write-Host "API health: $apiHealthUrl/api/health"
+Write-Host "Swagger: $apiHealthUrl/swagger"
+
+$lanAddresses = Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue |
+    Where-Object {
+        $_.IPAddress -notlike '127.*' -and
+        $_.IPAddress -notlike '169.254.*'
+    } |
+    Select-Object -ExpandProperty IPAddress -Unique
+
+foreach ($address in $lanAddresses) {
+    $lanFrontend = if ($UseXamppApache) {
+        "http://$address/GatePassSystem/"
+    } else {
+        "http://${address}:5500"
+    }
+    Write-Host "LAN frontend: $lanFrontend"
+}
 
 if (-not $NoBrowser) {
     Start-Process $frontendUrl

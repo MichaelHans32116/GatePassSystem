@@ -1,0 +1,79 @@
+name: gate-pass-system
+
+services:
+  db:
+    image: mariadb:11.4
+    restart: unless-stopped
+    environment:
+      MARIADB_DATABASE: gate_pass_system
+      MARIADB_USER: gatepass
+      MARIADB_PASSWORD: ${GATEPASS_DB_PASSWORD:-gatepass_local_change_me}
+      MARIADB_ROOT_PASSWORD: ${GATEPASS_DB_ROOT_PASSWORD:-gatepass_root_local_change_me}
+      TZ: Asia/Manila
+    ports:
+      - "${GATEPASS_DB_PORT:-3307}:3306"
+    volumes:
+      - gatepass_database:/var/lib/mysql
+      - ./Database/schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro
+      - ./Database/seed-reference.sql:/docker-entrypoint-initdb.d/002-seed-reference.sql:ro
+      - ./Database/procedures.sql:/docker-entrypoint-initdb.d/003-procedures.sql:ro
+    healthcheck:
+      test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  signature-helper:
+    build:
+      context: ./Backend/SignatureBackgroundRemoval
+    restart: unless-stopped
+    volumes:
+      - rembg_models:/root/.u2net
+
+  api:
+    build:
+      context: .
+      dockerfile: Backend/Dockerfile
+    restart: unless-stopped
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ASPNETCORE_URLS: http://+:8080
+      GATEPASS_DB_CONNECTION: "Server=db;Port=3306;Database=gate_pass_system;User ID=gatepass;Password=${GATEPASS_DB_PASSWORD:-gatepass_local_change_me};Allow User Variables=True;SslMode=None"
+      Jwt__Key: ${GATEPASS_JWT_KEY:-DEVELOPMENT-ONLY-DOCKER-GATEPASS-KEY-CHANGE-BEFORE-SHARING-2026}
+      SignatureStorage__RootPath: /app/Data/signatures
+      SignatureStorage__BackgroundRemovalUrl: http://signature-helper:8000/remove-background
+    ports:
+      - "${GATEPASS_API_PORT:-5088}:8080"
+    volumes:
+      - gatepass_signatures:/app/Data/signatures
+    depends_on:
+      db:
+        condition: service_healthy
+      signature-helper:
+        condition: service_started
+    healthcheck:
+      test: ["CMD", "curl", "--fail", "--silent", "http://127.0.0.1:8080/api/health"]
+      interval: 5s
+      timeout: 5s
+      retries: 30
+
+  frontend:
+    build:
+      context: .
+      dockerfile: Frontend/Dockerfile
+    restart: unless-stopped
+    ports:
+      - "${GATEPASS_FRONTEND_PORT:-8080}:80"
+    depends_on:
+      api:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "--quiet", "--spider", "http://127.0.0.1/healthz"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+volumes:
+  gatepass_database:
+  gatepass_signatures:
+  rembg_models:

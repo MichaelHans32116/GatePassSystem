@@ -104,6 +104,10 @@ var configuredOrigins = builder.Configuration
     .GetSection("Cors:AllowedOrigins")
     .Get<string[]>() ?? [];
 
+var allowAnyFrontendOrigin =
+    builder.Environment.IsDevelopment() &&
+    builder.Configuration.GetValue<bool>("Cors:AllowAnyOrigin");
+
 var allowedOrigins = defaultOrigins
     .Concat(configuredOrigins)
     .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -112,10 +116,20 @@ var allowedOrigins = defaultOrigins
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(FrontendCorsPolicy, policy =>
+    {
+        if (allowAnyFrontendOrigin)
+        {
+            policy.AllowAnyOrigin();
+        }
+        else
+        {
+            policy.WithOrigins(allowedOrigins);
+        }
+
         policy
-            .WithOrigins(allowedOrigins)
             .WithMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
-            .WithHeaders("Authorization", "Content-Type", "Accept"));
+            .WithHeaders("Authorization", "Content-Type", "Accept");
+    });
 });
 
 var jwtOptions = builder.Configuration
