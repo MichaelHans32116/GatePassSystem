@@ -1,6 +1,14 @@
 # Backend Project Structure
 
-Recommended service split:
+Implemented Phase 1 services:
+
+- `AuthService`: employee/system account login and current-user retrieval.
+- `JwtTokenService`: JWT creation with multiple role and permission claims.
+- `Pbkdf2PasswordHasher`: salted PBKDF2-SHA256 password hashing.
+- `UserRepository`: async Dapper account, employee, role, and permission lookup.
+- `DatabaseHealthRepository`: MariaDB connectivity check.
+
+Planned workflow service split:
 
 | Area | Responsibility |
 | --- | --- |
@@ -12,14 +20,14 @@ Recommended service split:
 | `NotificationService` | Approver notifications and unread counts. |
 | `AuditLogService` | Immutable action logs. |
 
-Recommended model groups:
+Model groups:
 
 - User, Role, Permission, Department, Position
 - GatePassRequest, GatePassApproval, GatePassScan
 - Vehicle, Driver
 - SignatureFile, Notification, AuditLog
 
-Recommended DTO groups:
+DTO groups:
 
 - Auth requests/responses
 - Gate pass create/update/detail responses

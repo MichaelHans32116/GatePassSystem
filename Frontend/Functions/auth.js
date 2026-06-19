@@ -1,62 +1,152 @@
-// Authentication and session UI.
+// Database-backed authentication and browser session handling.
 
 function togglePassword() {
-            const passInput = document.getElementById('empPass');
-            const eyeIcon = document.getElementById('eyeIcon');
+    const passInput = document.getElementById('empPass');
+    const eyeIcon = document.getElementById('eyeIcon');
 
-            if (passInput.type === 'password') {
-                passInput.type = 'text';
-                eyeIcon.classList.remove('fa-eye');
-                eyeIcon.classList.add('fa-eye-slash');
-            } else {
-                passInput.type = 'password';
-                eyeIcon.classList.remove('fa-eye-slash');
-                eyeIcon.classList.add('fa-eye');
-            }
+    if (passInput.type === 'password') {
+        passInput.type = 'text';
+        eyeIcon.classList.remove('fa-eye');
+        eyeIcon.classList.add('fa-eye-slash');
+    } else {
+        passInput.type = 'password';
+        eyeIcon.classList.remove('fa-eye-slash');
+        eyeIcon.classList.add('fa-eye');
+    }
+}
+
+function resolveInterfaceRole(roles) {
+    const roleSet = new Set(roles || []);
+
+    if (roleSet.has('SYSTEM_ADMIN')) return 'System Admin';
+    if (roleSet.has('SECURITY')) return 'Security';
+    if (roleSet.has('PRESIDENT')) return 'President';
+    if (roleSet.has('PAS_NOTER') || roleSet.has('HR_ADMIN')) return 'PAS / HR Admin';
+    if (roleSet.has('IMMEDIATE_SUPERIOR')) return 'Immediate Superior';
+    return 'Associate';
+}
+
+function mapAuthenticatedUser(apiUser) {
+    const roles = apiUser.roles || [];
+
+    return {
+        id: apiUser.employeeId || apiUser.username,
+        accountId: apiUser.id,
+        name: apiUser.fullName,
+        role: resolveInterfaceRole(roles),
+        roles,
+        permissions: apiUser.permissions || [],
+        dept: apiUser.department || 'System',
+        position: apiUser.position || '',
+        mustChangePassword: Boolean(apiUser.mustChangePassword),
+        canNoteGatePass: roles.includes('PAS_NOTER')
+    };
+}
+
+function showAuthenticatedApp(user, showSignedInToast = true) {
+    currentUser = user;
+    document.getElementById('loginView').style.opacity = '0';
+
+    setTimeout(() => {
+        document.getElementById('loginView').classList.add('hidden');
+        document.getElementById('appView').classList.remove('hidden');
+        document.getElementById('loginView').style.opacity = '1';
+    }, 300);
+
+    document.getElementById('navUserName').innerText = user.name;
+    document.getElementById('navUserRole').innerText = user.role;
+    setupRoleAccess(user);
+
+    if (showSignedInToast) {
+        showToast(`Signed in as ${user.name}`);
+    }
+
+    if (user.mustChangePassword) {
+        showToast('Initial password detected. Password-change flow will be enabled next.', 'info');
+    }
+}
+
+function quickLogin(id, pass) {
+    document.getElementById('empId').value = id;
+    document.getElementById('empPass').value = pass;
+    document.getElementById('loginForm').dispatchEvent(new Event('submit'));
+}
+
+async function handleLogin(e) {
+    e.preventDefault();
+
+    const form = document.getElementById('loginForm');
+    const submitButton = form.querySelector('button[type="submit"]');
+    const username = document.getElementById('empId').value.trim();
+    const password = document.getElementById('empPass').value;
+    const mockUser = mockUsers.find(
+        user => user.id === username && user.password === password
+    );
+
+    submitButton.disabled = true;
+    submitButton.classList.add('opacity-60', 'cursor-wait');
+
+    try {
+        if (mockUser) {
+            ApiClient.clearAccessToken();
+            form.reset();
+            showAuthenticatedApp({ ...mockUser, roles: [], permissions: [] });
+            return;
         }
 
-function quickLogin(id, password) {
-            document.getElementById('empId').value = id;
-            document.getElementById('empPass').value = password;
-            document.getElementById('loginForm').dispatchEvent(new Event('submit'));
-        }
+        const result = await ApiClient.request('/auth/login', {
+            method: 'POST',
+            body: JSON.stringify({ username, password })
+        });
 
-function handleLogin(e) {
-            e.preventDefault();
-            const id = document.getElementById('empId').value;
-            const password = document.getElementById('empPass').value;
-            const user = mockUsers.find(u => u.id === id && u.password === password);
+        ApiClient.setAccessToken(result.accessToken);
+        form.reset();
+        showAuthenticatedApp(mapAuthenticatedUser(result.user));
+    } catch (error) {
+        ApiClient.clearAccessToken();
+        showToast(
+            error instanceof ApiError ? error.message : 'Unable to connect to the Gate Pass API.',
+            'error'
+        );
+    } finally {
+        submitButton.disabled = false;
+        submitButton.classList.remove('opacity-60', 'cursor-wait');
+    }
+}
 
-            if (user) {
-                currentUser = user;
-                document.getElementById('loginView').style.opacity = '0';
-                setTimeout(() => {
-                    document.getElementById('loginView').classList.add('hidden');
-                    document.getElementById('appView').classList.remove('hidden');
-                    document.getElementById('loginView').style.opacity = '1';
-                }, 500);
+async function restoreAuthenticatedSession() {
+    if (!ApiClient.hasAccessToken()) return;
 
-                document.getElementById('navUserName').innerText = user.name;
-                document.getElementById('navUserRole').innerText = user.role;
-                setupRoleAccess(user);
-                showToast(`Signed in as ${user.name}`);
-            } else {
-                showToast('Invalid ID or Password.', 'error');
-            }
-        }
+    try {
+        const apiUser = await ApiClient.request('/auth/me');
+        showAuthenticatedApp(mapAuthenticatedUser(apiUser), false);
+    } catch {
+        ApiClient.clearAccessToken();
+    }
+}
 
 function logout() {
-            currentUser = null;
-            document.getElementById('appView').classList.add('hidden');
-            document.getElementById('loginView').classList.remove('hidden');
-            document.getElementById('loginForm').reset();
-            if(window.innerWidth < 768 && !document.getElementById('sidebar').classList.contains('-translate-x-full')) {
-                toggleSidebar(); // close sidebar if open on mobile
-            }
-        }
+    ApiClient.clearAccessToken();
+    currentUser = null;
+    document.getElementById('appView').classList.add('hidden');
+    document.getElementById('loginView').classList.remove('hidden');
+    document.getElementById('loginForm').reset();
 
+    if (
+        window.innerWidth < 768 &&
+        !document.getElementById('sidebar').classList.contains('-translate-x-full')
+    ) {
+        toggleSidebar();
+    }
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    document.getElementById('loginForm')?.addEventListener('submit', handleLogin);
+    document.getElementById('logoutButton')?.addEventListener('click', logout);
+    restoreAuthenticatedSession();
+});
 
 window.togglePassword = togglePassword;
-window.quickLogin = quickLogin;
 window.handleLogin = handleLogin;
 window.logout = logout;
+window.quickLogin = quickLogin;
