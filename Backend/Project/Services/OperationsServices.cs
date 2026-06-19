@@ -25,6 +25,16 @@ public sealed class FleetService(IFleetRepository repository) : IFleetService
         SaveDriverRequest request,
         CancellationToken cancellationToken = default) =>
         repository.SaveDriverAsync(driverId, request, cancellationToken);
+
+    public Task ArchiveVehicleAsync(
+        long vehicleId,
+        CancellationToken cancellationToken = default) =>
+        repository.ArchiveVehicleAsync(vehicleId, cancellationToken);
+
+    public Task ArchiveDriverAsync(
+        long driverId,
+        CancellationToken cancellationToken = default) =>
+        repository.ArchiveDriverAsync(driverId, cancellationToken);
 }
 
 public sealed class SignatureService(

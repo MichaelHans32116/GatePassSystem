@@ -187,6 +187,50 @@ public sealed class FleetRepository(
             cancellationToken: cancellationToken));
     }
 
+    public async Task ArchiveVehicleAsync(
+        long vehicleId,
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection =
+            await connectionFactory.OpenConnectionAsync(cancellationToken);
+        await connection.ExecuteAsync(new CommandDefinition(
+            """
+            UPDATE tbl_vehicles
+            SET is_active = FALSE,
+                vehicle_status_code = 'ARCHIVED'
+            WHERE vehicle_id = @VehicleId;
+            """,
+            new { VehicleId = vehicleId },
+            cancellationToken: cancellationToken));
+    }
+
+    public async Task ArchiveDriverAsync(
+        long driverId,
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection =
+            await connectionFactory.OpenConnectionAsync(cancellationToken);
+        var assignedVehicles = await connection.ExecuteScalarAsync<long>(
+            new CommandDefinition(
+                """
+                SELECT COUNT(*)
+                FROM tbl_vehicles
+                WHERE default_driver_id = @DriverId
+                  AND is_active = TRUE;
+                """,
+                new { DriverId = driverId },
+                cancellationToken: cancellationToken));
+        if (assignedVehicles > 0)
+        {
+            throw new InvalidOperationException(
+                "Driver cannot be archived while assigned to an active vehicle.");
+        }
+        await connection.ExecuteAsync(new CommandDefinition(
+            "UPDATE tbl_drivers SET is_active = FALSE WHERE driver_id = @DriverId;",
+            new { DriverId = driverId },
+            cancellationToken: cancellationToken));
+    }
+
     public async Task<bool> ReserveAsync(
         long gatePassId,
         long vehicleId,

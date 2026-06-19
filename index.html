@@ -435,7 +435,8 @@
                         <div class="p-4 md:p-5 border-b bg-gray-50 flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-end gap-4">
                             <div class="w-full sm:w-auto"><label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Search ID/Name</label><input type="text" id="logFilterName" placeholder="Enter keyword..." class="w-full border border-gray-300 p-2 rounded text-sm sm:w-48 md:w-56 focus:outline-none focus:border-mpiBlue"></div>
                             <div class="w-full sm:w-auto"><label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Filter by Date</label><input type="date" id="logFilterDate" class="w-full border border-gray-300 p-2 rounded text-sm text-gray-700 focus:outline-none focus:border-mpiBlue"></div>
-                            <div class="w-full sm:w-auto" id="filterDeptContainer"><label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Department</label><select id="logFilterDept" class="w-full border border-gray-300 p-2 rounded text-sm text-gray-700 focus:outline-none focus:border-mpiBlue"><option value="">All</option><option value="Production">Production</option><option value="HRAD">HRAD</option><option value="Finance & IT">Finance & IT</option><option value="Executive">Executive</option></select></div>
+                            <div class="w-full sm:w-auto" id="filterDeptContainer"><label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Department</label><select id="logFilterDept" class="w-full border border-gray-300 p-2 rounded text-sm text-gray-700 focus:outline-none focus:border-mpiBlue"><option value="">All Departments</option></select></div>
+                            <div class="w-full sm:w-auto"><label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Status</label><select id="logFilterStatus" class="w-full border border-gray-300 p-2 rounded text-sm"><option value="">All Statuses</option><option value="PENDING_SUPERIOR">Pending Superior</option><option value="PENDING_PRESIDENT">Pending President</option><option value="PENDING_PAS">Pending PAS</option><option value="APPROVED">Approved</option><option value="OUTSIDE">Outside</option><option value="RETURNED">Returned</option><option value="REJECTED">Rejected</option><option value="CANCELLED">Cancelled</option></select></div>
                             <div class="w-full sm:w-auto"><button onclick="renderAdminLogs(1)" class="w-full bg-mpiBlue text-white px-5 py-2 rounded shadow text-sm font-bold hover:bg-mpiDark transition"><i class="fas fa-filter mr-2"></i>Apply Filters</button></div>
                         </div>
                         <div class="overflow-x-auto min-h-[300px]">
@@ -461,20 +462,26 @@
                     <!-- TAB CONTENT: USERS (Active/Archive) -->
                     <div id="admin-users" class="admin-tab-content hidden bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
                         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
-                            <div><h3 class="font-bold text-gray-800 text-lg">User Management</h3><p class="text-xs md:text-sm text-gray-500">System accounts with login access.</p></div>
-                            <button onclick="showToast('Open Add User Form', 'info')" class="w-full sm:w-auto bg-mpiBlue text-white px-4 py-2 text-sm font-bold rounded shadow hover:bg-mpiDark transition"><i class="fas fa-user-plus mr-1"></i> Add User</button>
+                            <div><h3 class="font-bold text-gray-800 text-lg">User Management</h3><p class="text-xs md:text-sm text-gray-500">All employee and system accounts from MariaDB. <span id="adminUsersCount" class="font-bold text-mpiBlue"></span></p></div>
+                            <button onclick="openUserEditor()" class="w-full sm:w-auto bg-mpiBlue text-white px-4 py-2 text-sm font-bold rounded shadow hover:bg-mpiDark transition"><i class="fas fa-user-plus mr-1"></i> Add User</button>
                         </div>
 
-                        <div class="flex space-x-4 mb-4 border-b border-gray-200 pb-2">
-                            <button class="text-mpiBlue font-bold text-sm border-b-2 border-mpiBlue pb-1">Active Users</button>
-                            <button class="text-gray-500 hover:text-gray-700 text-sm pb-1">Archived Records</button>
+                        <div class="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-4 p-3 bg-gray-50 border rounded-lg">
+                            <input id="userFilterSearch" oninput="renderAdminUsers(1)" placeholder="Search ID, name, username..." class="border p-2 rounded text-sm md:col-span-2">
+                            <select id="userFilterRole" onchange="renderAdminUsers(1)" class="border p-2 rounded text-sm"><option value="">All Roles</option></select>
+                            <select id="userFilterDepartment" onchange="renderAdminUsers(1)" class="border p-2 rounded text-sm"><option value="">All Departments</option></select>
+                            <select id="userFilterStatus" onchange="renderAdminUsers(1)" class="border p-2 rounded text-sm"><option value="ACTIVE">Active Users</option><option value="LOCKED">Locked Users</option><option value="ARCHIVED">Archived Records</option><option value="">All Statuses</option></select>
+                            <button onclick="renderAdminUsers(1)" class="bg-mpiBlue text-white rounded px-3 py-2 text-sm font-bold"><i class="fas fa-search mr-1"></i> Search</button>
+                            <label class="text-[10px] font-bold text-gray-500">Hired From<input id="userFilterHiredFrom" onchange="renderAdminUsers(1)" type="date" class="block w-full border p-2 rounded text-sm font-normal mt-1"></label>
+                            <label class="text-[10px] font-bold text-gray-500">Hired To<input id="userFilterHiredTo" onchange="renderAdminUsers(1)" type="date" class="block w-full border p-2 rounded text-sm font-normal mt-1"></label>
                         </div>
                         <div class="overflow-x-auto">
                             <table class="w-full text-left border-collapse text-sm min-w-max">
-                                <thead><tr class="bg-gray-50 border-y"><th class="p-3 font-semibold text-gray-600">ID</th><th class="p-3 font-semibold text-gray-600">Name</th><th class="p-3 font-semibold text-gray-600">Role</th><th class="p-3 font-semibold text-gray-600">Department</th><th class="p-3 font-semibold text-gray-600 text-right">Actions</th></tr></thead>
+                                <thead><tr class="bg-gray-50 border-y"><th class="p-3 font-semibold text-gray-600">ID</th><th class="p-3 font-semibold text-gray-600">Name / Position</th><th class="p-3 font-semibold text-gray-600">Roles</th><th class="p-3 font-semibold text-gray-600">Department</th><th class="p-3 font-semibold text-gray-600">Status</th><th class="p-3 font-semibold text-gray-600 text-right">Actions</th></tr></thead>
                                 <tbody id="adminUsersList" class="divide-y divide-gray-100"><!-- JS --></tbody>
                             </table>
                         </div>
+                        <div class="flex justify-end items-center gap-2 mt-4"><button id="userPrevPage" onclick="changeUserPage(-1)" class="border rounded px-3 py-1 disabled:opacity-40">Prev</button><span id="userPageIndicator" class="bg-mpiBlue text-white rounded px-3 py-1 font-bold">1</span><button id="userNextPage" onclick="changeUserPage(1)" class="border rounded px-3 py-1 disabled:opacity-40">Next</button></div>
                     </div>
 
                     <!-- TAB CONTENT: DEPARTMENTS & POSITIONS (Split View) -->
@@ -484,29 +491,20 @@
                             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-5">
                                 <div class="flex justify-between items-center mb-4">
                                     <h3 class="font-bold text-gray-800"><i class="far fa-building mr-2 text-mpiBlue"></i>Departments</h3>
-                                    <button class="bg-blue-50 text-mpiBlue px-3 py-1.5 rounded text-xs font-bold hover:bg-blue-100"><i class="fas fa-plus mr-1"></i> Add Dept</button>
+                                    <button onclick="openDepartmentEditor()" class="bg-blue-50 text-mpiBlue px-3 py-1.5 rounded text-xs font-bold hover:bg-blue-100"><i class="fas fa-plus mr-1"></i> Add Dept</button>
                                 </div>
-                                <div class="relative mb-3"><input type="text" placeholder="Search departments..." class="w-full border p-2 pl-8 rounded text-sm"><i class="fas fa-search absolute left-3 top-2.5 text-gray-400"></i></div>
-                                <ul class="divide-y divide-gray-100 text-sm">
-                                    <li class="py-3 flex justify-between items-center group"><span>ADMIN DEPARTMENT</span><div class="flex space-x-2 text-gray-400"><i class="fas fa-edit hover:text-mpiBlue cursor-pointer"></i><i class="fas fa-trash hover:text-red-500 cursor-pointer"></i></div></li>
-                                    <li class="py-3 flex justify-between items-center group"><span>FINANCE & IT DEPARTMENT</span><div class="flex space-x-2 text-gray-400"><i class="fas fa-edit hover:text-mpiBlue cursor-pointer"></i><i class="fas fa-trash hover:text-red-500 cursor-pointer"></i></div></li>
-                                    <li class="py-3 flex justify-between items-center group"><span>HRAD DEPARTMENT</span><div class="flex space-x-2 text-gray-400"><i class="fas fa-edit hover:text-mpiBlue cursor-pointer"></i><i class="fas fa-trash hover:text-red-500 cursor-pointer"></i></div></li>
-                                    <li class="py-3 flex justify-between items-center group"><span>PRODUCTION DEPARTMENT</span><div class="flex space-x-2 text-gray-400"><i class="fas fa-edit hover:text-mpiBlue cursor-pointer"></i><i class="fas fa-trash hover:text-red-500 cursor-pointer"></i></div></li>
-                                </ul>
+                                <div class="relative mb-3"><input id="departmentSearch" oninput="renderDepartmentsAndRoles()" type="text" placeholder="Search departments..." class="w-full border p-2 pl-8 rounded text-sm"><i class="fas fa-search absolute left-3 top-2.5 text-gray-400"></i></div>
+                                <ul id="adminDepartmentList" class="divide-y divide-gray-100 text-sm"></ul>
                             </div>
 
                             <!-- Positions -->
                             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-5">
                                 <div class="flex justify-between items-center mb-4">
-                                    <h3 class="font-bold text-gray-800"><i class="fas fa-briefcase mr-2 text-mpiBlue"></i>Positions / Roles</h3>
-                                    <button class="bg-blue-50 text-mpiBlue px-3 py-1.5 rounded text-xs font-bold hover:bg-blue-100"><i class="fas fa-plus mr-1"></i> Add Role</button>
+                                    <h3 class="font-bold text-gray-800"><i class="fas fa-user-shield mr-2 text-mpiBlue"></i>Roles & Permissions</h3>
+                                    <button onclick="openRoleEditor()" class="bg-blue-50 text-mpiBlue px-3 py-1.5 rounded text-xs font-bold hover:bg-blue-100"><i class="fas fa-plus mr-1"></i> Add Role</button>
                                 </div>
-                                <div class="relative mb-3"><input type="text" placeholder="Search roles..." class="w-full border p-2 pl-8 rounded text-sm"><i class="fas fa-search absolute left-3 top-2.5 text-gray-400"></i></div>
-                                <ul class="divide-y divide-gray-100 text-sm">
-                                    <li class="py-3 flex justify-between items-center group"><div class="flex flex-col"><span class="font-semibold">Immediate Superior</span><span class="text-[10px] text-gray-400">All Departments</span></div><div class="flex space-x-2 text-gray-400"><i class="fas fa-edit hover:text-mpiBlue cursor-pointer"></i><i class="fas fa-trash hover:text-red-500 cursor-pointer"></i></div></li>
-                                    <li class="py-3 flex justify-between items-center group"><div class="flex flex-col"><span class="font-semibold">Associate</span><span class="text-[10px] text-gray-400">All Departments</span></div><div class="flex space-x-2 text-gray-400"><i class="fas fa-edit hover:text-mpiBlue cursor-pointer"></i><i class="fas fa-trash hover:text-red-500 cursor-pointer"></i></div></li>
-                                    <li class="py-3 flex justify-between items-center group"><div class="flex flex-col"><span class="font-semibold">Security Guard</span><span class="text-[10px] text-gray-400">Agency</span></div><div class="flex space-x-2 text-gray-400"><i class="fas fa-edit hover:text-mpiBlue cursor-pointer"></i><i class="fas fa-trash hover:text-red-500 cursor-pointer"></i></div></li>
-                                </ul>
+                                <div class="relative mb-3"><input id="roleSearch" oninput="renderDepartmentsAndRoles()" type="text" placeholder="Search roles..." class="w-full border p-2 pl-8 rounded text-sm"><i class="fas fa-search absolute left-3 top-2.5 text-gray-400"></i></div>
+                                <ul id="adminRoleList" class="divide-y divide-gray-100 text-sm"></ul>
                             </div>
                         </div>
                     </div>
@@ -515,7 +513,7 @@
                     <div id="admin-fleet" class="admin-tab-content hidden bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
                         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
                             <div><h3 class="font-bold text-gray-800 text-lg">Vehicles & Drivers Database</h3><p class="text-xs md:text-sm text-gray-500">Manage company fleet and assigned drivers (No system login required for drivers).</p></div>
-                            <button onclick="showToast('Add Fleet Record', 'info')" class="w-full sm:w-auto bg-mpiBlue text-white px-4 py-2 text-sm font-bold rounded shadow hover:bg-mpiDark transition"><i class="fas fa-plus mr-1"></i> Add Record</button>
+                            <div class="flex gap-2 w-full sm:w-auto"><button onclick="openDriverEditor()" class="flex-1 sm:flex-none border border-mpiBlue text-mpiBlue px-4 py-2 text-sm font-bold rounded"><i class="fas fa-id-card mr-1"></i> Add Driver</button><button onclick="openVehicleEditor()" class="flex-1 sm:flex-none bg-mpiBlue text-white px-4 py-2 text-sm font-bold rounded shadow hover:bg-mpiDark transition"><i class="fas fa-car mr-1"></i> Add Vehicle</button></div>
                         </div>
                         <div class="overflow-x-auto">
                             <table class="w-full text-left border-collapse text-sm min-w-max">
@@ -523,6 +521,8 @@
                                 <tbody id="adminFleetList" class="divide-y divide-gray-100"><!-- JS --></tbody>
                             </table>
                         </div>
+                        <h4 class="font-bold text-gray-700 mt-7 mb-2">Drivers</h4>
+                        <div class="overflow-x-auto"><table class="w-full text-left border-collapse text-sm min-w-max"><thead><tr class="bg-gray-50 border-y"><th class="p-3">Driver</th><th class="p-3">Type</th><th class="p-3">License</th><th class="p-3">Expiry</th><th class="p-3 text-right">Actions</th></tr></thead><tbody id="adminDriverList"></tbody></table></div>
                     </div>
                 </section>
 
@@ -678,80 +678,46 @@
             <!-- Approval Action Area (E-Signature Input) -->
             <div id="approvalActionArea" class="w-full bg-white border-t border-gray-200 p-4 md:p-5 print-hide hidden rounded-b-lg flex-col space-y-4">
                 <div class="bg-blue-50 border border-blue-200 p-3 rounded">
-                    <h3 class="font-bold text-mpiBlue text-sm mb-1"><i class="fas fa-pen-nib mr-1"></i> Digital Signature Attachment</h3>
-                    <p class="text-xs text-gray-600 mb-3">Attach a signature image, remove simple blue/white backgrounds locally, use the optional Python AI remover, or draw a signature directly using mouse/touch.</p>
+                    <h3 class="font-bold text-mpiBlue text-sm mb-1"><i class="fas fa-pen-nib mr-1"></i> Digital Signature</h3>
+                    <p class="text-xs text-gray-600 mb-3">Create the signature on the left and verify the exact output on the right before approval.</p>
 
-                    <div class="signature-source-toggle">
-                        <button type="button" onclick="showSignatureSource('upload')" id="btnSigUploadPanel" class="text-xs font-bold bg-mpiBlue text-white px-3 py-2 rounded"><i class="fas fa-upload mr-1"></i> Upload Image</button>
-                        <button type="button" onclick="showSignatureSource('draw')" id="btnSigDrawPanel" class="text-xs font-bold bg-white border border-blue-200 text-mpiBlue px-3 py-2 rounded hover:bg-blue-50"><i class="fas fa-pen mr-1"></i> Draw Signature</button>
-                    </div>
+                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                        <div class="bg-white border border-blue-100 rounded-lg p-3">
+                            <h4 class="font-bold text-xs text-gray-700 mb-2">1. Signature Editor</h4>
+                            <div class="signature-source-toggle">
+                                <button type="button" onclick="showSignatureSource('upload')" id="btnSigUploadPanel" class="text-xs font-bold bg-mpiBlue text-white px-3 py-2 rounded"><i class="fas fa-upload mr-1"></i> Upload Image</button>
+                                <button type="button" onclick="showSignatureSource('draw')" id="btnSigDrawPanel" class="text-xs font-bold bg-white border border-blue-200 text-mpiBlue px-3 py-2 rounded hover:bg-blue-50"><i class="fas fa-pen mr-1"></i> Draw Signature</button>
+                            </div>
 
-                    <div id="sigUploadPanel" class="space-y-3">
-                        <div class="signature-upload-zone">
-                            <label for="sigUpload" class="text-xs font-bold bg-white border border-blue-200 text-mpiBlue px-3 py-2 rounded hover:bg-blue-50 cursor-pointer">
-                                <i class="fas fa-image mr-1"></i> Choose Signature Image
-                            </label>
-                            <input type="file" id="sigUpload" accept="image/png, image/jpeg" class="text-xs">
-                            <span id="sigFileName" class="text-xs text-gray-500">No image selected.</span>
-                        </div>
-                        <p id="sigStatus" class="text-[10px] text-gray-500 leading-relaxed">Upload a PNG/JPG signature, or switch to Draw Signature.</p>
-
-                        <!-- Background Removal Options -->
-                        <div id="sigBgOptions" class="hidden p-3 bg-white border border-blue-100 rounded space-y-3">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                <div>
-                                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Optional Background Removal</label>
-                                    <select id="sigBgMode" class="w-full border border-gray-300 p-2 rounded text-xs focus:outline-none focus:border-mpiBlue">
-                                        <option value="none">Do not remove background</option>
-                                        <option value="autoSmart" selected>Auto detect blue or white background</option>
-                                        <option value="blue">Blue ID background / chroma key</option>
-                                        <option value="white">White paper background</option>
-                                        <option value="aiServer">AI remove bg via local Python server</option>
-                                    </select>
+                            <div id="sigUploadPanel" class="space-y-3">
+                                <div class="signature-upload-zone">
+                                    <label for="sigUpload" class="text-xs font-bold bg-white border border-blue-200 text-mpiBlue px-3 py-2 rounded hover:bg-blue-50 cursor-pointer"><i class="fas fa-image mr-1"></i> Select Image</label>
+                                    <input type="file" id="sigUpload" accept="image/png, image/jpeg" class="text-xs">
+                                    <span id="sigFileName" class="text-xs text-gray-500">No image selected.</span>
                                 </div>
-                                <div>
-                                    <label class="flex justify-between text-[10px] font-bold text-gray-500 uppercase mb-1">
-                                        <span>Removal Strength</span>
-                                        <span id="sigBgThresholdValue" class="text-mpiBlue">20</span>
-                                    </label>
-                                    <input type="range" id="sigBgThreshold" min="10" max="140" value="20" class="w-full">
+                                <div id="sigBgOptions" class="hidden p-3 bg-gray-50 border rounded space-y-3">
+                                    <label class="block text-[10px] font-bold text-gray-500 uppercase">Background Removal<select id="sigBgMode" class="mt-1 w-full border border-gray-300 p-2 rounded text-xs"><option value="none">Keep original</option><option value="autoSmart" selected>Automatic best result</option><option value="blue">Blue background</option><option value="white">White background</option><option value="aiServer">AI local remover</option></select></label>
+                                    <label class="flex flex-col text-[10px] font-bold text-gray-500 uppercase"><span>Removal Strength: <span id="sigBgThresholdValue" class="text-mpiBlue">20</span></span><input type="range" id="sigBgThreshold" min="10" max="140" value="20"></label>
                                 </div>
                             </div>
-                            <p class="text-[10px] text-gray-500 leading-relaxed">
-                                <strong>Auto</strong> checks the image corners and chooses blue or white mode. Use strength around <strong>20</strong> for clean blue ID or white paper backgrounds. AI mode uses your local Python server at <strong>127.0.0.1:8000</strong>, not an external API.
-                            </p>
-                        </div>
-                    </div>
 
-                    <div id="sigDrawPanel" class="hidden p-3 bg-white border border-blue-100 rounded space-y-3">
-                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                            <p class="text-xs text-gray-600">Draw your signature below. The canvas is transparent when placed on the form.</p>
-                            <div class="flex gap-2">
-                                <button type="button" onclick="clearSignaturePad()" class="text-xs px-3 py-1.5 rounded border border-gray-300 hover:bg-gray-100">Clear</button>
-                                <button type="button" onclick="useDrawnSignature()" class="text-xs px-3 py-1.5 rounded bg-mpiBlue text-white font-bold hover:bg-mpiDark">Use Drawn Signature</button>
+                            <div id="sigDrawPanel" class="hidden space-y-3">
+                                <div class="signature-pad-bg p-2 rounded"><canvas id="signaturePad" class="signature-pad-canvas"></canvas></div>
+                                <div class="flex justify-end gap-2"><button type="button" onclick="clearSignaturePad()" class="text-xs px-3 py-1.5 rounded border">Clear</button><button type="button" onclick="useDrawnSignature()" class="text-xs px-3 py-1.5 rounded bg-mpiBlue text-white font-bold">Apply Drawing</button></div>
                             </div>
+                            <p id="sigStatus" class="mt-2 text-[10px] text-gray-500 leading-relaxed">Upload an image or draw your signature.</p>
                         </div>
-                        <div class="signature-pad-bg p-2 rounded">
-                            <canvas id="signaturePad" class="signature-pad-canvas"></canvas>
-                        </div>
-                    </div>
 
-                    <!-- Signature Editing Controls -->
-                    <div id="sigControls" class="hidden mt-3 p-3 bg-white border border-blue-100 rounded grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Scale / Size (10% to 300%)</label>
-                            <input type="range" id="sigSize" min="10" max="300" value="100" class="w-full">
-                        </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Vertical Offset</label>
-                            <input type="range" id="sigY" min="-40" max="40" value="0" class="w-full">
-                        </div>
-                        <!-- SAVE DEFAULT CHECKBOX -->
-                        <div class="col-span-1 md:col-span-2 flex items-center justify-end pt-2 border-t border-gray-100 mt-2">
-                            <label class="flex items-center space-x-2 text-sm font-bold text-mpiBlue cursor-pointer bg-white px-3 py-2 border border-blue-200 rounded shadow-sm hover:bg-blue-50 transition">
-                                <input type="checkbox" id="saveDefaultSig" class="rounded text-mpiBlue focus:ring-mpiBlue w-4 h-4">
-                                <span>Save Signature, Size & Placement as Default</span>
-                            </label>
+                        <div class="bg-white border border-blue-100 rounded-lg p-3 flex flex-col">
+                            <h4 class="font-bold text-xs text-gray-700 mb-2">2. Live Signature Preview</h4>
+                            <div class="signature-editor-preview flex-1">
+                                <div id="signatureEditorPreview" class="w-full h-full flex items-center justify-center text-xs text-gray-400">Your signature preview will appear here.</div>
+                            </div>
+                            <div id="sigControls" class="hidden mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
+                                <label class="text-[10px] font-bold text-gray-500 uppercase">Size<input type="range" id="sigSize" min="10" max="300" value="100" class="w-full"></label>
+                                <label class="text-[10px] font-bold text-gray-500 uppercase">Vertical Position<input type="range" id="sigY" min="-40" max="40" value="0" class="w-full"></label>
+                                <label class="md:col-span-2 flex items-center gap-2 text-xs font-bold text-mpiBlue border-t pt-2"><input type="checkbox" id="saveDefaultSig" class="rounded text-mpiBlue"> Save as my default signature</label>
+                            </div>
                         </div>
                     </div>
                 </div>
@@ -768,12 +734,12 @@
     <script src="Frontend/runtime-config.js?v=20260619-portable"></script>
     <script src="Frontend/Functions/mock-data.js?v=20260619-phase4-1"></script>
     <script src="Frontend/Connectors/api-client.js?v=20260619-portable"></script>
-    <script src="Frontend/Functions/signature.js?v=20260619-phase4-1"></script>
-    <script src="Frontend/Functions/modal.js?v=20260619-phase4-1"></script>
+    <script src="Frontend/Functions/signature.js?v=20260619-admin-signature"></script>
+    <script src="Frontend/Functions/modal.js?v=20260619-admin-signature"></script>
     <script src="Frontend/Functions/gatepass.js?v=20260619-phase4-1"></script>
     <script src="Frontend/Functions/approvals.js?v=20260619-phase4-1"></script>
     <script src="Frontend/Functions/scanner.js?v=20260619-camera-2"></script>
-    <script src="Frontend/Functions/admin.js?v=20260619-phase4-1"></script>
+    <script src="Frontend/Functions/admin.js?v=20260619-admin-signature"></script>
     <script src="Frontend/Functions/navigation.js?v=20260619-phase4-1"></script>
     <script src="Frontend/Functions/auth.js?v=20260619-phase4-1"></script>
     <script src="Frontend/Functions/app.js?v=20260619-phase4-1"></script>

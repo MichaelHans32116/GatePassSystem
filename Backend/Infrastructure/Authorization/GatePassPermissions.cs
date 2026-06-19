@@ -12,6 +12,11 @@ public static class GatePassPermissions
     public const string MonitorOutside = "gatepass.monitor.outside";
     public const string FleetManage = "fleet.manage";
     public const string ReportsView = "reports.view";
+    public const string EmployeesRead = "employees.read";
+    public const string UsersManage = "users.manage";
+    public const string RolesManage = "roles.manage";
+    public const string DepartmentsManage = "departments.manage";
+    public const string AuditView = "audit.view";
 
     public static readonly string[] All =
     [
@@ -24,7 +29,12 @@ public static class GatePassPermissions
         Scan,
         MonitorOutside,
         FleetManage,
-        ReportsView
+        ReportsView,
+        EmployeesRead,
+        UsersManage,
+        RolesManage,
+        DepartmentsManage,
+        AuditView
     ];
 }
 

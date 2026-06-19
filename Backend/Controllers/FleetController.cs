@@ -48,6 +48,16 @@ public sealed class FleetController(
         return Success<object>(new { id }, "Vehicle updated.");
     }
 
+    [Authorize(Policy = GatePassPermissions.FleetManage)]
+    [HttpDelete("vehicles/{id:long}")]
+    public async Task<IActionResult> ArchiveVehicle(
+        long id,
+        CancellationToken cancellationToken)
+    {
+        await fleetService.ArchiveVehicleAsync(id, cancellationToken);
+        return NoContent();
+    }
+
     [HttpGet("drivers")]
     public async Task<ActionResult<ApiResponse<IReadOnlyList<DriverRecord>>>> Drivers(
         CancellationToken cancellationToken) =>
@@ -80,6 +90,16 @@ public sealed class FleetController(
     {
         await fleetService.SaveDriverAsync(id, request, cancellationToken);
         return Success<object>(new { id }, "Driver updated.");
+    }
+
+    [Authorize(Policy = GatePassPermissions.FleetManage)]
+    [HttpDelete("drivers/{id:long}")]
+    public async Task<IActionResult> ArchiveDriver(
+        long id,
+        CancellationToken cancellationToken)
+    {
+        await fleetService.ArchiveDriverAsync(id, cancellationToken);
+        return NoContent();
     }
 }
 

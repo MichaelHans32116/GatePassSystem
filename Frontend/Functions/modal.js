@@ -404,10 +404,11 @@ async function viewPass(id, isReviewing = false) {
                         else if (currentUser.canNoteGatePass) targetContainerId = 'sigPAS';
                         else targetContainerId = 'sigImm';
 
-                        const targetDiv = document.getElementById(targetContainerId);
-                        if (targetDiv) {
-                             targetDiv.innerHTML = `<img src="${currentUploadedSig}" id="liveDocumentSig" class="signature-img" style="width: ${currentUser.savedSignature.w || 100}%; margin-bottom: ${currentUser.savedSignature.y || 0}px;">`;
-                        }
+                        renderSignatureImage(
+                            currentUploadedSig,
+                            currentUser.savedSignature.w || 100,
+                            currentUser.savedSignature.y || 0
+                        );
 
                         document.getElementById('sigSize').value = currentUser.savedSignature.w || 100;
                         document.getElementById('sigY').value = currentUser.savedSignature.y || 0;
@@ -427,6 +428,10 @@ async function viewPass(id, isReviewing = false) {
                         document.getElementById('sigBgOptions').classList.add('hidden');
                         document.getElementById('sigControls').classList.add('hidden');
                         document.getElementById('saveDefaultSig').checked = false;
+                        const editorPreview = document.getElementById('signatureEditorPreview');
+                        if (editorPreview) {
+                            editorPreview.innerHTML = 'Your signature preview will appear here.';
+                        }
                         setSignatureStatus('Upload a PNG/JPG signature, or switch to Draw Signature.', 'muted');
                     }
                 } else {

@@ -182,9 +182,13 @@ function getSignatureTargetContainerId() {
 
 function renderSignatureImage(dataUrl, width = 100, y = 0) {
             const targetDiv = document.getElementById(getSignatureTargetContainerId());
-            if (!targetDiv) return;
-
-            targetDiv.innerHTML = `<img src="${dataUrl}" id="liveDocumentSig" class="signature-img" style="width: ${width}%; margin-bottom: ${y}px;">`;
+            if (targetDiv) {
+                targetDiv.innerHTML = `<img src="${dataUrl}" id="liveDocumentSig" class="signature-img" style="width: ${width}%; margin-bottom: ${y}px;">`;
+            }
+            const preview = document.getElementById('signatureEditorPreview');
+            if (preview) {
+                preview.innerHTML = `<img src="${dataUrl}" id="liveEditorSig" style="width: ${Math.min(Number(width), 180)}%; transform: translateY(${-Number(y)}px);">`;
+            }
         }
 
 function setSignatureStatus(message, type = 'muted') {
@@ -374,10 +378,10 @@ function setupSignaturePad() {
                 event.preventDefault();
                 const ctx = canvas.getContext('2d');
                 const p = getPoint(event);
-                ctx.lineWidth = 2.2;
+                ctx.lineWidth = 3.2;
                 ctx.lineCap = 'round';
                 ctx.lineJoin = 'round';
-                ctx.strokeStyle = '#111827';
+                ctx.strokeStyle = '#020617';
                 ctx.beginPath();
                 ctx.moveTo(signaturePadState.lastX, signaturePadState.lastY);
                 ctx.lineTo(p.x, p.y);
@@ -490,9 +494,15 @@ function initializeSignatureControls() {
 
     const applySignaturePlacement = () => {
         const liveSignature = document.getElementById('liveDocumentSig');
-        if (!liveSignature) return;
-        liveSignature.style.width = size.value + '%';
-        liveSignature.style.marginBottom = offset.value + 'px';
+        if (liveSignature) {
+            liveSignature.style.width = size.value + '%';
+            liveSignature.style.marginBottom = offset.value + 'px';
+        }
+        const editorSignature = document.getElementById('liveEditorSig');
+        if (editorSignature) {
+            editorSignature.style.width = Math.min(Number(size.value), 180) + '%';
+            editorSignature.style.transform = `translateY(${-Number(offset.value)}px)`;
+        }
     };
 
     size?.addEventListener('input', applySignaturePlacement);

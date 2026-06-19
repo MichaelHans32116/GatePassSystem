@@ -29,6 +29,7 @@ public static class DependencyInjection
         services.AddScoped<ISecurityRepository, SecurityRepository>();
         services.AddScoped<ISignatureRepository, SignatureRepository>();
         services.AddScoped<IOperationsRepository, OperationsRepository>();
+        services.AddScoped<IAdminRepository, AdminRepository>();
         services.AddSingleton<IPasswordHasher, Pbkdf2PasswordHasher>();
         services.AddSingleton<IQrTokenService, QrTokenService>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
@@ -39,6 +40,7 @@ public static class DependencyInjection
         services.AddScoped<ISecurityService, SecurityService>();
         services.AddScoped<ISignatureService, SignatureService>();
         services.AddScoped<IDashboardService, DashboardService>();
+        services.AddScoped<IAdminService, AdminService>();
 
         services.AddOptions<JwtOptions>();
         services.AddSingleton<IValidateOptions<JwtOptions>, JwtOptionsValidator>();

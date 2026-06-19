@@ -20,6 +20,12 @@ public interface IFleetRepository
         long? driverId,
         SaveDriverRequest request,
         CancellationToken cancellationToken = default);
+    Task ArchiveVehicleAsync(
+        long vehicleId,
+        CancellationToken cancellationToken = default);
+    Task ArchiveDriverAsync(
+        long driverId,
+        CancellationToken cancellationToken = default);
 
     Task<bool> ReserveAsync(
         long gatePassId,
