@@ -148,6 +148,7 @@ static async Task ImportAsync(
 {
     await using var connection = new MySqlConnection(connectionString);
     await connection.OpenAsync();
+    await connection.ExecuteAsync("SET time_zone = '+00:00';");
     await using var transaction = await connection.BeginTransactionAsync();
     var passwordHasher = new Pbkdf2PasswordHasher();
     await using var sourceFileStream = File.OpenRead(sourceFilePath);

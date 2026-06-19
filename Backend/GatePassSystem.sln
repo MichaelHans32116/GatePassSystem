@@ -4,6 +4,9 @@ Microsoft Visual Studio Solution File, Format Version 12.00
 VisualStudioVersion = 17.0.31903.59
 MinimumVisualStudioVersion = 10.0.40219.1
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GatePassSystem.Api", "GatePassSystem.Api.csproj", "{09294BAC-E256-4A1E-A539-0B8AC3F64994}"
+	ProjectSection(ProjectDependencies) = postProject
+		{1B535205-E68A-4D45-805F-0F53EDE6385B} = {1B535205-E68A-4D45-805F-0F53EDE6385B}
+	EndProjectSection
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Project", "Project", "{EB1B1211-640D-0C76-A929-990D115248FD}"
 EndProject
@@ -14,6 +17,9 @@ EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "EmployeeImporter", "EmployeeImporter", "{D2173A9B-502D-7CD2-0660-0171D2281256}"
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "GatePassSystem.EmployeeImporter", "Tools\EmployeeImporter\GatePassSystem.EmployeeImporter.csproj", "{1B113AC7-E6E1-4A2B-AB92-BFBB8D6346AD}"
+	ProjectSection(ProjectDependencies) = postProject
+		{1B535205-E68A-4D45-805F-0F53EDE6385B} = {1B535205-E68A-4D45-805F-0F53EDE6385B}
+	EndProjectSection
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

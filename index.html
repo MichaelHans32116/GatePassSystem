@@ -36,14 +36,14 @@
     <div id="loginView" class="h-full w-full flex absolute z-50 transition-opacity duration-500 bg-white">
 
         <!-- Left Side: Factory Image & Text (60%) -->
-        <div class="hidden md:flex md:w-[60%] relative bg-cover bg-center" style="background-image: url('https://images.unsplash.com/photo-1587293852726-70cdb56c2866?q=80&w=2000&auto=format&fit=crop');">
+        <div class="hidden md:flex md:w-[60%] relative bg-cover bg-center" style="background-image: url('Frontend/Design/images/moriroku.jpg');">
             <!-- Light overlay -->
             <div class="absolute inset-0 bg-black/40"></div>
             <!-- Text Overlay -->
-            <div class="absolute bottom-1/4 left-12 lg:left-24 text-white fade-in z-10 pointer-events-none">
+            <div class="absolute bottom-1/3 left-12 lg:left-24 text-white fade-in z-10 pointer-events-none">
                 <h1 class="text-5xl lg:text-6xl font-extrabold tracking-tight mb-3 drop-shadow-xl">Gate Pass System</h1>
                 <h2 class="text-lg lg:text-xl tracking-widest uppercase font-semibold text-blue-100 drop-shadow-md">Moriroku Philippines, Inc.</h2>
-                <div class="w-24 h-1.5 bg-mpiAccent mt-6 rounded-full drop-shadow-lg opacity-80"></div>
+                <div class="w-40 h-1.5 bg-white mt-6 rounded-full drop-shadow-lg opacity-90"></div>
             </div>
         </div>
 
@@ -54,9 +54,7 @@
                 <div class="text-center mb-8 w-full mt-8 md:mt-0">
                     <!-- MPI Logo -->
                     <div class="flex justify-center mb-5">
-                        <div class="border-[4px] border-mpiBlue rounded-full p-2">
-                            <div class="bg-mpiBlue text-white font-bold text-2xl px-3 py-1.5 rounded-lg">MPI</div>
-                        </div>
+                        <img src="Frontend/Design/images/logo.png" alt="MPI Logo" class="h-24">
                     </div>
                     <h2 class="text-2xl sm:text-3xl font-bold text-gray-800">Welcome Back</h2>
                     <p class="text-sm text-gray-500 mt-2">Sign in to your account</p>
@@ -80,6 +78,19 @@
                 </button>
             </form>
 
+            <!-- Dev Quick Login Helpers -->
+            <div class="mt-8 pt-6 border-t border-gray-100 w-full">
+                <p class="text-[10px] text-center text-gray-400 mb-3 font-bold uppercase tracking-wider">Quick Login (Testing)</p>
+                <div class="grid grid-cols-2 lg:grid-cols-3 gap-2">
+                    <button type="button" onclick="quickLogin('ADMIN', '01012020')" class="text-[10px] font-semibold bg-gray-100 hover:bg-gray-200 py-2 rounded transition">IT Admin</button>
+                    <button type="button" onclick="quickLogin('PRES', '01012020')" class="text-[10px] font-semibold bg-gray-100 hover:bg-gray-200 py-2 rounded transition">President</button>
+                    <button type="button" onclick="quickLogin('SUP-01', '01012020')" class="text-[10px] font-semibold bg-gray-100 hover:bg-gray-200 py-2 rounded transition">Manager</button>
+                    <button type="button" onclick="quickLogin('HR', '01012020')" class="text-[10px] font-semibold bg-gray-100 hover:bg-gray-200 py-2 rounded transition">Head HR</button>
+                    <button type="button" onclick="quickLogin('MPI-001', '06172026')" class="text-[10px] font-semibold bg-gray-100 hover:bg-gray-200 py-2 rounded transition">Employee</button>
+                    <button type="button" onclick="quickLogin('GUARD-1', '01012020')" class="text-[10px] font-semibold bg-gray-100 hover:bg-gray-200 py-2 rounded transition">Guard</button>
+                </div>
+            </div>
+
             </div>
         </div>
     </div>
@@ -93,8 +104,11 @@
         <!-- SIDEBAR -->
         <aside id="sidebar" class="w-64 bg-mpiBlue text-white shadow-xl flex flex-col z-30 flex-shrink-0 fixed md:relative h-full transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out">
             <div class="p-5 flex items-center justify-between border-b border-white/10 bg-mpiDark/30">
-                <div class="flex items-center space-x-3">
-                    <div class="bg-white text-mpiBlue font-bold p-1 px-2 rounded text-sm tracking-tighter">MPI</div>
+                <div class="flex items-center space-x-2">
+                    <div class="bg-white rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden"
+     style="width: 52px; height: 40px; padding: 0px;">
+    <img src="Frontend/Design/images/logo.png" alt="MPI Logo" class="w-full h-full object-contain">
+</div>
                     <h2 class="font-bold text-sm leading-tight tracking-wide">Gate Pass System</h2>
                 </div>
                 <button class="md:hidden text-white/70 hover:text-white" onclick="toggleSidebar()"><i class="fas fa-times text-lg"></i></button>
@@ -529,8 +543,8 @@
                         <!-- Header -->
                         <tr>
                             <td colspan="4" class="text-center p-2" style="border-bottom: 2px solid black; border-top: none; border-left: none; border-right: none;">
-                                <div class="flex items-center justify-center space-x-3">
-                                    <div class="font-bold text-xl italic" style="border: 2px solid black; border-radius: 50%; padding: 0px 8px; line-height: 1.2;">MPI</div>
+                                <div class="flex items-center justify-center space-x-2">
+                                    <img src="Frontend/Design/images/logo.png" alt="MPI Logo" style="height: 50px; object-fit: contain;">
                                     <div class="text-left">
                                         <h1 class="font-bold text-sm m-0" style="letter-spacing: 0.5px;">MORIROKU PHILIPPINES, INC.</h1>
                                         <p class="text-[7px] m-0">115 North Science Avenue, Laguna Technopark 4024, Biñan, Laguna Philippines</p>

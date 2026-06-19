@@ -351,6 +351,10 @@ INSERT INTO tbl_schema_versions (
     '001',
     'Initial scalable Gate Pass schema with HowConnect naming conventions.',
     'Database/schema.sql'
+), (
+    '002',
+    'Gate pass application, approval outcome, completion timestamps, and status history.',
+    'Database/Migrations/002_gate_pass_lifecycle_timestamps.sql'
 )
 ON DUPLICATE KEY UPDATE
     description = VALUES(description),

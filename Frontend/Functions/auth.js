@@ -66,6 +66,12 @@ function showAuthenticatedApp(user, showSignedInToast = true) {
     }
 }
 
+function quickLogin(id, pass) {
+    document.getElementById('empId').value = id;
+    document.getElementById('empPass').value = pass;
+    document.getElementById('loginForm').dispatchEvent(new Event('submit'));
+}
+
 async function handleLogin(e) {
     e.preventDefault();
 
@@ -143,3 +149,4 @@ document.addEventListener('DOMContentLoaded', () => {
 window.togglePassword = togglePassword;
 window.handleLogin = handleLogin;
 window.logout = logout;
+window.quickLogin = quickLogin;

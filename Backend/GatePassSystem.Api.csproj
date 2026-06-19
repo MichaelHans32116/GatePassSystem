@@ -5,6 +5,12 @@
     <Nullable>enable</Nullable>
     <ImplicitUsings>enable</ImplicitUsings>
     <RootNamespace>GatePassSystem.Api</RootNamespace>
+    <DefaultItemExcludes>
+      $(DefaultItemExcludes);
+      Project\**;
+      Tools\**;
+      SignatureBackgroundRemoval\**
+    </DefaultItemExcludes>
   </PropertyGroup>
 
   <ItemGroup>
@@ -14,11 +20,6 @@
   <ItemGroup>
     <PackageReference Include="Microsoft.AspNetCore.Authentication.JwtBearer" Version="8.0.23" />
     <PackageReference Include="Swashbuckle.AspNetCore" Version="10.2.1" />
-  </ItemGroup>
-
-  <ItemGroup>
-    <Compile Remove="Project\**\*.cs" />
-    <Compile Remove="Tools\**\*.cs" />
   </ItemGroup>
 
 </Project>

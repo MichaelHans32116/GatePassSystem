@@ -11,6 +11,14 @@ const string GeneralRateLimitPolicy = "General";
 const string AuthRateLimitPolicy = "Auth";
 
 var builder = WebApplication.CreateBuilder(args);
+
+// Keep API logging portable for local Kestrel, Apache reverse proxy, and
+// restricted Windows service accounts. The default Windows Event Log provider
+// can terminate startup when the process account cannot create/write a source.
+builder.Logging.ClearProviders();
+builder.Logging.AddConsole();
+builder.Logging.AddDebug();
+
 var environmentConnectionString =
     Environment.GetEnvironmentVariable("GATEPASS_DB_CONNECTION");
 

@@ -7,13 +7,30 @@ Files:
 - `schema.sql`: canonical clean-install schema using the HowConnect-style
   `tbl_` and `view_` naming convention.
 - `seed-reference.sql`: safe role, permission, and department baseline data.
+- `procedures.sql`: transactional gate pass creation, submission,
+  approval outcome, completion, paging, and dashboard stored procedures.
 - `NAMING_CONVENTIONS.md`: naming rules for tables, keys, views, procedures,
   indexes, C# types, and DTOs.
 - `Migrations/`: ordered scripts for changes after the first deployed database.
 
-Planned next files:
+Gate pass lifecycle timestamps:
 
-- `procedures.sql`: transactional workflow helpers for request creation, approvals, and scans.
+- `applied_at`: request submission time.
+- `approval_completed_at`: final approval or rejection time.
+- `approved_at`, `rejected_at`, `cancelled_at`, `expired_at`: explicit outcome times.
+- `completed_at`: actual gate transaction completion time after Time In or a
+  one-way Time Out.
+- `tbl_gate_pass_status_history`: immutable status transition history.
+
+Local setup order:
+
+1. `schema.sql`
+2. `seed-reference.sql`
+3. `procedures.sql`
+4. Employee importer with the external workbook
+
+Planned next file:
+
 - `views.sql`: reporting and queue views if the schema file becomes too large.
 
 The raw employee workbook is intentionally excluded from Git. The importer reads
