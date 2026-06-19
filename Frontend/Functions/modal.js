@@ -72,7 +72,7 @@ function resetDocumentModalLayout() {
             setModalInteractionState('drag', false);
             setModalInteractionState('resize', false);
 
-            modal.classList.remove('is-floating', 'w-screen', 'h-screen', 'm-0', 'scale-100');
+            modal.classList.remove('is-floating', 'is-reviewing', 'w-screen', 'h-screen', 'm-0', 'scale-100');
             modal.classList.add('scale-95');
 
             modal.style.left = '';
@@ -87,6 +87,7 @@ function resetDocumentModalLayout() {
 
             printModal.classList.remove('p-0');
             printModal.classList.add('p-4');
+            updateModalExpandButton(false);
         }
 
 function initializeModalDragResize() {
@@ -205,6 +206,7 @@ function toggleMaximizeModal() {
                     modal.style.width = modalRestoreLayout.width;
                     modal.style.height = modalRestoreLayout.height;
                 }
+                updateModalExpandButton(false);
             } else {
                 const rect = modal.getBoundingClientRect();
                 modalRestoreLayout = {
@@ -225,6 +227,23 @@ function toggleMaximizeModal() {
                 modal.style.borderRadius = '0';
                 printModal.classList.remove('p-4');
                 printModal.classList.add('p-0');
+                updateModalExpandButton(true);
+            }
+        }
+
+function updateModalExpandButton(expanded) {
+            const text = document.getElementById('modalExpandText');
+            const icon = document.getElementById('modalExpandIcon');
+            const button = document.getElementById('modalExpandButton');
+            if (text) text.innerText = expanded ? 'Minimize' : 'Expand';
+            if (icon) {
+                icon.classList.toggle('fa-window-maximize', !expanded);
+                icon.classList.toggle('fa-window-minimize', expanded);
+            }
+            if (button) {
+                button.title = expanded
+                    ? 'Minimize document workspace'
+                    : 'Expand document workspace';
             }
         }
 
@@ -375,9 +394,11 @@ async function viewPass(id, isReviewing = false) {
             const actionArea = document.getElementById('approvalActionArea');
             if(actionArea) {
                 if(isReviewing) {
+                    document.getElementById('printModalContent')?.classList.add('is-reviewing');
                     actionArea.style.display = 'flex';
                     document.getElementById('sigUpload').value = '';
-                    document.getElementById('sigFileName').innerText = 'No image selected.';
+                    document.getElementById('sigFileName').innerText = '';
+                    document.getElementById('sigSelectedFileRow')?.classList.add('hidden');
                     showSignatureSource('upload');
 
                     // PRE-FILL USERNAME FOR TRUE LIVE PREVIEW ALIGNMENT
@@ -428,13 +449,10 @@ async function viewPass(id, isReviewing = false) {
                         document.getElementById('sigBgOptions').classList.add('hidden');
                         document.getElementById('sigControls').classList.add('hidden');
                         document.getElementById('saveDefaultSig').checked = false;
-                        const editorPreview = document.getElementById('signatureEditorPreview');
-                        if (editorPreview) {
-                            editorPreview.innerHTML = 'Your signature preview will appear here.';
-                        }
-                        setSignatureStatus('Upload a PNG/JPG signature, or switch to Draw Signature.', 'muted');
+                        setSignatureStatus('Choose an image or switch to Draw Signature.', 'muted');
                     }
                 } else {
+                    document.getElementById('printModalContent')?.classList.remove('is-reviewing');
                     actionArea.style.display = 'none';
                 }
             }
@@ -461,5 +479,6 @@ window.prepareModalForFloating = prepareModalForFloating;
 window.resetDocumentModalLayout = resetDocumentModalLayout;
 window.initializeModalDragResize = initializeModalDragResize;
 window.toggleMaximizeModal = toggleMaximizeModal;
+window.updateModalExpandButton = updateModalExpandButton;
 window.viewPass = viewPass;
 window.closeModal = closeModal;

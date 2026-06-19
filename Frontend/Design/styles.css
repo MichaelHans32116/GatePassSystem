@@ -116,6 +116,39 @@
             border-radius: 0.5rem;
             will-change: left, top, width, height;
         }
+        .document-modal.is-reviewing {
+            width: min(98vw, 1240px);
+            display: grid !important;
+            grid-template-columns: minmax(300px, 360px) minmax(0, 1fr);
+            grid-template-rows: auto auto minmax(0, 1fr);
+            align-items: stretch;
+        }
+        .document-modal.is-reviewing #modalDragHandle,
+        .document-modal.is-reviewing #workflowTracker {
+            grid-column: 1 / -1;
+        }
+        .document-modal.is-reviewing #approvalActionArea {
+            grid-column: 1;
+            grid-row: 3;
+            display: flex;
+            min-height: 0;
+            max-height: none;
+            overflow-y: auto;
+            border-top: 0;
+            border-right: 1px solid #dbeafe;
+            border-radius: 0 0 0 0.5rem;
+        }
+        .document-modal.is-reviewing #modalScrollArea {
+            grid-column: 2;
+            grid-row: 3;
+            min-height: 0;
+            display: flex;
+            align-items: flex-start;
+            justify-content: center;
+        }
+        .document-modal.is-reviewing #printableArea {
+            flex: 0 0 auto;
+        }
         .document-modal:not(.is-floating) {
             margin: auto;
         }
@@ -207,25 +240,6 @@
             touch-action: none;
             cursor: crosshair;
         }
-        .signature-editor-preview {
-            min-height: 190px;
-            border: 1px dashed #93c5fd;
-            border-radius: 0.5rem;
-            background:
-                linear-gradient(45deg, #f8fafc 25%, transparent 25%),
-                linear-gradient(-45deg, #f8fafc 25%, transparent 25%),
-                linear-gradient(45deg, transparent 75%, #f8fafc 75%),
-                linear-gradient(-45deg, transparent 75%, #f8fafc 75%);
-            background-size: 16px 16px;
-            background-position: 0 0, 0 8px, 8px -8px, -8px 0;
-            overflow: hidden;
-        }
-        .signature-editor-preview img {
-            max-width: 92%;
-            max-height: 155px;
-            object-fit: contain;
-            filter: contrast(1.65) brightness(0.58);
-        }
         .signature-pad-bg {
             background-image: linear-gradient(45deg, #f8fafc 25%, transparent 25%),
                               linear-gradient(-45deg, #f8fafc 25%, transparent 25%),
@@ -246,4 +260,22 @@
         }
         .signature-upload-zone input[type="file"] {
             max-width: 100%;
+        }
+
+        @media (max-width: 900px) {
+            .document-modal.is-reviewing {
+                display: flex !important;
+                width: min(96vw, 760px);
+            }
+            .document-modal.is-reviewing #approvalActionArea {
+                order: 3;
+                max-height: 42vh;
+                border-right: 0;
+                border-top: 1px solid #e5e7eb;
+                border-radius: 0 0 0.5rem 0.5rem;
+            }
+            .document-modal.is-reviewing #modalScrollArea {
+                order: 2;
+                display: block;
+            }
         }

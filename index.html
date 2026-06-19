@@ -30,7 +30,7 @@
             }
         }
     </script>
-        <link rel="stylesheet" href="Frontend/Design/styles.css?v=20260620-phase5">
+        <link rel="stylesheet" href="Frontend/Design/styles.css?v=20260620-phase5-1">
 </head>
 <body class="h-screen overflow-hidden flex flex-col font-sans text-sm md:text-base">
 
@@ -188,6 +188,13 @@
                     </div>
                 </div>
             </header>
+
+            <div id="initialPasswordBanner" class="hidden flex-shrink-0 border-b border-amber-200 bg-amber-50 px-4 py-2.5 text-xs text-amber-900 md:px-6">
+                <div class="mx-auto flex max-w-7xl items-center gap-2">
+                    <i class="fas fa-key text-amber-600"></i>
+                    <span><strong>Initial password is still active.</strong> Password change will be available in the next security phase.</span>
+                </div>
+            </div>
 
             <!-- Scrollable Content -->
             <div class="p-4 md:p-6 overflow-y-auto flex-grow relative" id="mainContent">
@@ -544,7 +551,7 @@
             <div class="w-full bg-white rounded-t-lg border-b border-gray-200 p-4 flex justify-between items-center z-10 print-hide cursor-move" id="modalDragHandle">
                 <h2 class="font-bold text-lg text-gray-800"><i class="fas fa-arrows-alt mr-2 text-gray-400"></i>Document Review</h2>
                 <div class="flex items-center space-x-2">
-                    <button onclick="toggleMaximizeModal()" class="text-sm font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded transition" title="Maximize/Restore"><i class="fas fa-window-maximize mr-1"></i> Expand</button>
+                    <button id="modalExpandButton" onclick="toggleMaximizeModal()" class="text-sm font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded transition" title="Expand document workspace"><i id="modalExpandIcon" class="fas fa-window-maximize mr-1"></i> <span id="modalExpandText">Expand</span></button>
                     <button onclick="window.print()" class="text-sm font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded transition"><i class="fas fa-print mr-1"></i> Print</button>
                     <button onclick="closeModal()" class="w-8 h-8 rounded hover:bg-red-50 hover:text-red-600 text-gray-500 flex items-center justify-center transition"><i class="fas fa-times text-xl"></i></button>
                 </div>
@@ -681,46 +688,38 @@
             <div id="approvalActionArea" class="w-full bg-white border-t border-gray-200 p-4 md:p-5 print-hide hidden rounded-b-lg flex-col space-y-4">
                 <div class="bg-blue-50 border border-blue-200 p-3 rounded">
                     <h3 class="font-extrabold text-mpiBlue text-base mb-1"><i class="fas fa-pen-nib mr-1"></i> Use Digital Signature</h3>
-                    <p class="text-xs text-gray-600 mb-3">Create the signature on the left and verify the exact output on the right before approval.</p>
+                    <p class="text-xs text-gray-600 mb-3">Choose or draw a signature here. The actual document on the right updates live.</p>
 
-                    <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                        <div class="bg-white border border-blue-100 rounded-lg p-3">
-                            <h4 class="font-bold text-xs text-gray-700 mb-2">1. Signature Editor</h4>
-                            <div class="signature-source-toggle">
-                                <button type="button" onclick="showSignatureSource('upload')" id="btnSigUploadPanel" class="text-xs font-bold bg-mpiBlue text-white px-3 py-2 rounded"><i class="fas fa-upload mr-1"></i> Upload Image</button>
-                                <button type="button" onclick="showSignatureSource('draw')" id="btnSigDrawPanel" class="text-xs font-bold bg-white border border-blue-200 text-mpiBlue px-3 py-2 rounded hover:bg-blue-50"><i class="fas fa-pen mr-1"></i> Draw Signature</button>
-                            </div>
-
-                            <div id="sigUploadPanel" class="space-y-3">
-                                <div class="signature-upload-zone">
-                                    <label for="sigUpload" class="text-xs font-bold bg-white border border-blue-200 text-mpiBlue px-3 py-2 rounded hover:bg-blue-50 cursor-pointer"><i class="fas fa-image mr-1"></i> Select Image</label>
-                                    <input type="file" id="sigUpload" accept="image/png, image/jpeg" class="text-xs">
-                                    <span id="sigFileName" class="text-xs text-gray-500">No image selected.</span>
-                                </div>
-                                <div id="sigBgOptions" class="hidden p-3 bg-gray-50 border rounded space-y-3">
-                                    <label class="block text-[10px] font-bold text-gray-500 uppercase">Background Removal<select id="sigBgMode" class="mt-1 w-full border border-gray-300 p-2 rounded text-xs"><option value="none">Keep original</option><option value="autoSmart" selected>Automatic best result</option><option value="blue">Blue background</option><option value="white">White background</option><option value="aiServer">AI local remover</option></select></label>
-                                    <label class="flex flex-col text-[10px] font-bold text-gray-500 uppercase"><span>Removal Strength: <span id="sigBgThresholdValue" class="text-mpiBlue">20</span></span><input type="range" id="sigBgThreshold" min="10" max="140" value="20"></label>
-                                </div>
-                            </div>
-
-                            <div id="sigDrawPanel" class="hidden space-y-3">
-                                <div class="signature-pad-bg p-2 rounded"><canvas id="signaturePad" class="signature-pad-canvas"></canvas></div>
-                                <div class="flex justify-end gap-2"><button type="button" onclick="clearSignaturePad()" class="text-xs px-3 py-1.5 rounded border">Clear</button><button type="button" onclick="useDrawnSignature()" class="text-xs px-3 py-1.5 rounded bg-mpiBlue text-white font-extrabold">Use Drawn Signature</button></div>
-                            </div>
-                            <p id="sigStatus" class="mt-2 text-[10px] text-gray-500 leading-relaxed">Upload an image or draw your signature.</p>
+                    <div class="bg-white border border-blue-100 rounded-lg p-3">
+                        <h4 class="font-bold text-xs text-gray-700 mb-2">Signature Editor</h4>
+                        <div class="signature-source-toggle">
+                            <label for="sigUpload" onclick="showSignatureSource('upload')" id="btnSigUploadPanel" class="cursor-pointer text-xs font-bold bg-mpiBlue text-white px-3 py-2 rounded"><i class="fas fa-upload mr-1"></i> Upload Image</label>
+                            <input type="file" id="sigUpload" accept="image/png, image/jpeg" class="sr-only">
+                            <button type="button" onclick="showSignatureSource('draw')" id="btnSigDrawPanel" class="text-xs font-bold bg-white border border-blue-200 text-mpiBlue px-3 py-2 rounded hover:bg-blue-50"><i class="fas fa-pen mr-1"></i> Draw Signature</button>
                         </div>
 
-                        <div class="bg-white border border-blue-100 rounded-lg p-3 flex flex-col">
-                            <h4 class="font-bold text-xs text-gray-700 mb-2">2. Live Signature Preview</h4>
-                            <div class="signature-editor-preview flex-1">
-                                <div id="signatureEditorPreview" class="w-full h-full flex items-center justify-center text-xs text-gray-400">Your signature preview will appear here.</div>
+                        <div id="sigUploadPanel" class="space-y-3">
+                            <div id="sigSelectedFileRow" class="hidden signature-upload-zone">
+                                <i class="fas fa-image text-mpiBlue"></i>
+                                <span id="sigFileName" class="min-w-0 flex-1 truncate text-xs font-semibold text-gray-600"></span>
                             </div>
-                            <div id="sigControls" class="hidden mt-3 grid grid-cols-1 md:grid-cols-2 gap-3">
-                                <label class="text-[10px] font-bold text-gray-500 uppercase">Size<input type="range" id="sigSize" min="10" max="300" value="100" class="w-full"></label>
-                                <label class="text-[10px] font-bold text-gray-500 uppercase">Vertical Position<input type="range" id="sigY" min="-40" max="40" value="0" class="w-full"></label>
-                                <label class="md:col-span-2 flex items-center gap-2 text-xs font-bold text-mpiBlue border-t pt-2"><input type="checkbox" id="saveDefaultSig" class="rounded text-mpiBlue"> Save as my default signature</label>
+                            <div id="sigBgOptions" class="hidden p-3 bg-gray-50 border rounded space-y-3">
+                                <label class="block text-[10px] font-bold text-gray-500 uppercase">Background Removal<select id="sigBgMode" class="mt-1 w-full border border-gray-300 p-2 rounded text-xs"><option value="none">Keep original</option><option value="autoSmart" selected>Automatic best result</option><option value="blue">Blue background</option><option value="white">White background</option><option value="aiServer">AI local remover</option></select></label>
+                                <label class="flex flex-col text-[10px] font-bold text-gray-500 uppercase"><span>Removal Strength: <span id="sigBgThresholdValue" class="text-mpiBlue">20</span></span><input type="range" id="sigBgThreshold" min="10" max="140" value="20"></label>
                             </div>
                         </div>
+
+                        <div id="sigDrawPanel" class="hidden space-y-3">
+                            <div class="signature-pad-bg p-2 rounded"><canvas id="signaturePad" class="signature-pad-canvas"></canvas></div>
+                            <div class="flex justify-end gap-2"><button type="button" onclick="clearSignaturePad()" class="text-xs px-3 py-1.5 rounded border">Clear</button><button type="button" onclick="useDrawnSignature()" class="text-xs px-3 py-1.5 rounded bg-mpiBlue text-white font-extrabold">Use Drawn Signature</button></div>
+                        </div>
+
+                        <div id="sigControls" class="hidden mt-3 grid grid-cols-1 gap-3 border-t pt-3">
+                            <label class="text-[10px] font-bold text-gray-500 uppercase">Signature Size<input type="range" id="sigSize" min="10" max="300" value="100" class="w-full"></label>
+                            <label class="text-[10px] font-bold text-gray-500 uppercase">Vertical Position<input type="range" id="sigY" min="-40" max="40" value="0" class="w-full"></label>
+                            <label class="flex items-center gap-2 text-xs font-bold text-mpiBlue"><input type="checkbox" id="saveDefaultSig" class="rounded text-mpiBlue"> Save as my default signature</label>
+                        </div>
+                        <p id="sigStatus" class="mt-2 text-[10px] text-gray-500 leading-relaxed">Choose an image or draw your signature.</p>
                     </div>
                 </div>
 
@@ -736,14 +735,14 @@
     <script src="Frontend/runtime-config.js?v=20260619-portable"></script>
     <script src="Frontend/Functions/mock-data.js?v=20260620-phase5"></script>
     <script src="Frontend/Connectors/api-client.js?v=20260619-portable"></script>
-    <script src="Frontend/Functions/signature.js?v=20260620-phase5"></script>
-    <script src="Frontend/Functions/modal.js?v=20260620-phase5"></script>
+    <script src="Frontend/Functions/signature.js?v=20260620-phase5-2"></script>
+    <script src="Frontend/Functions/modal.js?v=20260620-phase5-2"></script>
     <script src="Frontend/Functions/gatepass.js?v=20260620-phase5"></script>
     <script src="Frontend/Functions/approvals.js?v=20260619-phase4-1"></script>
     <script src="Frontend/Functions/scanner.js?v=20260620-phase5"></script>
     <script src="Frontend/Functions/admin.js?v=20260620-phase5"></script>
     <script src="Frontend/Functions/navigation.js?v=20260620-phase5"></script>
-    <script src="Frontend/Functions/auth.js?v=20260620-phase5"></script>
+    <script src="Frontend/Functions/auth.js?v=20260620-phase5-1"></script>
     <script src="Frontend/Functions/app.js?v=20260619-phase4-1"></script>
 </body>
 </html>

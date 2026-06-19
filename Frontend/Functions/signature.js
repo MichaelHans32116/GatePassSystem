@@ -185,10 +185,6 @@ function renderSignatureImage(dataUrl, width = 100, y = 0) {
             if (targetDiv) {
                 targetDiv.innerHTML = `<img src="${dataUrl}" id="liveDocumentSig" class="signature-img" style="width: ${width}%; margin-bottom: ${y}px;">`;
             }
-            const preview = document.getElementById('signatureEditorPreview');
-            if (preview) {
-                preview.innerHTML = `<img src="${dataUrl}" id="liveEditorSig" style="width: ${Math.min(Number(width), 180)}%; transform: translateY(${-Number(y)}px);">`;
-            }
         }
 
 function setSignatureStatus(message, type = 'muted') {
@@ -347,7 +343,7 @@ function showSignatureSource(source) {
                 drawBtn?.classList.remove('bg-mpiBlue', 'text-white');
                 drawBtn?.classList.add('bg-white', 'text-mpiBlue', 'border', 'border-blue-200');
                 if (!currentOriginalSignatureData && !currentUploadedSig) {
-                    setSignatureStatus('Upload a PNG/JPG signature, or switch to Draw Signature.', 'muted');
+                    setSignatureStatus('Choose an image, or switch to Draw Signature.', 'muted');
                 }
             }
         }
@@ -478,6 +474,7 @@ function initializeSignatureControls() {
             document.getElementById('sigBgThresholdValue').innerText = '20';
             document.getElementById('sigBgOptions')?.classList.remove('hidden');
             document.getElementById('sigFileName').innerText = selectedFile.name;
+            document.getElementById('sigSelectedFileRow')?.classList.remove('hidden');
             processAndRenderSignature();
         };
         reader.readAsDataURL(selectedFile);
@@ -497,11 +494,6 @@ function initializeSignatureControls() {
         if (liveSignature) {
             liveSignature.style.width = size.value + '%';
             liveSignature.style.marginBottom = offset.value + 'px';
-        }
-        const editorSignature = document.getElementById('liveEditorSig');
-        if (editorSignature) {
-            editorSignature.style.width = Math.min(Number(size.value), 180) + '%';
-            editorSignature.style.transform = `translateY(${-Number(offset.value)}px)`;
         }
     };
 
