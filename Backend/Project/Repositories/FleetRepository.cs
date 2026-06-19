@@ -65,12 +65,55 @@ public sealed class FleetRepository(
         SaveVehicleRequest request,
         CancellationToken cancellationToken = default)
     {
+        var vehicleName = request.VehicleName.Trim();
+        var plateNumber = request.PlateNumber.Trim().ToUpperInvariant();
+        var vehicleStatusCode =
+            request.VehicleStatusCode.Trim().ToUpperInvariant();
         await using var connection =
             await connectionFactory.OpenConnectionAsync(cancellationToken);
 
+        var duplicatePlate = await connection.ExecuteScalarAsync<bool>(
+            new CommandDefinition(
+                """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM tbl_vehicles
+                    WHERE plate_number = @PlateNumber
+                      AND (@VehicleId IS NULL OR vehicle_id <> @VehicleId)
+                );
+                """,
+                new { PlateNumber = plateNumber, VehicleId = vehicleId },
+                cancellationToken: cancellationToken));
+        if (duplicatePlate)
+        {
+            throw new InvalidOperationException(
+                "That plate number is already assigned to another vehicle.");
+        }
+
+        if (request.DefaultDriverId.HasValue)
+        {
+            var driverExists = await connection.ExecuteScalarAsync<bool>(
+                new CommandDefinition(
+                    """
+                    SELECT EXISTS (
+                        SELECT 1
+                        FROM tbl_drivers
+                        WHERE driver_id = @DriverId
+                          AND is_active = TRUE
+                    );
+                    """,
+                    new { DriverId = request.DefaultDriverId.Value },
+                    cancellationToken: cancellationToken));
+            if (!driverExists)
+            {
+                throw new InvalidOperationException(
+                    "The selected active driver was not found.");
+            }
+        }
+
         if (vehicleId.HasValue)
         {
-            await connection.ExecuteAsync(new CommandDefinition(
+            var affected = await connection.ExecuteAsync(new CommandDefinition(
                 """
                 UPDATE tbl_vehicles
                 SET vehicle_name = @VehicleName,
@@ -86,15 +129,20 @@ public sealed class FleetRepository(
                 new
                 {
                     VehicleId = vehicleId.Value,
-                    request.VehicleName,
-                    PlateNumber = request.PlateNumber.Trim().ToUpperInvariant(),
+                    VehicleName = vehicleName,
+                    PlateNumber = plateNumber,
                     request.VehicleType,
                     request.Capacity,
                     request.DefaultDriverId,
-                    request.VehicleStatusCode,
+                    VehicleStatusCode = vehicleStatusCode,
                     request.Remarks
                 },
                 cancellationToken: cancellationToken));
+            if (affected == 0)
+            {
+                throw new InvalidOperationException(
+                    "Active vehicle record was not found.");
+            }
             return vehicleId.Value;
         }
 
@@ -121,12 +169,12 @@ public sealed class FleetRepository(
             """,
             new
             {
-                request.VehicleName,
-                PlateNumber = request.PlateNumber.Trim().ToUpperInvariant(),
+                VehicleName = vehicleName,
+                PlateNumber = plateNumber,
                 request.VehicleType,
                 request.Capacity,
                 request.DefaultDriverId,
-                request.VehicleStatusCode,
+                VehicleStatusCode = vehicleStatusCode,
                 request.Remarks
             },
             cancellationToken: cancellationToken));
@@ -137,12 +185,63 @@ public sealed class FleetRepository(
         SaveDriverRequest request,
         CancellationToken cancellationToken = default)
     {
+        var driverTypeCode = request.DriverTypeCode.Trim().ToUpperInvariant();
+        var employeeRecordId = driverTypeCode == "EMPLOYEE"
+            ? request.EmployeeRecordId
+            : null;
+        var fullName = request.FullName.Trim();
+        var licenseNumber = string.IsNullOrWhiteSpace(request.LicenseNumber)
+            ? null
+            : request.LicenseNumber.Trim().ToUpperInvariant();
         await using var connection =
             await connectionFactory.OpenConnectionAsync(cancellationToken);
 
+        if (employeeRecordId.HasValue)
+        {
+            var employeeExists = await connection.ExecuteScalarAsync<bool>(
+                new CommandDefinition(
+                    """
+                    SELECT EXISTS (
+                        SELECT 1
+                        FROM tbl_employees
+                        WHERE employee_record_id = @EmployeeRecordId
+                          AND employment_status_code = 'ACTIVE'
+                    );
+                    """,
+                    new { EmployeeRecordId = employeeRecordId.Value },
+                    cancellationToken: cancellationToken));
+            if (!employeeExists)
+            {
+                throw new InvalidOperationException(
+                    "The selected active employee record was not found.");
+            }
+
+            var employeeAlreadyLinked = await connection.ExecuteScalarAsync<bool>(
+                new CommandDefinition(
+                    """
+                    SELECT EXISTS (
+                        SELECT 1
+                        FROM tbl_drivers
+                        WHERE employee_record_id = @EmployeeRecordId
+                          AND (@DriverId IS NULL OR driver_id <> @DriverId)
+                    );
+                    """,
+                    new
+                    {
+                        EmployeeRecordId = employeeRecordId.Value,
+                        DriverId = driverId
+                    },
+                    cancellationToken: cancellationToken));
+            if (employeeAlreadyLinked)
+            {
+                throw new InvalidOperationException(
+                    "That employee already has a driver record.");
+            }
+        }
+
         if (driverId.HasValue)
         {
-            await connection.ExecuteAsync(new CommandDefinition(
+            var affected = await connection.ExecuteAsync(new CommandDefinition(
                 """
                 UPDATE tbl_drivers
                 SET employee_record_id = @EmployeeRecordId,
@@ -156,13 +255,18 @@ public sealed class FleetRepository(
                 new
                 {
                     DriverId = driverId.Value,
-                    request.EmployeeRecordId,
-                    request.FullName,
-                    request.DriverTypeCode,
-                    request.LicenseNumber,
+                    EmployeeRecordId = employeeRecordId,
+                    FullName = fullName,
+                    DriverTypeCode = driverTypeCode,
+                    LicenseNumber = licenseNumber,
                     request.LicenseExpiryDate
                 },
                 cancellationToken: cancellationToken));
+            if (affected == 0)
+            {
+                throw new InvalidOperationException(
+                    "Active driver record was not found.");
+            }
             return driverId.Value;
         }
 
@@ -183,7 +287,14 @@ public sealed class FleetRepository(
             );
             SELECT LAST_INSERT_ID();
             """,
-            request,
+            new
+            {
+                EmployeeRecordId = employeeRecordId,
+                FullName = fullName,
+                DriverTypeCode = driverTypeCode,
+                LicenseNumber = licenseNumber,
+                request.LicenseExpiryDate
+            },
             cancellationToken: cancellationToken));
     }
 
@@ -193,15 +304,21 @@ public sealed class FleetRepository(
     {
         await using var connection =
             await connectionFactory.OpenConnectionAsync(cancellationToken);
-        await connection.ExecuteAsync(new CommandDefinition(
+        var affected = await connection.ExecuteAsync(new CommandDefinition(
             """
             UPDATE tbl_vehicles
             SET is_active = FALSE,
                 vehicle_status_code = 'ARCHIVED'
-            WHERE vehicle_id = @VehicleId;
+            WHERE vehicle_id = @VehicleId
+              AND is_active = TRUE;
             """,
             new { VehicleId = vehicleId },
             cancellationToken: cancellationToken));
+        if (affected == 0)
+        {
+            throw new InvalidOperationException(
+                "Active vehicle record was not found.");
+        }
     }
 
     public async Task ArchiveDriverAsync(
@@ -210,6 +327,24 @@ public sealed class FleetRepository(
     {
         await using var connection =
             await connectionFactory.OpenConnectionAsync(cancellationToken);
+        var exists = await connection.ExecuteScalarAsync<bool>(
+            new CommandDefinition(
+                """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM tbl_drivers
+                    WHERE driver_id = @DriverId
+                      AND is_active = TRUE
+                );
+                """,
+                new { DriverId = driverId },
+                cancellationToken: cancellationToken));
+        if (!exists)
+        {
+            throw new InvalidOperationException(
+                "Active driver record was not found.");
+        }
+
         var assignedVehicles = await connection.ExecuteScalarAsync<long>(
             new CommandDefinition(
                 """

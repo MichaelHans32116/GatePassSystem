@@ -213,12 +213,33 @@ app.UseExceptionHandler(errorApp =>
             .GetRequiredService<ILoggerFactory>()
             .CreateLogger("GlobalExceptionHandler");
 
-        logger.LogError(
-            feature?.Error,
-            "Unhandled API exception. traceId={TraceId}",
-            context.TraceIdentifier);
+        var error = feature?.Error;
+        var isExpectedConflict = error is InvalidOperationException ||
+            error is MySqlException
+            {
+                Number: 1062 or 1452
+            } ||
+            error is MySqlException
+            {
+                SqlState: "45000"
+            };
 
-        var (status, code, message) = feature?.Error switch
+        if (isExpectedConflict)
+        {
+            logger.LogWarning(
+                "API request conflict. message={Message} traceId={TraceId}",
+                error?.Message,
+                context.TraceIdentifier);
+        }
+        else
+        {
+            logger.LogError(
+                error,
+                "Unhandled API exception. traceId={TraceId}",
+                context.TraceIdentifier);
+        }
+
+        var (status, code, message) = error switch
         {
             InvalidOperationException invalid =>
                 (StatusCodes.Status409Conflict,
@@ -228,6 +249,14 @@ app.UseExceptionHandler(errorApp =>
                 (StatusCodes.Status409Conflict,
                  "DATABASE_WORKFLOW_CONFLICT",
                  database.Message),
+            MySqlException { Number: 1062 } =>
+                (StatusCodes.Status409Conflict,
+                 "DUPLICATE_RECORD",
+                 "A record with the same unique value already exists."),
+            MySqlException { Number: 1452 } =>
+                (StatusCodes.Status409Conflict,
+                 "REFERENCE_NOT_FOUND",
+                 "A selected related record does not exist or is no longer active."),
             _ =>
                 (StatusCodes.Status500InternalServerError,
                  "INTERNAL_SERVER_ERROR",

@@ -123,6 +123,11 @@ if (-not (Test-LocalPort 5087)) {
     if (-not (Test-Path $apiExe)) {
         throw 'GatePassSystem.Api.exe was not produced by the build.'
     }
+    $apiLogDirectory = Join-Path $repo 'LocalData\logs'
+    New-Item -ItemType Directory -Force -Path $apiLogDirectory | Out-Null
+    $apiLogStamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+    $apiOutputLog = Join-Path $apiLogDirectory "api-$apiLogStamp.out.log"
+    $apiErrorLog = Join-Path $apiLogDirectory "api-$apiLogStamp.err.log"
 
     $apiCommand = @"
 `$env:ASPNETCORE_ENVIRONMENT='Development'
@@ -134,6 +139,8 @@ Set-Location '$apiDirectory'
 "@
     Start-Process powershell.exe `
         -ArgumentList @('-NoProfile', '-WindowStyle', 'Hidden', '-Command', $apiCommand) `
+        -RedirectStandardOutput $apiOutputLog `
+        -RedirectStandardError $apiErrorLog `
         -WindowStyle Hidden
 }
 
@@ -204,6 +211,10 @@ Write-Host 'Gate Pass local stack is ready.' -ForegroundColor Green
 Write-Host "Frontend: $frontendUrl"
 Write-Host "API health: $apiHealthUrl/api/health"
 Write-Host "Swagger: $apiHealthUrl/swagger"
+if ($apiOutputLog) {
+    Write-Host "API log: $apiOutputLog"
+    Write-Host "API error log: $apiErrorLog"
+}
 
 $lanAddresses = Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue |
     Where-Object {

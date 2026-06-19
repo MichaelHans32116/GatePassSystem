@@ -6,6 +6,21 @@ namespace GatePassSystem.Project.Services;
 
 public sealed class FleetService(IFleetRepository repository) : IFleetService
 {
+    private static readonly HashSet<string> VehicleStatuses =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            "AVAILABLE",
+            "MAINTENANCE",
+            "UNAVAILABLE"
+        };
+
+    private static readonly HashSet<string> DriverTypes =
+        new(StringComparer.OrdinalIgnoreCase)
+        {
+            "EMPLOYEE",
+            "EXTERNAL"
+        };
+
     public Task<IReadOnlyList<VehicleRecord>> GetVehiclesAsync(
         CancellationToken cancellationToken = default) =>
         repository.GetVehiclesAsync(cancellationToken);
@@ -17,14 +32,56 @@ public sealed class FleetService(IFleetRepository repository) : IFleetService
     public Task<long> SaveVehicleAsync(
         long? vehicleId,
         SaveVehicleRequest request,
-        CancellationToken cancellationToken = default) =>
-        repository.SaveVehicleAsync(vehicleId, request, cancellationToken);
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(request.VehicleName) ||
+            string.IsNullOrWhiteSpace(request.PlateNumber))
+        {
+            throw new InvalidOperationException(
+                "Vehicle name and plate number are required.");
+        }
+
+        if (request.Capacity is <= 0)
+        {
+            throw new InvalidOperationException(
+                "Vehicle capacity must be greater than zero.");
+        }
+
+        if (string.IsNullOrWhiteSpace(request.VehicleStatusCode) ||
+            !VehicleStatuses.Contains(request.VehicleStatusCode.Trim()))
+        {
+            throw new InvalidOperationException("The selected vehicle status is invalid.");
+        }
+
+        return repository.SaveVehicleAsync(vehicleId, request, cancellationToken);
+    }
 
     public Task<long> SaveDriverAsync(
         long? driverId,
         SaveDriverRequest request,
-        CancellationToken cancellationToken = default) =>
-        repository.SaveDriverAsync(driverId, request, cancellationToken);
+        CancellationToken cancellationToken = default)
+    {
+        var driverType = request.DriverTypeCode?.Trim();
+        if (string.IsNullOrWhiteSpace(request.FullName))
+        {
+            throw new InvalidOperationException("Driver full name is required.");
+        }
+
+        if (string.IsNullOrWhiteSpace(driverType) ||
+            !DriverTypes.Contains(driverType))
+        {
+            throw new InvalidOperationException("The selected driver type is invalid.");
+        }
+
+        if (driverType.Equals("EMPLOYEE", StringComparison.OrdinalIgnoreCase) &&
+            !request.EmployeeRecordId.HasValue)
+        {
+            throw new InvalidOperationException(
+                "An employee record is required for an employee driver.");
+        }
+
+        return repository.SaveDriverAsync(driverId, request, cancellationToken);
+    }
 
     public Task ArchiveVehicleAsync(
         long vehicleId,

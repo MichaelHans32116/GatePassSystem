@@ -111,9 +111,30 @@ function adminModal(title, body, saveLabel, onSave) {
     }
     document.getElementById('adminEditorTitle').innerText = title;
     document.getElementById('adminEditorBody').innerHTML = body;
-    document.getElementById('adminEditorSave').innerText = saveLabel;
+    const saveButton = document.getElementById('adminEditorSave');
+    saveButton.innerText = saveLabel;
+    saveButton.dataset.defaultLabel = saveLabel;
+    saveButton.disabled = false;
+    saveButton.classList.remove('opacity-60', 'cursor-not-allowed');
     const form = document.getElementById('adminEditorForm');
-    form.onsubmit = onSave;
+    form.dataset.submitting = 'false';
+    form.onsubmit = async event => {
+        event.preventDefault();
+        if (form.dataset.submitting === 'true') return;
+
+        form.dataset.submitting = 'true';
+        saveButton.disabled = true;
+        saveButton.classList.add('opacity-60', 'cursor-not-allowed');
+        saveButton.innerText = 'Saving...';
+        try {
+            await onSave(event);
+        } finally {
+            form.dataset.submitting = 'false';
+            saveButton.disabled = false;
+            saveButton.classList.remove('opacity-60', 'cursor-not-allowed');
+            saveButton.innerText = saveButton.dataset.defaultLabel || saveLabel;
+        }
+    };
     modal.classList.remove('hidden');
     modal.classList.add('flex');
 }
@@ -295,15 +316,15 @@ function openUserEditor(userId = null) {
         user ? 'Edit User Account' : 'Add User Account',
         `<input type="hidden" id="adminUserId" value="${user?.userId || ''}">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-            <label class="text-xs font-bold">Employee ID (optional)<input id="adminUserEmployeeId" class="mt-1 w-full border p-2 rounded font-normal" value="${adminEscape(user?.employeeId || '')}" placeholder="Existing active employee ID"></label>
-            <label class="text-xs font-bold">Username<input id="adminUserUsername" required class="mt-1 w-full border p-2 rounded font-normal" value="${adminEscape(user?.username || '')}"></label>
-            <label class="text-xs font-bold md:col-span-2">Display Name<input id="adminUserDisplayName" required class="mt-1 w-full border p-2 rounded font-normal" value="${adminEscape(user?.displayName || '')}"></label>
-            <label class="text-xs font-bold">Account Type<select id="adminUserType" class="mt-1 w-full border p-2 rounded font-normal">
+            <label class="text-xs font-bold">Account Type<select id="adminUserType" onchange="handleAdminUserTypeChange()" class="mt-1 w-full border p-2 rounded font-normal">
                 ${['EMPLOYEE','SECURITY_AGENCY','SYSTEM'].map(value => `<option ${user?.accountTypeCode === value ? 'selected' : ''}>${value}</option>`).join('')}
             </select></label>
             <label class="text-xs font-bold">Status<select id="adminUserStatus" class="mt-1 w-full border p-2 rounded font-normal">
                 ${['ACTIVE','LOCKED','ARCHIVED'].map(value => `<option ${user?.accountStatusCode === value ? 'selected' : ''}>${value}</option>`).join('')}
             </select></label>
+            <label id="adminUserEmployeeField" class="text-xs font-bold">Employee ID<input id="adminUserEmployeeId" class="mt-1 w-full border p-2 rounded font-normal" value="${adminEscape(user?.employeeId || '')}" placeholder="Existing active employee ID"><span class="mt-1 block text-[10px] font-normal text-gray-400">Links this login to an active employee record.</span></label>
+            <label class="text-xs font-bold">Login ID / Username<input id="adminUserUsername" required class="mt-1 w-full border p-2 rounded font-normal" value="${adminEscape(user?.username || '')}" placeholder="Example: sec-001"></label>
+            <label class="text-xs font-bold md:col-span-2">Display Name<input id="adminUserDisplayName" required class="mt-1 w-full border p-2 rounded font-normal" value="${adminEscape(user?.displayName || '')}" placeholder="Name shown in the system"></label>
             <label class="text-xs font-bold md:col-span-2">${user ? 'New Password (leave blank to keep)' : 'Initial Password'}<input id="adminUserPassword" type="password" ${user ? '' : 'required'} class="mt-1 w-full border p-2 rounded font-normal"></label>
         </div>
         <div class="mt-4"><p class="text-xs font-bold mb-2">Roles</p><div class="grid grid-cols-1 md:grid-cols-2 gap-2">${userRoleCheckboxes(user?.roleCodes || [])}</div></div>
@@ -311,6 +332,20 @@ function openUserEditor(userId = null) {
         user ? 'Save User' : 'Create User',
         saveAdminUser
     );
+    handleAdminUserTypeChange();
+}
+
+function handleAdminUserTypeChange() {
+    const type = document.getElementById('adminUserType')?.value;
+    const field = document.getElementById('adminUserEmployeeField');
+    const input = document.getElementById('adminUserEmployeeId');
+    if (!field || !input) return;
+
+    const isEmployee = type === 'EMPLOYEE';
+    field.classList.toggle('hidden', !isEmployee);
+    input.disabled = !isEmployee;
+    input.required = isEmployee;
+    if (!isEmployee) input.value = '';
 }
 
 async function saveAdminUser(event) {
@@ -318,11 +353,14 @@ async function saveAdminUser(event) {
     const id = document.getElementById('adminUserId').value;
     const roleCodes = [...document.querySelectorAll('input[name="adminUserRoles"]:checked')]
         .map(input => input.value);
+    const accountTypeCode = document.getElementById('adminUserType').value;
     const payload = {
-        employeeId: document.getElementById('adminUserEmployeeId').value.trim() || null,
+        employeeId: accountTypeCode === 'EMPLOYEE'
+            ? document.getElementById('adminUserEmployeeId').value.trim() || null
+            : null,
         username: document.getElementById('adminUserUsername').value.trim(),
         displayName: document.getElementById('adminUserDisplayName').value.trim(),
-        accountTypeCode: document.getElementById('adminUserType').value,
+        accountTypeCode,
         accountStatusCode: document.getElementById('adminUserStatus').value,
         mustChangePassword: document.getElementById('adminUserMustChange').checked,
         password: document.getElementById('adminUserPassword').value || null,
@@ -359,13 +397,13 @@ async function renderDepartmentsAndRoles() {
             .filter(item => !deptSearch || item.departmentName.toLowerCase().includes(deptSearch) || item.departmentCode.toLowerCase().includes(deptSearch))
             .map(item => `<li class="py-3 flex justify-between items-center gap-2">
                 <div><div class="font-semibold">${adminEscape(item.departmentName)}</div><div class="text-[10px] text-gray-400">${adminEscape(item.departmentCode)} · ${item.activeEmployeeCount} active employees ${item.isActive ? '' : '· ARCHIVED'}</div></div>
-                <div class="whitespace-nowrap"><button onclick="openDepartmentEditor(${item.departmentId})" class="text-blue-600 p-2"><i class="fas fa-edit"></i></button><button onclick="archiveDepartment(${item.departmentId})" class="text-red-600 p-2"><i class="fas fa-archive"></i></button></div>
+                <div class="whitespace-nowrap"><button onclick="openDepartmentEditor(${item.departmentId})" class="text-blue-600 p-2"><i class="fas fa-edit"></i></button>${item.isActive ? `<button onclick="archiveDepartment(${item.departmentId})" class="text-red-600 p-2"><i class="fas fa-archive"></i></button>` : ''}</div>
             </li>`).join('');
         document.getElementById('adminRoleList').innerHTML = adminState.roles
             .filter(item => !roleSearch || item.roleName.toLowerCase().includes(roleSearch) || item.roleCode.toLowerCase().includes(roleSearch))
             .map(item => `<li class="py-3 flex justify-between items-center gap-2">
                 <div><div class="font-semibold">${adminEscape(item.roleName)}</div><div class="text-[10px] text-gray-400">${adminEscape(item.roleCode)} · ${item.activeUserCount} users · ${(item.permissionCodes || []).length} permissions ${item.isActive ? '' : '· ARCHIVED'}</div></div>
-                <div class="whitespace-nowrap"><button onclick="openRoleEditor(${item.roleId})" class="text-blue-600 p-2"><i class="fas fa-edit"></i></button><button onclick="archiveRole(${item.roleId})" class="text-red-600 p-2"><i class="fas fa-archive"></i></button></div>
+                <div class="whitespace-nowrap"><button onclick="openRoleEditor(${item.roleId})" class="text-blue-600 p-2"><i class="fas fa-edit"></i></button>${!item.isSystemRole && item.isActive ? `<button onclick="archiveRole(${item.roleId})" class="text-red-600 p-2"><i class="fas fa-archive"></i></button>` : ''}</div>
             </li>`).join('');
     } catch (error) {
         showToast(error instanceof ApiError ? error.message : 'Unable to load configuration.', 'error');
@@ -421,7 +459,7 @@ function openRoleEditor(id = null) {
     adminModal(item ? 'Edit Role' : 'Add Role', `
         <input type="hidden" id="roleId" value="${item?.roleId || ''}">
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <label class="text-xs font-bold">Code<input id="roleCode" required class="mt-1 w-full border p-2 rounded font-normal" value="${adminEscape(item?.roleCode || '')}"></label>
+            <label class="text-xs font-bold">Code<input id="roleCode" required ${item?.isSystemRole ? 'readonly' : ''} class="mt-1 w-full border p-2 rounded font-normal ${item?.isSystemRole ? 'bg-gray-100 text-gray-500' : ''}" value="${adminEscape(item?.roleCode || '')}"></label>
             <label class="text-xs font-bold">Name<input id="roleName" required class="mt-1 w-full border p-2 rounded font-normal" value="${adminEscape(item?.roleName || '')}"></label>
         </div>
         <label class="block text-xs font-bold mt-3">Description<textarea id="roleDescription" class="mt-1 w-full border p-2 rounded font-normal">${adminEscape(item?.description || '')}</textarea></label>
@@ -544,22 +582,39 @@ function openDriverEditor(id = null) {
         <input type="hidden" id="driverId" value="${item?.driverId || ''}">
         <label class="block text-xs font-bold mb-3">Full Name<input id="driverName" required class="mt-1 w-full border p-2 rounded font-normal" value="${adminEscape(item?.fullName || '')}"></label>
         <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-            <label class="text-xs font-bold">Driver Type<select id="driverType" class="mt-1 w-full border p-2 rounded font-normal">${['EMPLOYEE','EXTERNAL'].map(type => `<option ${item?.driverTypeCode === type ? 'selected' : ''}>${type}</option>`).join('')}</select></label>
-            <label class="text-xs font-bold">Employee Record ID (optional)<input id="driverEmployeeRecord" type="number" class="mt-1 w-full border p-2 rounded font-normal" value="${item?.employeeRecordId || ''}"></label>
+            <label class="text-xs font-bold">Driver Type<select id="driverType" onchange="handleDriverTypeChange()" class="mt-1 w-full border p-2 rounded font-normal">${['EMPLOYEE','EXTERNAL'].map(type => `<option ${item?.driverTypeCode === type ? 'selected' : ''}>${type}</option>`).join('')}</select></label>
+            <label id="driverEmployeeRecordField" class="text-xs font-bold">Employee Database Record ID<input id="driverEmployeeRecord" type="number" min="1" class="mt-1 w-full border p-2 rounded font-normal" value="${item?.employeeRecordId || ''}"><span class="mt-1 block text-[10px] font-normal text-gray-400">Required only when the driver is an MPI employee.</span></label>
             <label class="text-xs font-bold">License Number<input id="driverLicense" class="mt-1 w-full border p-2 rounded font-normal" value="${adminEscape(item?.licenseNumber || '')}"></label>
             <label class="text-xs font-bold">License Expiry<input id="driverExpiry" type="date" class="mt-1 w-full border p-2 rounded font-normal" value="${item?.licenseExpiryDate ? item.licenseExpiryDate.slice(0, 10) : ''}"></label>
         </div>`,
         item ? 'Save Driver' : 'Create Driver',
         saveDriver);
+    handleDriverTypeChange();
+}
+
+function handleDriverTypeChange() {
+    const type = document.getElementById('driverType')?.value;
+    const field = document.getElementById('driverEmployeeRecordField');
+    const input = document.getElementById('driverEmployeeRecord');
+    if (!field || !input) return;
+
+    const isEmployee = type === 'EMPLOYEE';
+    field.classList.toggle('hidden', !isEmployee);
+    input.disabled = !isEmployee;
+    input.required = isEmployee;
+    if (!isEmployee) input.value = '';
 }
 
 async function saveDriver(event) {
     event.preventDefault();
     const id = document.getElementById('driverId').value;
+    const driverTypeCode = document.getElementById('driverType').value;
     const payload = {
-        employeeRecordId: Number(document.getElementById('driverEmployeeRecord').value) || null,
+        employeeRecordId: driverTypeCode === 'EMPLOYEE'
+            ? Number(document.getElementById('driverEmployeeRecord').value) || null
+            : null,
         fullName: document.getElementById('driverName').value.trim(),
-        driverTypeCode: document.getElementById('driverType').value,
+        driverTypeCode,
         licenseNumber: document.getElementById('driverLicense').value.trim() || null,
         licenseExpiryDate: document.getElementById('driverExpiry').value || null
     };
@@ -642,6 +697,7 @@ window.changeUserPage = changeUserPage;
 window.showUserRoleDetails = showUserRoleDetails;
 window.showUserDepartmentDetails = showUserDepartmentDetails;
 window.openUserEditor = openUserEditor;
+window.handleAdminUserTypeChange = handleAdminUserTypeChange;
 window.archiveAdminUser = archiveAdminUser;
 window.renderDepartmentsAndRoles = renderDepartmentsAndRoles;
 window.openDepartmentEditor = openDepartmentEditor;
@@ -652,5 +708,6 @@ window.renderAdminFleet = renderAdminFleet;
 window.openVehicleEditor = openVehicleEditor;
 window.archiveVehicle = archiveVehicle;
 window.openDriverEditor = openDriverEditor;
+window.handleDriverTypeChange = handleDriverTypeChange;
 window.archiveDriver = archiveDriver;
 window.closeAdminEditor = closeAdminEditor;

@@ -173,10 +173,15 @@ public sealed class AdminRepository(
     {
         var username = request.Username.Trim();
         var displayName = request.DisplayName.Trim();
-        var employeeId = string.IsNullOrWhiteSpace(request.EmployeeId)
+        var accountTypeCode = request.AccountTypeCode.Trim().ToUpperInvariant();
+        var accountStatusCode = request.AccountStatusCode.Trim().ToUpperInvariant();
+        var employeeId = !accountTypeCode.Equals(
+                "EMPLOYEE",
+                StringComparison.OrdinalIgnoreCase) ||
+            string.IsNullOrWhiteSpace(request.EmployeeId)
             ? null
             : request.EmployeeId.Trim();
-        var roleCodes = request.RoleCodes
+        var roleCodes = (request.RoleCodes ?? [])
             .Where(code => !string.IsNullOrWhiteSpace(code))
             .Select(code => code.Trim().ToUpperInvariant())
             .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -197,6 +202,25 @@ public sealed class AdminRepository(
 
         try
         {
+            var usernameExists = await connection.ExecuteScalarAsync<bool>(
+                new CommandDefinition(
+                    """
+                    SELECT EXISTS (
+                        SELECT 1
+                        FROM tbl_user_accounts
+                        WHERE username = @Username
+                          AND (@UserId IS NULL OR user_id <> @UserId)
+                    );
+                    """,
+                    new { Username = username, UserId = userId },
+                    transaction,
+                    cancellationToken: cancellationToken));
+            if (usernameExists)
+            {
+                throw new InvalidOperationException(
+                    "That username is already assigned to another account.");
+            }
+
             long? employeeRecordId = null;
             if (employeeId is not null)
             {
@@ -217,6 +241,30 @@ public sealed class AdminRepository(
                 {
                     throw new InvalidOperationException(
                         "The selected active employee record was not found.");
+                }
+
+                var employeeAlreadyLinked =
+                    await connection.ExecuteScalarAsync<bool>(
+                        new CommandDefinition(
+                            """
+                            SELECT EXISTS (
+                                SELECT 1
+                                FROM tbl_user_accounts
+                                WHERE employee_record_id = @EmployeeRecordId
+                                  AND (@UserId IS NULL OR user_id <> @UserId)
+                            );
+                            """,
+                            new
+                            {
+                                EmployeeRecordId = employeeRecordId,
+                                UserId = userId
+                            },
+                            transaction,
+                            cancellationToken: cancellationToken));
+                if (employeeAlreadyLinked)
+                {
+                    throw new InvalidOperationException(
+                        "That employee already has a user account.");
                 }
             }
 
@@ -246,8 +294,8 @@ public sealed class AdminRepository(
                             EmployeeRecordId = employeeRecordId,
                             Username = username,
                             DisplayName = displayName,
-                            AccountTypeCode = request.AccountTypeCode.Trim().ToUpperInvariant(),
-                            AccountStatusCode = request.AccountStatusCode.Trim().ToUpperInvariant(),
+                            AccountTypeCode = accountTypeCode,
+                            AccountStatusCode = accountStatusCode,
                             request.MustChangePassword,
                             PasswordHash = passwordHash
                         },
@@ -289,8 +337,8 @@ public sealed class AdminRepository(
                             Username = username,
                             DisplayName = displayName,
                             PasswordHash = passwordHash!,
-                            AccountTypeCode = request.AccountTypeCode.Trim().ToUpperInvariant(),
-                            AccountStatusCode = request.AccountStatusCode.Trim().ToUpperInvariant(),
+                            AccountTypeCode = accountTypeCode,
+                            AccountStatusCode = accountStatusCode,
                             request.MustChangePassword
                         },
                         transaction,
@@ -372,20 +420,39 @@ public sealed class AdminRepository(
             await connectionFactory.OpenConnectionAsync(cancellationToken);
         await using var transaction =
             await connection.BeginTransactionAsync(cancellationToken);
-        await connection.ExecuteAsync(new CommandDefinition(
-            """
-            UPDATE tbl_user_accounts
-            SET account_status_code = 'ARCHIVED'
-            WHERE user_id = @UserId;
+        try
+        {
+            var exists = await connection.ExecuteScalarAsync<bool>(
+                new CommandDefinition(
+                    "SELECT EXISTS (SELECT 1 FROM tbl_user_accounts WHERE user_id = @UserId);",
+                    new { UserId = userId },
+                    transaction,
+                    cancellationToken: cancellationToken));
+            if (!exists)
+            {
+                throw new InvalidOperationException("User account was not found.");
+            }
 
-            UPDATE tbl_user_roles
-            SET is_active = FALSE
-            WHERE user_id = @UserId;
-            """,
-            new { UserId = userId },
-            transaction,
-            cancellationToken: cancellationToken));
-        await transaction.CommitAsync(cancellationToken);
+            await connection.ExecuteAsync(new CommandDefinition(
+                """
+                UPDATE tbl_user_accounts
+                SET account_status_code = 'ARCHIVED'
+                WHERE user_id = @UserId;
+
+                UPDATE tbl_user_roles
+                SET is_active = FALSE
+                WHERE user_id = @UserId;
+                """,
+                new { UserId = userId },
+                transaction,
+                cancellationToken: cancellationToken));
+            await transaction.CommitAsync(cancellationToken);
+        }
+        catch
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
     }
 
     public async Task<IReadOnlyList<DepartmentAdminRecord>> GetDepartmentsAsync(
@@ -424,11 +491,40 @@ public sealed class AdminRepository(
         SaveDepartmentRequest request,
         CancellationToken cancellationToken = default)
     {
+        var departmentCode = request.DepartmentCode.Trim().ToUpperInvariant();
+        var departmentName = request.DepartmentName.Trim();
         await using var connection =
             await connectionFactory.OpenConnectionAsync(cancellationToken);
+
+        var duplicateExists = await connection.ExecuteScalarAsync<bool>(
+            new CommandDefinition(
+                """
+                SELECT EXISTS (
+                    SELECT 1
+                    FROM tbl_departments
+                    WHERE (
+                            department_code = @DepartmentCode
+                            OR department_name = @DepartmentName
+                          )
+                      AND (@DepartmentId IS NULL OR department_id <> @DepartmentId)
+                );
+                """,
+                new
+                {
+                    DepartmentCode = departmentCode,
+                    DepartmentName = departmentName,
+                    DepartmentId = departmentId
+                },
+                cancellationToken: cancellationToken));
+        if (duplicateExists)
+        {
+            throw new InvalidOperationException(
+                "A department with the same code or name already exists.");
+        }
+
         if (departmentId.HasValue)
         {
-            await connection.ExecuteAsync(new CommandDefinition(
+            var affected = await connection.ExecuteAsync(new CommandDefinition(
                 """
                 UPDATE tbl_departments
                 SET department_code = @DepartmentCode,
@@ -440,12 +536,16 @@ public sealed class AdminRepository(
                 new
                 {
                     DepartmentId = departmentId.Value,
-                    DepartmentCode = request.DepartmentCode.Trim().ToUpperInvariant(),
-                    DepartmentName = request.DepartmentName.Trim(),
+                    DepartmentCode = departmentCode,
+                    DepartmentName = departmentName,
                     request.Description,
                     request.IsActive
                 },
                 cancellationToken: cancellationToken));
+            if (affected == 0)
+            {
+                throw new InvalidOperationException("Department was not found.");
+            }
             return departmentId.Value;
         }
 
@@ -466,8 +566,8 @@ public sealed class AdminRepository(
             """,
             new
             {
-                DepartmentCode = request.DepartmentCode.Trim().ToUpperInvariant(),
-                DepartmentName = request.DepartmentName.Trim(),
+                DepartmentCode = departmentCode,
+                DepartmentName = departmentName,
                 request.Description,
                 request.IsActive
             },
@@ -480,6 +580,16 @@ public sealed class AdminRepository(
     {
         await using var connection =
             await connectionFactory.OpenConnectionAsync(cancellationToken);
+        var exists = await connection.ExecuteScalarAsync<bool>(
+            new CommandDefinition(
+                "SELECT EXISTS (SELECT 1 FROM tbl_departments WHERE department_id = @DepartmentId);",
+                new { DepartmentId = departmentId },
+                cancellationToken: cancellationToken));
+        if (!exists)
+        {
+            throw new InvalidOperationException("Department was not found.");
+        }
+
         var activeEmployees = await connection.ExecuteScalarAsync<long>(
             new CommandDefinition(
                 """
@@ -552,9 +662,11 @@ public sealed class AdminRepository(
         SaveRoleRequest request,
         CancellationToken cancellationToken = default)
     {
-        var permissions = request.PermissionCodes
+        var roleCode = request.RoleCode.Trim().ToUpperInvariant();
+        var roleName = request.RoleName.Trim();
+        var permissions = (request.PermissionCodes ?? [])
             .Where(code => !string.IsNullOrWhiteSpace(code))
-            .Select(code => code.Trim())
+            .Select(code => code.Trim().ToLowerInvariant())
             .Distinct(StringComparer.OrdinalIgnoreCase)
             .ToArray();
         await using var connection =
@@ -563,10 +675,50 @@ public sealed class AdminRepository(
             await connection.BeginTransactionAsync(cancellationToken);
         try
         {
+            var duplicateExists = await connection.ExecuteScalarAsync<bool>(
+                new CommandDefinition(
+                    """
+                    SELECT EXISTS (
+                        SELECT 1
+                        FROM tbl_roles
+                        WHERE (role_code = @RoleCode OR role_name = @RoleName)
+                          AND (@RoleId IS NULL OR role_id <> @RoleId)
+                    );
+                    """,
+                    new { RoleCode = roleCode, RoleName = roleName, RoleId = roleId },
+                    transaction,
+                    cancellationToken: cancellationToken));
+            if (duplicateExists)
+            {
+                throw new InvalidOperationException(
+                    "A role with the same code or name already exists.");
+            }
+
             long savedRoleId;
             if (roleId.HasValue)
             {
-                await connection.ExecuteAsync(new CommandDefinition(
+                var roleInfo = await connection.QuerySingleOrDefaultAsync<RoleIdentity>(
+                    new CommandDefinition(
+                        """
+                        SELECT role_code AS RoleCode, is_system_role AS IsSystemRole
+                        FROM tbl_roles
+                        WHERE role_id = @RoleId;
+                        """,
+                        new { RoleId = roleId.Value },
+                        transaction,
+                        cancellationToken: cancellationToken));
+                if (roleInfo is null)
+                {
+                    throw new InvalidOperationException("Role was not found.");
+                }
+                if (roleInfo.IsSystemRole &&
+                    !roleInfo.RoleCode.Equals(roleCode, StringComparison.OrdinalIgnoreCase))
+                {
+                    throw new InvalidOperationException(
+                        "The code of a built-in system role cannot be changed.");
+                }
+
+                var affected = await connection.ExecuteAsync(new CommandDefinition(
                     """
                     UPDATE tbl_roles
                     SET role_code = @RoleCode,
@@ -578,13 +730,17 @@ public sealed class AdminRepository(
                     new
                     {
                         RoleId = roleId.Value,
-                        RoleCode = request.RoleCode.Trim().ToUpperInvariant(),
-                        RoleName = request.RoleName.Trim(),
+                        RoleCode = roleCode,
+                        RoleName = roleName,
                         request.Description,
                         request.IsActive
                     },
                     transaction,
                     cancellationToken: cancellationToken));
+                if (affected == 0)
+                {
+                    throw new InvalidOperationException("Role was not found.");
+                }
                 savedRoleId = roleId.Value;
             }
             else
@@ -609,8 +765,8 @@ public sealed class AdminRepository(
                         """,
                         new
                         {
-                            RoleCode = request.RoleCode.Trim().ToUpperInvariant(),
-                            RoleName = request.RoleName.Trim(),
+                            RoleCode = roleCode,
+                            RoleName = roleName,
                             request.Description,
                             request.IsActive
                         },
@@ -657,6 +813,25 @@ public sealed class AdminRepository(
     {
         await using var connection =
             await connectionFactory.OpenConnectionAsync(cancellationToken);
+        var roleInfo = await connection.QuerySingleOrDefaultAsync<RoleIdentity>(
+            new CommandDefinition(
+                """
+                SELECT role_code AS RoleCode, is_system_role AS IsSystemRole
+                FROM tbl_roles
+                WHERE role_id = @RoleId;
+                """,
+                new { RoleId = roleId },
+                cancellationToken: cancellationToken));
+        if (roleInfo is null)
+        {
+            throw new InvalidOperationException("Role was not found.");
+        }
+        if (roleInfo.IsSystemRole)
+        {
+            throw new InvalidOperationException(
+                "Built-in system roles cannot be archived.");
+        }
+
         var activeUsers = await connection.ExecuteScalarAsync<long>(
             new CommandDefinition(
                 """
@@ -695,5 +870,11 @@ public sealed class AdminRepository(
                 """,
                 cancellationToken: cancellationToken));
         return rows.AsList();
+    }
+
+    private sealed class RoleIdentity
+    {
+        public string RoleCode { get; init; } = string.Empty;
+        public bool IsSystemRole { get; init; }
     }
 }
