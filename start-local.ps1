@@ -35,17 +35,17 @@ if (-not (Test-LocalPort 3306)) {
     throw 'MariaDB did not start on port 3306.'
 }
 
-if (-not $SkipBuild) {
-    & dotnet build "$repo\Backend\GatePassSystem.sln" `
-        --configuration Release `
-        --disable-build-servers `
-        -maxcpucount:1
-    if ($LASTEXITCODE -ne 0) {
-        throw 'Backend build failed.'
-    }
-}
-
 if (-not (Test-LocalPort 5087)) {
+    if (-not $SkipBuild) {
+        & dotnet build "$repo\Backend\GatePassSystem.sln" `
+            --configuration Release `
+            --disable-build-servers `
+            -maxcpucount:1
+        if ($LASTEXITCODE -ne 0) {
+            throw 'Backend build failed.'
+        }
+    }
+
     $apiDirectory = "$repo\Backend\bin\Release\net8.0"
     $apiExe = Join-Path $apiDirectory 'GatePassSystem.Api.exe'
     if (-not (Test-Path $apiExe)) {
