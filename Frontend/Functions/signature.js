@@ -1,7 +1,6 @@
 // Signature upload, draw, optional background removal, and placement.
 
 var signaturePadState = { drawing: false, lastX: 0, lastY: 0 };
-var PYTHON_BG_REMOVAL_ENDPOINT = 'http://127.0.0.1:8000/remove-background';
 function removeSignatureBackground(img, options = {}) {
             let mode = options.mode || 'autoSmart';
             const threshold = Number(options.threshold || 20);
@@ -171,6 +170,10 @@ function featherAlphaEdges(data, width, height) {
         }
 
 function getSignatureTargetContainerId() {
+            const pass = gatePasses.find(item => item.id === currentViewedPassId);
+            if (pass?.status === 'Pending Superior') return 'sigImm';
+            if (pass?.status === 'Pending President') return 'sigPres';
+            if (pass?.status === 'Pending PAS') return 'sigPAS';
             if (!currentUser) return 'sigImm';
             if (currentUser.role === 'President') return 'sigPres';
             if (currentUser.canNoteGatePass) return 'sigPAS';
@@ -236,17 +239,10 @@ function dataUrlToBlob(dataUrl) {
 async function removeBackgroundWithPython(dataUrl) {
             const formData = new FormData();
             formData.append('file', dataUrlToBlob(dataUrl), 'signature.png');
-
-            const response = await fetch(PYTHON_BG_REMOVAL_ENDPOINT, {
+            const blob = await ApiClient.blob('/signatures/process-background', {
                 method: 'POST',
                 body: formData
             });
-
-            if (!response.ok) {
-                throw new Error('Python background remover failed: ' + response.status);
-            }
-
-            const blob = await response.blob();
             return await new Promise((resolve) => {
                 const reader = new FileReader();
                 reader.onload = () => resolve(reader.result);
@@ -278,8 +274,8 @@ async function processAndRenderSignature(showMessage = true) {
 
                 if (mode === 'none') {
                     currentUploadedSig = currentOriginalSignatureData;
-                } else if (mode === 'aiServer') {
-                    showToast('Processing with local Python AI remover...', 'info');
+                } else if (mode === 'aiServer' || (mode === 'autoSmart' && isDatabaseSession())) {
+                    showToast('Testing white, blue, and AI removal automatically...', 'info');
                     currentUploadedSig = await removeBackgroundWithPython(currentOriginalSignatureData);
                 } else {
                     const img = await loadImageFromDataUrl(currentOriginalSignatureData);
@@ -297,16 +293,16 @@ async function processAndRenderSignature(showMessage = true) {
 
                 const statusMessage = mode === 'none'
                     ? 'Signature image attached. Background removal is off.'
-                    : mode === 'aiServer'
-                        ? 'Local Python background removal applied.'
+                    : mode === 'aiServer' || (mode === 'autoSmart' && isDatabaseSession())
+                        ? 'Automatic best-result background removal applied.'
                         : `Background removal preview applied: ${mode}, strength ${threshold}.`;
                 setSignatureStatus(statusMessage, 'success');
 
                 if (showMessage) {
                     const message = mode === 'none'
                         ? 'Image attached without background removal.'
-                        : mode === 'aiServer'
-                            ? 'AI background removal applied from local Python server.'
+                        : mode === 'aiServer' || (mode === 'autoSmart' && isDatabaseSession())
+                            ? 'Best result selected from white, blue, and AI removal.'
                             : `Background removal applied: ${mode} at strength ${threshold}.`;
                     showToast(message, 'success');
                 }

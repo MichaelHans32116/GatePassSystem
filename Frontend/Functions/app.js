@@ -27,7 +27,7 @@ function showToast(message, type = 'success') {
             }, 3000);
         }
 
-function refreshDashboards() {
+async function refreshDashboards() {
     if (!currentUser) return;
 
     const guardWrapper = document.getElementById('guardDashWrapper');
@@ -36,14 +36,14 @@ function refreshDashboards() {
     if (currentUser.role === 'Security') {
         standardWrapper.classList.add('hidden');
         guardWrapper.classList.remove('hidden');
-        renderGuardDashboard();
+        await renderGuardDashboard();
     } else {
         standardWrapper.classList.remove('hidden');
         guardWrapper.classList.add('hidden');
-        renderStandardDashboard();
+        await renderStandardDashboard();
     }
 
-    renderApprovalQueue();
+    await renderApprovalQueue();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -54,6 +54,11 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeSignatureControls();
     initializeGatePassForm();
     renderAdminTables();
+});
+
+window.addEventListener('gatepass:authenticated', async () => {
+    await loadFleetReferences();
+    await refreshDashboards();
 });
 
 window.updateDate = updateDate;

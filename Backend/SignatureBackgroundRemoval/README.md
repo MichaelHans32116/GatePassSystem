@@ -8,7 +8,9 @@ The frontend calls:
 POST http://127.0.0.1:8000/remove-background
 ```
 
-This service uses `rembg` locally. It does not call an external API.
+This service generates white-threshold, blue-threshold, and `rembg` candidates,
+scores background transparency and signature-stroke preservation, and returns
+the best result automatically. It does not call an external API.
 
 ## Setup
 

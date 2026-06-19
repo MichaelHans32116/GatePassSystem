@@ -228,8 +228,16 @@ function toggleMaximizeModal() {
             }
         }
 
-function viewPass(id, isReviewing = false) {
-            const p = gatePasses.find(x => x.id === id); if(!p) return; currentViewedPassId = id;
+async function viewPass(id, isReviewing = false) {
+            let p;
+            try {
+                p = await getGatePassDetail(id);
+            } catch (error) {
+                showToast(error instanceof ApiError ? error.message : 'Unable to load document.', 'error');
+                return;
+            }
+            if(!p) return;
+            currentViewedPassId = p.id;
 
             const setVal = (elemId, val) => {
                 const el = document.getElementById(elemId);
@@ -261,7 +269,7 @@ function viewPass(id, isReviewing = false) {
                 if(nameSpan) { nameSpan.innerText = ''; nameSpan.classList.add('hidden'); }
             });
 
-            const handleSig = (sigData, idPrefix) => {
+            const handleSig = async (sigData, idPrefix) => {
                 if(!sigData) return;
                 const nameSpan = document.getElementById(idPrefix + 'Name');
                 const sigDiv = document.getElementById(idPrefix);
@@ -269,6 +277,18 @@ function viewPass(id, isReviewing = false) {
                 if(nameSpan) {
                     nameSpan.innerText = sigData.name;
                     nameSpan.classList.remove('hidden');
+                }
+                if (sigData.fileId && !sigData.img && isDatabaseSession()) {
+                    try {
+                        const blob = await ApiClient.blob(`/signatures/${sigData.fileId}`);
+                        sigData.img = await new Promise((resolve) => {
+                            const reader = new FileReader();
+                            reader.onload = () => resolve(reader.result);
+                            reader.readAsDataURL(blob);
+                        });
+                    } catch {
+                        // Keep the digitally-signed fallback if the file is unavailable.
+                    }
                 }
                 if(sigDiv) {
                     if(sigData.img) {
@@ -282,14 +302,27 @@ function viewPass(id, isReviewing = false) {
                 }
             };
 
-            handleSig(p.signatures.imm, 'sigImm');
-            handleSig(p.signatures.pres, 'sigPres');
-            handleSig(p.signatures.pas, 'sigPAS');
+            await handleSig(p.signatures.imm, 'sigImm');
+            await handleSig(p.signatures.pres, 'sigPres');
+            await handleSig(p.signatures.pas, 'sigPAS');
 
             const qrContainer = document.getElementById('qrCodeDisplay');
             if(qrContainer) {
                 qrContainer.innerHTML = '';
-                if (p.status === 'Approved' || p.status === 'Outside') new QRCode(qrContainer, { text: p.id, width: 60, height: 60 });
+                if (['Approved', 'Outside', 'Overdue'].includes(p.status)) {
+                    try {
+                        const qrValue = await loadQrToken(p);
+                        if (qrValue) {
+                            new QRCode(qrContainer, {
+                                text: qrValue,
+                                width: 60,
+                                height: 60
+                            });
+                        }
+                    } catch {
+                        qrContainer.innerHTML = '<span class="text-[9px] text-gray-400">QR unavailable</span>';
+                    }
+                }
             }
 
             // System Admin Progress Tracker

@@ -2,6 +2,33 @@
 
 Internal gate pass workflow system for requesting, approving, printing, scanning, and tracking associate gate passes.
 
+## Start the complete local system
+
+Double-click `start-local.bat`, or run:
+
+```powershell
+.\start-local.ps1
+```
+
+This checks XAMPP MariaDB, builds and starts the ASP.NET API on port `5087`,
+serves the vanilla frontend on port `5500`, verifies `/api/health`, and opens
+the frontend. Do not open `index.html` directly because the API expects an
+HTTP origin.
+
+For automatic signature cleanup, run
+`Backend/SignatureBackgroundRemoval/start_backend.bat` once to create its
+isolated environment. Later `start-local.bat` launches that helper
+automatically when the environment exists.
+
+Optional automated frontend smoke test:
+
+```powershell
+$env:GATEPASS_TEST_USERNAME = "employee-id"
+$env:GATEPASS_TEST_PASSWORD = "initial-or-current-password"
+npm install --no-save playwright
+node Tests/frontend-smoke.mjs
+```
+
 ## Current Status
 
 The repository now contains:

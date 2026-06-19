@@ -208,10 +208,14 @@ public sealed class GatePassRepository(
                 approver.display_name AS ApproverName,
                 step.approval_status_code AS ApprovalStatusCode,
                 step.comments AS Comments,
-                step.acted_at AS ActedAt
+                step.acted_at AS ActedAt,
+                approval_signature.signature_file_id AS SignatureFileId
             FROM tbl_gate_pass_approval_steps step
             JOIN tbl_user_accounts approver
                 ON approver.user_id = step.assigned_approver_user_id
+            LEFT JOIN tbl_approval_signatures approval_signature
+                ON approval_signature.approval_step_id =
+                   step.approval_step_id
             WHERE step.gate_pass_id = @GatePassId
             ORDER BY step.sequence_no;
 

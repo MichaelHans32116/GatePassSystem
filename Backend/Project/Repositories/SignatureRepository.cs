@@ -78,5 +78,52 @@ public sealed class SignatureRepository(
                 new { SignatureFileId = signatureFileId },
                 cancellationToken: cancellationToken));
     }
-}
 
+    public async Task<bool> CanUserReadAsync(
+        long signatureFileId,
+        long userId,
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection =
+            await connectionFactory.OpenConnectionAsync(cancellationToken);
+        return await connection.ExecuteScalarAsync<int>(new CommandDefinition(
+            """
+            SELECT COUNT(*)
+            FROM tbl_signature_files signature_file
+            WHERE signature_file.signature_file_id = @SignatureFileId
+              AND signature_file.is_active = TRUE
+              AND (
+                  signature_file.owner_user_id = @UserId
+                  OR EXISTS (
+                      SELECT 1
+                      FROM tbl_approval_signatures approval_signature
+                      JOIN tbl_gate_pass_approval_steps approval_step
+                        ON approval_step.approval_step_id =
+                           approval_signature.approval_step_id
+                      JOIN tbl_gate_pass_requests request_row
+                        ON request_row.gate_pass_id =
+                           approval_step.gate_pass_id
+                      WHERE approval_signature.signature_file_id =
+                            signature_file.signature_file_id
+                        AND (
+                            request_row.requester_user_id = @UserId
+                            OR EXISTS (
+                                SELECT 1
+                                FROM tbl_gate_pass_approval_steps viewer_step
+                                WHERE viewer_step.gate_pass_id =
+                                      request_row.gate_pass_id
+                                  AND viewer_step.assigned_approver_user_id =
+                                      @UserId
+                            )
+                        )
+                  )
+              );
+            """,
+            new
+            {
+                SignatureFileId = signatureFileId,
+                UserId = userId
+            },
+            cancellationToken: cancellationToken)) > 0;
+    }
+}

@@ -28,6 +28,10 @@ public interface ISignatureService
     Task<SignatureFileRecord?> GetAsync(
         long signatureFileId,
         CancellationToken cancellationToken = default);
+    Task<bool> CanReadAsync(
+        long signatureFileId,
+        long userId,
+        CancellationToken cancellationToken = default);
 }
 
 public interface IDashboardService
@@ -38,4 +42,3 @@ public interface IDashboardService
         long? departmentId,
         CancellationToken cancellationToken = default);
 }
-

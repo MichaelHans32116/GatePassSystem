@@ -56,6 +56,9 @@ function showAuthenticatedApp(user, showSignedInToast = true) {
     document.getElementById('navUserName').innerText = user.name;
     document.getElementById('navUserRole').innerText = user.role;
     setupRoleAccess(user);
+    window.dispatchEvent(new CustomEvent('gatepass:authenticated', {
+        detail: { database: ApiClient.isDatabaseSession(), user }
+    }));
 
     if (showSignedInToast) {
         showToast(`Signed in as ${user.name}`);
@@ -94,7 +97,7 @@ async function handleLogin(e) {
             return;
         }
 
-        const result = await ApiClient.request('/auth/login', {
+        const result = await ApiClient.data('/auth/login', {
             method: 'POST',
             body: JSON.stringify({ username, password })
         });
@@ -118,14 +121,21 @@ async function restoreAuthenticatedSession() {
     if (!ApiClient.hasAccessToken()) return;
 
     try {
-        const apiUser = await ApiClient.request('/auth/me');
+        const apiUser = await ApiClient.data('/auth/me');
         showAuthenticatedApp(mapAuthenticatedUser(apiUser), false);
     } catch {
         ApiClient.clearAccessToken();
     }
 }
 
-function logout() {
+async function logout() {
+    if (ApiClient.hasAccessToken()) {
+        try {
+            await ApiClient.request('/auth/logout', { method: 'POST' });
+        } catch {
+            // Local token cleanup remains authoritative for the browser session.
+        }
+    }
     ApiClient.clearAccessToken();
     currentUser = null;
     document.getElementById('appView').classList.add('hidden');

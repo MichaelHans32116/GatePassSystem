@@ -54,8 +54,11 @@ public sealed class SignaturesController(
         }
 
         var canRead =
-            signature.OwnerUserId == CurrentUserId ||
-            User.HasClaim("permission", "gatepass.read.all");
+            User.HasClaim("permission", "gatepass.read.all") ||
+            await signatureService.CanReadAsync(
+                id,
+                CurrentUserId,
+                cancellationToken);
         if (!canRead)
         {
             return NotFound();

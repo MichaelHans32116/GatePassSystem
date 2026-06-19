@@ -30,7 +30,8 @@ function setupRoleAccess(user) {
             }
             else if (user.role === 'System Admin') {
                 document.getElementById('navGroupApprovals').style.display = 'none';
-                document.getElementById('navGroupSecurity').style.display = 'none';
+                document.getElementById('navGroupSecurity').style.display =
+                    user.permissions?.includes('gatepass.scan') ? 'block' : 'none';
                 document.getElementById('navAdminLabel').innerText = "System Configuration";
                 document.getElementById('filterDeptContainer').style.display = 'block';
                 switchSection('adminPanel');
@@ -70,6 +71,7 @@ function setupRoleAccess(user) {
         }
 
 function switchSection(targetId) {
+            if (targetId !== 'guardScan') stopQrCamera?.();
             document.querySelectorAll('.nav-item').forEach(link => link.classList.remove('active'));
             const targetLink = document.querySelector(`.nav-item[data-target="${targetId}"]`);
             if(targetLink) targetLink.classList.add('active');
@@ -95,6 +97,7 @@ function switchSection(targetId) {
             }
 
             refreshDashboards();
+            if(targetId === 'guardScan') initializeQrCameras();
             if(targetId === 'applyPass') updateApprovalRoutePreview();
             if(targetId === 'adminPanel') {
                 if(targetLink && targetLink.dataset.target === 'fleetManagement') {

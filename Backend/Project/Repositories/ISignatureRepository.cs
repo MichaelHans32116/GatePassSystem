@@ -13,5 +13,9 @@ public interface ISignatureRepository
     Task<SignatureFileRecord?> GetAsync(
         long signatureFileId,
         CancellationToken cancellationToken = default);
-}
 
+    Task<bool> CanUserReadAsync(
+        long signatureFileId,
+        long userId,
+        CancellationToken cancellationToken = default);
+}

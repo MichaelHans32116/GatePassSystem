@@ -40,6 +40,15 @@ public sealed class SignatureService(
         long signatureFileId,
         CancellationToken cancellationToken = default) =>
         repository.GetAsync(signatureFileId, cancellationToken);
+
+    public Task<bool> CanReadAsync(
+        long signatureFileId,
+        long userId,
+        CancellationToken cancellationToken = default) =>
+        repository.CanUserReadAsync(
+            signatureFileId,
+            userId,
+            cancellationToken);
 }
 
 public sealed class DashboardService(

@@ -308,6 +308,7 @@ JOIN tbl_permissions p ON p.permission_code IN (
     'gatepass.create.own',
     'gatepass.read.own',
     'gatepass.read.all',
+    'gatepass.scan',
     'gatepass.monitor.outside',
     'employees.read',
     'users.manage',

@@ -67,6 +67,7 @@ public sealed class ApprovalStepRecord
     public string ApprovalStatusCode { get; init; } = string.Empty;
     public string? Comments { get; init; }
     public DateTime? ActedAt { get; init; }
+    public long? SignatureFileId { get; init; }
 }
 
 public sealed class ApprovalQueueItem

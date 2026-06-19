@@ -4,12 +4,14 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MPI - Gate Pass System</title>
+    <link rel="icon" type="image/png" href="Frontend/Design/images/logo.png">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- QR Code Generator -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="Frontend/SRC/vendor/jsQR.js?v=1.4.0"></script>
 
     <script>
         tailwind.config = {
@@ -382,10 +384,30 @@
                         <h2 class="text-xl font-bold text-gray-800 mb-1">Security QR Scanner</h2>
                         <p class="text-xs text-gray-500 mb-6">Scan Gate Pass to Log Time Out / In</p>
 
-                        <div class="w-full h-48 bg-gray-100 rounded flex items-center justify-center border-2 border-dashed border-gray-300 mb-4 relative overflow-hidden">
-                            <div class="absolute top-0 left-0 w-full h-1 bg-green-500 animate-[pulse_1s_ease-in-out_infinite] shadow-[0_0_10px_#22c55e]"></div>
-                            <i class="fas fa-qrcode text-5xl text-gray-300"></i>
-                            <p class="absolute bottom-2 text-[10px] text-gray-400">Camera Feed Simulated</p>
+                        <div id="qrCameraFrame" class="w-full aspect-video bg-gray-950 rounded flex items-center justify-center border-2 border-dashed border-gray-300 mb-4 relative overflow-hidden">
+                            <video id="qrCameraVideo" class="hidden w-full h-full object-cover" playsinline muted></video>
+                            <canvas id="qrCameraCanvas" class="hidden"></canvas>
+                            <div id="qrCameraPlaceholder" class="text-center text-gray-400">
+                                <i class="fas fa-qrcode text-5xl"></i>
+                                <p class="mt-2 text-[10px]">Select and start a camera</p>
+                            </div>
+                            <div id="qrScanLine" class="hidden absolute top-0 left-0 w-full h-1 bg-green-500 animate-[pulse_1s_ease-in-out_infinite] shadow-[0_0_10px_#22c55e]"></div>
+                        </div>
+
+                        <div class="text-left bg-blue-50 p-3 rounded border border-blue-100 mb-3 space-y-2">
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase">Camera</label>
+                            <select id="qrCameraSelect" class="w-full border border-gray-300 p-2 rounded text-sm bg-white">
+                                <option value="">Detect cameras...</option>
+                            </select>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button id="startQrCameraButton" type="button" onclick="startQrCamera()" class="bg-mpiBlue text-white px-3 py-2 rounded text-xs font-bold hover:bg-mpiDark">
+                                    <i class="fas fa-camera mr-1"></i> Start Camera
+                                </button>
+                                <button id="stopQrCameraButton" type="button" onclick="stopQrCamera()" class="bg-gray-700 text-white px-3 py-2 rounded text-xs font-bold hover:bg-black" disabled>
+                                    <i class="fas fa-stop mr-1"></i> Stop
+                                </button>
+                            </div>
+                            <p id="qrCameraStatus" class="text-[10px] text-gray-500">Camera access works on localhost or HTTPS.</p>
                         </div>
 
                         <div class="text-left bg-gray-50 p-3 rounded border">
@@ -736,22 +758,23 @@
 
                 <div class="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2">
                     <button onclick="closeModal()" class="px-4 py-2 rounded border border-gray-300 text-sm font-medium hover:bg-gray-200 transition">Cancel</button>
-                    <button onclick="approveCurrentPass()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded shadow text-sm font-bold transition"><i class="fas fa-check-circle mr-1"></i> Approve Request</button>
+                    <button onclick="rejectCurrentPass()" class="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded shadow text-sm font-bold transition"><i class="fas fa-times-circle mr-1"></i> Reject</button>
+                    <button id="approveRequestButton" onclick="approveCurrentPass()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded shadow text-sm font-bold transition"><i class="fas fa-check-circle mr-1"></i> Approve Request</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <script src="Frontend/Functions/mock-data.js?v=20260619-auth-api-3"></script>
-    <script src="Frontend/Connectors/api-client.js?v=20260619-auth-api-2"></script>
-    <script src="Frontend/Functions/signature.js"></script>
-    <script src="Frontend/Functions/modal.js"></script>
-    <script src="Frontend/Functions/gatepass.js"></script>
-    <script src="Frontend/Functions/approvals.js"></script>
-    <script src="Frontend/Functions/scanner.js"></script>
-    <script src="Frontend/Functions/admin.js?v=20260619-auth-api-3"></script>
-    <script src="Frontend/Functions/navigation.js"></script>
-    <script src="Frontend/Functions/auth.js?v=20260619-auth-api-4"></script>
-    <script src="Frontend/Functions/app.js"></script>
+    <script src="Frontend/Functions/mock-data.js?v=20260619-phase4-1"></script>
+    <script src="Frontend/Connectors/api-client.js?v=20260619-phase4-1"></script>
+    <script src="Frontend/Functions/signature.js?v=20260619-phase4-1"></script>
+    <script src="Frontend/Functions/modal.js?v=20260619-phase4-1"></script>
+    <script src="Frontend/Functions/gatepass.js?v=20260619-phase4-1"></script>
+    <script src="Frontend/Functions/approvals.js?v=20260619-phase4-1"></script>
+    <script src="Frontend/Functions/scanner.js?v=20260619-camera-2"></script>
+    <script src="Frontend/Functions/admin.js?v=20260619-phase4-1"></script>
+    <script src="Frontend/Functions/navigation.js?v=20260619-phase4-1"></script>
+    <script src="Frontend/Functions/auth.js?v=20260619-phase4-1"></script>
+    <script src="Frontend/Functions/app.js?v=20260619-phase4-1"></script>
 </body>
 </html>
