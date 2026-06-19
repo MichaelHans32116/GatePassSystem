@@ -400,6 +400,8 @@ static async Task ImportAsync(
         }
     }
 
+    await SyncApprovalAssignmentsAsync(connection, transaction);
+
     await connection.ExecuteAsync(
         """
         UPDATE tbl_employee_import_batches
@@ -416,6 +418,118 @@ static async Task ImportAsync(
     Console.WriteLine($"Active accounts created/updated: {accountsCreatedOrUpdated}");
     Console.WriteLine($"Existing accounts archived: {accountsArchived}");
     Console.WriteLine($"Company driver records updated: {driverRecordsUpdated}");
+    Console.WriteLine("Approval assignments synchronized from active role mappings.");
+}
+
+static async Task SyncApprovalAssignmentsAsync(
+    MySqlConnection connection,
+    MySqlTransaction transaction)
+{
+    await connection.ExecuteAsync(
+        """
+        INSERT INTO tbl_approval_assignments (
+            approval_step_code,
+            approver_user_id,
+            department_id,
+            position_id,
+            priority,
+            is_alternate,
+            is_active
+        )
+        SELECT
+            'SUPERIOR',
+            ua.user_id,
+            employee.department_id,
+            NULL,
+            1,
+            FALSE,
+            TRUE
+        FROM tbl_user_accounts ua
+        JOIN tbl_employees employee
+            ON employee.employee_record_id = ua.employee_record_id
+        JOIN tbl_user_roles user_role
+            ON user_role.user_id = ua.user_id
+           AND user_role.is_active = TRUE
+        JOIN tbl_roles role_row
+            ON role_row.role_id = user_role.role_id
+           AND role_row.role_code = 'IMMEDIATE_SUPERIOR'
+        WHERE ua.account_status_code = 'ACTIVE'
+          AND employee.employment_status_code = 'ACTIVE'
+          AND NOT EXISTS (
+              SELECT 1
+              FROM tbl_approval_assignments existing
+              WHERE existing.approval_step_code = 'SUPERIOR'
+                AND existing.approver_user_id = ua.user_id
+                AND existing.department_id = employee.department_id
+          );
+
+        INSERT INTO tbl_approval_assignments (
+            approval_step_code,
+            approver_user_id,
+            department_id,
+            position_id,
+            priority,
+            is_alternate,
+            is_active
+        )
+        SELECT
+            'PRESIDENT',
+            ua.user_id,
+            NULL,
+            NULL,
+            1,
+            FALSE,
+            TRUE
+        FROM tbl_user_accounts ua
+        JOIN tbl_user_roles user_role
+            ON user_role.user_id = ua.user_id
+           AND user_role.is_active = TRUE
+        JOIN tbl_roles role_row
+            ON role_row.role_id = user_role.role_id
+           AND role_row.role_code = 'PRESIDENT'
+        WHERE ua.account_status_code = 'ACTIVE'
+          AND NOT EXISTS (
+              SELECT 1
+              FROM tbl_approval_assignments existing
+              WHERE existing.approval_step_code = 'PRESIDENT'
+                AND existing.approver_user_id = ua.user_id
+                AND existing.department_id IS NULL
+          );
+
+        INSERT INTO tbl_approval_assignments (
+            approval_step_code,
+            approver_user_id,
+            department_id,
+            position_id,
+            priority,
+            is_alternate,
+            is_active
+        )
+        SELECT
+            'PAS',
+            ua.user_id,
+            NULL,
+            NULL,
+            ROW_NUMBER() OVER (ORDER BY ua.user_id),
+            ROW_NUMBER() OVER (ORDER BY ua.user_id) > 1,
+            TRUE
+        FROM tbl_user_accounts ua
+        JOIN tbl_user_roles user_role
+            ON user_role.user_id = ua.user_id
+           AND user_role.is_active = TRUE
+        JOIN tbl_roles role_row
+            ON role_row.role_id = user_role.role_id
+           AND role_row.role_code = 'PAS_NOTER'
+        WHERE ua.account_status_code = 'ACTIVE'
+          AND NOT EXISTS (
+              SELECT 1
+              FROM tbl_approval_assignments existing
+              WHERE existing.approval_step_code = 'PAS'
+                AND existing.approver_user_id = ua.user_id
+                AND existing.department_id IS NULL
+          );
+        """,
+        transaction: transaction);
 }
 
 static async Task AssignRolesAsync(

@@ -1,6 +1,6 @@
 # Backend Project Structure
 
-Implemented Phase 1 services:
+Implemented foundation services:
 
 - `AuthService`: employee/system account login and current-user retrieval.
 - `JwtTokenService`: JWT creation with multiple role and permission claims.
@@ -8,17 +8,19 @@ Implemented Phase 1 services:
 - `UserRepository`: async Dapper account, employee, role, and permission lookup.
 - `DatabaseHealthRepository`: MariaDB connectivity check.
 
-Planned workflow service split:
+Implemented Phase 2 domain split:
 
 | Area | Responsibility |
 | --- | --- |
 | `AuthService` | Login, password hashing, current user lookup, token/session handling. |
-| `GatePassWorkflowService` | Approval route calculation and status transitions. |
+| `GatePassService` | Approval route calculation, request creation, submission, details, and paging. |
 | `ApprovalService` | Approval/rejection actions, signature attachment, audit writes. |
-| `SecurityScanService` | QR/manual scan validation, Time Out/In recording, duplicate prevention. |
-| `VehicleService` | Vehicle/driver master data and availability checks. |
+| `SecurityService` | QR/manual scan validation, Time Out/In recording, and row-lock duplicate prevention. |
+| `FleetService` | Vehicle/driver master data and overlap-safe reservations. |
+| `SignatureService` | Signature-file metadata registration and retrieval. |
+| `DashboardService` | Stored-procedure dashboard snapshots and status totals. |
 | `NotificationService` | Approver notifications and unread counts. |
-| `AuditLogService` | Immutable action logs. |
+| `OperationsRepository` | Immutable audit writes and dashboard multi-result reads. |
 
 Model groups:
 
@@ -34,3 +36,6 @@ DTO groups:
 - Approval queue/action responses
 - Scanner request/result responses
 - Admin management DTOs
+
+HTTP controllers remain a Phase 3 concern so the project layer stays usable
+independently of ASP.NET Core.
