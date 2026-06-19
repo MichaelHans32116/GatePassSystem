@@ -21,8 +21,9 @@ function resolveInterfaceRole(roles) {
     if (roleSet.has('SYSTEM_ADMIN')) return 'System Admin';
     if (roleSet.has('SECURITY')) return 'Security';
     if (roleSet.has('PRESIDENT')) return 'President';
-    if (roleSet.has('PAS_NOTER') || roleSet.has('HR_ADMIN')) return 'PAS / HR Admin';
+    if (roleSet.has('PAS_NOTER')) return 'PAS Noter';
     if (roleSet.has('IMMEDIATE_SUPERIOR')) return 'Immediate Superior';
+    if (roleSet.has('DRIVER')) return 'Driver';
     return 'Associate';
 }
 

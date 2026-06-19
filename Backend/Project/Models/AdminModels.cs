@@ -17,10 +17,23 @@ public sealed class AdminUserRecord
     public DateTime? LastLoginAt { get; init; }
     public DateTime CreatedAt { get; init; }
     public string RoleCodesCsv { get; init; } = string.Empty;
+    public string ApprovalDepartmentNamesCsv { get; init; } = string.Empty;
     public IReadOnlyList<string> RoleCodes =>
         string.IsNullOrWhiteSpace(RoleCodesCsv)
             ? []
             : RoleCodesCsv.Split(',', StringSplitOptions.RemoveEmptyEntries);
+    public IReadOnlyList<string> DepartmentNames =>
+        new[] { DepartmentName }
+            .Concat(
+                string.IsNullOrWhiteSpace(ApprovalDepartmentNamesCsv)
+                    ? []
+                    : ApprovalDepartmentNamesCsv.Split(
+                        '|',
+                        StringSplitOptions.RemoveEmptyEntries))
+            .Where(name => !string.IsNullOrWhiteSpace(name))
+            .Select(name => name!)
+            .Distinct(StringComparer.OrdinalIgnoreCase)
+            .ToArray();
 }
 
 public sealed class DepartmentAdminRecord

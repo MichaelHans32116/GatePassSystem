@@ -48,6 +48,65 @@ if (-not (Test-LocalPort 3306)) {
 
 & (Join-Path $repo 'Database\setup-xampp.ps1')
 
+$employeeWorkbook = Join-Path $repo 'Database\employees_export_2026-06-17.xlsx'
+$activeEmployeeCount = [int](& $mysql `
+    '--user=root' `
+    '--protocol=tcp' `
+    '--host=127.0.0.1' `
+    '--port=3306' `
+    '--batch' `
+    '--skip-column-names' `
+    '--execute=SELECT COUNT(*) FROM gate_pass_system.tbl_employees WHERE employment_status_code=''ACTIVE'';'
+)
+
+if ((Test-Path $employeeWorkbook) -and $activeEmployeeCount -lt 95) {
+    Write-Host 'Importing approved active employee fields...' -ForegroundColor Yellow
+    & dotnet run `
+        --project "$repo\Backend\Tools\EmployeeImporter\GatePassSystem.EmployeeImporter.csproj" `
+        -- `
+        --file $employeeWorkbook `
+        --connection 'Server=127.0.0.1;Port=3306;Database=gate_pass_system;User ID=root;Password=;SslMode=None' `
+        --apply
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Employee import failed.'
+    }
+
+    $fleetSeed = (Resolve-Path (Join-Path $repo 'Database\seed-fleet.sql')).Path.Replace('\', '/')
+    & $mysql `
+        '--user=root' `
+        '--protocol=tcp' `
+        '--host=127.0.0.1' `
+        '--port=3306' `
+        "--execute=SOURCE $fleetSeed;"
+    if ($LASTEXITCODE -ne 0) {
+        throw 'Fleet seed failed after employee import.'
+    }
+}
+
+if ((Test-LocalPort 5087) -and -not $SkipBuild) {
+    $listener = Get-NetTCPConnection `
+        -LocalPort 5087 `
+        -State Listen `
+        -ErrorAction SilentlyContinue |
+        Select-Object -First 1
+    $listenerProcess = if ($listener) {
+        Get-Process -Id $listener.OwningProcess -ErrorAction SilentlyContinue
+    }
+
+    if ($listenerProcess -and
+        $listenerProcess.Path -like '*GatePassSystem.Api*') {
+        Stop-Process -Id $listenerProcess.Id -Force
+        for ($attempt = 0; $attempt -lt 20; $attempt++) {
+            if (-not (Test-LocalPort 5087)) {
+                break
+            }
+            Start-Sleep -Milliseconds 250
+        }
+    } else {
+        throw 'Port 5087 is already used by a process that is not GatePassSystem.Api.'
+    }
+}
+
 if (-not (Test-LocalPort 5087)) {
     if (-not $SkipBuild) {
         & dotnet build "$repo\Backend\GatePassSystem.sln" `

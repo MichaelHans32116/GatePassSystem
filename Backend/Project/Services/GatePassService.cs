@@ -184,13 +184,9 @@ public sealed class GatePassService(
             new QrTokenResponse(
                 detail.GatePassId,
                 detail.GatePassNo,
-                qrTokenService.CreateToken(detail.GatePassId),
-                detail.QrExpiresAt.HasValue
-                    ? new DateTimeOffset(
-                        DateTime.SpecifyKind(
-                            detail.QrExpiresAt.Value,
-                            DateTimeKind.Utc))
-                    : null));
+                qrTokenService.CreateEmployeeToken(
+                    detail.RequesterEmployeeId),
+                null));
     }
 
     private static string? Validate(CreateGatePassRequest request)

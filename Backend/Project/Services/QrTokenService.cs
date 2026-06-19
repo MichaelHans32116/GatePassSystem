@@ -12,7 +12,36 @@ public sealed class QrTokenService(IOptions<JwtOptions> options) : IQrTokenServi
 
     public string CreateToken(long gatePassId)
     {
-        var payload = $"GP1.{gatePassId}";
+        return CreateSignedToken($"GP1.{gatePassId}");
+    }
+
+    public string CreateEmployeeToken(long employeeRecordId)
+    {
+        return CreateSignedToken($"EMP1.{employeeRecordId}");
+    }
+
+    public bool TryGetEmployeeRecordId(
+        string token,
+        out long employeeRecordId)
+    {
+        employeeRecordId = 0;
+        var parts = token.Split('.');
+        if (parts.Length != 3 ||
+            !parts[0].Equals("EMP1", StringComparison.Ordinal) ||
+            !long.TryParse(parts[1], out employeeRecordId) ||
+            employeeRecordId <= 0)
+        {
+            return false;
+        }
+
+        var expected = CreateSignedToken($"EMP1.{employeeRecordId}");
+        return CryptographicOperations.FixedTimeEquals(
+            Encoding.UTF8.GetBytes(expected),
+            Encoding.UTF8.GetBytes(token));
+    }
+
+    private string CreateSignedToken(string payload)
+    {
         using var hmac = new HMACSHA256(_key);
         var signature = Base64UrlEncoder.Encode(
             hmac.ComputeHash(Encoding.UTF8.GetBytes(payload)));

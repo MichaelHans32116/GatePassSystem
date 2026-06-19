@@ -46,7 +46,7 @@ INSERT INTO tbl_approval_step_types (
 ) VALUES
 ('SUPERIOR', 'Immediate Superior Approval', 10),
 ('PRESIDENT', 'President Approval', 20),
-('PAS', 'PAS / HR Noting', 30)
+('PAS', 'PAS Noting', 30)
 ON DUPLICATE KEY UPDATE
     step_name = VALUES(step_name),
     sort_order = VALUES(sort_order),
@@ -63,7 +63,7 @@ INSERT INTO tbl_gate_pass_statuses (
 ('DRAFT', 'Draft', 'DRAFT', FALSE, FALSE, 10),
 ('PENDING_SUPERIOR', 'Pending Superior Approval', 'PENDING', FALSE, FALSE, 20),
 ('PENDING_PRESIDENT', 'Pending President Approval', 'PENDING', FALSE, FALSE, 30),
-('PENDING_PAS', 'Pending PAS / HR Noting', 'PENDING', FALSE, FALSE, 40),
+('PENDING_PAS', 'Pending PAS Noting', 'PENDING', FALSE, FALSE, 40),
 ('APPROVED', 'Approved', 'ACTIVE', FALSE, TRUE, 50),
 ('OUTSIDE', 'Currently Outside', 'ACTIVE', FALSE, TRUE, 60),
 ('OVERDUE', 'Overdue Return', 'ACTIVE', FALSE, TRUE, 70),
@@ -195,14 +195,24 @@ INSERT INTO tbl_roles (
 ('ASSOCIATE', 'Associate', 'Can create gate pass requests for their own employee record.'),
 ('IMMEDIATE_SUPERIOR', 'Immediate Superior', 'Can act on assigned superior approval steps.'),
 ('PRESIDENT', 'President', 'Can act on required executive approval steps.'),
-('PAS_NOTER', 'PAS / HR Noter', 'Can perform the final PAS/HR noting step.'),
-('HR_ADMIN', 'HR Administrator', 'Can monitor requests, employees, and operational reports.'),
+('PAS_NOTER', 'PAS Noter', 'Can perform the final PAS noting step.'),
+('DRIVER', 'Driver', 'Can create personal gate passes and be assigned to company vehicles.'),
 ('SECURITY', 'Security', 'Can verify passes and record Time Out and Time In.'),
 ('SYSTEM_ADMIN', 'System Administrator', 'Can manage accounts, roles, configuration, and audit logs.')
 ON DUPLICATE KEY UPDATE
     role_name = VALUES(role_name),
     description = VALUES(description),
     is_active = TRUE;
+
+UPDATE tbl_user_roles user_role
+JOIN tbl_roles role_row
+    ON role_row.role_id = user_role.role_id
+SET user_role.is_active = FALSE
+WHERE role_row.role_code = 'HR_ADMIN';
+
+UPDATE tbl_roles
+SET is_active = FALSE
+WHERE role_code = 'HR_ADMIN';
 
 INSERT INTO tbl_permissions (
     permission_code, description
@@ -281,14 +291,9 @@ SELECT r.role_id, p.permission_id
 FROM tbl_roles r
 JOIN tbl_permissions p ON p.permission_code IN (
     'gatepass.create.own',
-    'gatepass.read.own',
-    'gatepass.read.all',
-    'gatepass.monitor.outside',
-    'employees.read',
-    'fleet.manage',
-    'reports.view'
+    'gatepass.read.own'
 )
-WHERE r.role_code = 'HR_ADMIN'
+WHERE r.role_code = 'DRIVER'
 ON DUPLICATE KEY UPDATE permission_id = VALUES(permission_id);
 
 INSERT INTO tbl_role_permissions (role_id, permission_id)
@@ -356,6 +361,10 @@ INSERT INTO tbl_schema_versions (
     '002',
     'Gate pass application, approval outcome, completion timestamps, and status history.',
     'Database/Migrations/002_gate_pass_lifecycle_timestamps.sql'
+), (
+    '003',
+    'Phase 5 role cleanup, PAS routing, employee QR, and fleet workflow.',
+    'Database/Migrations/003_phase5_workflow_defaults.sql'
 )
 ON DUPLICATE KEY UPDATE
     description = VALUES(description),

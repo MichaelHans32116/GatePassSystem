@@ -23,7 +23,9 @@ async function simulateQrScan(identifierOverride = null, fromCamera = false) {
     }
 
     try {
-        const isQrToken = identifier.startsWith('GP1.');
+        const isQrToken =
+            identifier.startsWith('GP1.') ||
+            identifier.startsWith('EMP1.');
         const result = await ApiClient.post('/security/scans', {
             qrToken: isQrToken ? identifier : null,
             manualGatePassNo: isQrToken ? null : identifier

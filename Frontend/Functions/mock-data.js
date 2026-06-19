@@ -22,7 +22,7 @@ var currentViewedPassId = null;
 var currentUploadedSig = null;
 var currentOriginalSignatureData = null;
 var currentLogPage = 1;
-var logsPerPage = 5;
+var logsPerPage = 15;
 
 window.mockUsers = mockUsers;
 window.mockVehicles = mockVehicles;

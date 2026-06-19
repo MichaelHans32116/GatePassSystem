@@ -17,6 +17,7 @@ services:
       - ./Database/schema.sql:/docker-entrypoint-initdb.d/001-schema.sql:ro
       - ./Database/seed-reference.sql:/docker-entrypoint-initdb.d/002-seed-reference.sql:ro
       - ./Database/procedures.sql:/docker-entrypoint-initdb.d/003-procedures.sql:ro
+      - ./Database/seed-fleet.sql:/docker-entrypoint-initdb.d/004-seed-fleet.sql:ro
     healthcheck:
       test: ["CMD", "healthcheck.sh", "--connect", "--innodb_initialized"]
       interval: 5s

@@ -97,9 +97,28 @@ function setNowTime(inputId) {
         now.toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit' });
 }
 
+function populateDriverOptions(selectedDriverId = null) {
+    const driverSelect = document.getElementById('gpDriver');
+    if (!driverSelect) return;
+
+    if (!isDatabaseSession()) {
+        driverSelect.innerHTML = '<option value="">Auto-assigned in demo mode</option>';
+        driverSelect.disabled = true;
+        return;
+    }
+
+    driverSelect.innerHTML =
+        '<option value="">Unassigned</option>' +
+        databaseDrivers.map(driver =>
+            `<option value="${driver.driverId}" ${driver.driverId === selectedDriverId ? 'selected' : ''}>${adminEscape(driver.fullName)}</option>`
+        ).join('');
+    driverSelect.disabled = false;
+}
+
 function handleVehicleChange(sel) {
     if (sel.value === 'others') {
-        document.getElementById('gpDriver').value = '';
+        populateDriverOptions();
+        document.getElementById('gpDriver').disabled = true;
         document.getElementById('manualVehicleFields').classList.remove('hidden');
         document.getElementById('gpManualVehicle').required = true;
         document.getElementById('gpManualDriver').required = true;
@@ -111,7 +130,8 @@ function handleVehicleChange(sel) {
     document.getElementById('gpManualDriver').required = false;
     const vehicles = isDatabaseSession() ? databaseVehicles : mockVehicles;
     const selected = vehicles.find(vehicle => String(vehicle.id) === String(sel.value));
-    document.getElementById('gpDriver').value = selected?.driver || '';
+    populateDriverOptions(selected?.driverId || null);
+    document.getElementById('gpDriver').disabled = !selected;
 }
 
 function toggleExpectedIn(show) {
@@ -143,8 +163,8 @@ function updateApprovalRoutePreview() {
 
     const steps = [];
     if (requiresSuperiorApproval(currentUser)) steps.push('Immediate Superior');
-    if (requiresPresidentApproval(currentUser, isVehicleNeeded)) steps.push('President / VP');
-    steps.push('PAS / HR');
+    if (requiresPresidentApproval(currentUser, isVehicleNeeded)) steps.push('President');
+    steps.push('PAS');
     routeText.innerText = steps.join(' → ');
 }
 
@@ -203,7 +223,7 @@ async function submitGatePass(e) {
             ? `${document.getElementById('gpManualVehicle').value.trim()} / Driver: ${document.getElementById('gpManualDriver').value.trim()}`
             : null,
         driverId: needsVehicle && !isManual
-            ? databaseVehicles.find(vehicle => String(vehicle.id) === String(vehicleSelection))?.driverId || null
+            ? Number(document.getElementById('gpDriver').value) || null
             : null
     };
 
@@ -292,6 +312,7 @@ async function loadFleetReferences() {
                 status: gatePassStatusLabels[vehicle.availabilityStatusCode] || vehicle.availabilityStatusCode
             };
         });
+        populateDriverOptions();
         initializeGatePassForm();
         renderAdminTables();
         renderFleetStatusWidget();

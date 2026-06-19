@@ -10,6 +10,7 @@ var adminState = {
     userPage: 1,
     userTotalPages: 1
 };
+const adminUserPageSize = 15;
 
 function adminEscape(value) {
     return String(value ?? '')
@@ -23,6 +24,67 @@ function adminEscape(value) {
 function adminDate(value) {
     if (!value) return '—';
     return new Date(value).toLocaleDateString();
+}
+
+function compactRoleCell(user) {
+    const roles = user.roleCodes || [];
+    if (!roles.length) return '<span class="text-gray-400">—</span>';
+
+    return `
+        <button type="button" onclick="showUserRoleDetails(${user.userId})" class="inline-flex items-center gap-1 rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-bold text-mpiBlue hover:bg-blue-100" title="View all assigned roles">
+            <span>${adminEscape(roles[0])}</span>
+            ${roles.length > 1 ? `<span class="rounded-full bg-mpiBlue px-1.5 py-0.5 text-[9px] text-white">+${roles.length - 1}</span>` : ''}
+        </button>`;
+}
+
+function compactDepartmentCell(user) {
+    const departments = user.departmentNames || (
+        user.departmentName ? [user.departmentName] : []
+    );
+    if (!departments.length) {
+        return '<span class="text-gray-400">System / External</span>';
+    }
+
+    return `
+        <button type="button" onclick="showUserDepartmentDetails(${user.userId})" class="inline-flex max-w-[240px] items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-700 hover:bg-slate-200" title="View all assigned departments">
+            <span class="truncate">${adminEscape(departments[0])}</span>
+            ${departments.length > 1 ? `<span class="rounded-full bg-slate-700 px-1.5 py-0.5 text-[9px] text-white">+${departments.length - 1}</span>` : ''}
+        </button>`;
+}
+
+function showUserRoleDetails(userId) {
+    const user = adminState.users.find(item => item.userId === userId);
+    if (!user) return;
+
+    adminModal(
+        `${user.displayName} — Assigned Roles`,
+        `<div class="flex flex-wrap gap-2">${(user.roleCodes || []).map(roleCode =>
+            `<span class="rounded-full bg-blue-50 px-3 py-1.5 text-xs font-bold text-mpiBlue">${adminEscape(roleCode)}</span>`
+        ).join('') || '<span class="text-sm text-gray-400">No active roles.</span>'}</div>`,
+        'Close',
+        (event) => {
+            event.preventDefault();
+            closeAdminEditor();
+        });
+}
+
+function showUserDepartmentDetails(userId) {
+    const user = adminState.users.find(item => item.userId === userId);
+    if (!user) return;
+    const departments = user.departmentNames || (
+        user.departmentName ? [user.departmentName] : []
+    );
+
+    adminModal(
+        `${user.displayName} — Departments`,
+        `<div class="flex flex-wrap gap-2">${departments.map(department =>
+            `<span class="rounded-full bg-slate-100 px-3 py-1.5 text-xs font-bold text-slate-700">${adminEscape(department)}</span>`
+        ).join('') || '<span class="text-sm text-gray-400">No assigned department.</span>'}</div>`,
+        'Close',
+        (event) => {
+            event.preventDefault();
+            closeAdminEditor();
+        });
 }
 
 function adminModal(title, body, saveLabel, onSave) {
@@ -70,7 +132,7 @@ async function loadAdminReferences() {
         ApiClient.get('/admin/permissions')
     ]);
     adminState.departments = departments;
-    adminState.roles = roles;
+    adminState.roles = roles.filter(item => item.roleCode !== 'HR_ADMIN');
     adminState.permissions = permissions;
 
     const deptOptions = departments
@@ -85,7 +147,7 @@ async function loadAdminReferences() {
     const roleFilter = document.getElementById('userFilterRole');
     if (roleFilter) {
         roleFilter.innerHTML = '<option value="">All Roles</option>' +
-            roles.filter(item => item.isActive)
+            adminState.roles.filter(item => item.isActive)
                 .map(item => `<option value="${adminEscape(item.roleCode)}">${adminEscape(item.roleName)}</option>`)
                 .join('');
     }
@@ -172,7 +234,7 @@ async function renderAdminUsers(page = 1) {
             <tr><td class="p-3">${adminEscape(user.id)}</td><td class="p-3">${adminEscape(user.name)}</td><td class="p-3">${adminEscape(user.role)}</td><td class="p-3">${adminEscape(user.dept)}</td><td></td></tr>`).join('');
         return;
     }
-    const query = new URLSearchParams({ page, pageSize: 100 });
+    const query = new URLSearchParams({ page, pageSize: adminUserPageSize });
     const search = document.getElementById('userFilterSearch')?.value.trim();
     const role = document.getElementById('userFilterRole')?.value;
     const department = document.getElementById('userFilterDepartment')?.value;
@@ -198,15 +260,16 @@ async function renderAdminUsers(page = 1) {
             <tr class="border-b hover:bg-gray-50">
                 <td class="p-3 text-xs font-mono">${adminEscape(user.employeeId || user.username)}</td>
                 <td class="p-3"><div class="font-semibold">${adminEscape(user.displayName)}</div><div class="text-[10px] text-gray-400">${adminEscape(user.positionName || user.accountTypeCode)} · Hired ${adminDate(user.dateHired)}</div></td>
-                <td class="p-3 text-xs">${(user.roleCodes || []).map(roleCode => `<span class="inline-block px-2 py-1 mr-1 mb-1 rounded bg-blue-50 text-mpiBlue">${adminEscape(roleCode)}</span>`).join('')}</td>
-                <td class="p-3 text-xs">${adminEscape(user.departmentName || 'System / External')}</td>
+                <td class="p-3 text-xs">${compactRoleCell(user)}</td>
+                <td class="p-3 text-xs">${compactDepartmentCell(user)}</td>
                 <td class="p-3 text-xs"><span class="px-2 py-1 rounded ${user.accountStatusCode === 'ACTIVE' ? 'bg-green-100 text-green-700' : 'bg-gray-200 text-gray-600'}">${adminEscape(user.accountStatusCode)}</span></td>
                 <td class="p-3 text-right whitespace-nowrap">
                     <button onclick="openUserEditor(${user.userId})" class="text-blue-600 border border-blue-200 px-2 py-1 rounded mr-1"><i class="fas fa-edit"></i></button>
                     ${user.accountStatusCode !== 'ARCHIVED' ? `<button onclick="archiveAdminUser(${user.userId})" class="text-red-600 border border-red-200 px-2 py-1 rounded"><i class="fas fa-archive"></i></button>` : ''}
                 </td>
             </tr>`).join('') || '<tr><td colspan="6" class="p-8 text-center text-gray-400">No users match your filters.</td></tr>';
-        document.getElementById('userPageIndicator').innerText = response.page;
+        document.getElementById('userPageIndicator').innerText =
+            `${response.page} / ${Math.max(response.totalPages, 1)}`;
         document.getElementById('userPrevPage').disabled = response.page <= 1;
         document.getElementById('userNextPage').disabled = response.page >= response.totalPages;
     } catch (error) {
@@ -576,6 +639,8 @@ window.renderAdminTables = renderAdminTables;
 window.renderFleetStatusWidget = renderFleetStatusWidget;
 window.renderAdminUsers = renderAdminUsers;
 window.changeUserPage = changeUserPage;
+window.showUserRoleDetails = showUserRoleDetails;
+window.showUserDepartmentDetails = showUserDepartmentDetails;
 window.openUserEditor = openUserEditor;
 window.archiveAdminUser = archiveAdminUser;
 window.renderDepartmentsAndRoles = renderDepartmentsAndRoles;

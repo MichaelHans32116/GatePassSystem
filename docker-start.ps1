@@ -73,6 +73,15 @@ if (-not $SkipEmployeeImport -and (Test-Path $workbook)) {
     }
 }
 
+& docker compose exec -T db mariadb `
+    '--user=gatepass' `
+    "--password=$dbPassword" `
+    'gate_pass_system' `
+    '--execute=SOURCE /docker-entrypoint-initdb.d/004-seed-fleet.sql;'
+if ($LASTEXITCODE -ne 0) {
+    throw 'Docker fleet seed failed.'
+}
+
 $frontendUrl = "http://127.0.0.1:$frontendPort"
 Write-Host 'Docker Gate Pass stack is ready.' -ForegroundColor Green
 Write-Host "Frontend: $frontendUrl"

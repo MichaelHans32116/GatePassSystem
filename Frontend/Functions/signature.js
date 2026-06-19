@@ -378,7 +378,7 @@ function setupSignaturePad() {
                 event.preventDefault();
                 const ctx = canvas.getContext('2d');
                 const p = getPoint(event);
-                ctx.lineWidth = 3.2;
+                ctx.lineWidth = 4;
                 ctx.lineCap = 'round';
                 ctx.lineJoin = 'round';
                 ctx.strokeStyle = '#020617';

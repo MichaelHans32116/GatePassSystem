@@ -42,4 +42,4 @@ The apply operation also synchronizes workflow assignments from active roles:
 
 - Immediate Superior approvers are scoped to their employee department.
 - President approvers are global.
-- PAS / HR noters are global and priority ordered.
+- PAS noters are global, load-balanced at the primary priority, and use a fallback priority.

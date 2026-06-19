@@ -33,11 +33,28 @@ public sealed class SecurityService(
         var normalized = hasQr
             ? request.QrToken!.Trim()
             : request.ManualGatePassNo!.Trim().ToUpperInvariant();
+        long? employeeRecordId = null;
+        if (hasQr &&
+            normalized.StartsWith("EMP1.", StringComparison.Ordinal))
+        {
+            if (!qrTokenService.TryGetEmployeeRecordId(
+                    normalized,
+                    out var parsedEmployeeRecordId))
+            {
+                return ServiceResult<SecurityScanResult>.Failure(
+                    "INVALID_EMPLOYEE_QR",
+                    "The employee QR code is invalid.");
+            }
+
+            employeeRecordId = parsedEmployeeRecordId;
+        }
+
         var identifierHash = qrTokenService.HashToken(normalized);
 
         var result = await securityRepository.ScanAsync(
             guardUserId,
-            hasQr ? identifierHash : null,
+            hasQr && !employeeRecordId.HasValue ? identifierHash : null,
+            employeeRecordId,
             hasManual ? normalized : null,
             identifierHash,
             traceId,

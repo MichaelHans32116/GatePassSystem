@@ -27,6 +27,7 @@ public sealed class SecurityRepository(
     public async Task<SecurityScanResult> ScanAsync(
         long guardUserId,
         string? qrTokenHash,
+        long? employeeRecordId,
         string? manualGatePassNo,
         string providedIdentifierHash,
         string traceId,
@@ -43,25 +44,45 @@ public sealed class SecurityRepository(
                 new CommandDefinition(
                     """
                     SELECT
-                        gate_pass_id AS GatePassId,
-                        gate_pass_status_code AS StatusCode,
-                        will_return AS WillReturn,
-                        vehicle_id AS VehicleId,
-                        qr_expires_at AS QrExpiresAt
-                    FROM tbl_gate_pass_requests
+                        request_row.gate_pass_id AS GatePassId,
+                        request_row.gate_pass_status_code AS StatusCode,
+                        request_row.will_return AS WillReturn,
+                        request_row.vehicle_id AS VehicleId,
+                        request_row.qr_expires_at AS QrExpiresAt
+                    FROM tbl_gate_pass_requests request_row
+                    JOIN tbl_gate_pass_statuses status_row
+                        ON status_row.gate_pass_status_code =
+                           request_row.gate_pass_status_code
                     WHERE (
+                        @EmployeeRecordId IS NOT NULL
+                        AND request_row.requester_employee_id =
+                            @EmployeeRecordId
+                        AND status_row.is_terminal = FALSE
+                    ) OR (
                         @QrTokenHash IS NOT NULL
-                        AND qr_token_hash = @QrTokenHash
+                        AND request_row.qr_token_hash = @QrTokenHash
                     ) OR (
                         @ManualGatePassNo IS NOT NULL
-                        AND gate_pass_no = @ManualGatePassNo
+                        AND request_row.gate_pass_no = @ManualGatePassNo
                     )
+                    ORDER BY
+                        CASE
+                            WHEN request_row.gate_pass_status_code IN (
+                                'APPROVED',
+                                'OUTSIDE',
+                                'OVERDUE'
+                            ) THEN 0
+                            ELSE 1
+                        END,
+                        request_row.expected_out_at,
+                        request_row.gate_pass_id
                     LIMIT 1
                     FOR UPDATE;
                     """,
                     new
                     {
                         QrTokenHash = qrTokenHash,
+                        EmployeeRecordId = employeeRecordId,
                         ManualGatePassNo = manualGatePassNo
                     },
                     transaction,
@@ -71,8 +92,8 @@ public sealed class SecurityRepository(
             {
                 var missing = new SecurityScanResult(
                     null,
-                    "NOT_FOUND",
-                    "Gate pass was not found.",
+                    "NO_ACTIVE_GATE_PASS",
+                    "Gate pass verification is not available.",
                     null,
                     null);
                 await InsertScanAsync(
@@ -80,7 +101,7 @@ public sealed class SecurityRepository(
                     transaction,
                     null,
                     guardUserId,
-                    qrTokenHash is null ? "MANUAL_GATE_PASS" : "QR",
+                    manualGatePassNo is null ? "QR" : "MANUAL_GATE_PASS",
                     "REJECTED_ATTEMPT",
                     missing,
                     providedIdentifierHash,
@@ -135,10 +156,18 @@ public sealed class SecurityRepository(
             }
             else
             {
+                var isPendingApproval =
+                    gatePass.StatusCode.StartsWith(
+                        "PENDING_",
+                        StringComparison.Ordinal);
                 var invalid = new SecurityScanResult(
                     gatePass.GatePassId,
-                    "INVALID_STATE",
-                    "This gate pass is not available for scanning.",
+                    isPendingApproval
+                        ? "REQUIREMENTS_INCOMPLETE"
+                        : "INVALID_STATE",
+                    isPendingApproval
+                        ? "Gate pass requirements and approvals are incomplete."
+                        : "This gate pass is not available for scanning.",
                     gatePass.StatusCode,
                     null);
                 await InsertScanAsync(
@@ -146,7 +175,7 @@ public sealed class SecurityRepository(
                     transaction,
                     gatePass.GatePassId,
                     guardUserId,
-                    qrTokenHash is null ? "MANUAL_GATE_PASS" : "QR",
+                    manualGatePassNo is null ? "QR" : "MANUAL_GATE_PASS",
                     "REJECTED_ATTEMPT",
                     invalid,
                     providedIdentifierHash,
@@ -232,7 +261,7 @@ public sealed class SecurityRepository(
                 transaction,
                 gatePass.GatePassId,
                 guardUserId,
-                qrTokenHash is null ? "MANUAL_GATE_PASS" : "QR",
+                manualGatePassNo is null ? "QR" : "MANUAL_GATE_PASS",
                 action,
                 success,
                 providedIdentifierHash,

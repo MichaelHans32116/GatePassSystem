@@ -105,7 +105,7 @@ The repository now contains:
 - Gate pass request creation
 - Request review and approval workflow
 - President approval when required by policy
-- PAS / HR final noting
+- PAS final noting
 - QR-based security Time Out and Time In
 - Vehicle and driver tracking
 - Searchable gate pass logs

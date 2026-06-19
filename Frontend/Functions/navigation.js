@@ -50,7 +50,7 @@ function setupRoleAccess(user) {
                 // Associates / Immediate Superiors / HR
                 document.getElementById('navGroupSecurity').style.display = 'none';
 
-                if (user.role === 'Associate') {
+                if (user.role === 'Associate' || user.role === 'Driver') {
                     document.getElementById('navGroupApprovals').style.display = 'none';
                     document.getElementById('navGroupAdmin').style.display = 'none';
                 } else {

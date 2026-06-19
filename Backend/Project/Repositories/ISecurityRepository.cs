@@ -11,6 +11,7 @@ public interface ISecurityRepository
     Task<SecurityScanResult> ScanAsync(
         long guardUserId,
         string? qrTokenHash,
+        long? employeeRecordId,
         string? manualGatePassNo,
         string providedIdentifierHash,
         string traceId,

@@ -196,7 +196,7 @@ static async Task ImportAsync(
             'IMMEDIATE_SUPERIOR',
             'PRESIDENT',
             'PAS_NOTER',
-            'HR_ADMIN',
+            'DRIVER',
             'SYSTEM_ADMIN'
         );
         """,
@@ -233,6 +233,18 @@ static async Task ImportAsync(
                 inactiveEmployee.EmployeeId,
                 ImportBatchId = importBatchId
             },
+            transaction);
+
+        await connection.ExecuteAsync(
+            """
+            UPDATE tbl_drivers driver_row
+            JOIN tbl_employees employee
+                ON employee.employee_record_id =
+                   driver_row.employee_record_id
+            SET driver_row.is_active = FALSE
+            WHERE employee.employee_id = @EmployeeId;
+            """,
+            new { inactiveEmployee.EmployeeId },
             transaction);
     }
 
@@ -427,109 +439,137 @@ static async Task SyncApprovalAssignmentsAsync(
 {
     await connection.ExecuteAsync(
         """
-        INSERT INTO tbl_approval_assignments (
-            approval_step_code,
-            approver_user_id,
-            department_id,
-            position_id,
-            priority,
-            is_alternate,
-            is_active
-        )
-        SELECT
-            'SUPERIOR',
-            ua.user_id,
-            employee.department_id,
-            NULL,
-            1,
-            FALSE,
-            TRUE
-        FROM tbl_user_accounts ua
-        JOIN tbl_employees employee
-            ON employee.employee_record_id = ua.employee_record_id
-        JOIN tbl_user_roles user_role
-            ON user_role.user_id = ua.user_id
-           AND user_role.is_active = TRUE
-        JOIN tbl_roles role_row
-            ON role_row.role_id = user_role.role_id
-           AND role_row.role_code = 'IMMEDIATE_SUPERIOR'
-        WHERE ua.account_status_code = 'ACTIVE'
-          AND employee.employment_status_code = 'ACTIVE'
-          AND NOT EXISTS (
-              SELECT 1
-              FROM tbl_approval_assignments existing
-              WHERE existing.approval_step_code = 'SUPERIOR'
-                AND existing.approver_user_id = ua.user_id
-                AND existing.department_id = employee.department_id
-          );
-
-        INSERT INTO tbl_approval_assignments (
-            approval_step_code,
-            approver_user_id,
-            department_id,
-            position_id,
-            priority,
-            is_alternate,
-            is_active
-        )
-        SELECT
-            'PRESIDENT',
-            ua.user_id,
-            NULL,
-            NULL,
-            1,
-            FALSE,
-            TRUE
-        FROM tbl_user_accounts ua
-        JOIN tbl_user_roles user_role
-            ON user_role.user_id = ua.user_id
-           AND user_role.is_active = TRUE
-        JOIN tbl_roles role_row
-            ON role_row.role_id = user_role.role_id
-           AND role_row.role_code = 'PRESIDENT'
-        WHERE ua.account_status_code = 'ACTIVE'
-          AND NOT EXISTS (
-              SELECT 1
-              FROM tbl_approval_assignments existing
-              WHERE existing.approval_step_code = 'PRESIDENT'
-                AND existing.approver_user_id = ua.user_id
-                AND existing.department_id IS NULL
-          );
-
-        INSERT INTO tbl_approval_assignments (
-            approval_step_code,
-            approver_user_id,
-            department_id,
-            position_id,
-            priority,
-            is_alternate,
-            is_active
-        )
-        SELECT
-            'PAS',
-            ua.user_id,
-            NULL,
-            NULL,
-            ROW_NUMBER() OVER (ORDER BY ua.user_id),
-            ROW_NUMBER() OVER (ORDER BY ua.user_id) > 1,
-            TRUE
-        FROM tbl_user_accounts ua
-        JOIN tbl_user_roles user_role
-            ON user_role.user_id = ua.user_id
-           AND user_role.is_active = TRUE
-        JOIN tbl_roles role_row
-            ON role_row.role_id = user_role.role_id
-           AND role_row.role_code = 'PAS_NOTER'
-        WHERE ua.account_status_code = 'ACTIVE'
-          AND NOT EXISTS (
-              SELECT 1
-              FROM tbl_approval_assignments existing
-              WHERE existing.approval_step_code = 'PAS'
-                AND existing.approver_user_id = ua.user_id
-                AND existing.department_id IS NULL
-          );
+        DELETE FROM tbl_approval_assignments
+        WHERE approval_step_code IN ('SUPERIOR', 'PRESIDENT', 'PAS');
         """,
         transaction: transaction);
+
+    var superiorAssignments = new[]
+    {
+        new ApprovalAssignmentSpec("GA133", "ADMIN_DEPARTMENT", 1, false),
+        new ApprovalAssignmentSpec("GA150", "FINANCE_IT_DEPARTMENT", 1, false),
+        new ApprovalAssignmentSpec("GA150", "FINANCE_HR_IT_DEPARTMENT", 1, false),
+        new ApprovalAssignmentSpec("GA409", "HRAD_DEPARTMENT", 1, false),
+        new ApprovalAssignmentSpec("MP012", "INJECTION_ASSEMBLY_PRODUCTION_DEPARTMENT", 1, false),
+        new ApprovalAssignmentSpec("MP012", "PRODUCTION_ASSEMBLY_DEPARTMENT", 1, false),
+        new ApprovalAssignmentSpec("PP399", "PRODUCTION_ASSEMBLY_DEPARTMENT", 2, true),
+        new ApprovalAssignmentSpec("PP408", "PRODUCTION_ASSEMBLY_DEPARTMENT", 3, true),
+        new ApprovalAssignmentSpec("MP012", "PRODUCTION_INJECTION_DEPARTMENT", 1, false),
+        new ApprovalAssignmentSpec("MP012", "PRODUCTION_DEPARTMENT", 1, false),
+        new ApprovalAssignmentSpec("PP399", "PRODUCTION_DEPARTMENT", 2, true),
+        new ApprovalAssignmentSpec("PP408", "PRODUCTION_DEPARTMENT", 3, true),
+        new ApprovalAssignmentSpec("PP163", "PPC_DEPARTMENT", 1, false),
+        new ApprovalAssignmentSpec("PP052", "PRODUCTION_ENGINEERING_DEPARTMENT", 1, false),
+        new ApprovalAssignmentSpec("PP287", "PURCHASING_DEPARTMENT", 1, false),
+        new ApprovalAssignmentSpec("PP081", "QUALITY_ASSURANCE_DEPARTMENT", 1, false),
+        new ApprovalAssignmentSpec("PP201", "QUALITY_ASSURANCE_DEPARTMENT", 2, true)
+    };
+
+    foreach (var assignment in superiorAssignments)
+    {
+        await InsertApprovalAssignmentAsync(
+            connection,
+            transaction,
+            "SUPERIOR",
+            assignment.EmployeeId,
+            assignment.DepartmentCode,
+            assignment.Priority,
+            assignment.IsAlternate);
+    }
+
+    await InsertApprovalAssignmentAsync(
+        connection,
+        transaction,
+        "PRESIDENT",
+        "GA125",
+        null,
+        1,
+        false);
+
+    await InsertApprovalAssignmentAsync(
+        connection,
+        transaction,
+        "PAS",
+        "GA150",
+        null,
+        1,
+        false);
+    await InsertApprovalAssignmentAsync(
+        connection,
+        transaction,
+        "PAS",
+        "GA133",
+        null,
+        1,
+        false);
+    await InsertApprovalAssignmentAsync(
+        connection,
+        transaction,
+        "PAS",
+        "GA120",
+        null,
+        2,
+        true);
+}
+
+static async Task InsertApprovalAssignmentAsync(
+    MySqlConnection connection,
+    MySqlTransaction transaction,
+    string approvalStepCode,
+    string employeeId,
+    string? departmentCode,
+    int priority,
+    bool isAlternate)
+{
+    var inserted = await connection.ExecuteAsync(
+        """
+        INSERT INTO tbl_approval_assignments (
+            approval_step_code,
+            approver_user_id,
+            department_id,
+            position_id,
+            priority,
+            is_alternate,
+            is_active
+        )
+        SELECT
+            @ApprovalStepCode,
+            account_row.user_id,
+            department_row.department_id,
+            NULL,
+            @Priority,
+            @IsAlternate,
+            TRUE
+        FROM tbl_employees employee
+        JOIN tbl_user_accounts account_row
+            ON account_row.employee_record_id =
+               employee.employee_record_id
+        LEFT JOIN tbl_departments department_row
+            ON department_row.department_code = @DepartmentCode
+        WHERE employee.employee_id = @EmployeeId
+          AND employee.employment_status_code = 'ACTIVE'
+          AND account_row.account_status_code = 'ACTIVE'
+          AND (
+              @DepartmentCode IS NULL
+              OR department_row.department_id IS NOT NULL
+          );
+        """,
+        new
+        {
+            ApprovalStepCode = approvalStepCode,
+            EmployeeId = employeeId,
+            DepartmentCode = departmentCode,
+            Priority = priority,
+            IsAlternate = isAlternate
+        },
+        transaction);
+
+    if (inserted != 1)
+    {
+        throw new InvalidOperationException(
+            $"Could not configure {approvalStepCode} approver {employeeId} " +
+            $"for {departmentCode ?? "all departments"}.");
+    }
 }
 
 static async Task AssignRolesAsync(
@@ -559,9 +599,11 @@ static async Task AssignRolesAsync(
         desiredRoles.Add("PAS_NOTER");
     }
 
-    if (HrAdminEmployeeIds.Contains(employee.EmployeeId))
+    if (employee.Position.Contains(
+            "COMPANY DRIVER",
+            StringComparison.OrdinalIgnoreCase))
     {
-        desiredRoles.Add("HR_ADMIN");
+        desiredRoles.Add("DRIVER");
     }
 
     if (SystemAdminEmployeeIds.Contains(employee.EmployeeId))
@@ -569,21 +611,31 @@ static async Task AssignRolesAsync(
         desiredRoles.Add("SYSTEM_ADMIN");
     }
 
-    foreach (var roleCode in desiredRoles)
+    foreach (var role in roleIds)
     {
-        if (!roleIds.TryGetValue(roleCode, out var roleId))
+        if (desiredRoles.Contains(role.Key))
         {
-            continue;
+            await connection.ExecuteAsync(
+                """
+                INSERT INTO tbl_user_roles (user_id, role_id, is_active)
+                VALUES (@AccountId, @RoleId, TRUE)
+                ON DUPLICATE KEY UPDATE is_active = TRUE;
+                """,
+                new { AccountId = accountId, RoleId = role.Value },
+                transaction);
         }
-
-        await connection.ExecuteAsync(
-            """
-            INSERT INTO tbl_user_roles (user_id, role_id, is_active)
-            VALUES (@AccountId, @RoleId, TRUE)
-            ON DUPLICATE KEY UPDATE is_active = TRUE;
-            """,
-            new { AccountId = accountId, RoleId = roleId },
-            transaction);
+        else
+        {
+            await connection.ExecuteAsync(
+                """
+                UPDATE tbl_user_roles
+                SET is_active = FALSE
+                WHERE user_id = @AccountId
+                  AND role_id = @RoleId;
+                """,
+                new { AccountId = accountId, RoleId = role.Value },
+                transaction);
+        }
     }
 }
 
@@ -653,13 +705,6 @@ static readonly HashSet<string> PasNoterEmployeeIds =
     "GA120"
 ];
 
-static readonly HashSet<string> HrAdminEmployeeIds =
-[
-    "GA150",
-    "GA409",
-    "GA120"
-];
-
 static readonly HashSet<string> SystemAdminEmployeeIds =
 [
     "GA407",
@@ -674,6 +719,12 @@ internal sealed record EmployeeImportRow(
     string Position,
     DateOnly DateHired,
     string EmploymentStatus);
+
+internal sealed record ApprovalAssignmentSpec(
+    string EmployeeId,
+    string DepartmentCode,
+    int Priority,
+    bool IsAlternate);
 
 internal sealed class RoleRow
 {

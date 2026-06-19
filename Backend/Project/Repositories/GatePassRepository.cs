@@ -63,6 +63,16 @@ public sealed class GatePassRepository(
                 FROM tbl_approval_assignments aa
                 JOIN tbl_user_accounts ua
                     ON ua.user_id = aa.approver_user_id
+                LEFT JOIN (
+                    SELECT
+                        assigned_approver_user_id,
+                        COUNT(*) AS pending_count
+                    FROM tbl_gate_pass_approval_steps
+                    WHERE approval_status_code = 'PENDING'
+                    GROUP BY assigned_approver_user_id
+                ) workload
+                    ON workload.assigned_approver_user_id =
+                       aa.approver_user_id
                 WHERE aa.approval_step_code = @ApprovalStepCode
                   AND aa.is_active = TRUE
                   AND ua.account_status_code = 'ACTIVE'
@@ -84,6 +94,7 @@ public sealed class GatePassRepository(
                     CASE WHEN aa.position_id = @PositionId THEN 0 ELSE 1 END,
                     aa.is_alternate,
                     aa.priority,
+                    COALESCE(workload.pending_count, 0),
                     aa.approval_assignment_id
                 LIMIT 1;
                 """,
@@ -181,6 +192,7 @@ public sealed class GatePassRepository(
         const string sql = """
             SELECT
                 records.*,
+                request_row.requester_employee_id AS RequesterEmployeeId,
                 request_row.will_return AS WillReturn,
                 request_row.vehicle_usage_code AS VehicleUsageCode,
                 request_row.vehicle_id AS VehicleId,
@@ -332,6 +344,7 @@ public sealed class GatePassRepository(
             GatePassId = source.GatePassId,
             GatePassNo = source.GatePassNo,
             RequesterUserId = source.RequesterUserId,
+            RequesterEmployeeId = source.RequesterEmployeeId,
             EmployeeId = source.EmployeeId,
             FullName = source.FullName,
             DepartmentName = source.DepartmentName,

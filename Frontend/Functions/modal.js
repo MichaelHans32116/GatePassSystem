@@ -327,7 +327,7 @@ async function viewPass(id, isReviewing = false) {
 
             // System Admin Progress Tracker
             const wf = document.getElementById('workflowTracker');
-            if (currentUser.role === 'System Admin' || ['President','Immediate Superior','PAS / HR Admin'].includes(currentUser.role)) {
+            if (currentUser.role === 'System Admin' || ['President','Immediate Superior','PAS Noter','PAS / HR Admin'].includes(currentUser.role)) {
                 wf.classList.remove('hidden');
                 let stepsHTML = '';
 
@@ -345,10 +345,10 @@ async function viewPass(id, isReviewing = false) {
                 }
 
                 if (reqPres) {
-                    stepsHTML += `<span class="${hasPres}"><i class="fas ${p.signatures.pres ? 'fa-check-circle' : 'fa-circle'}"></i> ${stepNo++}. President / VP</span>`;
+                    stepsHTML += `<span class="${hasPres}"><i class="fas ${p.signatures.pres ? 'fa-check-circle' : 'fa-circle'}"></i> ${stepNo++}. President</span>`;
                     stepsHTML += ` <i class="fas fa-chevron-right text-gray-300 mx-2"></i> `;
                 }
-                stepsHTML += `<span class="${hasPAS}"><i class="fas ${p.signatures.pas ? 'fa-check-circle' : 'fa-circle'}"></i> ${stepNo}. PAS / HR</span>`;
+                stepsHTML += `<span class="${hasPAS}"><i class="fas ${p.signatures.pas ? 'fa-check-circle' : 'fa-circle'}"></i> ${stepNo}. PAS</span>`;
 
                 document.getElementById('workflowSteps').innerHTML = stepsHTML;
             } else {

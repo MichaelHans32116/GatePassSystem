@@ -31,7 +31,17 @@ public sealed class AdminRepository(
         const string where = """
             WHERE (@AccountStatusCode IS NULL
                    OR ua.account_status_code = @AccountStatusCode)
-              AND (@DepartmentId IS NULL OR e.department_id = @DepartmentId)
+              AND (
+                  @DepartmentId IS NULL
+                  OR e.department_id = @DepartmentId
+                  OR EXISTS (
+                      SELECT 1
+                      FROM tbl_approval_assignments department_assignment
+                      WHERE department_assignment.approver_user_id = ua.user_id
+                        AND department_assignment.department_id = @DepartmentId
+                        AND department_assignment.is_active = TRUE
+                  )
+              )
               AND (@HiredFrom IS NULL OR e.date_hired >= @HiredFrom)
               AND (@HiredTo IS NULL OR e.date_hired <= @HiredTo)
               AND (
@@ -53,6 +63,17 @@ public sealed class AdminRepository(
                   OR e.full_name LIKE CONCAT('%', @Search, '%')
                   OR d.department_name LIKE CONCAT('%', @Search, '%')
                   OR p.position_name LIKE CONCAT('%', @Search, '%')
+                  OR EXISTS (
+                      SELECT 1
+                      FROM tbl_approval_assignments search_assignment
+                      JOIN tbl_departments search_department
+                        ON search_department.department_id =
+                           search_assignment.department_id
+                      WHERE search_assignment.approver_user_id = ua.user_id
+                        AND search_assignment.is_active = TRUE
+                        AND search_department.department_name
+                            LIKE CONCAT('%', @Search, '%')
+                  )
               )
             """;
 
@@ -86,6 +107,22 @@ public sealed class AdminRepository(
                     ua.must_change_password AS MustChangePassword,
                     ua.last_login_at AS LastLoginAt,
                     ua.created_at AS CreatedAt,
+                    COALESCE(
+                        (
+                            SELECT GROUP_CONCAT(
+                                DISTINCT assigned_department.department_name
+                                ORDER BY assigned_department.department_name
+                                SEPARATOR '|'
+                            )
+                            FROM tbl_approval_assignments assignment_row
+                            JOIN tbl_departments assigned_department
+                                ON assigned_department.department_id =
+                                   assignment_row.department_id
+                            WHERE assignment_row.approver_user_id = ua.user_id
+                              AND assignment_row.is_active = TRUE
+                        ),
+                        ''
+                    ) AS ApprovalDepartmentNamesCsv,
                     COALESCE(
                         GROUP_CONCAT(
                             DISTINCT CASE WHEN ur.is_active THEN r.role_code END

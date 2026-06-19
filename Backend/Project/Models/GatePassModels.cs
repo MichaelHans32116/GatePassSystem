@@ -16,6 +16,7 @@ public class GatePassRecord
     public long GatePassId { get; init; }
     public string GatePassNo { get; init; } = string.Empty;
     public long RequesterUserId { get; init; }
+    public long RequesterEmployeeId { get; init; }
     public string EmployeeId { get; init; } = string.Empty;
     public string FullName { get; init; } = string.Empty;
     public string DepartmentName { get; init; } = string.Empty;

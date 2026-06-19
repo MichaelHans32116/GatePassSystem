@@ -74,11 +74,21 @@ if ($databaseExists -eq 0) {
             Write-Host 'Applying database migration 002...' -ForegroundColor Yellow
             Invoke-MySqlSource 'Database\Migrations\002_gate_pass_lifecycle_timestamps.sql'
         }
+
+        $phase5Applied = [int](Invoke-MySqlQuery(
+            "SELECT COUNT(*) FROM gate_pass_system.tbl_schema_versions WHERE version_no='003';"
+        ))[0]
+
+        if ($phase5Applied -eq 0) {
+            Write-Host 'Applying database migration 003...' -ForegroundColor Yellow
+            Invoke-MySqlSource 'Database\Migrations\003_phase5_workflow_defaults.sql'
+        }
     }
 }
 
 Invoke-MySqlSource 'Database\seed-reference.sql'
 Invoke-MySqlSource 'Database\procedures.sql'
+Invoke-MySqlSource 'Database\seed-fleet.sql'
 
 $versions = Invoke-MySqlQuery(
     'SELECT version_no FROM gate_pass_system.tbl_schema_versions ORDER BY version_no;'
