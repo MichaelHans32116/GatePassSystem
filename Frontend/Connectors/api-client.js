@@ -3,9 +3,11 @@
     const fallbackApiBaseUrl =
         window.location.protocol === 'file:'
             ? 'http://127.0.0.1:5087/api'
-            : `${window.location.protocol}//${window.location.hostname}:5087/api`;
+            : `${window.location.origin}/api`;
     const API_BASE_URL = (configuredApiBaseUrl || fallbackApiBaseUrl)
         .replace(/\/+$/, '');
+    const AUTHORIZATION_HEADER =
+        window.GatePassConfig?.apiAuthorizationHeader || 'Authorization';
     const ACCESS_TOKEN_KEY = 'gatePassAccessToken';
 
     class ApiError extends Error {
@@ -23,7 +25,9 @@
         const response = await fetch(API_BASE_URL + path, {
             headers: {
                 ...(!isFormData ? { 'Content-Type': 'application/json' } : {}),
-                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                ...(token
+                    ? { [AUTHORIZATION_HEADER]: `Bearer ${token}` }
+                    : {}),
                 ...(options.headers || {})
             },
             ...options
@@ -57,7 +61,9 @@
         const token = sessionStorage.getItem(ACCESS_TOKEN_KEY);
         const response = await fetch(API_BASE_URL + path, {
             headers: {
-                ...(token ? { Authorization: `Bearer ${token}` } : {}),
+                ...(token
+                    ? { [AUTHORIZATION_HEADER]: `Bearer ${token}` }
+                    : {}),
                 ...(options.headers || {})
             },
             ...options

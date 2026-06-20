@@ -227,11 +227,18 @@
 
                     <!-- STANDARD Dashboard Wrapper -->
                     <div id="standardDashWrapper">
-                        <!-- HR Vehicle Fleet Tracking Widget -->
-                        <div id="hrFleetWidget" class="hidden mb-8 bg-white p-4 md:p-5 rounded-lg shadow-sm border border-gray-200">
-                            <h2 class="text-base font-bold text-gray-800 mb-4 border-b pb-2"><i class="fas fa-truck mr-2 text-mpiBlue"></i>Live Fleet Status</h2>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="fleetGridContainer">
-                                <!-- Populated via JS -->
+                        <div id="myEmployeeQrCard" class="hidden mb-6 rounded-xl border border-blue-200 bg-white p-4 shadow-sm">
+                            <div class="flex flex-col items-center gap-4 sm:flex-row sm:items-center">
+                                <div id="myEmployeeQrCode" class="shrink-0 rounded-lg border bg-white p-2"></div>
+                                <div class="text-center sm:text-left">
+                                    <div class="mb-1 flex items-center justify-center gap-2 text-mpiBlue sm:justify-start">
+                                        <i class="fas fa-id-card"></i>
+                                        <h2 class="text-base font-extrabold">My Employee QR</h2>
+                                    </div>
+                                    <p class="text-sm font-bold text-gray-800" id="myEmployeeQrId"></p>
+                                    <p class="mt-1 max-w-lg text-xs leading-relaxed text-gray-500">This is your permanent employee QR. Security scans it only when you have an active gate pass queue. No queue means the scan is ignored.</p>
+                                    <p class="mt-2 text-[10px] font-semibold uppercase tracking-wide text-blue-600"><i class="fas fa-clock mr-1"></i>30-second duplicate-scan protection</p>
+                                </div>
                             </div>
                         </div>
 
@@ -391,14 +398,15 @@
                     <div class="bg-white p-6 md:p-8 rounded-lg shadow border border-gray-200 w-full text-center">
                         <i class="fas fa-shield-alt text-4xl text-mpiBlue mb-3"></i>
                         <h2 class="text-xl font-bold text-gray-800 mb-1">Security QR Scanner</h2>
-                        <p class="text-xs text-gray-500 mb-6">Scan Gate Pass to Log Time Out / In</p>
+                        <p class="text-xs text-gray-500 mb-2">Scan the employee's permanent QR to record Time Out / Time In.</p>
+                        <p class="text-[10px] font-semibold text-blue-600 mb-6"><i class="fas fa-clock mr-1"></i>Each QR has a 30-second anti-double-scan cooldown.</p>
 
                         <div id="qrCameraFrame" class="w-full aspect-video bg-gray-950 rounded flex items-center justify-center border-2 border-dashed border-gray-300 mb-4 relative overflow-hidden">
                             <video id="qrCameraVideo" class="hidden w-full h-full object-cover" playsinline muted></video>
                             <canvas id="qrCameraCanvas" class="hidden"></canvas>
                             <div id="qrCameraPlaceholder" class="text-center text-gray-400">
                                 <i class="fas fa-qrcode text-5xl"></i>
-                                <p class="mt-2 text-[10px]">Select and start a camera</p>
+                                <p class="mt-2 text-[10px]">Scan an employee QR</p>
                             </div>
                             <div id="qrScanLine" class="hidden absolute top-0 left-0 w-full h-1 bg-green-500 animate-[pulse_1s_ease-in-out_infinite] shadow-[0_0_10px_#22c55e]"></div>
                         </div>
@@ -732,17 +740,17 @@
         </div>
     </div>
 
-    <script src="Frontend/runtime-config.js?v=20260619-portable"></script>
+    <script src="Frontend/runtime-config.js?v=20260620-public-qr"></script>
     <script src="Frontend/Functions/mock-data.js?v=20260620-phase5"></script>
-    <script src="Frontend/Connectors/api-client.js?v=20260619-portable"></script>
+    <script src="Frontend/Connectors/api-client.js?v=20260620-public-qr"></script>
     <script src="Frontend/Functions/signature.js?v=20260620-phase5-2"></script>
     <script src="Frontend/Functions/modal.js?v=20260620-phase5-2"></script>
-    <script src="Frontend/Functions/gatepass.js?v=20260620-phase5"></script>
+    <script src="Frontend/Functions/gatepass.js?v=20260620-employee-qr"></script>
     <script src="Frontend/Functions/approvals.js?v=20260619-phase4-1"></script>
-    <script src="Frontend/Functions/scanner.js?v=20260620-phase5"></script>
-    <script src="Frontend/Functions/admin.js?v=20260620-phase5-2-crud"></script>
-    <script src="Frontend/Functions/navigation.js?v=20260620-phase5"></script>
-    <script src="Frontend/Functions/auth.js?v=20260620-phase5-1"></script>
+    <script src="Frontend/Functions/scanner.js?v=20260620-security-cooldown"></script>
+    <script src="Frontend/Functions/admin.js?v=20260620-phase5-3"></script>
+    <script src="Frontend/Functions/navigation.js?v=20260620-security-only"></script>
+    <script src="Frontend/Functions/auth.js?v=20260620-employee-qr"></script>
     <script src="Frontend/Functions/app.js?v=20260619-phase4-1"></script>
 </body>
 </html>

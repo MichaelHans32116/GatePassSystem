@@ -11,7 +11,7 @@ function setupRoleAccess(user) {
             // Reset visibility
             document.getElementById('navItemApply').style.display = 'flex';
             document.getElementById('navGroupApprovals').style.display = 'block';
-            document.getElementById('navGroupSecurity').style.display = 'block';
+            document.getElementById('navGroupSecurity').style.display = 'none';
             document.getElementById('navGroupAdmin').style.display = 'block';
             document.getElementById('navGroupHR').style.display = 'none';
             document.getElementById('navItemDashboard').style.display = 'flex';
@@ -22,6 +22,7 @@ function setupRoleAccess(user) {
             document.getElementById('tab-depts').style.display = 'inline-block';
 
             if (user.role === 'Security') {
+                document.getElementById('navGroupSecurity').style.display = 'block';
                 document.getElementById('navItemDashboard').style.display = 'flex';
                 document.getElementById('navItemApply').style.display = 'none';
                 document.getElementById('navGroupApprovals').style.display = 'none';
@@ -30,8 +31,7 @@ function setupRoleAccess(user) {
             }
             else if (user.role === 'System Admin') {
                 document.getElementById('navGroupApprovals').style.display = 'none';
-                document.getElementById('navGroupSecurity').style.display =
-                    user.permissions?.includes('gatepass.scan') ? 'block' : 'none';
+                document.getElementById('navGroupSecurity').style.display = 'none';
                 document.getElementById('navAdminLabel').innerText = "System Configuration";
                 document.getElementById('filterDeptContainer').style.display = 'block';
                 switchSection('adminPanel');

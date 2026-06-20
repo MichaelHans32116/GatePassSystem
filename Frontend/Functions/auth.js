@@ -39,6 +39,7 @@ function mapAuthenticatedUser(apiUser) {
         permissions: apiUser.permissions || [],
         dept: apiUser.department || 'System',
         position: apiUser.position || '',
+        employeeQrToken: apiUser.employeeQrToken || null,
         mustChangePassword: Boolean(apiUser.mustChangePassword),
         canNoteGatePass: roles.includes('PAS_NOTER')
     };

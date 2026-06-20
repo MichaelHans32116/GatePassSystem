@@ -563,7 +563,11 @@ CREATE TABLE IF NOT EXISTS tbl_gate_pass_scans (
         REFERENCES tbl_scan_actions(scan_action_code),
     INDEX ix_scans_request_time (gate_pass_id, scanned_at),
     INDEX ix_scans_guard_time (scanned_by_user_id, scanned_at),
-    INDEX ix_scans_result_time (result_code, scanned_at)
+    INDEX ix_scans_result_time (result_code, scanned_at),
+    INDEX ix_scans_identifier_time (
+        provided_identifier_hash,
+        scanned_at
+    )
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS tbl_notifications (

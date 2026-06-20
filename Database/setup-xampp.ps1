@@ -83,6 +83,24 @@ if ($databaseExists -eq 0) {
             Write-Host 'Applying database migration 003...' -ForegroundColor Yellow
             Invoke-MySqlSource 'Database\Migrations\003_phase5_workflow_defaults.sql'
         }
+
+        $employeeQrSecurityApplied = [int](Invoke-MySqlQuery(
+            "SELECT COUNT(*) FROM gate_pass_system.tbl_schema_versions WHERE version_no='004';"
+        ))[0]
+
+        if ($employeeQrSecurityApplied -eq 0) {
+            Write-Host 'Applying database migration 004...' -ForegroundColor Yellow
+            Invoke-MySqlSource 'Database\Migrations\004_security_employee_qr.sql'
+        }
+
+        $scanCooldownIndexApplied = [int](Invoke-MySqlQuery(
+            "SELECT COUNT(*) FROM gate_pass_system.tbl_schema_versions WHERE version_no='005';"
+        ))[0]
+
+        if ($scanCooldownIndexApplied -eq 0) {
+            Write-Host 'Applying database migration 005...' -ForegroundColor Yellow
+            Invoke-MySqlSource 'Database\Migrations\005_scan_cooldown_index.sql'
+        }
     }
 }
 

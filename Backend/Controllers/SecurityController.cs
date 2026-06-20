@@ -9,7 +9,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace GatePassSystem.Api.Controllers;
 
 [ApiController]
-[Authorize(Policy = GatePassPermissions.Scan)]
+[Authorize(Roles = "SECURITY")]
 [Route("api/security")]
 public sealed class SecurityController(
     ISecurityService securityService) : ApiControllerBase

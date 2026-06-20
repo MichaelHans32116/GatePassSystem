@@ -39,6 +39,34 @@ http://127.0.0.1/GatePassSystem/
 The API remains on port `5087`. Development CORS is enabled only by the local
 launcher so the Apache/PHP frontend can call the API from localhost or a LAN IP.
 
+## Start protected internet practice access
+
+Run:
+
+```powershell
+.\start-public.ps1
+```
+
+This installs Cloudflare Tunnel when needed, creates a separate
+password-protected Apache gateway, and publishes a temporary HTTPS URL without
+opening router ports. The URL and generated access credentials are stored only
+under the ignored `LocalData\public-access` directory.
+
+The launcher uses HTTP/2 for the tunnel because some networks intermittently
+drop Cloudflare QUIC/UDP sessions. It also verifies the temporary hostname
+through Cloudflare DNS while other public resolvers are still propagating it.
+Both the frontend and `/api` route remain behind the gateway password; the
+ASP.NET Bearer token is forwarded separately after Apache authentication.
+
+Stop the public practice URL when testing is complete:
+
+```powershell
+.\stop-public.ps1
+```
+
+The temporary URL changes whenever the tunnel restarts. MariaDB and the
+ASP.NET API remain on the laptop; only the protected gateway is exposed.
+
 ## Start the portable Docker stack
 
 Docker Desktop is required. Double-click `docker-start.bat`, or run:

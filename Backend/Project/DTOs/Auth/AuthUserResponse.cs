@@ -10,11 +10,14 @@ public sealed class AuthUserResponse
     public string FullName { get; init; } = string.Empty;
     public string? Department { get; init; }
     public string? Position { get; init; }
+    public string? EmployeeQrToken { get; init; }
     public bool MustChangePassword { get; init; }
     public IReadOnlyList<string> Roles { get; init; } = [];
     public IReadOnlyList<string> Permissions { get; init; } = [];
 
-    public static AuthUserResponse FromModel(AuthUser user) =>
+    public static AuthUserResponse FromModel(
+        AuthUser user,
+        string? employeeQrToken = null) =>
         new()
         {
             Id = user.AccountId,
@@ -23,6 +26,7 @@ public sealed class AuthUserResponse
             FullName = user.DisplayName,
             Department = user.Department,
             Position = user.Position,
+            EmployeeQrToken = employeeQrToken,
             MustChangePassword = user.MustChangePassword,
             Roles = user.Roles,
             Permissions = user.Permissions

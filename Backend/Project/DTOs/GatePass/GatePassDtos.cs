@@ -61,7 +61,8 @@ public sealed record SecurityScanResult(
     string ResultCode,
     string Message,
     string? RequestStatus,
-    DateTimeOffset? RecordedAt);
+    DateTimeOffset? RecordedAt,
+    int? CooldownSecondsRemaining = null);
 
 public sealed record QrTokenResponse(
     long GatePassId,

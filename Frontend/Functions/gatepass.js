@@ -315,7 +315,6 @@ async function loadFleetReferences() {
         populateDriverOptions();
         initializeGatePassForm();
         renderAdminTables();
-        renderFleetStatusWidget();
     } catch (error) {
         showToast(error instanceof ApiError ? error.message : 'Unable to load fleet references.', 'error');
     }
@@ -370,7 +369,7 @@ async function loadQrToken(pass) {
 }
 
 async function renderStandardDashboard() {
-    renderFleetStatusWidget();
+    renderMyEmployeeQr();
     document.getElementById('btnNewRequest').style.display =
         currentUser.role === 'President' ? 'none' : 'block';
 
@@ -401,6 +400,28 @@ async function renderStandardDashboard() {
     `).join('') || '<tr><td colspan="5" class="px-5 py-8 text-center text-gray-400">No records found.</td></tr>';
 }
 
+function renderMyEmployeeQr() {
+    const card = document.getElementById('myEmployeeQrCard');
+    const container = document.getElementById('myEmployeeQrCode');
+    if (!card || !container) return;
+
+    const token = currentUser?.employeeQrToken;
+    card.classList.toggle('hidden', !token);
+    container.innerHTML = '';
+    if (!token || typeof window.QRCode !== 'function') return;
+
+    new QRCode(container, {
+        text: token,
+        width: 132,
+        height: 132,
+        colorDark: '#0f172a',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.H
+    });
+    const employeeId = document.getElementById('myEmployeeQrId');
+    if (employeeId) employeeId.innerText = currentUser.id;
+}
+
 window.isDatabaseSession = isDatabaseSession;
 window.mapApiGatePass = mapApiGatePass;
 window.setNowTime = setNowTime;
@@ -419,3 +440,4 @@ window.loadAllGatePasses = loadAllGatePasses;
 window.getGatePassDetail = getGatePassDetail;
 window.loadQrToken = loadQrToken;
 window.renderStandardDashboard = renderStandardDashboard;
+window.renderMyEmployeeQr = renderMyEmployeeQr;

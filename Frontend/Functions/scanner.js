@@ -5,10 +5,10 @@ var qrCameraAnimationFrame = null;
 var qrCameraDetector = null;
 var qrCameraLastDetectionAt = 0;
 var qrCameraScanning = false;
+var qrClientCooldowns = new Map();
 
 async function simulateQrScan(identifierOverride = null, fromCamera = false) {
-    const canScan = currentUser.role === 'Security' ||
-        currentUser.permissions?.includes('gatepass.scan');
+    const canScan = currentUser.role === 'Security';
     if (!canScan) return;
     const input = document.getElementById('manualQrInput');
     const identifier = (identifierOverride || input.value).trim();
@@ -23,6 +23,8 @@ async function simulateQrScan(identifierOverride = null, fromCamera = false) {
     }
 
     try {
+        const inputButton = document.querySelector('#manualQrInput + button');
+        if (inputButton) inputButton.disabled = true;
         const isQrToken =
             identifier.startsWith('GP1.') ||
             identifier.startsWith('EMP1.');
@@ -30,18 +32,44 @@ async function simulateQrScan(identifierOverride = null, fromCamera = false) {
             qrToken: isQrToken ? identifier : null,
             manualGatePassNo: isQrToken ? null : identifier
         });
-        showToast(result.message, result.resultCode.includes('RECORDED') ? 'success' : 'error');
+        const recorded = result.resultCode.includes('RECORDED');
+        const ignored = result.resultCode === 'NO_ACTIVE_GATE_PASS_IGNORED';
+        const cooldown = result.resultCode === 'SCAN_COOLDOWN';
+        showToast(
+            result.message,
+            recorded ? 'success' : ignored || cooldown ? 'info' : 'error'
+        );
         input.value = '';
-        if (fromCamera && result.resultCode.includes('RECORDED')) {
-            stopQrCamera();
-            setQrCameraStatus(
-                `${result.message} Camera stopped to prevent a duplicate scan.`,
-                'success'
+        if (fromCamera) {
+            const cooldownSeconds =
+                result.cooldownSecondsRemaining || 30;
+            qrClientCooldowns.set(
+                identifier,
+                Date.now() + cooldownSeconds * 1000
             );
+            qrCameraScanning = true;
+            setQrCameraStatus(
+                `${result.message} Ready for another employee QR.`,
+                recorded
+                    ? 'success'
+                    : ignored || cooldown
+                        ? 'info'
+                        : 'error'
+            );
+            qrCameraAnimationFrame =
+                requestAnimationFrame(scanQrCameraFrame);
         }
         await renderGuardDashboard();
     } catch (error) {
         showToast(error instanceof ApiError ? error.message : 'Scan failed.', 'error');
+        if (fromCamera) {
+            qrCameraScanning = true;
+            qrCameraAnimationFrame =
+                requestAnimationFrame(scanQrCameraFrame);
+        }
+    } finally {
+        const inputButton = document.querySelector('#manualQrInput + button');
+        if (inputButton) inputButton.disabled = false;
     }
 }
 
@@ -137,7 +165,7 @@ async function startQrCamera() {
         document.getElementById('startQrCameraButton').disabled = true;
         document.getElementById('stopQrCameraButton').disabled = false;
         qrCameraScanning = true;
-        setQrCameraStatus('Camera active. Hold the Gate Pass QR inside the frame.', 'success');
+        setQrCameraStatus('Camera active. Hold an employee QR inside the frame.', 'success');
         await initializeQrCameras();
         scanQrCameraFrame();
     } catch (error) {
@@ -180,8 +208,16 @@ async function scanQrCameraFrame() {
             }
 
             if (rawValue && qrCameraScanning) {
+                const clientCooldownUntil =
+                    qrClientCooldowns.get(rawValue) || 0;
+                if (clientCooldownUntil > Date.now()) {
+                    qrCameraAnimationFrame =
+                        requestAnimationFrame(scanQrCameraFrame);
+                    return;
+                }
+                qrClientCooldowns.delete(rawValue);
                 qrCameraScanning = false;
-                setQrCameraStatus('QR detected. Recording transaction...', 'info');
+                setQrCameraStatus('Employee QR detected. Checking gate pass queue...', 'info');
                 await simulateQrScan(rawValue, true);
                 return;
             }

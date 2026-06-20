@@ -5,8 +5,11 @@ using GatePassSystem.Project.Models;
 namespace GatePassSystem.Project.Repositories;
 
 public sealed class SecurityRepository(
-    IDatabaseConnectionFactory connectionFactory) : ISecurityRepository
+    IDatabaseConnectionFactory connectionFactory,
+    TimeProvider timeProvider) : ISecurityRepository
 {
+    private const int ScanCooldownSeconds = 30;
+
     public async Task<IReadOnlyList<SecurityQueueItem>> GetQueueAsync(
         CancellationToken cancellationToken = default)
     {
@@ -40,6 +43,40 @@ public sealed class SecurityRepository(
 
         try
         {
+            var now = timeProvider.GetUtcNow().UtcDateTime;
+            var cooldownFrom = now.AddSeconds(-ScanCooldownSeconds);
+            var lastIdentifierScanAt =
+                await connection.QuerySingleOrDefaultAsync<DateTime?>(
+                    new CommandDefinition(
+                        """
+                        SELECT MAX(scanned_at)
+                        FROM tbl_gate_pass_scans
+                        WHERE provided_identifier_hash = @IdentifierHash
+                          AND scanned_at >= @CooldownFrom;
+                        """,
+                        new
+                        {
+                            IdentifierHash = providedIdentifierHash,
+                            CooldownFrom = cooldownFrom
+                        },
+                        transaction,
+                        cancellationToken: cancellationToken));
+            if (lastIdentifierScanAt.HasValue)
+            {
+                var remaining = Math.Max(
+                    1,
+                    ScanCooldownSeconds -
+                    (int)Math.Floor((now - lastIdentifierScanAt.Value).TotalSeconds));
+                await transaction.CommitAsync(cancellationToken);
+                return new SecurityScanResult(
+                    null,
+                    "SCAN_COOLDOWN",
+                    $"Please wait {remaining} second{(remaining == 1 ? "" : "s")} before scanning this employee again.",
+                    null,
+                    null,
+                    remaining);
+            }
+
             var gatePass = await connection.QuerySingleOrDefaultAsync<ScanTarget>(
                 new CommandDefinition(
                     """
@@ -48,7 +85,14 @@ public sealed class SecurityRepository(
                         request_row.gate_pass_status_code AS StatusCode,
                         request_row.will_return AS WillReturn,
                         request_row.vehicle_id AS VehicleId,
-                        request_row.qr_expires_at AS QrExpiresAt
+                        request_row.qr_expires_at AS QrExpiresAt,
+                        (
+                            SELECT COUNT(*)
+                            FROM tbl_gate_pass_approval_steps approval
+                            WHERE approval.gate_pass_id =
+                                request_row.gate_pass_id
+                              AND approval.approval_status_code = 'PENDING'
+                        ) AS PendingApprovalCount
                     FROM tbl_gate_pass_requests request_row
                     JOIN tbl_gate_pass_statuses status_row
                         ON status_row.gate_pass_status_code =
@@ -92,8 +136,8 @@ public sealed class SecurityRepository(
             {
                 var missing = new SecurityScanResult(
                     null,
-                    "NO_ACTIVE_GATE_PASS",
-                    "Gate pass verification is not available.",
+                    "NO_ACTIVE_GATE_PASS_IGNORED",
+                    "No active gate pass queue for this employee. Scan ignored.",
                     null,
                     null);
                 await InsertScanAsync(
@@ -105,12 +149,12 @@ public sealed class SecurityRepository(
                     "REJECTED_ATTEMPT",
                     missing,
                     providedIdentifierHash,
+                    now,
                     cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
                 return missing;
             }
 
-            var now = DateTime.UtcNow;
             if (qrTokenHash is not null &&
                 gatePass.QrExpiresAt.HasValue &&
                 gatePass.QrExpiresAt.Value < now)
@@ -130,9 +174,33 @@ public sealed class SecurityRepository(
                     "REJECTED_ATTEMPT",
                     expired,
                     providedIdentifierHash,
+                    now,
                     cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
                 return expired;
+            }
+
+            if (gatePass.PendingApprovalCount > 0)
+            {
+                var incomplete = new SecurityScanResult(
+                    gatePass.GatePassId,
+                    "REQUIREMENTS_INCOMPLETE",
+                    "Gate pass requirements and approvals are incomplete.",
+                    gatePass.StatusCode,
+                    null);
+                await InsertScanAsync(
+                    connection,
+                    transaction,
+                    gatePass.GatePassId,
+                    guardUserId,
+                    manualGatePassNo is null ? "QR" : "MANUAL_GATE_PASS",
+                    "REJECTED_ATTEMPT",
+                    incomplete,
+                    providedIdentifierHash,
+                    now,
+                    cancellationToken);
+                await transaction.CommitAsync(cancellationToken);
+                return incomplete;
             }
 
             string action;
@@ -179,6 +247,7 @@ public sealed class SecurityRepository(
                     "REJECTED_ATTEMPT",
                     invalid,
                     providedIdentifierHash,
+                    now,
                     cancellationToken);
                 await transaction.CommitAsync(cancellationToken);
                 return invalid;
@@ -265,6 +334,7 @@ public sealed class SecurityRepository(
                 action,
                 success,
                 providedIdentifierHash,
+                now,
                 cancellationToken);
 
             await transaction.CommitAsync(cancellationToken);
@@ -286,6 +356,7 @@ public sealed class SecurityRepository(
         string action,
         SecurityScanResult result,
         string identifierHash,
+        DateTime scannedAt,
         CancellationToken cancellationToken) =>
         connection.ExecuteAsync(new CommandDefinition(
             """
@@ -296,7 +367,8 @@ public sealed class SecurityRepository(
                 scan_action_code,
                 result_code,
                 message,
-                provided_identifier_hash
+                provided_identifier_hash,
+                scanned_at
             ) VALUES (
                 @GatePassId,
                 @GuardUserId,
@@ -304,7 +376,8 @@ public sealed class SecurityRepository(
                 @Action,
                 @ResultCode,
                 @Message,
-                @IdentifierHash
+                @IdentifierHash,
+                @ScannedAt
             );
             """,
             new
@@ -315,7 +388,8 @@ public sealed class SecurityRepository(
                 Action = action,
                 result.ResultCode,
                 result.Message,
-                IdentifierHash = identifierHash
+                IdentifierHash = identifierHash,
+                ScannedAt = scannedAt
             },
             transaction,
             cancellationToken: cancellationToken));
@@ -327,5 +401,6 @@ public sealed class SecurityRepository(
         public bool WillReturn { get; init; }
         public long? VehicleId { get; init; }
         public DateTime? QrExpiresAt { get; init; }
+        public int PendingApprovalCount { get; init; }
     }
 }

@@ -671,27 +671,10 @@ function renderAdminTables() {
     }
 }
 
-function renderFleetStatusWidget() {
-    const fleetWidget = document.getElementById('hrFleetWidget');
-    if (!fleetWidget) return;
-    if (!currentUser?.canNoteGatePass) {
-        fleetWidget.classList.add('hidden');
-        return;
-    }
-    fleetWidget.classList.remove('hidden');
-    const vehicles = isDatabaseSession() ? databaseVehicles : mockVehicles;
-    document.getElementById('fleetGridContainer').innerHTML = vehicles.map(vehicle => `
-        <div class="border rounded p-3 text-sm flex justify-between items-center ${vehicle.status === 'Available' || vehicle.status === 'AVAILABLE' ? 'bg-green-50 border-green-200' : 'bg-red-50 border-red-200'}">
-            <div><p class="font-bold text-gray-800">${adminEscape(vehicle.name)}</p><p class="text-[10px] text-gray-500">${adminEscape(vehicle.driver)}</p></div>
-            <span class="text-[10px] font-bold px-2 py-1 rounded">${adminEscape(vehicle.status)}</span>
-        </div>`).join('');
-}
-
 window.renderAdminLogs = renderAdminLogs;
 window.changeLogPage = changeLogPage;
 window.switchAdminTab = switchAdminTab;
 window.renderAdminTables = renderAdminTables;
-window.renderFleetStatusWidget = renderFleetStatusWidget;
 window.renderAdminUsers = renderAdminUsers;
 window.changeUserPage = changeUserPage;
 window.showUserRoleDetails = showUserRoleDetails;
