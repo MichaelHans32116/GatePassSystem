@@ -39,7 +39,24 @@ http://127.0.0.1/GatePassSystem/
 The API remains on port `5087`. Development CORS is enabled only by the local
 launcher so the Apache/PHP frontend can call the API from localhost or a LAN IP.
 
+### Access from another device on the same Wi-Fi
+
+Cloudflare is not required for devices connected to the same router or Wi-Fi.
+After running `deploy-xampp.ps1` or `start-local.ps1`, use the LAN URL printed
+by the launcher. Example:
+
+```text
+http://192.168.100.46/GatePassSystem/
+```
+
+The IP address can change after reconnecting to Wi-Fi, so use the current
+address printed by the launcher instead of permanently relying on the example.
+The laptop, XAMPP Apache, MariaDB, and the ASP.NET API must remain running.
+
 ## Start protected internet practice access
+
+Cloudflare access is optional. Use it only when the system must be opened from
+another network, mobile data, or another country.
 
 Run:
 
@@ -66,6 +83,48 @@ Stop the public practice URL when testing is complete:
 
 The temporary URL changes whenever the tunnel restarts. MariaDB and the
 ASP.NET API remain on the laptop; only the protected gateway is exposed.
+Anyone with the current URL and generated gateway credentials can connect from
+outside the local network while the laptop and tunnel remain online. Do not
+commit or share the credentials publicly.
+
+The current temporary URL and gateway credentials are written locally to:
+
+```text
+LocalData\public-access\credentials.txt
+```
+
+`LocalData` is ignored by Git, so credentials are never included in a push.
+Run `start-public.ps1` on each computer after pulling; do not expect an old
+temporary `trycloudflare.com` URL from another machine to remain active.
+
+### Cloudflare URL does not resolve
+
+If Cloudflare and Google DNS already know the temporary hostname but Windows
+reports `DNS name does not exist`, the router may be caching an old negative
+DNS response. Open PowerShell as Administrator and set reliable Wi-Fi DNS:
+
+```powershell
+Set-DnsClientServerAddress `
+    -InterfaceAlias "Wi-Fi" `
+    -ServerAddresses @(
+        "1.1.1.1",
+        "8.8.8.8",
+        "2606:4700:4700::1111",
+        "2001:4860:4860::8888"
+    )
+Clear-DnsClientCache
+ipconfig /flushdns
+```
+
+To restore automatic DNS from the router:
+
+```powershell
+Set-DnsClientServerAddress -InterfaceAlias "Wi-Fi" -ResetServerAddresses
+```
+
+Cloudflare Quick Tunnels are intended for temporary testing and have no uptime
+guarantee. Use a named Cloudflare Tunnel and company-controlled domain for a
+stable production address.
 
 ## Start the portable Docker stack
 
