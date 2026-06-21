@@ -422,6 +422,76 @@ function renderMyEmployeeQr() {
     if (employeeId) employeeId.innerText = currentUser.id;
 }
 
+function toggleEmployeeQrDialog(forceOpen) {
+    const dialog = document.getElementById('employeeQrDialog');
+    const container = document.getElementById('employeeQrDialogCode');
+    const employeeId = document.getElementById('employeeQrDialogId');
+    const token = currentUser?.employeeQrToken;
+    if (!dialog || !container) return;
+
+    const shouldOpen = typeof forceOpen === 'boolean'
+        ? forceOpen
+        : dialog.classList.contains('hidden');
+
+    if (!shouldOpen) {
+        dialog.classList.add('hidden', 'pointer-events-none');
+        document.body.classList.remove('overflow-hidden');
+        return;
+    }
+
+    if (!token || typeof window.QRCode !== 'function') return;
+
+    container.innerHTML = '';
+    new QRCode(container, {
+        text: token,
+        width: 280,
+        height: 280,
+        colorDark: '#0f172a',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.H
+    });
+    if (employeeId) employeeId.innerText = currentUser.id || '';
+    dialog.classList.remove('hidden', 'pointer-events-none');
+    dialog.classList.add('flex');
+    document.body.classList.add('overflow-hidden');
+}
+
+function closeEmployeeQrDialog() {
+    toggleEmployeeQrDialog(false);
+}
+
+function initializeEmployeeQrCard() {
+    const card = document.getElementById('myEmployeeQrCard');
+    const dialog = document.getElementById('employeeQrDialog');
+    if (card && !card.dataset.boundExpand) {
+        card.addEventListener('click', () => toggleEmployeeQrDialog(true));
+        card.addEventListener('keydown', event => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                event.preventDefault();
+                toggleEmployeeQrDialog(true);
+            }
+        });
+        card.dataset.boundExpand = 'true';
+    }
+
+    if (dialog && !dialog.dataset.boundDismiss) {
+        dialog.addEventListener('click', event => {
+            if (event.target === dialog) {
+                closeEmployeeQrDialog();
+            }
+        });
+        dialog.dataset.boundDismiss = 'true';
+    }
+}
+
+document.addEventListener('keydown', event => {
+    if (event.key === 'Escape') {
+        closeEmployeeQrDialog();
+    }
+});
+
+document.addEventListener('DOMContentLoaded', initializeEmployeeQrCard);
+
 window.isDatabaseSession = isDatabaseSession;
 window.mapApiGatePass = mapApiGatePass;
 window.setNowTime = setNowTime;
@@ -441,3 +511,5 @@ window.getGatePassDetail = getGatePassDetail;
 window.loadQrToken = loadQrToken;
 window.renderStandardDashboard = renderStandardDashboard;
 window.renderMyEmployeeQr = renderMyEmployeeQr;
+window.toggleEmployeeQrDialog = toggleEmployeeQrDialog;
+window.closeEmployeeQrDialog = closeEmployeeQrDialog;

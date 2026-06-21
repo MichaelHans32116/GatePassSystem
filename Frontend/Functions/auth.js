@@ -57,10 +57,6 @@ function showAuthenticatedApp(user, showSignedInToast = true) {
 
     document.getElementById('navUserName').innerText = user.name;
     document.getElementById('navUserRole').innerText = user.role;
-    document.getElementById('initialPasswordBanner')?.classList.toggle(
-        'hidden',
-        !user.mustChangePassword
-    );
     setupRoleAccess(user);
     window.dispatchEvent(new CustomEvent('gatepass:authenticated', {
         detail: { database: ApiClient.isDatabaseSession(), user }
@@ -143,7 +139,6 @@ async function logout() {
     currentUser = null;
     document.getElementById('appView').classList.add('hidden');
     document.getElementById('loginView').classList.remove('hidden');
-    document.getElementById('initialPasswordBanner')?.classList.add('hidden');
     document.getElementById('loginForm').reset();
 
     if (

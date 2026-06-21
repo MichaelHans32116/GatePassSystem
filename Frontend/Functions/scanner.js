@@ -13,7 +13,7 @@ async function simulateQrScan(identifierOverride = null, fromCamera = false) {
     const input = document.getElementById('manualQrInput');
     const identifier = (identifierOverride || input.value).trim();
     if (!identifier) {
-        showToast('Enter a QR token or Gate Pass number.', 'error');
+        showToast('Enter a QR or GP-ID.', 'error');
         return;
     }
 
@@ -49,7 +49,7 @@ async function simulateQrScan(identifierOverride = null, fromCamera = false) {
             );
             qrCameraScanning = true;
             setQrCameraStatus(
-                `${result.message} Ready for another employee QR.`,
+                `${result.message} Ready for next scan.`,
                 recorded
                     ? 'success'
                     : ignored || cooldown
@@ -93,7 +93,7 @@ async function initializeQrCameras() {
     const select = document.getElementById('qrCameraSelect');
     if (!select || !navigator.mediaDevices?.enumerateDevices) {
         setQrCameraStatus(
-            'Camera scanning requires localhost/HTTPS and a supported browser.',
+            'Camera needs localhost/HTTPS.',
             'error'
         );
         return;
@@ -103,7 +103,7 @@ async function initializeQrCameras() {
     const hasJsQr = typeof window.jsQR === 'function';
     if (!hasBarcodeDetector && !hasJsQr) {
         setQrCameraStatus(
-            'QR decoder did not load. Refresh the page or use manual scan.',
+            'QR reader not ready. Refresh or use manual entry.',
             'error'
         );
         return;
@@ -141,7 +141,7 @@ async function initializeQrCameras() {
 
 async function startQrCamera() {
     if (!navigator.mediaDevices?.getUserMedia) {
-        setQrCameraStatus('Camera access is unavailable. Use localhost/HTTPS.', 'error');
+        setQrCameraStatus('Camera unavailable. Use localhost/HTTPS.', 'error');
         return;
     }
 
@@ -165,14 +165,14 @@ async function startQrCamera() {
         document.getElementById('startQrCameraButton').disabled = true;
         document.getElementById('stopQrCameraButton').disabled = false;
         qrCameraScanning = true;
-        setQrCameraStatus('Camera active. Hold an employee QR inside the frame.', 'success');
+        setQrCameraStatus('Camera active. Hold QR in frame.', 'success');
         await initializeQrCameras();
         scanQrCameraFrame();
     } catch (error) {
         stopQrCamera();
         setQrCameraStatus(
             error.name === 'NotAllowedError'
-                ? 'Camera permission was denied. Allow camera access and try again.'
+                ? 'Camera permission denied.'
                 : `Unable to start camera: ${error.message}`,
             'error'
         );
@@ -217,7 +217,7 @@ async function scanQrCameraFrame() {
                 }
                 qrClientCooldowns.delete(rawValue);
                 qrCameraScanning = false;
-                setQrCameraStatus('Employee QR detected. Checking gate pass queue...', 'info');
+                setQrCameraStatus('QR detected. Checking queue...', 'info');
                 await simulateQrScan(rawValue, true);
                 return;
             }
