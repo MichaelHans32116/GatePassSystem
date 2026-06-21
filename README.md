@@ -15,10 +15,18 @@ serves the vanilla frontend on port `5500`, verifies `/api/health`, and opens
 the frontend. Do not open `index.html` directly because the API expects an
 HTTP origin.
 
-The launcher binds the frontend and API to all local network interfaces. It
-prints LAN URLs that can be opened by another device on the same network.
-Manual QR entry works over HTTP; live phone-camera scanning requires HTTPS or
-localhost because of browser security rules.
+The default launcher is localhost-only for laptop testing on the current
+computer. Manual QR entry works over HTTP; live phone-camera scanning requires
+HTTPS or localhost because of browser security rules.
+
+If you intentionally want same-Wi-Fi/LAN access, run:
+
+```powershell
+.\start-local.ps1 -ExposeLan
+```
+
+This binds the frontend and API to local network interfaces and prints LAN
+URLs that can be opened by another device on the same router or Wi-Fi.
 
 ## Deploy through local XAMPP
 

@@ -1,13 +1,18 @@
 param(
     [switch]$NoBrowser,
     [switch]$SkipBuild,
-    [switch]$UseXamppApache
+    [switch]$UseXamppApache,
+    [switch]$ExposeLan
 )
 
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $MyInvocation.MyCommand.Path
 $apiHealthUrl = 'http://127.0.0.1:5087'
-$apiListenUrl = 'http://0.0.0.0:5087'
+$apiListenUrl = if ($ExposeLan) {
+    'http://0.0.0.0:5087'
+} else {
+    'http://127.0.0.1:5087'
+}
 $frontendUrl = if ($UseXamppApache) {
     'http://127.0.0.1/GatePassSystem/'
 } else {
@@ -133,7 +138,7 @@ if (-not (Test-LocalPort 5087)) {
 `$env:ASPNETCORE_ENVIRONMENT='Development'
 `$env:ASPNETCORE_URLS='$apiListenUrl'
 `$env:GATEPASS_DB_CONNECTION='Server=127.0.0.1;Port=3306;Database=gate_pass_system;User ID=root;Password=;Allow User Variables=True;SslMode=None'
-`$env:Cors__AllowAnyOrigin='true'
+`$env:Cors__AllowAnyOrigin='$($ExposeLan.ToString().ToLowerInvariant())'
 Set-Location '$apiDirectory'
 & '$apiExe'
 "@
@@ -174,8 +179,9 @@ if ($UseXamppApache) {
     }
 
     if (-not (Test-LocalPort 5500)) {
+        $phpBindAddress = if ($ExposeLan) { '0.0.0.0:5500' } else { '127.0.0.1:5500' }
         Start-Process -FilePath $php `
-            -ArgumentList @('-S', '0.0.0.0:5500', '-t', $repo) `
+            -ArgumentList @('-S', $phpBindAddress, '-t', $repo) `
             -WorkingDirectory $repo `
             -WindowStyle Hidden
     }
@@ -216,20 +222,22 @@ if ($apiOutputLog) {
     Write-Host "API error log: $apiErrorLog"
 }
 
-$lanAddresses = Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue |
-    Where-Object {
-        $_.IPAddress -notlike '127.*' -and
-        $_.IPAddress -notlike '169.254.*'
-    } |
-    Select-Object -ExpandProperty IPAddress -Unique
+if ($ExposeLan) {
+    $lanAddresses = Get-NetIPAddress -AddressFamily IPv4 -ErrorAction SilentlyContinue |
+        Where-Object {
+            $_.IPAddress -notlike '127.*' -and
+            $_.IPAddress -notlike '169.254.*'
+        } |
+        Select-Object -ExpandProperty IPAddress -Unique
 
-foreach ($address in $lanAddresses) {
-    $lanFrontend = if ($UseXamppApache) {
-        "http://$address/GatePassSystem/"
-    } else {
-        "http://${address}:5500"
+    foreach ($address in $lanAddresses) {
+        $lanFrontend = if ($UseXamppApache) {
+            "http://$address/GatePassSystem/"
+        } else {
+            "http://${address}:5500"
+        }
+        Write-Host "LAN frontend: $lanFrontend"
     }
-    Write-Host "LAN frontend: $lanFrontend"
 }
 
 if (-not $NoBrowser) {
