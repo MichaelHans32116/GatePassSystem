@@ -422,12 +422,66 @@ function renderMyEmployeeQr() {
     if (employeeId) employeeId.innerText = currentUser.id;
 }
 
-function toggleEmployeeQrDialog(forceOpen) {
+function getEmployeeQrViewportSize() {
+    const viewport = window.visualViewport;
+    return {
+        width: Math.floor(viewport?.width || window.innerWidth || 0),
+        height: Math.floor(viewport?.height || window.innerHeight || 0)
+    };
+}
+
+function getEmployeeQrDialogMetrics() {
+    const panel = document.getElementById('employeeQrDialogPanel');
+    const container = document.getElementById('employeeQrDialogCode');
+    const { width: viewportWidth, height: viewportHeight } = getEmployeeQrViewportSize();
+
+    if (panel) {
+        panel.style.maxWidth = `${Math.min(Math.max(viewportWidth - 24, 0), 520)}px`;
+    }
+
+    const panelStyles = panel ? window.getComputedStyle(panel) : null;
+    const containerStyles = container ? window.getComputedStyle(container) : null;
+    const panelPaddingX = panelStyles
+        ? parseFloat(panelStyles.paddingLeft) + parseFloat(panelStyles.paddingRight)
+        : 32;
+    const containerPaddingX = containerStyles
+        ? parseFloat(containerStyles.paddingLeft) + parseFloat(containerStyles.paddingRight)
+        : 24;
+    const panelWidth = panel?.clientWidth || Math.min(viewportWidth - 24, 520);
+    const widthLimit = panelWidth - panelPaddingX - containerPaddingX - 6;
+    const heightReserve = viewportHeight < 700 ? 210 : 250;
+    const heightLimit = viewportHeight - heightReserve;
+    const qrSize = Math.max(0, Math.floor(Math.min(widthLimit, heightLimit, 420)));
+
+    return { qrSize };
+}
+
+function renderExpandedEmployeeQr() {
     const dialog = document.getElementById('employeeQrDialog');
     const container = document.getElementById('employeeQrDialogCode');
     const employeeId = document.getElementById('employeeQrDialogId');
     const token = currentUser?.employeeQrToken;
-    if (!dialog || !container) return;
+    if (!dialog || dialog.classList.contains('hidden') || !container) return;
+    if (!token || typeof window.QRCode !== 'function') return;
+
+    const { qrSize } = getEmployeeQrDialogMetrics();
+    if (qrSize <= 0) return;
+    container.innerHTML = '';
+    new QRCode(container, {
+        text: token,
+        width: qrSize,
+        height: qrSize,
+        colorDark: '#0f172a',
+        colorLight: '#ffffff',
+        correctLevel: QRCode.CorrectLevel.H
+    });
+    if (employeeId) employeeId.innerText = currentUser.id || '';
+}
+
+function toggleEmployeeQrDialog(forceOpen) {
+    const dialog = document.getElementById('employeeQrDialog');
+    const token = currentUser?.employeeQrToken;
+    if (!dialog) return;
 
     const shouldOpen = typeof forceOpen === 'boolean'
         ? forceOpen
@@ -441,19 +495,10 @@ function toggleEmployeeQrDialog(forceOpen) {
 
     if (!token || typeof window.QRCode !== 'function') return;
 
-    container.innerHTML = '';
-    new QRCode(container, {
-        text: token,
-        width: 280,
-        height: 280,
-        colorDark: '#0f172a',
-        colorLight: '#ffffff',
-        correctLevel: QRCode.CorrectLevel.H
-    });
-    if (employeeId) employeeId.innerText = currentUser.id || '';
     dialog.classList.remove('hidden', 'pointer-events-none');
     dialog.classList.add('flex');
     document.body.classList.add('overflow-hidden');
+    requestAnimationFrame(renderExpandedEmployeeQr);
 }
 
 function closeEmployeeQrDialog() {
@@ -491,6 +536,8 @@ document.addEventListener('keydown', event => {
 });
 
 document.addEventListener('DOMContentLoaded', initializeEmployeeQrCard);
+window.addEventListener('resize', renderExpandedEmployeeQr);
+window.visualViewport?.addEventListener('resize', renderExpandedEmployeeQr);
 
 window.isDatabaseSession = isDatabaseSession;
 window.mapApiGatePass = mapApiGatePass;
@@ -513,3 +560,4 @@ window.renderStandardDashboard = renderStandardDashboard;
 window.renderMyEmployeeQr = renderMyEmployeeQr;
 window.toggleEmployeeQrDialog = toggleEmployeeQrDialog;
 window.closeEmployeeQrDialog = closeEmployeeQrDialog;
+window.renderExpandedEmployeeQr = renderExpandedEmployeeQr;
