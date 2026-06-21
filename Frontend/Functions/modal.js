@@ -256,7 +256,7 @@ async function viewPass(id, isReviewing = false) {
                 return;
             }
             if(!p) return;
-            currentViewedPassId = p.id;
+            currentViewedPassId = getGatePassViewKey(p);
 
             const setVal = (elemId, val) => {
                 const el = document.getElementById(elemId);

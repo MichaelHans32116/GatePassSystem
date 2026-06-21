@@ -20,7 +20,7 @@ async function approveCurrentPass() {
         return;
     }
 
-    const pass = gatePasses.find(item => item.id === currentViewedPassId);
+    const pass = findGatePassRecord();
     if (!pass) return;
 
     const approveButton = document.getElementById('approveRequestButton');
@@ -44,7 +44,7 @@ async function approveCurrentPass() {
 
 async function rejectCurrentPass() {
     if (!isDatabaseSession()) {
-        const pass = gatePasses.find(item => item.id === currentViewedPassId);
+        const pass = findGatePassRecord();
         if (!pass) return;
         const reason = window.prompt('Reason for rejection:');
         if (!reason?.trim()) return;
@@ -55,7 +55,7 @@ async function rejectCurrentPass() {
         return;
     }
 
-    const pass = gatePasses.find(item => item.id === currentViewedPassId);
+    const pass = findGatePassRecord();
     if (!pass) return;
     const reason = window.prompt('Reason for rejection:');
     if (!reason?.trim()) return;
@@ -75,7 +75,7 @@ async function rejectCurrentPass() {
 }
 
 function approveCurrentMockPass() {
-    const pass = gatePasses.find(item => item.id === currentViewedPassId);
+    const pass = findGatePassRecord();
     if (!pass) return;
 
     const sigWidth = document.getElementById('sigSize').value;
@@ -183,7 +183,7 @@ function updateApprovalQueueDisplay(toApprove) {
                 <p class="text-xs text-gray-500 mb-1">Dest: ${pass.destination}</p>
                 <p class="text-xs text-gray-500">Department: ${pass.userDept || 'N/A'}</p>
             </div>
-            <button onclick="viewPass('${pass.id}', true)" class="w-full bg-blue-50 text-mpiBlue text-xs font-bold py-2 rounded hover:bg-mpiBlue hover:text-white transition">Review Document</button>
+            <button onclick="${getViewPassCall(pass, true)}" class="w-full bg-blue-50 text-mpiBlue text-xs font-bold py-2 rounded hover:bg-mpiBlue hover:text-white transition">Review Document</button>
         </div>
     `).join('') || '<div class="col-span-2 text-center py-10 text-gray-400">No pending approvals.</div>';
 }

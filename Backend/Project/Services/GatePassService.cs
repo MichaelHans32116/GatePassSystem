@@ -189,6 +189,13 @@ public sealed class GatePassService(
                 null));
     }
 
+    public Task<bool> DeleteForTestingAsync(
+        long gatePassId,
+        CancellationToken cancellationToken = default) =>
+        gatePassRepository.DeleteForTestingAsync(
+            gatePassId,
+            cancellationToken);
+
     private static string? Validate(CreateGatePassRequest request)
     {
         if (string.IsNullOrWhiteSpace(request.Destination) ||

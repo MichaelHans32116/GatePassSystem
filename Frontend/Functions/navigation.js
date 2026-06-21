@@ -71,7 +71,10 @@ function setupRoleAccess(user) {
         }
 
 function switchSection(targetId) {
-            if (targetId !== 'guardScan') stopQrCamera?.();
+            const sectionTargetId = targetId === 'fleetManagement'
+                ? 'adminPanel'
+                : targetId;
+            if (sectionTargetId !== 'guardScan') stopQrCamera?.();
             document.querySelectorAll('.nav-item').forEach(link => link.classList.remove('active'));
             const targetLink = document.querySelector(`.nav-item[data-target="${targetId}"]`);
             if(targetLink) targetLink.classList.add('active');
@@ -90,17 +93,17 @@ function switchSection(targetId) {
             document.getElementById('pageTitle').innerText = titles[targetId] || 'System';
 
             document.querySelectorAll('.view-section').forEach(sec => sec.classList.add('hidden'));
-            const targetSec = document.getElementById('sec-' + targetId);
+            const targetSec = document.getElementById('sec-' + sectionTargetId);
             if(targetSec) {
                 targetSec.classList.remove('hidden');
                 targetSec.classList.remove('fade-in'); void targetSec.offsetWidth; targetSec.classList.add('fade-in');
             }
 
             refreshDashboards();
-            if(targetId === 'guardScan') initializeQrCameras();
-            if(targetId === 'applyPass') updateApprovalRoutePreview();
-            if(targetId === 'adminPanel') {
-                if(targetLink && targetLink.dataset.target === 'fleetManagement') {
+            if(sectionTargetId === 'guardScan') initializeQrCameras();
+            if(sectionTargetId === 'applyPass') updateApprovalRoutePreview();
+            if(sectionTargetId === 'adminPanel') {
+                if(targetId === 'fleetManagement') {
                     switchAdminTab('fleet');
                 } else {
                     switchAdminTab('logs');

@@ -28,4 +28,8 @@ public interface IGatePassService
     Task<ServiceResult<QrTokenResponse>> GetQrTokenAsync(
         long gatePassId,
         CancellationToken cancellationToken = default);
+
+    Task<bool> DeleteForTestingAsync(
+        long gatePassId,
+        CancellationToken cancellationToken = default);
 }

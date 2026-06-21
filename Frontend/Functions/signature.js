@@ -170,7 +170,7 @@ function featherAlphaEdges(data, width, height) {
         }
 
 function getSignatureTargetContainerId() {
-            const pass = gatePasses.find(item => item.id === currentViewedPassId);
+            const pass = findGatePassRecord();
             if (pass?.status === 'Pending Superior') return 'sigImm';
             if (pass?.status === 'Pending President') return 'sigPres';
             if (pass?.status === 'Pending PAS') return 'sigPAS';
@@ -270,17 +270,20 @@ async function processAndRenderSignature(showMessage = true) {
 
             try {
                 setSignatureBusy(true);
-                setSignatureStatus(mode === 'aiServer' ? 'Processing with local Python remover...' : 'Processing signature preview...', 'info');
+                setSignatureStatus(mode === 'aiServer' ? 'Processing with local remover...' : 'Processing signature preview...', 'info');
 
                 if (mode === 'none') {
                     currentUploadedSig = currentOriginalSignatureData;
-                } else if (mode === 'aiServer' || (mode === 'autoSmart' && isDatabaseSession())) {
-                    showToast('Testing white, blue, and AI removal automatically...', 'info');
+                } else if (mode === 'aiServer' && isDatabaseSession()) {
+                    showToast('Processing signature with local remover...', 'info');
                     currentUploadedSig = await removeBackgroundWithPython(currentOriginalSignatureData);
                 } else {
                     const img = await loadImageFromDataUrl(currentOriginalSignatureData);
                     let effectiveMode = mode;
-                    if (mode === 'autoSmart') {
+                    if (mode === 'aiServer') {
+                        effectiveMode = 'autoSmart';
+                    }
+                    if (effectiveMode === 'autoSmart') {
                         effectiveMode = detectSimpleBackgroundMode(img);
                     }
                     currentUploadedSig = removeSignatureBackground(img, { mode: effectiveMode, threshold });
@@ -293,28 +296,31 @@ async function processAndRenderSignature(showMessage = true) {
 
                 const statusMessage = mode === 'none'
                     ? 'Signature image attached. Background removal is off.'
-                    : mode === 'aiServer' || (mode === 'autoSmart' && isDatabaseSession())
-                        ? 'Automatic best-result background removal applied.'
+                    : mode === 'aiServer' && isDatabaseSession()
+                        ? 'Local remover applied.'
+                        : mode === 'aiServer'
+                            ? 'Local auto remover applied.'
                         : `Background removal preview applied: ${mode}, strength ${threshold}.`;
                 setSignatureStatus(statusMessage, 'success');
 
                 if (showMessage) {
                     const message = mode === 'none'
                         ? 'Image attached without background removal.'
-                        : mode === 'aiServer' || (mode === 'autoSmart' && isDatabaseSession())
-                            ? 'Best result selected from white, blue, and AI removal.'
+                        : mode === 'aiServer' && isDatabaseSession()
+                            ? 'Local remover applied.'
+                            : mode === 'aiServer'
+                                ? 'Local auto remover applied.'
                             : `Background removal applied: ${mode} at strength ${threshold}.`;
                     showToast(message, 'success');
                 }
             } catch (error) {
-                console.error(error);
                 const img = await loadImageFromDataUrl(currentOriginalSignatureData);
                 currentUploadedSig = removeSignatureBackground(img, { mode: 'autoSmart', threshold });
                 renderSignatureImage(currentUploadedSig, currentWidth, currentY);
                 document.getElementById('sigBgOptions')?.classList.remove('hidden');
                 document.getElementById('sigControls')?.classList.remove('hidden');
-                setSignatureStatus('Python remover unavailable. Local auto remover was used instead.', 'error');
-                showToast('AI server unavailable. Used local auto remover instead.', 'error');
+                setSignatureStatus('Local auto remover used instead.', 'info');
+                showToast('Used local auto remover instead.', 'info');
             } finally {
                 setSignatureBusy(false);
             }

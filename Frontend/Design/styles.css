@@ -102,7 +102,9 @@
         /* Signature Object Fit */
         .sig-image-container img { max-height: 100%; object-fit: contain; margin: 0 auto; display: block; }
         .signature-img {
-            max-height: 34px;
+            max-height: 56px;
+            max-width: none;
+            height: auto;
             object-fit: contain;
             filter: contrast(1.65) brightness(0.58);
         }

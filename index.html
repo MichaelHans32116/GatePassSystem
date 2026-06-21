@@ -139,7 +139,7 @@
 
                 <div id="navGroupHR" class="mt-4 hidden">
                     <div class="px-6 py-2 text-[10px] font-bold text-blue-300 uppercase tracking-widest">Operations</div>
-                    <a href="#" class="nav-item px-6 py-3 transition text-white" data-target="fleetManagement" onclick="switchSection('adminPanel'); switchAdminTab('fleet');">
+                    <a href="#" class="nav-item px-6 py-3 transition text-white" data-target="fleetManagement" onclick="switchSection('fleetManagement')">
                         <i class="fas fa-truck w-6 text-left"></i> <span class="text-sm">Vehicles & Drivers</span>
                     </a>
                 </div>
@@ -220,7 +220,7 @@
 
                     <!-- STANDARD Dashboard Wrapper -->
                     <div id="standardDashWrapper">
-                        <div id="myEmployeeQrCard" class="hidden mb-6 cursor-pointer rounded-xl border border-blue-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md" role="button" tabindex="0" aria-label="Expand employee QR">
+                        <div id="myEmployeeQrCard" class="hidden mb-6 cursor-pointer rounded-xl border border-blue-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md" role="button" tabindex="0" aria-label="Expand employee QR" onclick="toggleEmployeeQrDialog(true)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleEmployeeQrDialog(true);}">
                             <div class="flex flex-col items-center gap-4 sm:flex-row sm:items-center">
                                 <div id="myEmployeeQrCode" class="shrink-0 rounded-lg border bg-white p-2"></div>
                                 <div class="text-center sm:text-left">
@@ -471,7 +471,7 @@
                             <table class="w-full text-left border-collapse min-w-max">
                                 <thead>
                                     <tr class="bg-white text-gray-500 text-[11px] uppercase tracking-wider border-b">
-                                        <th class="px-5 py-3 font-semibold">GP-ID</th><th class="px-5 py-3 font-semibold">Associate</th><th class="px-5 py-3 font-semibold">Dept</th><th class="px-5 py-3 font-semibold">1-Way?</th><th class="px-5 py-3 font-semibold">Actual Out</th><th class="px-5 py-3 font-semibold">Actual In</th><th class="px-5 py-3 font-semibold">Status</th>
+                                        <th class="px-5 py-3 font-semibold">GP-ID</th><th class="px-5 py-3 font-semibold">Associate</th><th class="px-5 py-3 font-semibold">Dept</th><th class="px-5 py-3 font-semibold">1-Way?</th><th class="px-5 py-3 font-semibold">Actual Out</th><th class="px-5 py-3 font-semibold">Actual In</th><th class="px-5 py-3 font-semibold">Status</th><th class="px-5 py-3 font-semibold text-right">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody id="adminLogsTable" class="text-sm divide-y divide-gray-100"></tbody>
@@ -666,7 +666,7 @@
                         <tr>
                             <td colspan="2" class="align-top h-14 relative w-1/2">
                                 <div class="text-[7px] uppercase absolute top-1 left-1">APPROVED BY</div>
-                                <div class="absolute bottom-[16px] w-full flex justify-center items-end" style="height: 35px;">
+                                <div class="absolute bottom-[14px] w-full flex justify-center items-end" style="height: 52px;">
                                     <div id="sigImm" class="w-full flex justify-center items-end"></div>
                                 </div>
                                 <div class="absolute bottom-1 w-full text-center leading-none">
@@ -675,7 +675,7 @@
                                 </div>
                             </td>
                             <td class="align-top h-14 relative w-1/4 border-l-0">
-                                <div class="absolute bottom-[16px] w-full flex justify-center items-end" style="height: 35px;">
+                                <div class="absolute bottom-[14px] w-full flex justify-center items-end" style="height: 52px;">
                                     <div id="sigPres" class="w-full flex justify-center items-end"></div>
                                 </div>
                                 <div class="absolute bottom-1 w-full text-center leading-none">
@@ -685,7 +685,7 @@
                             </td>
                             <td class="align-top h-14 relative w-1/4">
                                 <div class="text-[7px] uppercase absolute top-1 left-1">NOTED BY</div>
-                                <div class="absolute bottom-[16px] w-full flex justify-center items-end" style="height: 35px;">
+                                <div class="absolute bottom-[14px] w-full flex justify-center items-end" style="height: 52px;">
                                     <div id="sigPAS" class="w-full flex justify-center items-end"></div>
                                 </div>
                                 <div class="absolute bottom-1 w-full text-center leading-none">
@@ -734,8 +734,8 @@
                         </div>
 
                         <div id="sigControls" class="hidden mt-3 grid grid-cols-1 gap-3 border-t pt-3">
-                            <label class="text-[10px] font-bold text-gray-500 uppercase">Signature Size<input type="range" id="sigSize" min="10" max="300" value="100" class="w-full"></label>
-                            <label class="text-[10px] font-bold text-gray-500 uppercase">Vertical Position<input type="range" id="sigY" min="-40" max="40" value="0" class="w-full"></label>
+                            <label class="text-[10px] font-bold text-gray-500 uppercase">Signature Size<input type="range" id="sigSize" min="10" max="450" value="100" class="w-full"></label>
+                            <label class="text-[10px] font-bold text-gray-500 uppercase">Up / Down<input type="range" id="sigY" min="-70" max="70" value="0" class="w-full"></label>
                             <label class="flex items-center gap-2 text-xs font-bold text-mpiBlue"><input type="checkbox" id="saveDefaultSig" class="rounded text-mpiBlue"> Save as my default signature</label>
                         </div>
                         <p id="sigStatus" class="mt-2 text-[10px] text-gray-500 leading-relaxed">Choose an image or draw your signature.</p>

@@ -101,4 +101,23 @@ public sealed class GatePassRequestsController(
             ? Success(result.Value!)
             : ServiceFailure(result);
     }
+
+    [Authorize(Policy = GatePassPermissions.UsersManage)]
+    [HttpDelete("{id:long}/test-delete")]
+    public async Task<IActionResult> DeleteForTesting(
+        long id,
+        CancellationToken cancellationToken)
+    {
+        var deleted = await gatePassService.DeleteForTestingAsync(
+            id,
+            cancellationToken);
+
+        return deleted
+            ? NoContent()
+            : NotFound(new ApiErrorResponse(
+                "GATE_PASS_NOT_FOUND",
+                "Gate pass was not found.",
+                null,
+                HttpContext.TraceIdentifier));
+    }
 }

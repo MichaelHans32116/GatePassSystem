@@ -12,6 +12,10 @@ var adminState = {
 };
 const adminUserPageSize = 15;
 
+function canDeleteGatePassLogs() {
+    return currentUser?.role === 'System Admin' || currentUser?.role === 'Admin';
+}
+
 function adminEscape(value) {
     return String(value ?? '')
         .replaceAll('&', '&amp;')
@@ -201,7 +205,7 @@ async function renderAdminLogs(page = 1) {
             renderDatabaseAdminLogs(response);
         } catch (error) {
             document.getElementById('adminLogsTable').innerHTML =
-                '<tr><td colspan="7" class="text-center py-6 text-gray-400">Unable to load gate pass logs.</td></tr>';
+                '<tr><td colspan="8" class="text-center py-6 text-gray-400">Unable to load gate pass logs.</td></tr>';
             showToast(error instanceof ApiError ? error.message : 'Unable to load gate pass logs.', 'error');
         }
         return;
@@ -212,14 +216,14 @@ async function renderAdminLogs(page = 1) {
         (!departmentId || pass.userDept === departmentId) &&
         (!statusCode || pass.status === statusCode)
     );
-    renderMockAdminLogs(filtered);
+    renderMockAdminLogsWithActions(filtered);
 }
 
 function renderDatabaseAdminLogs(response) {
     const list = response.items.map(mapApiGatePass);
     gatePasses = list;
     document.getElementById('adminLogsTable').innerHTML = list.map(pass => `
-        <tr class="hover:bg-gray-50 transition border-b cursor-pointer" onclick="viewPass('${adminEscape(pass.id)}')">
+        <tr class="hover:bg-gray-50 transition border-b cursor-pointer" onclick="${getViewPassCall(pass)}">
             <td class="px-5 py-2 font-mono text-xs">${adminEscape(pass.id)}</td>
             <td class="px-5 py-2 font-semibold">${adminEscape(pass.userName)}</td>
             <td class="px-5 py-2 text-gray-500 text-xs">${adminEscape(pass.userDept)}</td>
@@ -227,8 +231,13 @@ function renderDatabaseAdminLogs(response) {
             <td class="px-5 py-2 text-blue-600 font-mono text-xs">${adminEscape(pass.actualOut || '--:--')}</td>
             <td class="px-5 py-2 text-green-600 font-mono text-xs">${adminEscape(pass.actualIn || '--:--')}</td>
             <td class="px-5 py-2 text-[10px]"><span class="px-2 py-1 rounded bg-gray-100">${adminEscape(pass.status)}</span></td>
+            <td class="px-5 py-2 text-right">
+                ${canDeleteGatePassLogs()
+                    ? `<button onclick="event.stopPropagation(); deleteGatePassLog(${pass.dbId})" class="rounded border border-red-200 px-2.5 py-1 text-[11px] font-bold text-red-600 hover:bg-red-50">Delete</button>`
+                    : '<span class="text-gray-300">--</span>'}
+            </td>
         </tr>
-    `).join('') || '<tr><td colspan="7" class="text-center py-6 text-gray-400">No logs match your filters.</td></tr>';
+    `).join('') || '<tr><td colspan="8" class="text-center py-6 text-gray-400">No logs match your filters.</td></tr>';
 
     const start = response.totalCount ? ((response.page - 1) * response.pageSize) + 1 : 0;
     const end = Math.min(response.page * response.pageSize, response.totalCount);
@@ -247,6 +256,71 @@ function renderMockAdminLogs(list) {
 
 function changeLogPage(step) {
     renderAdminLogs(currentLogPage + step);
+}
+
+function renderMockAdminLogsWithActions(list) {
+    document.getElementById('adminLogsTable').innerHTML = list.map(pass => `
+        <tr class="border-b hover:bg-gray-50 transition cursor-pointer" onclick="${getViewPassCall(pass)}">
+            <td class="px-5 py-2">${adminEscape(pass.id)}</td>
+            <td class="px-5 py-2">${adminEscape(pass.userName)}</td>
+            <td class="px-5 py-2">${adminEscape(pass.userDept)}</td>
+            <td class="px-5 py-2">${pass.willReturn ? 'No' : 'Yes'}</td>
+            <td class="px-5 py-2">${pass.actualOut || '--:--'}</td>
+            <td class="px-5 py-2">${pass.actualIn || '--:--'}</td>
+            <td class="px-5 py-2">${adminEscape(pass.status)}</td>
+            <td class="px-5 py-2 text-right">
+                ${canDeleteGatePassLogs()
+                    ? `<button onclick="event.stopPropagation(); deleteGatePassLog(${JSON.stringify(pass.id)})" class="rounded border border-red-200 px-2.5 py-1 text-[11px] font-bold text-red-600 hover:bg-red-50">Delete</button>`
+                    : '<span class="text-gray-300">--</span>'}
+            </td>
+        </tr>
+    `).join('') || '<tr><td colspan="8" class="text-center py-6 text-gray-400">No logs found.</td></tr>';
+}
+
+async function deleteGatePassLog(idOrDbId) {
+    const pass = findGatePassRecord(idOrDbId);
+    const passLabel = pass?.id || String(idOrDbId);
+    if (!confirm(`Delete ${passLabel} from test logs? This also removes it from dashboard history.`)) {
+        return;
+    }
+
+    if (!isDatabaseSession()) {
+        gatePasses = gatePasses.filter(item => item.id !== String(idOrDbId));
+        if (String(currentViewedPassId) === String(idOrDbId) ||
+            currentViewedPassId === pass?.id) {
+            closeModal?.();
+        }
+        showToast('Test log deleted.');
+        renderAdminLogs(currentLogPage);
+        refreshDashboards();
+        return;
+    }
+
+    const dbId = Number(pass?.dbId ?? idOrDbId);
+    if (!Number.isFinite(dbId) || dbId <= 0) {
+        showToast('Unable to resolve the selected log.', 'error');
+        return;
+    }
+
+    try {
+        await ApiClient.request(`/gate-pass-requests/${dbId}/test-delete`, {
+            method: 'DELETE'
+        });
+        gatePasses = gatePasses.filter(item => item.dbId !== dbId);
+        if (String(currentViewedPassId) === String(dbId) ||
+            currentViewedPassId === pass?.id) {
+            closeModal?.();
+        }
+        showToast('Test log deleted.');
+        await Promise.all([
+            renderAdminLogs(currentLogPage),
+            loadMyGatePasses().catch(() => null),
+            renderApprovalQueue?.().catch(() => null)
+        ]);
+        refreshDashboards();
+    } catch (error) {
+        showToast(error instanceof ApiError ? error.message : 'Unable to delete test log.', 'error');
+    }
 }
 
 async function renderAdminUsers(page = 1) {
@@ -504,6 +578,31 @@ async function archiveRole(id) {
 }
 
 async function renderAdminFleet() {
+    if (!isDatabaseSession()) {
+        const mockDrivers = mockVehicles.map((vehicle, index) => ({
+            driverId: index + 1,
+            fullName: vehicle.driver,
+            driverTypeCode: 'EXTERNAL',
+            licenseNumber: null,
+            licenseExpiryDate: null
+        }));
+        adminState.vehicles = mockVehicles.map((vehicle, index) => ({
+            vehicleId: index + 1,
+            vehicleName: vehicle.name,
+            plateNumber: vehicle.plate,
+            defaultDriverId: index + 1,
+            availabilityStatusCode: vehicle.status.toUpperCase().replaceAll(' ', '_')
+        }));
+        adminState.drivers = mockDrivers;
+        document.getElementById('adminFleetList').innerHTML = adminState.vehicles.map(vehicle => `
+            <tr class="border-b"><td class="p-3 font-semibold">${adminEscape(vehicle.vehicleName)}</td><td class="p-3 font-mono text-xs">${adminEscape(vehicle.plateNumber)}</td><td class="p-3 text-xs">${adminEscape(mockDrivers.find(driver => driver.driverId === vehicle.defaultDriverId)?.fullName || 'Unassigned')}</td><td class="p-3 text-xs">${adminEscape(vehicle.availabilityStatusCode.replaceAll('_', ' '))}</td><td class="p-3 text-right"><span class="text-[11px] text-gray-400">Mock</span></td></tr>
+        `).join('') || '<tr><td colspan="5" class="p-6 text-center text-gray-400">No active vehicles.</td></tr>';
+        document.getElementById('adminDriverList').innerHTML = mockDrivers.map(driver => `
+            <tr class="border-b"><td class="p-3 font-semibold">${adminEscape(driver.fullName)}</td><td class="p-3 text-xs">${adminEscape(driver.driverTypeCode)}</td><td class="p-3 text-xs">${adminEscape(driver.licenseNumber || '—')}</td><td class="p-3 text-xs">${adminDate(driver.licenseExpiryDate)}</td><td class="p-3 text-right"><span class="text-[11px] text-gray-400">Mock</span></td></tr>
+        `).join('') || '<tr><td colspan="5" class="p-6 text-center text-gray-400">No active drivers.</td></tr>';
+        return;
+    }
+
     try {
         const [vehicles, drivers] = await Promise.all([
             ApiClient.get('/vehicles'),
@@ -688,6 +787,7 @@ window.archiveDepartment = archiveDepartment;
 window.openRoleEditor = openRoleEditor;
 window.archiveRole = archiveRole;
 window.renderAdminFleet = renderAdminFleet;
+window.deleteGatePassLog = deleteGatePassLog;
 window.openVehicleEditor = openVehicleEditor;
 window.archiveVehicle = archiveVehicle;
 window.openDriverEditor = openDriverEditor;

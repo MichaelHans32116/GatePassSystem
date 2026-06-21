@@ -22,6 +22,29 @@ function isDatabaseSession() {
     return ApiClient.isDatabaseSession();
 }
 
+function findGatePassRecord(idOrDbId = currentViewedPassId) {
+    const numericId = Number(idOrDbId);
+    return gatePasses.find(pass =>
+        pass.id === String(idOrDbId) ||
+        (Number.isFinite(numericId) && pass.dbId === numericId)
+    );
+}
+
+function getGatePassViewKey(pass) {
+    const dbId = Number(pass?.dbId);
+    return Number.isFinite(dbId) && dbId > 0
+        ? dbId
+        : String(pass?.id || '');
+}
+
+function getViewPassCall(pass, isReviewing = false) {
+    const viewKey = getGatePassViewKey(pass);
+    const serializedKey = typeof viewKey === 'number'
+        ? String(viewKey)
+        : JSON.stringify(viewKey).replaceAll('"', '&quot;');
+    return `viewPass(${serializedKey}${isReviewing ? ', true' : ''})`;
+}
+
 function formatDateTime(value, includeDate = true) {
     if (!value) return 'N/A';
     const date = new Date(value.endsWith?.('Z') ? value : `${value}Z`);
@@ -291,6 +314,7 @@ function submitMockGatePass(e) {
 async function loadFleetReferences() {
     if (!isDatabaseSession()) {
         databaseVehicles = [];
+        databaseDrivers = [];
         initializeGatePassForm();
         return;
     }
@@ -316,6 +340,12 @@ async function loadFleetReferences() {
         initializeGatePassForm();
         renderAdminTables();
     } catch (error) {
+        if (error instanceof ApiError && error.status === 401) {
+            databaseVehicles = [];
+            databaseDrivers = [];
+            initializeGatePassForm();
+            return;
+        }
         showToast(error instanceof ApiError ? error.message : 'Unable to load fleet references.', 'error');
     }
 }
@@ -349,10 +379,30 @@ async function loadAllGatePasses(page = 1, pageSize = 100, search = '') {
 }
 
 async function getGatePassDetail(id) {
-    const existing = gatePasses.find(pass => pass.id === id || pass.dbId === Number(id));
+    const existing = findGatePassRecord(id);
     if (!isDatabaseSession()) return existing || null;
 
-    const dbId = existing?.dbId || Number(id);
+    let dbId = Number(existing?.dbId ?? id);
+    if (!Number.isFinite(dbId) || dbId <= 0) {
+        if (typeof id === 'string' && id.trim()) {
+            const lookup = await ApiClient.request(
+                `/gate-pass-requests?page=1&pageSize=20&search=${encodeURIComponent(id.trim())}`
+            );
+            const match = lookup.items
+                .map(mapApiGatePass)
+                .find(pass => pass.id === id);
+            if (!match?.dbId) {
+                return null;
+            }
+            const index = gatePasses.findIndex(pass => pass.dbId === match.dbId);
+            if (index >= 0) gatePasses[index] = match;
+            else gatePasses.push(match);
+            dbId = match.dbId;
+        } else {
+            return null;
+        }
+    }
+
     const detail = await ApiClient.get(`/gate-pass-requests/${dbId}`);
     const mapped = mapApiGatePass(detail);
     const index = gatePasses.findIndex(pass => pass.dbId === mapped.dbId);
@@ -390,7 +440,7 @@ async function renderStandardDashboard() {
         myPasses.filter(pass => ['Returned', 'Closed'].includes(pass.status)).length;
 
     document.getElementById('myPassesTableBody').innerHTML = myPasses.map((pass) => `
-        <tr class="hover:bg-gray-50 transition border-b cursor-pointer" onclick="viewPass('${pass.id}')">
+        <tr class="hover:bg-gray-50 transition border-b cursor-pointer" onclick="${getViewPassCall(pass)}">
             <td class="px-4 md:px-5 py-3 font-mono text-mpiBlue text-xs font-bold">${pass.id}</td>
             <td class="px-4 md:px-5 py-3">${pass.dateFiled}</td>
             <td class="px-4 md:px-5 py-3 truncate max-w-[150px] md:max-w-[200px]">${pass.destination}</td>
@@ -489,6 +539,7 @@ function toggleEmployeeQrDialog(forceOpen) {
 
     if (!shouldOpen) {
         dialog.classList.add('hidden', 'pointer-events-none');
+        dialog.classList.remove('flex');
         document.body.classList.remove('overflow-hidden');
         return;
     }
@@ -498,7 +549,7 @@ function toggleEmployeeQrDialog(forceOpen) {
     dialog.classList.remove('hidden', 'pointer-events-none');
     dialog.classList.add('flex');
     document.body.classList.add('overflow-hidden');
-    requestAnimationFrame(renderExpandedEmployeeQr);
+    requestAnimationFrame(() => requestAnimationFrame(renderExpandedEmployeeQr));
 }
 
 function closeEmployeeQrDialog() {
@@ -506,19 +557,7 @@ function closeEmployeeQrDialog() {
 }
 
 function initializeEmployeeQrCard() {
-    const card = document.getElementById('myEmployeeQrCard');
     const dialog = document.getElementById('employeeQrDialog');
-    if (card && !card.dataset.boundExpand) {
-        card.addEventListener('click', () => toggleEmployeeQrDialog(true));
-        card.addEventListener('keydown', event => {
-            if (event.key === 'Enter' || event.key === ' ') {
-                event.preventDefault();
-                toggleEmployeeQrDialog(true);
-            }
-        });
-        card.dataset.boundExpand = 'true';
-    }
-
     if (dialog && !dialog.dataset.boundDismiss) {
         dialog.addEventListener('click', event => {
             if (event.target === dialog) {
@@ -561,3 +600,6 @@ window.renderMyEmployeeQr = renderMyEmployeeQr;
 window.toggleEmployeeQrDialog = toggleEmployeeQrDialog;
 window.closeEmployeeQrDialog = closeEmployeeQrDialog;
 window.renderExpandedEmployeeQr = renderExpandedEmployeeQr;
+window.findGatePassRecord = findGatePassRecord;
+window.getGatePassViewKey = getGatePassViewKey;
+window.getViewPassCall = getViewPassCall;

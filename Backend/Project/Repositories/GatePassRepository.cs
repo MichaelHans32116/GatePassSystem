@@ -335,6 +335,133 @@ public sealed class GatePassRepository(
         return new PagedResult<GatePassRecord>(items, total, page, pageSize);
     }
 
+    public async Task<bool> DeleteForTestingAsync(
+        long gatePassId,
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection =
+            await connectionFactory.OpenConnectionAsync(cancellationToken);
+        await using var transaction =
+            await connection.BeginTransactionAsync(cancellationToken);
+
+        try
+        {
+            var exists = await connection.ExecuteScalarAsync<int>(
+                new CommandDefinition(
+                    """
+                    SELECT COUNT(*)
+                    FROM tbl_gate_pass_requests
+                    WHERE gate_pass_id = @GatePassId;
+                    """,
+                    new { GatePassId = gatePassId },
+                    transaction,
+                    cancellationToken: cancellationToken));
+
+            if (exists == 0)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                return false;
+            }
+
+            var signatureFileIds = (await connection.QueryAsync<long>(
+                new CommandDefinition(
+                    """
+                    SELECT approval_signature.signature_file_id
+                    FROM tbl_approval_signatures approval_signature
+                    JOIN tbl_gate_pass_approval_steps approval_step
+                        ON approval_step.approval_step_id =
+                           approval_signature.approval_step_id
+                    WHERE approval_step.gate_pass_id = @GatePassId;
+                    """,
+                    new { GatePassId = gatePassId },
+                    transaction,
+                    cancellationToken: cancellationToken))).AsList();
+
+            await connection.ExecuteAsync(new CommandDefinition(
+                """
+                DELETE approval_signature
+                FROM tbl_approval_signatures approval_signature
+                JOIN tbl_gate_pass_approval_steps approval_step
+                    ON approval_step.approval_step_id =
+                       approval_signature.approval_step_id
+                WHERE approval_step.gate_pass_id = @GatePassId;
+                """,
+                new { GatePassId = gatePassId },
+                transaction,
+                cancellationToken: cancellationToken));
+
+            await connection.ExecuteAsync(new CommandDefinition(
+                "DELETE FROM tbl_gate_pass_scans WHERE gate_pass_id = @GatePassId;",
+                new { GatePassId = gatePassId },
+                transaction,
+                cancellationToken: cancellationToken));
+
+            await connection.ExecuteAsync(new CommandDefinition(
+                "DELETE FROM tbl_gate_pass_status_history WHERE gate_pass_id = @GatePassId;",
+                new { GatePassId = gatePassId },
+                transaction,
+                cancellationToken: cancellationToken));
+
+            await connection.ExecuteAsync(new CommandDefinition(
+                "DELETE FROM tbl_vehicle_reservations WHERE gate_pass_id = @GatePassId;",
+                new { GatePassId = gatePassId },
+                transaction,
+                cancellationToken: cancellationToken));
+
+            await connection.ExecuteAsync(new CommandDefinition(
+                "DELETE FROM tbl_gate_pass_approval_steps WHERE gate_pass_id = @GatePassId;",
+                new { GatePassId = gatePassId },
+                transaction,
+                cancellationToken: cancellationToken));
+
+            await connection.ExecuteAsync(new CommandDefinition(
+                """
+                DELETE FROM tbl_notifications
+                WHERE related_entity_type = 'GATE_PASS'
+                  AND related_entity_id = @GatePassId;
+                """,
+                new { GatePassId = gatePassId },
+                transaction,
+                cancellationToken: cancellationToken));
+
+            await connection.ExecuteAsync(new CommandDefinition(
+                """
+                DELETE FROM tbl_audit_logs
+                WHERE entity_type = 'GATE_PASS'
+                  AND entity_id = @GatePassId;
+                """,
+                new { GatePassId = gatePassId },
+                transaction,
+                cancellationToken: cancellationToken));
+
+            await connection.ExecuteAsync(new CommandDefinition(
+                "DELETE FROM tbl_gate_pass_requests WHERE gate_pass_id = @GatePassId;",
+                new { GatePassId = gatePassId },
+                transaction,
+                cancellationToken: cancellationToken));
+
+            if (signatureFileIds.Count > 0)
+            {
+                await connection.ExecuteAsync(new CommandDefinition(
+                    """
+                    DELETE FROM tbl_signature_files
+                    WHERE signature_file_id IN @SignatureFileIds;
+                    """,
+                    new { SignatureFileIds = signatureFileIds.Distinct().ToArray() },
+                    transaction,
+                    cancellationToken: cancellationToken));
+            }
+
+            await transaction.CommitAsync(cancellationToken);
+            return true;
+        }
+        catch
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
+    }
+
     private static GatePassDetail CopyDetail(
         GatePassDetail source,
         IReadOnlyList<ApprovalStepRecord> steps,

@@ -41,5 +41,8 @@ public interface IGatePassRepository
         GatePassQuery query,
         long? requesterUserId,
         CancellationToken cancellationToken = default);
-}
 
+    Task<bool> DeleteForTestingAsync(
+        long gatePassId,
+        CancellationToken cancellationToken = default);
+}
