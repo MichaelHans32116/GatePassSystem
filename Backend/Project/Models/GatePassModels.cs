@@ -15,14 +15,25 @@ public class GatePassRecord
 {
     public long GatePassId { get; init; }
     public string GatePassNo { get; init; } = string.Empty;
+    public string ControlNo { get; init; } = string.Empty;
+    public string FormTypeCode { get; init; } = "PERSON_GATE_PASS";
+    public string FormName { get; init; } = "Person Gate Pass";
+    public DateTime FormDate { get; init; }
     public long RequesterUserId { get; init; }
     public long RequesterEmployeeId { get; init; }
+    public long? PreparedBySignatureFileId { get; init; }
     public string EmployeeId { get; init; } = string.Empty;
     public string FullName { get; init; } = string.Empty;
     public string DepartmentName { get; init; } = string.Empty;
     public string PositionName { get; init; } = string.Empty;
+    public long? AuthorizedEmployeeId { get; init; }
+    public string? AuthorizedEmployeeNo { get; init; }
+    public string? AuthorizedEmployeeName { get; init; }
+    public long? AuthorizedDepartmentId { get; init; }
+    public string? AuthorizedDepartmentName { get; init; }
     public string Destination { get; init; } = string.Empty;
     public string Purpose { get; init; } = string.Empty;
+    public string? MaterialRemarks { get; init; }
     public string GatePassStatusCode { get; init; } = string.Empty;
     public string StatusName { get; init; } = string.Empty;
     public string StatusGroup { get; init; } = string.Empty;
@@ -55,6 +66,28 @@ public sealed class GatePassDetail : GatePassRecord
     public int VersionNo { get; init; }
     public IReadOnlyList<ApprovalStepRecord> ApprovalSteps { get; init; } = [];
     public IReadOnlyList<GatePassScanRecord> Scans { get; init; } = [];
+    public IReadOnlyList<MaterialGatePassItemRecord> MaterialItems { get; init; } = [];
+}
+
+public sealed class MaterialGatePassItemRecord
+{
+    public long MaterialItemId { get; init; }
+    public long GatePassId { get; init; }
+    public int LineNo { get; init; }
+    public string? ItemNo { get; init; }
+    public string Description { get; init; } = string.Empty;
+    public decimal Quantity { get; init; }
+    public string Unit { get; init; } = string.Empty;
+}
+
+public sealed class EmployeeLookupRecord
+{
+    public long EmployeeRecordId { get; init; }
+    public string EmployeeId { get; init; } = string.Empty;
+    public string FullName { get; init; } = string.Empty;
+    public long DepartmentId { get; init; }
+    public string DepartmentName { get; init; } = string.Empty;
+    public string PositionName { get; init; } = string.Empty;
 }
 
 public sealed class ApprovalStepRecord
@@ -75,6 +108,9 @@ public sealed class ApprovalQueueItem
 {
     public long GatePassId { get; init; }
     public string GatePassNo { get; init; } = string.Empty;
+    public string ControlNo { get; init; } = string.Empty;
+    public string FormTypeCode { get; init; } = "PERSON_GATE_PASS";
+    public string FormName { get; init; } = "Person Gate Pass";
     public long ApprovalStepId { get; init; }
     public string ApprovalStepCode { get; init; } = string.Empty;
     public string EmployeeId { get; init; } = string.Empty;
@@ -82,6 +118,9 @@ public sealed class ApprovalQueueItem
     public string DepartmentName { get; init; } = string.Empty;
     public string Destination { get; init; } = string.Empty;
     public string Purpose { get; init; } = string.Empty;
+    public string? AuthorizedEmployeeName { get; init; }
+    public string? AuthorizedDepartmentName { get; init; }
+    public string? MaterialRemarks { get; init; }
     public DateTime ExpectedOutAt { get; init; }
     public DateTime? ExpectedInAt { get; init; }
     public DateTime? AppliedAt { get; init; }
@@ -101,6 +140,7 @@ public sealed class GatePassScanRecord
 
 public sealed record ApprovalMutation(
     long GatePassId,
+    string FormTypeCode,
     string PreviousStatus,
     string NewStatus,
     string? NextApprovalStep);

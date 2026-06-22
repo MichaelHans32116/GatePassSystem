@@ -1,4 +1,5 @@
 using System.Data;
+using System.Text.Json;
 using Dapper;
 using GatePassSystem.Project.DTOs.Common;
 using GatePassSystem.Project.DTOs.GatePass;
@@ -29,6 +30,8 @@ public sealed class GatePassRepository(
                     p_requester_employee_id = requester.EmployeeRecordId,
                     p_requester_department_id = requester.DepartmentId,
                     p_requester_position_id = requester.PositionId,
+                    p_prepared_by_signature_file_id =
+                        request.PreparedBySignatureFileId,
                     p_destination = request.Destination,
                     p_purpose = request.Purpose,
                     p_expected_out_at = request.ExpectedOutAt.UtcDateTime,
@@ -46,8 +49,49 @@ public sealed class GatePassRepository(
                 cancellationToken: cancellationToken));
     }
 
+    public async Task<GatePassRecord> CreateMaterialDraftAsync(
+        RequesterContext requester,
+        EmployeeLookupRecord authorizedEmployee,
+        CreateMaterialGatePassRequest request,
+        string traceId,
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection =
+            await connectionFactory.OpenConnectionAsync(cancellationToken);
+
+        return await connection.QuerySingleAsync<GatePassRecord>(
+            new CommandDefinition(
+                "SP_CreateMaterialGatePass",
+                new
+                {
+                    p_requester_user_id = requester.UserId,
+                    p_requester_employee_id = requester.EmployeeRecordId,
+                    p_requester_department_id = requester.DepartmentId,
+                    p_requester_position_id = requester.PositionId,
+                    p_prepared_by_signature_file_id =
+                        request.PreparedBySignatureFileId,
+                    p_authorized_employee_id =
+                        authorizedEmployee.EmployeeRecordId,
+                    p_authorized_department_id =
+                        authorizedEmployee.DepartmentId,
+                    p_form_date = request.FormDate.ToDateTime(TimeOnly.MinValue),
+                    p_material_remarks = request.Remarks,
+                    p_items_json = JsonSerializer.Serialize(
+                        request.Items,
+                        new JsonSerializerOptions
+                        {
+                            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                        }),
+                    p_trace_id = traceId
+                },
+                commandType: CommandType.StoredProcedure,
+                cancellationToken: cancellationToken));
+    }
+
     public async Task<long?> FindApproverAsync(
         string approvalStepCode,
+        string formTypeCode,
+        bool requireExactFormType,
         long requesterUserId,
         long? departmentId,
         long? positionId,
@@ -77,6 +121,19 @@ public sealed class GatePassRepository(
                   AND aa.is_active = TRUE
                   AND ua.account_status_code = 'ACTIVE'
                   AND aa.approver_user_id <> @RequesterUserId
+                  AND (
+                      (
+                          @RequireExactFormType = TRUE
+                          AND aa.form_type_code = @FormTypeCode
+                      )
+                      OR (
+                          @RequireExactFormType = FALSE
+                          AND (
+                              aa.form_type_code IS NULL
+                              OR aa.form_type_code = @FormTypeCode
+                          )
+                      )
+                  )
                   AND (aa.valid_from IS NULL OR aa.valid_from <= UTC_DATE())
                   AND (aa.valid_until IS NULL OR aa.valid_until >= UTC_DATE())
                   AND (
@@ -101,6 +158,8 @@ public sealed class GatePassRepository(
                 new
                 {
                     ApprovalStepCode = approvalStepCode,
+                    FormTypeCode = formTypeCode,
+                    RequireExactFormType = requireExactFormType,
                     RequesterUserId = requesterUserId,
                     DepartmentId = departmentId,
                     PositionId = positionId
@@ -243,6 +302,18 @@ public sealed class GatePassRepository(
             FROM tbl_gate_pass_scans
             WHERE gate_pass_id = @GatePassId
             ORDER BY scanned_at;
+
+            SELECT
+                material_item_id AS MaterialItemId,
+                gate_pass_id AS GatePassId,
+                line_no AS LineNo,
+                item_no AS ItemNo,
+                description AS Description,
+                quantity AS Quantity,
+                unit AS Unit
+            FROM tbl_material_gate_pass_items
+            WHERE gate_pass_id = @GatePassId
+            ORDER BY line_no;
             """;
 
         using var grid = await connection.QueryMultipleAsync(
@@ -259,8 +330,10 @@ public sealed class GatePassRepository(
 
         var steps = (await grid.ReadAsync<ApprovalStepRecord>()).AsList();
         var scans = (await grid.ReadAsync<GatePassScanRecord>()).AsList();
+        var materialItems =
+            (await grid.ReadAsync<MaterialGatePassItemRecord>()).AsList();
 
-        return CopyDetail(detail, steps, scans);
+        return CopyDetail(detail, steps, scans, materialItems);
     }
 
     public async Task<PagedResult<GatePassRecord>> GetPagedAsync(
@@ -280,6 +353,8 @@ public sealed class GatePassRepository(
                    OR records.requester_user_id = @RequesterUserId)
               AND (@StatusCode IS NULL
                    OR records.gate_pass_status_code = @StatusCode)
+              AND (@FormTypeCode IS NULL
+                   OR records.form_type_code = @FormTypeCode)
               AND (@DepartmentId IS NULL
                    OR request_row.requester_department_id = @DepartmentId)
               AND (@FromAppliedAt IS NULL
@@ -289,8 +364,11 @@ public sealed class GatePassRepository(
               AND (
                   @Search IS NULL
                   OR records.gate_pass_no LIKE CONCAT('%', @Search, '%')
+                  OR records.control_no LIKE CONCAT('%', @Search, '%')
                   OR records.employee_id LIKE CONCAT('%', @Search, '%')
                   OR records.full_name LIKE CONCAT('%', @Search, '%')
+                  OR records.authorized_employee_no LIKE CONCAT('%', @Search, '%')
+                  OR records.authorized_employee_name LIKE CONCAT('%', @Search, '%')
                   OR records.destination LIKE CONCAT('%', @Search, '%')
               )
             """;
@@ -299,6 +377,7 @@ public sealed class GatePassRepository(
         {
             RequesterUserId = requesterUserId,
             query.StatusCode,
+            query.FormTypeCode,
             query.DepartmentId,
             FromAppliedAt = query.FromAppliedAt?.UtcDateTime,
             ToAppliedAt = query.ToAppliedAt?.UtcDateTime,
@@ -371,7 +450,12 @@ public sealed class GatePassRepository(
                     JOIN tbl_gate_pass_approval_steps approval_step
                         ON approval_step.approval_step_id =
                            approval_signature.approval_step_id
-                    WHERE approval_step.gate_pass_id = @GatePassId;
+                    WHERE approval_step.gate_pass_id = @GatePassId
+                    UNION
+                    SELECT prepared_by_signature_file_id
+                    FROM tbl_gate_pass_requests
+                    WHERE gate_pass_id = @GatePassId
+                      AND prepared_by_signature_file_id IS NOT NULL;
                     """,
                     new { GatePassId = gatePassId },
                     transaction,
@@ -386,6 +470,12 @@ public sealed class GatePassRepository(
                        approval_signature.approval_step_id
                 WHERE approval_step.gate_pass_id = @GatePassId;
                 """,
+                new { GatePassId = gatePassId },
+                transaction,
+                cancellationToken: cancellationToken));
+
+            await connection.ExecuteAsync(new CommandDefinition(
+                "DELETE FROM tbl_material_gate_pass_items WHERE gate_pass_id = @GatePassId;",
                 new { GatePassId = gatePassId },
                 transaction,
                 cancellationToken: cancellationToken));
@@ -427,7 +517,7 @@ public sealed class GatePassRepository(
             await connection.ExecuteAsync(new CommandDefinition(
                 """
                 DELETE FROM tbl_audit_logs
-                WHERE entity_type = 'GATE_PASS'
+                WHERE entity_type IN ('GATE_PASS', 'FORM_REQUEST')
                   AND entity_id = @GatePassId;
                 """,
                 new { GatePassId = gatePassId },
@@ -465,19 +555,31 @@ public sealed class GatePassRepository(
     private static GatePassDetail CopyDetail(
         GatePassDetail source,
         IReadOnlyList<ApprovalStepRecord> steps,
-        IReadOnlyList<GatePassScanRecord> scans) =>
+        IReadOnlyList<GatePassScanRecord> scans,
+        IReadOnlyList<MaterialGatePassItemRecord> materialItems) =>
         new()
         {
             GatePassId = source.GatePassId,
             GatePassNo = source.GatePassNo,
+            ControlNo = source.ControlNo,
+            FormTypeCode = source.FormTypeCode,
+            FormName = source.FormName,
+            FormDate = source.FormDate,
             RequesterUserId = source.RequesterUserId,
             RequesterEmployeeId = source.RequesterEmployeeId,
+            PreparedBySignatureFileId = source.PreparedBySignatureFileId,
             EmployeeId = source.EmployeeId,
             FullName = source.FullName,
             DepartmentName = source.DepartmentName,
             PositionName = source.PositionName,
+            AuthorizedEmployeeId = source.AuthorizedEmployeeId,
+            AuthorizedEmployeeNo = source.AuthorizedEmployeeNo,
+            AuthorizedEmployeeName = source.AuthorizedEmployeeName,
+            AuthorizedDepartmentId = source.AuthorizedDepartmentId,
+            AuthorizedDepartmentName = source.AuthorizedDepartmentName,
             Destination = source.Destination,
             Purpose = source.Purpose,
+            MaterialRemarks = source.MaterialRemarks,
             GatePassStatusCode = source.GatePassStatusCode,
             StatusName = source.StatusName,
             StatusGroup = source.StatusGroup,
@@ -505,6 +607,7 @@ public sealed class GatePassRepository(
             QrExpiresAt = source.QrExpiresAt,
             VersionNo = source.VersionNo,
             ApprovalSteps = steps,
-            Scans = scans
+            Scans = scans,
+            MaterialItems = materialItems
         };
 }

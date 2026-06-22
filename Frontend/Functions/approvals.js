@@ -31,7 +31,7 @@ async function approveCurrentPass() {
             signatureFileId: signature?.signatureFileId || null,
             comment: null
         });
-        showToast('Document Approved!');
+        showToast('Form request approved.');
         closeModal();
         await Promise.all([renderApprovalQueue(), loadMyGatePasses()]);
         refreshDashboards();
@@ -49,7 +49,7 @@ async function rejectCurrentPass() {
         const reason = window.prompt('Reason for rejection:');
         if (!reason?.trim()) return;
         pass.status = 'Rejected';
-        showToast('Document Rejected.', 'error');
+        showToast('Form request rejected.', 'error');
         closeModal();
         refreshDashboards();
         return;
@@ -65,7 +65,7 @@ async function rejectCurrentPass() {
             signatureFileId: null,
             comment: reason.trim()
         });
-        showToast('Document Rejected.', 'error');
+        showToast('Form request rejected.', 'error');
         closeModal();
         await renderApprovalQueue();
         refreshDashboards();
@@ -104,7 +104,7 @@ function approveCurrentMockPass() {
         pass.status = 'Approved';
     }
 
-    showToast('Document Approved!');
+    showToast('Form request approved.');
     closeModal();
     refreshDashboards();
 }
@@ -126,10 +126,17 @@ async function renderApprovalQueue() {
             const queuePasses = databaseApprovalQueue.map(item => ({
                 id: item.gatePassNo,
                 dbId: item.gatePassId,
+                controlNo: item.controlNo || item.gatePassNo,
+                formTypeCode: item.formTypeCode || 'PERSON_GATE_PASS',
+                formName: item.formName || 'Person Gate Pass',
                 userName: item.fullName,
                 userDept: item.departmentName,
                 destination: item.destination,
                 purpose: item.purpose,
+                authorizedEmployeeName: item.authorizedEmployeeName || null,
+                authorizedDepartmentName: item.authorizedDepartmentName || null,
+                materialRemarks: item.materialRemarks || '',
+                materialItems: [],
                 expectedOut: formatDateTime(item.expectedOutAt, false),
                 expectedIn: item.expectedInAt ? formatDateTime(item.expectedInAt, false) : 'N/A',
                 status: gatePassStatusLabels[`PENDING_${item.approvalStepCode}`],
@@ -179,9 +186,10 @@ function updateApprovalQueueDisplay(toApprove) {
     document.getElementById('approvalList').innerHTML = toApprove.map(pass => `
         <div class="bg-white border p-4 rounded shadow-sm flex flex-col justify-between">
             <div class="mb-3">
-                <div class="flex justify-between"><h3 class="font-bold text-sm">${pass.userName}</h3><span class="text-[9px] bg-yellow-100 px-1 rounded">${pass.status}</span></div>
-                <p class="text-xs text-gray-500 mb-1">Dest: ${pass.destination}</p>
-                <p class="text-xs text-gray-500">Department: ${pass.userDept || 'N/A'}</p>
+                <div class="mb-2 flex items-start justify-between gap-2"><div><span class="text-[9px] font-bold uppercase tracking-wide ${pass.formTypeCode === 'MATERIAL_GATE_PASS' ? 'text-amber-600' : 'text-mpiBlue'}">${materialEscape(pass.formName || 'Form Request')}</span><h3 class="font-bold text-sm">${materialEscape(pass.userName)}</h3></div><span class="whitespace-nowrap rounded bg-yellow-100 px-1 text-[9px]">${materialEscape(pass.status)}</span></div>
+                <p class="mb-1 font-mono text-[10px] font-bold text-gray-500">Control: ${materialEscape(pass.controlNo || pass.id)}</p>
+                <p class="text-xs text-gray-500 mb-1">${pass.formTypeCode === 'MATERIAL_GATE_PASS' ? `For: ${materialEscape(pass.authorizedEmployeeName || 'N/A')}` : `Destination: ${materialEscape(pass.destination)}`}</p>
+                <p class="text-xs text-gray-500">Department: ${materialEscape(pass.formTypeCode === 'MATERIAL_GATE_PASS' ? (pass.authorizedDepartmentName || pass.userDept || 'N/A') : (pass.userDept || 'N/A'))}</p>
             </div>
             <button onclick="${getViewPassCall(pass, true)}" class="w-full bg-blue-50 text-mpiBlue text-xs font-bold py-2 rounded hover:bg-mpiBlue hover:text-white transition">Review Document</button>
         </div>

@@ -12,6 +12,12 @@ public interface IGatePassService
         string traceId,
         CancellationToken cancellationToken = default);
 
+    Task<ServiceResult<GatePassCreationResult>> CreateMaterialAsync(
+        long requesterUserId,
+        CreateMaterialGatePassRequest request,
+        string traceId,
+        CancellationToken cancellationToken = default);
+
     Task<GatePassDetail?> GetDetailAsync(
         long gatePassId,
         CancellationToken cancellationToken = default);

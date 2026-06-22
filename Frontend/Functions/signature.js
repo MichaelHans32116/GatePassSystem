@@ -171,6 +171,13 @@ function featherAlphaEdges(data, width, height) {
 
 function getSignatureTargetContainerId() {
             const pass = findGatePassRecord();
+            if (pass?.formTypeCode === 'MATERIAL_GATE_PASS') {
+                if (pass.status === 'Pending Superior') return 'sigMatSuperior';
+                if (pass.status === 'Pending PAS') return 'sigMatPas';
+                return currentUser?.canNoteGatePass
+                    ? 'sigMatPas'
+                    : 'sigMatSuperior';
+            }
             if (pass?.status === 'Pending Superior') return 'sigImm';
             if (pass?.status === 'Pending President') return 'sigPres';
             if (pass?.status === 'Pending PAS') return 'sigPAS';

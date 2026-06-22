@@ -5,6 +5,8 @@ namespace GatePassSystem.Project.DTOs.GatePass;
 
 public sealed class CreateGatePassRequest
 {
+    public long? PreparedBySignatureFileId { get; init; }
+
     [Required, StringLength(255)]
     public string Destination { get; init; } = string.Empty;
 
@@ -26,8 +28,38 @@ public sealed class CreateGatePassRequest
     public long? DriverId { get; init; }
 }
 
+public sealed class CreateMaterialGatePassRequest
+{
+    public long AuthorizedEmployeeId { get; init; }
+    public DateOnly FormDate { get; init; }
+
+    [StringLength(1000)]
+    public string? Remarks { get; init; }
+
+    public long? PreparedBySignatureFileId { get; init; }
+
+    [Required, MinLength(1), MaxLength(20)]
+    public IReadOnlyList<MaterialGatePassItemRequest> Items { get; init; } = [];
+}
+
+public sealed class MaterialGatePassItemRequest
+{
+    [StringLength(80)]
+    public string? ItemNo { get; init; }
+
+    [Required, StringLength(500)]
+    public string Description { get; init; } = string.Empty;
+
+    [Range(typeof(decimal), "0.001", "999999999.999")]
+    public decimal Quantity { get; init; }
+
+    [Required, StringLength(50)]
+    public string Unit { get; init; } = string.Empty;
+}
+
 public sealed class GatePassQuery
 {
+    public string? FormTypeCode { get; init; }
     public string? StatusCode { get; init; }
     public long? DepartmentId { get; init; }
     public DateTimeOffset? FromAppliedAt { get; init; }
@@ -69,3 +101,11 @@ public sealed record QrTokenResponse(
     string GatePassNo,
     string QrToken,
     DateTimeOffset? ExpiresAt);
+
+public sealed record EmployeeLookupResponse(
+    long EmployeeRecordId,
+    string EmployeeId,
+    string FullName,
+    long DepartmentId,
+    string DepartmentName,
+    string PositionName);

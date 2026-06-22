@@ -19,6 +19,9 @@ public sealed class ApprovalRepository(
                 SELECT
                     request_row.gate_pass_id AS GatePassId,
                     request_row.gate_pass_no AS GatePassNo,
+                    request_row.control_no AS ControlNo,
+                    request_row.form_type_code AS FormTypeCode,
+                    form_type.form_name AS FormName,
                     step.approval_step_id AS ApprovalStepId,
                     step.approval_step_code AS ApprovalStepCode,
                     employee.employee_id AS EmployeeId,
@@ -26,18 +29,29 @@ public sealed class ApprovalRepository(
                     department.department_name AS DepartmentName,
                     request_row.destination AS Destination,
                     request_row.purpose AS Purpose,
+                    authorized_employee.full_name AS AuthorizedEmployeeName,
+                    authorized_department.department_name AS AuthorizedDepartmentName,
+                    request_row.material_remarks AS MaterialRemarks,
                     request_row.expected_out_at AS ExpectedOutAt,
                     request_row.expected_in_at AS ExpectedInAt,
                     request_row.applied_at AS AppliedAt
                 FROM tbl_gate_pass_approval_steps step
                 JOIN tbl_gate_pass_requests request_row
                     ON request_row.gate_pass_id = step.gate_pass_id
+                JOIN tbl_form_types form_type
+                    ON form_type.form_type_code = request_row.form_type_code
                 JOIN tbl_employees employee
                     ON employee.employee_record_id =
                        request_row.requester_employee_id
                 JOIN tbl_departments department
                     ON department.department_id =
                        request_row.requester_department_id
+                LEFT JOIN tbl_employees authorized_employee
+                    ON authorized_employee.employee_record_id =
+                       request_row.authorized_employee_id
+                LEFT JOIN tbl_departments authorized_department
+                    ON authorized_department.department_id =
+                       request_row.authorized_department_id
                 WHERE step.assigned_approver_user_id = @ApproverUserId
                   AND step.approval_status_code = 'PENDING'
                   AND request_row.gate_pass_status_code = CONCAT(
@@ -75,6 +89,7 @@ public sealed class ApprovalRepository(
                     """
                     SELECT
                         request_row.gate_pass_id AS GatePassId,
+                        request_row.form_type_code AS FormTypeCode,
                         request_row.gate_pass_status_code AS CurrentStatus,
                         request_row.requester_user_id AS RequesterUserId,
                         step.approval_step_id AS ApprovalStepId,
@@ -234,11 +249,15 @@ public sealed class ApprovalRepository(
                         ELSE rejected_at
                     END,
                     qr_token_hash = CASE
-                        WHEN @NewStatus = 'APPROVED' THEN @QrTokenHash
+                        WHEN @NewStatus = 'APPROVED'
+                         AND @FormTypeCode = 'PERSON_GATE_PASS'
+                            THEN @QrTokenHash
                         ELSE qr_token_hash
                     END,
                     qr_expires_at = CASE
-                        WHEN @NewStatus = 'APPROVED' THEN @QrExpiresAt
+                        WHEN @NewStatus = 'APPROVED'
+                         AND @FormTypeCode = 'PERSON_GATE_PASS'
+                            THEN @QrExpiresAt
                         ELSE qr_expires_at
                     END,
                     version_no = version_no + 1
@@ -267,6 +286,7 @@ public sealed class ApprovalRepository(
                     ActedAt = actedAt,
                     QrTokenHash = qrTokenHash,
                     QrExpiresAt = qrExpiresAt,
+                    current.FormTypeCode,
                     PreviousStatus = current.CurrentStatus,
                     ActorUserId = actorUserId,
                     Comment = comment,
@@ -278,6 +298,7 @@ public sealed class ApprovalRepository(
             await transaction.CommitAsync(cancellationToken);
             return new ApprovalMutation(
                 gatePassId,
+                current.FormTypeCode,
                 current.CurrentStatus,
                 newStatus,
                 nextStepCode);
@@ -292,6 +313,7 @@ public sealed class ApprovalRepository(
     private sealed class CurrentStep
     {
         public long GatePassId { get; init; }
+        public string FormTypeCode { get; init; } = "PERSON_GATE_PASS";
         public string CurrentStatus { get; init; } = string.Empty;
         public long RequesterUserId { get; init; }
         public long ApprovalStepId { get; init; }
@@ -300,4 +322,3 @@ public sealed class ApprovalRepository(
         public long ApproverUserId { get; init; }
     }
 }
-

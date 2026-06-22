@@ -263,7 +263,19 @@ async function viewPass(id, isReviewing = false) {
                 if (el) el.innerText = val;
             };
 
+            const isMaterial =
+                p.formTypeCode === 'MATERIAL_GATE_PASS';
+            document.getElementById('printableArea')?.classList.toggle(
+                'hidden',
+                isMaterial
+            );
+            document.getElementById('materialPrintableArea')?.classList.toggle(
+                'hidden',
+                !isMaterial
+            );
+
             setVal('vDateF', p.dateFiled);
+            setVal('vControlNo', p.controlNo || p.id);
             setVal('vName', p.userName);
             setVal('vDest', p.destination);
             setVal('vPurp', p.purpose);
@@ -280,8 +292,28 @@ async function viewPass(id, isReviewing = false) {
             setVal('vDriver', p.vehicle ? p.vehicle.driver : 'N/A');
             setVal('vPlate', vehicleString);
 
+            if (isMaterial) {
+                const formDate = p.formDate
+                    ? new Date(`${String(p.formDate).slice(0, 10)}T00:00:00`).toLocaleDateString()
+                    : p.dateFiled;
+                setVal('matControlNo', p.controlNo || p.id);
+                setVal('matDate', formDate);
+                setVal('matAuthorizedName', p.authorizedEmployeeName || 'N/A');
+                setVal('matAuthorizedDepartment', p.authorizedDepartmentName || 'N/A');
+                setVal('matRemarks', p.materialRemarks || '—');
+
+                const rows = [...(p.materialItems || [])];
+                while (rows.length < 8) rows.push(null);
+                document.getElementById('matItemsBody').innerHTML = rows
+                    .slice(0, 10)
+                    .map(item => item
+                        ? `<tr><td>${materialEscape(item.itemNo || '')}</td><td>${materialEscape(item.description)}</td><td class="text-center">${materialEscape(Number(item.quantity).toLocaleString(undefined, { maximumFractionDigits: 3 }))}</td><td class="text-center">${materialEscape(item.unit)}</td></tr>`
+                        : '<tr><td>&nbsp;</td><td></td><td></td><td></td></tr>')
+                    .join('');
+            }
+
             // Signatures handling
-            ['sigImm', 'sigPres', 'sigPAS'].forEach(idPrefix => {
+            ['sigImm', 'sigPres', 'sigPAS', 'sigMatPrepared', 'sigMatSuperior', 'sigMatPas'].forEach(idPrefix => {
                 const sigDiv = document.getElementById(idPrefix);
                 const nameSpan = document.getElementById(idPrefix + 'Name');
                 if(sigDiv) sigDiv.innerHTML = '';
@@ -324,11 +356,35 @@ async function viewPass(id, isReviewing = false) {
             await handleSig(p.signatures.imm, 'sigImm');
             await handleSig(p.signatures.pres, 'sigPres');
             await handleSig(p.signatures.pas, 'sigPAS');
+            if (isMaterial) {
+                await handleSig(p.signatures.imm, 'sigMatSuperior');
+                await handleSig(p.signatures.pas, 'sigMatPas');
+
+                const preparedSignature = p.preparedBySignatureFileId
+                    ? {
+                        name: p.userName,
+                        fileId: p.preparedBySignatureFileId,
+                        w: 100,
+                        y: 0
+                    }
+                    : null;
+                if (preparedSignature) {
+                    await handleSig(preparedSignature, 'sigMatPrepared');
+                } else {
+                    setVal('sigMatPreparedName', p.userName);
+                    document.getElementById('sigMatPreparedName')?.classList.remove('hidden');
+                    const preparedContainer = document.getElementById('sigMatPrepared');
+                    if (preparedContainer) {
+                        preparedContainer.innerHTML =
+                            '<span style="font-family:serif;font-style:italic;font-size:11px;color:#155CA2;">Digitally Prepared</span>';
+                    }
+                }
+            }
 
             const qrContainer = document.getElementById('qrCodeDisplay');
             if(qrContainer) {
                 qrContainer.innerHTML = '';
-                if (['Approved', 'Outside', 'Overdue'].includes(p.status)) {
+                if (!isMaterial && ['Approved', 'Outside', 'Overdue'].includes(p.status)) {
                     try {
                         const qrValue = await loadQrToken(p);
                         if (qrValue) {
@@ -353,7 +409,7 @@ async function viewPass(id, isReviewing = false) {
                 const hasImm = p.signatures.imm ? 'text-green-600 font-bold' : 'text-gray-400';
                 const hasPres = p.signatures.pres ? 'text-green-600 font-bold' : 'text-gray-400';
                 const hasPAS = p.signatures.pas ? 'text-green-600 font-bold' : 'text-gray-400';
-                const reqPres = p.requiresPresidentApproval === true;
+                const reqPres = !isMaterial && p.requiresPresidentApproval === true;
 
                 const reqSuperior = p.requiresSuperiorApproval !== false;
                 let stepNo = 1;
@@ -367,7 +423,7 @@ async function viewPass(id, isReviewing = false) {
                     stepsHTML += `<span class="${hasPres}"><i class="fas ${p.signatures.pres ? 'fa-check-circle' : 'fa-circle'}"></i> ${stepNo++}. President</span>`;
                     stepsHTML += ` <i class="fas fa-chevron-right text-gray-300 mx-2"></i> `;
                 }
-                stepsHTML += `<span class="${hasPAS}"><i class="fas ${p.signatures.pas ? 'fa-check-circle' : 'fa-circle'}"></i> ${stepNo}. PAS</span>`;
+                stepsHTML += `<span class="${hasPAS}"><i class="fas ${p.signatures.pas ? 'fa-check-circle' : 'fa-circle'}"></i> ${stepNo}. ${isMaterial ? 'PAS Approval' : 'PAS'}</span>`;
 
                 document.getElementById('workflowSteps').innerHTML = stepsHTML;
             } else {
@@ -403,9 +459,13 @@ async function viewPass(id, isReviewing = false) {
 
                     // PRE-FILL USERNAME FOR TRUE LIVE PREVIEW ALIGNMENT
                     let targetContainerId = null;
-                    if (p.status === 'Pending Superior') targetContainerId = 'sigImm';
-                    else if (p.status === 'Pending President') targetContainerId = 'sigPres';
-                    else if (p.status === 'Pending PAS') targetContainerId = 'sigPAS';
+                    if (p.status === 'Pending Superior') {
+                        targetContainerId = isMaterial ? 'sigMatSuperior' : 'sigImm';
+                    } else if (p.status === 'Pending President') {
+                        targetContainerId = 'sigPres';
+                    } else if (p.status === 'Pending PAS') {
+                        targetContainerId = isMaterial ? 'sigMatPas' : 'sigPAS';
+                    }
 
                     if (targetContainerId) {
                         const nameSpan = document.getElementById(targetContainerId + 'Name');

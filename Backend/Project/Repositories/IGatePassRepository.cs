@@ -14,8 +14,17 @@ public interface IGatePassRepository
         string traceId,
         CancellationToken cancellationToken = default);
 
+    Task<GatePassRecord> CreateMaterialDraftAsync(
+        RequesterContext requester,
+        EmployeeLookupRecord authorizedEmployee,
+        CreateMaterialGatePassRequest request,
+        string traceId,
+        CancellationToken cancellationToken = default);
+
     Task<long?> FindApproverAsync(
         string approvalStepCode,
+        string formTypeCode,
+        bool requireExactFormType,
         long requesterUserId,
         long? departmentId,
         long? positionId,

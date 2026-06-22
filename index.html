@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MPI - Gate Pass System</title>
+    <title>MPI - Form Request System</title>
     <link rel="icon" type="image/png" href="Frontend/Design/images/logo.png">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
@@ -30,7 +30,7 @@
             }
         }
     </script>
-        <link rel="stylesheet" href="Frontend/Design/styles.css?v=20260620-phase5-1">
+        <link rel="stylesheet" href="Frontend/Design/styles.css?v=20260622-form-request">
 </head>
 <body class="h-screen overflow-hidden flex flex-col font-sans text-sm md:text-base">
 
@@ -43,7 +43,7 @@
             <div class="absolute inset-0 bg-black/40"></div>
             <!-- Text Overlay -->
             <div class="absolute bottom-1/3 left-12 lg:left-24 text-white fade-in z-10 pointer-events-none">
-                <h1 class="text-5xl lg:text-6xl font-extrabold tracking-tight mb-3 drop-shadow-xl">Gate Pass System</h1>
+                <h1 class="text-5xl lg:text-6xl font-extrabold tracking-tight mb-3 drop-shadow-xl">Form Request System</h1>
                 <h2 class="text-lg lg:text-xl tracking-widest uppercase font-semibold text-blue-100 drop-shadow-md">Moriroku Philippines, Inc.</h2>
                 <div class="w-40 h-1.5 bg-white mt-6 rounded-full drop-shadow-lg opacity-90"></div>
             </div>
@@ -80,20 +80,7 @@
                 </button>
             </form>
 
-            <!-- Dev Quick Login Helpers -->
-            <div class="mt-8 pt-6 border-t border-gray-100 w-full">
-                <p class="text-[10px] text-center text-gray-400 mb-3 font-bold uppercase tracking-wider">Quick Login (Testing)</p>
-                <div class="grid grid-cols-2 lg:grid-cols-3 gap-2">
-                    <button type="button" onclick="quickLogin('ADMIN', '01012020')" class="text-[10px] font-semibold bg-gray-100 hover:bg-gray-200 py-2 rounded transition">IT Admin</button>
-                    <button type="button" onclick="quickLogin('PRES', '01012020')" class="text-[10px] font-semibold bg-gray-100 hover:bg-gray-200 py-2 rounded transition">President</button>
-                    <button type="button" onclick="quickLogin('SUP-01', '01012020')" class="text-[10px] font-semibold bg-gray-100 hover:bg-gray-200 py-2 rounded transition">Manager</button>
-                    <button type="button" onclick="quickLogin('HR', '01012020')" class="text-[10px] font-semibold bg-gray-100 hover:bg-gray-200 py-2 rounded transition">Head HR</button>
-                    <button type="button" onclick="quickLogin('MPI-001', '06172026')" class="text-[10px] font-semibold bg-gray-100 hover:bg-gray-200 py-2 rounded transition">Employee</button>
-                    <button type="button" onclick="quickLogin('GUARD-1', '01012020')" class="text-[10px] font-semibold bg-gray-100 hover:bg-gray-200 py-2 rounded transition">Guard</button>
-                </div>
-            </div>
-
-            </div>
+        </div>
         </div>
     </div>
 
@@ -111,7 +98,7 @@
      style="width: 52px; height: 40px; padding: 0px;">
     <img src="Frontend/Design/images/logo.png" alt="MPI Logo" class="w-full h-full object-contain">
 </div>
-                    <h2 class="font-bold text-sm leading-tight tracking-wide">Gate Pass System</h2>
+                    <h2 class="font-bold text-sm leading-tight tracking-wide">Form Request System</h2>
                 </div>
                 <button class="md:hidden text-white/70 hover:text-white" onclick="toggleSidebar()"><i class="fas fa-times text-lg"></i></button>
             </div>
@@ -124,7 +111,7 @@
                 </a>
 
                 <a href="#" class="nav-item px-6 py-3 transition text-white" data-target="applyPass" onclick="switchSection('applyPass')" id="navItemApply">
-                    <i class="fas fa-file-signature w-6 text-left"></i> <span class="text-sm">Apply Gate Pass</span>
+                    <i class="fas fa-file-signature w-6 text-left"></i> <span class="text-sm">New Form Request</span>
                 </a>
 
                 <div id="navGroupApprovals" class="mt-4 block">
@@ -254,7 +241,7 @@
                         </div>
 
                         <!-- Stat Cards -->
-                        <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Overview of your passes</h2>
+                        <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Overview of your form requests</h2>
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 mb-8">
                             <div class="bg-white p-5 rounded-lg shadow-sm border-t-4 border-yellow-400 flex items-center justify-between">
                                 <div><p class="text-3xl font-bold text-gray-800" id="cntPending">0</p><h3 class="text-[10px] md:text-xs font-semibold text-gray-500 mt-1 uppercase">Pending Requests</h3></div>
@@ -273,16 +260,16 @@
                         <!-- My Passes Table -->
                         <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
                             <div class="px-4 md:px-5 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50/50">
-                                <h2 class="font-bold text-gray-800">Recent Gate Passes</h2>
+                                <h2 class="font-bold text-gray-800">Recent Form Requests</h2>
                                 <button onclick="switchSection('applyPass')" id="btnNewRequest" class="text-xs bg-mpiBlue text-white px-3 py-2 rounded hover:bg-mpiDark transition"><i class="fas fa-plus mr-1"></i> New Request</button>
                             </div>
                             <div class="overflow-x-auto">
                                 <table class="w-full text-left border-collapse min-w-max">
                                     <thead>
                                         <tr class="bg-white text-gray-500 text-[11px] uppercase tracking-wider border-b">
-                                            <th class="px-5 py-3 font-semibold">GP ID</th>
+                                            <th class="px-5 py-3 font-semibold">Control No.</th>
                                             <th class="px-5 py-3 font-semibold">Date Filed</th>
-                                            <th class="px-5 py-3 font-semibold">Destination</th>
+                                            <th class="px-5 py-3 font-semibold">Form / Details</th>
                                             <th class="px-5 py-3 font-semibold">Status</th>
                                             <th class="px-5 py-3 font-semibold text-right">Action</th>
                                         </tr>
@@ -296,12 +283,27 @@
                     </div>
                 </section>
 
-                <!-- SECTION: APPLY GATE PASS -->
-                <section id="sec-applyPass" class="view-section hidden fade-in max-w-3xl mx-auto">
+                <!-- SECTION: NEW FORM REQUEST -->
+                <section id="sec-applyPass" class="view-section hidden fade-in max-w-5xl mx-auto">
                     <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
                         <div class="px-4 md:px-6 py-5 border-b border-gray-200">
-                            <h2 class="text-lg font-bold text-gray-800">Gate Pass Application Form</h2>
-                            <p class="text-gray-500 text-xs mt-1">Fill out the required information to request exit clearance.</p>
+                            <h2 class="text-lg font-bold text-gray-800">New Form Request</h2>
+                            <p class="text-gray-500 text-xs mt-1">Choose the form you need, then complete the required details.</p>
+                        </div>
+
+                        <div class="grid grid-cols-1 gap-3 border-b bg-slate-50 p-4 sm:grid-cols-2 md:p-6">
+                            <button id="formTypePersonButton" type="button" onclick="selectRequestFormType('PERSON_GATE_PASS')" class="form-type-card active rounded-xl border-2 border-mpiBlue bg-white p-4 text-left shadow-sm transition">
+                                <div class="flex items-start gap-3">
+                                    <span class="rounded-lg bg-blue-50 p-3 text-mpiBlue"><i class="fas fa-person-walking-arrow-right text-xl"></i></span>
+                                    <span><strong class="block text-sm text-gray-900">Person Gate Pass</strong><small class="mt-1 block text-xs leading-relaxed text-gray-500">For an associate leaving company premises, with optional vehicle reservation.</small></span>
+                                </div>
+                            </button>
+                            <button id="formTypeMaterialButton" type="button" onclick="selectRequestFormType('MATERIAL_GATE_PASS')" class="form-type-card rounded-xl border-2 border-transparent bg-white p-4 text-left shadow-sm transition hover:border-blue-200">
+                                <div class="flex items-start gap-3">
+                                    <span class="rounded-lg bg-amber-50 p-3 text-amber-600"><i class="fas fa-box-open text-xl"></i></span>
+                                    <span><strong class="block text-sm text-gray-900">Material Gate Pass</strong><small class="mt-1 block text-xs leading-relaxed text-gray-500">For an employee authorized to bring listed materials out of the premises.</small></span>
+                                </div>
+                            </button>
                         </div>
 
                         <form id="applyForm" onsubmit="submitGatePass(event)" class="p-4 md:p-6 space-y-5">
@@ -388,9 +390,86 @@
                                 <span><strong>Approval Flow:</strong> <span id="routeApprovalText">Immediate Superior → PAS</span></span>
                             </div>
 
+                            <div class="prepared-signature-panel">
+                                <div>
+                                    <h3 class="text-xs font-bold uppercase tracking-wide text-gray-700">Prepared By Signature <span class="font-normal normal-case text-gray-400">(optional)</span></h3>
+                                    <p class="mt-1 text-[11px] text-gray-500">Upload a signature image. White or blue backgrounds are cleaned automatically.</p>
+                                </div>
+                                <label class="prepared-signature-upload">
+                                    <i class="fas fa-upload"></i>
+                                    <span>Choose signature</span>
+                                    <input id="personPreparedSignatureUpload" type="file" accept="image/png,image/jpeg" class="sr-only" onchange="handlePreparedSignatureUpload(event, 'PERSON_GATE_PASS')">
+                                </label>
+                                <div id="personPreparedSignaturePreview" class="prepared-signature-preview hidden"></div>
+                                <button id="personPreparedSignatureClear" type="button" onclick="clearPreparedSignature('PERSON_GATE_PASS')" class="hidden text-xs font-bold text-red-600">Remove</button>
+                            </div>
+
                             <div class="pt-2 flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2">
                                 <button type="button" onclick="switchSection('dashBoard')" class="px-5 py-2 text-sm text-gray-600 font-medium hover:bg-gray-100 rounded transition">Cancel</button>
                                 <button type="submit" class="bg-mpiBlue text-white text-sm font-bold py-2 px-6 rounded shadow hover:bg-mpiDark transition">Submit Request</button>
+                            </div>
+                        </form>
+
+                        <form id="materialApplyForm" onsubmit="submitMaterialGatePass(event)" class="hidden p-4 md:p-6 space-y-5">
+                            <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+                                <div>
+                                    <label class="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-2">Date <span class="text-red-500">*</span></label>
+                                    <input type="date" id="materialFormDate" class="w-full rounded border border-gray-300 p-2.5 text-sm focus:border-mpiBlue focus:ring-1 focus:ring-mpiBlue" required>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-2">Employee Bringing Out Items <span class="text-red-500">*</span></label>
+                                    <select id="materialAuthorizedEmployee" class="w-full rounded border border-gray-300 bg-white p-2.5 text-sm focus:border-mpiBlue focus:ring-1 focus:ring-mpiBlue" required onchange="updateMaterialAuthorizedDepartment()">
+                                        <option value="">Loading active employees...</option>
+                                    </select>
+                                    <p id="materialAuthorizedDepartment" class="mt-1 text-[11px] text-gray-500">Department appears after selecting an employee.</p>
+                                </div>
+                            </div>
+
+                            <div class="overflow-hidden rounded-lg border border-gray-200">
+                                <div class="flex items-center justify-between border-b bg-gray-50 px-4 py-3">
+                                    <div>
+                                        <h3 class="text-sm font-bold text-gray-800">Items to Bring Out</h3>
+                                        <p class="text-[10px] text-gray-500">Add up to 20 item lines.</p>
+                                    </div>
+                                    <button type="button" onclick="addMaterialItemRow()" class="rounded bg-mpiBlue px-3 py-2 text-xs font-bold text-white hover:bg-mpiDark"><i class="fas fa-plus mr-1"></i>Add Item</button>
+                                </div>
+                                <div class="overflow-x-auto">
+                                    <table class="w-full min-w-[720px] text-left">
+                                        <thead class="border-b bg-white text-[10px] uppercase tracking-wide text-gray-500">
+                                            <tr><th class="px-3 py-2 w-10">#</th><th class="px-3 py-2 w-32">Item No.</th><th class="px-3 py-2">Description</th><th class="px-3 py-2 w-28">Quantity</th><th class="px-3 py-2 w-28">Unit</th><th class="px-3 py-2 w-12"></th></tr>
+                                        </thead>
+                                        <tbody id="materialItemsBody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-2">Remarks</label>
+                                <textarea id="materialRemarks" maxlength="1000" class="h-20 w-full resize-none rounded border border-gray-300 p-2.5 text-sm focus:border-mpiBlue focus:ring-1 focus:ring-mpiBlue" placeholder="Optional control or release remarks"></textarea>
+                            </div>
+
+                            <div class="prepared-signature-panel">
+                                <div>
+                                    <h3 class="text-xs font-bold uppercase tracking-wide text-gray-700">Prepared By Signature <span class="font-normal normal-case text-gray-400">(optional)</span></h3>
+                                    <p class="mt-1 text-[11px] text-gray-500">The logged-in requester is the Prepared By employee.</p>
+                                </div>
+                                <label class="prepared-signature-upload">
+                                    <i class="fas fa-upload"></i>
+                                    <span>Choose signature</span>
+                                    <input id="materialPreparedSignatureUpload" type="file" accept="image/png,image/jpeg" class="sr-only" onchange="handlePreparedSignatureUpload(event, 'MATERIAL_GATE_PASS')">
+                                </label>
+                                <div id="materialPreparedSignaturePreview" class="prepared-signature-preview hidden"></div>
+                                <button id="materialPreparedSignatureClear" type="button" onclick="clearPreparedSignature('MATERIAL_GATE_PASS')" class="hidden text-xs font-bold text-red-600">Remove</button>
+                            </div>
+
+                            <div class="flex items-center rounded bg-blue-50 p-3 text-[10px] text-gray-600 md:text-xs">
+                                <i class="fas fa-route mr-2 text-lg text-mpiBlue"></i>
+                                <span><strong>Approval Flow:</strong> Prepared By → Immediate Superior (Noted By) → PAS / Ma'am Alona (Approved By). No President approval.</span>
+                            </div>
+
+                            <div class="pt-2 flex flex-col justify-end gap-2 sm:flex-row">
+                                <button type="button" onclick="switchSection('dashBoard')" class="rounded px-5 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100">Cancel</button>
+                                <button type="submit" class="rounded bg-mpiBlue px-6 py-2 text-sm font-bold text-white shadow hover:bg-mpiDark">Submit Material Request</button>
                             </div>
                         </form>
                     </div>
@@ -452,7 +531,7 @@
                 <section id="sec-adminPanel" class="view-section hidden fade-in max-w-7xl mx-auto">
                     <!-- Admin Tabs Navigation (Scrollable on mobile) -->
                     <div class="flex overflow-x-auto whitespace-nowrap space-x-1 border-b border-gray-200 mb-6 pb-1" id="adminTabsContainer">
-                        <button onclick="switchAdminTab('logs')" id="tab-logs" class="admin-tab px-4 py-2 text-sm font-bold text-mpiBlue border-b-2 border-mpiBlue flex-shrink-0">Gate Pass Logs</button>
+                        <button onclick="switchAdminTab('logs')" id="tab-logs" class="admin-tab px-4 py-2 text-sm font-bold text-mpiBlue border-b-2 border-mpiBlue flex-shrink-0">Form Request Logs</button>
                         <button onclick="switchAdminTab('users')" id="tab-users" class="admin-tab px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 flex-shrink-0">Manage Users</button>
                         <button onclick="switchAdminTab('fleet')" id="tab-fleet" class="admin-tab px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 flex-shrink-0">Vehicles & Drivers</button>
                         <button onclick="switchAdminTab('depts')" id="tab-depts" class="admin-tab px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 flex-shrink-0">Departments & Roles</button>
@@ -464,6 +543,7 @@
                             <div class="w-full sm:w-auto"><label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Search ID/Name</label><input type="text" id="logFilterName" placeholder="Enter keyword..." class="w-full border border-gray-300 p-2 rounded text-sm sm:w-48 md:w-56 focus:outline-none focus:border-mpiBlue"></div>
                             <div class="w-full sm:w-auto"><label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Filter by Date</label><input type="date" id="logFilterDate" class="w-full border border-gray-300 p-2 rounded text-sm text-gray-700 focus:outline-none focus:border-mpiBlue"></div>
                             <div class="w-full sm:w-auto" id="filterDeptContainer"><label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Department</label><select id="logFilterDept" class="w-full border border-gray-300 p-2 rounded text-sm text-gray-700 focus:outline-none focus:border-mpiBlue"><option value="">All Departments</option></select></div>
+                            <div class="w-full sm:w-auto"><label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Form Type</label><select id="logFilterFormType" class="w-full border border-gray-300 p-2 rounded text-sm"><option value="">All Forms</option><option value="PERSON_GATE_PASS">Person Gate Pass</option><option value="MATERIAL_GATE_PASS">Material Gate Pass</option></select></div>
                             <div class="w-full sm:w-auto"><label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Status</label><select id="logFilterStatus" class="w-full border border-gray-300 p-2 rounded text-sm"><option value="">All Statuses</option><option value="PENDING_SUPERIOR">Pending Superior</option><option value="PENDING_PRESIDENT">Pending President</option><option value="PENDING_PAS">Pending PAS</option><option value="APPROVED">Approved</option><option value="OUTSIDE">Outside</option><option value="RETURNED">Returned</option><option value="REJECTED">Rejected</option><option value="CANCELLED">Cancelled</option></select></div>
                             <div class="w-full sm:w-auto"><button onclick="renderAdminLogs(1)" class="w-full bg-mpiBlue text-white px-5 py-2 rounded shadow text-sm font-bold hover:bg-mpiDark transition"><i class="fas fa-filter mr-2"></i>Apply Filters</button></div>
                         </div>
@@ -471,7 +551,7 @@
                             <table class="w-full text-left border-collapse min-w-max">
                                 <thead>
                                     <tr class="bg-white text-gray-500 text-[11px] uppercase tracking-wider border-b">
-                                        <th class="px-5 py-3 font-semibold">GP-ID</th><th class="px-5 py-3 font-semibold">Associate</th><th class="px-5 py-3 font-semibold">Dept</th><th class="px-5 py-3 font-semibold">1-Way?</th><th class="px-5 py-3 font-semibold">Actual Out</th><th class="px-5 py-3 font-semibold">Actual In</th><th class="px-5 py-3 font-semibold">Status</th><th class="px-5 py-3 font-semibold text-right">Action</th>
+                                        <th class="px-5 py-3 font-semibold">Control No.</th><th class="px-5 py-3 font-semibold">Type</th><th class="px-5 py-3 font-semibold">Requester</th><th class="px-5 py-3 font-semibold">Dept</th><th class="px-5 py-3 font-semibold">Subject</th><th class="px-5 py-3 font-semibold">Actual Out</th><th class="px-5 py-3 font-semibold">Actual In</th><th class="px-5 py-3 font-semibold">Status</th><th class="px-5 py-3 font-semibold text-right">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody id="adminLogsTable" class="text-sm divide-y divide-gray-100"></tbody>
@@ -615,8 +695,9 @@
                                 <div id="vName" class="font-bold text-xs uppercase pl-2 pt-1"></div>
                             </td>
                             <td class="w-[30%] h-10 align-top">
-                                <div class="text-[7px] uppercase">DATE FILED</div>
+                                <div class="flex justify-between text-[7px] uppercase"><span>DATE FILED</span><span>CONTROL NO.</span></div>
                                 <div id="vDateF" class="font-bold text-[10px] pl-2"></div>
+                                <div id="vControlNo" class="text-right font-mono text-[8px] font-bold"></div>
                             </td>
                         </tr>
                         <!-- Purpose & Driver -->
@@ -701,6 +782,52 @@
                         <div id="qrCodeDisplay"></div>
                     </div>
                 </div>
+
+                <div id="materialPrintableArea" class="material-print-form hidden shadow-lg">
+                    <div class="material-form-header">
+                        <img src="Frontend/Design/images/logo.png" alt="MPI Logo">
+                        <div>
+                            <h1>MORIROKU PHILIPPINES, INC.</h1>
+                            <p>115 North Science Avenue, Laguna Technopark, Biñan, Laguna</p>
+                            <p>FORM REQUEST SYSTEM</p>
+                        </div>
+                    </div>
+                    <h2 class="material-form-title">MATERIAL GATE PASS</h2>
+                    <div class="material-form-meta">
+                        <div><strong>TO</strong><span>GUARD ON DUTY</span></div>
+                        <div><strong>CONTROL NO.</strong><span id="matControlNo"></span></div>
+                        <div><strong>FROM</strong><span>PERSONNEL &amp; ADMIN. SECTION</span></div>
+                        <div><strong>DATE</strong><span id="matDate"></span></div>
+                    </div>
+                    <div class="material-form-authorization">
+                        <p>This is to allow Mr. / Ms. <strong id="matAuthorizedName"></strong></p>
+                        <p>of <strong id="matAuthorizedDepartment"></strong> to bring out the following items.</p>
+                    </div>
+                    <table class="material-items-table">
+                        <thead><tr><th>ITEM NO.</th><th>DESCRIPTION</th><th>QUANTITY</th><th>UNIT</th></tr></thead>
+                        <tbody id="matItemsBody"></tbody>
+                    </table>
+                    <div class="material-form-remarks"><strong>REMARKS:</strong><span id="matRemarks"></span></div>
+                    <div class="material-form-signatures">
+                        <div>
+                            <strong>Prepared By:</strong>
+                            <div id="sigMatPrepared" class="material-signature-image"></div>
+                            <span id="sigMatPreparedName"></span>
+                        </div>
+                        <div>
+                            <strong>Noted By:</strong>
+                            <div id="sigMatSuperior" class="material-signature-image"></div>
+                            <span id="sigMatSuperiorName"></span>
+                            <small>Immediate Superior</small>
+                        </div>
+                        <div>
+                            <strong>Approved By:</strong>
+                            <div id="sigMatPas" class="material-signature-image"></div>
+                            <span id="sigMatPasName"></span>
+                            <small>Personnel &amp; Admin Section</small>
+                        </div>
+                    </div>
+                </div>
             </div>
 
             <!-- Approval Action Area (E-Signature Input) -->
@@ -754,14 +881,15 @@
     <script src="Frontend/runtime-config.js?v=20260620-public-qr"></script>
     <script src="Frontend/Functions/mock-data.js?v=20260620-phase5"></script>
     <script src="Frontend/Connectors/api-client.js?v=20260620-public-qr"></script>
-    <script src="Frontend/Functions/signature.js?v=20260620-phase5-2"></script>
-    <script src="Frontend/Functions/modal.js?v=20260620-phase5-2"></script>
-    <script src="Frontend/Functions/gatepass.js?v=20260620-employee-qr"></script>
-    <script src="Frontend/Functions/approvals.js?v=20260619-phase4-1"></script>
+    <script src="Frontend/Functions/signature.js?v=20260622-form-request"></script>
+    <script src="Frontend/Functions/material-gatepass.js?v=20260622-form-request"></script>
+    <script src="Frontend/Functions/modal.js?v=20260622-form-request"></script>
+    <script src="Frontend/Functions/gatepass.js?v=20260622-form-request"></script>
+    <script src="Frontend/Functions/approvals.js?v=20260622-form-request"></script>
     <script src="Frontend/Functions/scanner.js?v=20260620-security-cooldown"></script>
-    <script src="Frontend/Functions/admin.js?v=20260620-phase5-3"></script>
-    <script src="Frontend/Functions/navigation.js?v=20260620-security-only"></script>
-    <script src="Frontend/Functions/auth.js?v=20260620-employee-qr"></script>
+    <script src="Frontend/Functions/admin.js?v=20260622-form-request"></script>
+    <script src="Frontend/Functions/navigation.js?v=20260622-form-request"></script>
+    <script src="Frontend/Functions/auth.js?v=20260622-form-request"></script>
     <script src="Frontend/Functions/app.js?v=20260619-phase4-1"></script>
 </body>
 </html>

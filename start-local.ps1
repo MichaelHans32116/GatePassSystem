@@ -180,8 +180,9 @@ if ($UseXamppApache) {
 
     if (-not (Test-LocalPort 5500)) {
         $phpBindAddress = if ($ExposeLan) { '0.0.0.0:5500' } else { '127.0.0.1:5500' }
+        $phpArguments = "-S $phpBindAddress -t `"$repo`""
         Start-Process -FilePath $php `
-            -ArgumentList @('-S', $phpBindAddress, '-t', $repo) `
+            -ArgumentList $phpArguments `
             -WorkingDirectory $repo `
             -WindowStyle Hidden
     }

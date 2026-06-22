@@ -11,6 +11,7 @@ public sealed class GatePassService(
     IGatePassRepository gatePassRepository,
     IFleetRepository fleetRepository,
     IOperationsRepository operationsRepository,
+    ISignatureRepository signatureRepository,
     IQrTokenService qrTokenService) : IGatePassService
 {
     public async Task<ServiceResult<GatePassCreationResult>> CreateAsync(
@@ -35,6 +36,17 @@ public sealed class GatePassService(
             return ServiceResult<GatePassCreationResult>.Failure(
                 "VALIDATION_ERROR",
                 validationError);
+        }
+
+        var signatureError = await ValidatePreparedSignatureAsync(
+            requester.UserId,
+            request.PreparedBySignatureFileId,
+            cancellationToken);
+        if (signatureError is not null)
+        {
+            return ServiceResult<GatePassCreationResult>.Failure(
+                "INVALID_PREPARED_SIGNATURE",
+                signatureError);
         }
 
         var isImmediateSuperior =
@@ -66,6 +78,8 @@ public sealed class GatePassService(
         {
             var approverId = await gatePassRepository.FindApproverAsync(
                 stepCode,
+                "PERSON_GATE_PASS",
+                false,
                 requester.UserId,
                 stepCode == "SUPERIOR" ? requester.DepartmentId : null,
                 stepCode == "SUPERIOR" ? requester.PositionId : null,
@@ -138,6 +152,120 @@ public sealed class GatePassService(
             new GatePassCreationResult(submitted, routeCodes));
     }
 
+    public async Task<ServiceResult<GatePassCreationResult>> CreateMaterialAsync(
+        long requesterUserId,
+        CreateMaterialGatePassRequest request,
+        string traceId,
+        CancellationToken cancellationToken = default)
+    {
+        var requester = await employeeRepository.GetRequesterContextAsync(
+            requesterUserId,
+            cancellationToken);
+        if (requester is null)
+        {
+            return ServiceResult<GatePassCreationResult>.Failure(
+                "REQUESTER_NOT_FOUND",
+                "No active employee record is linked to this account.");
+        }
+
+        var validationError = ValidateMaterial(request);
+        if (validationError is not null)
+        {
+            return ServiceResult<GatePassCreationResult>.Failure(
+                "VALIDATION_ERROR",
+                validationError);
+        }
+
+        var authorizedEmployee =
+            await employeeRepository.GetActiveEmployeeAsync(
+                request.AuthorizedEmployeeId,
+                cancellationToken);
+        if (authorizedEmployee is null)
+        {
+            return ServiceResult<GatePassCreationResult>.Failure(
+                "AUTHORIZED_EMPLOYEE_NOT_FOUND",
+                "Select an active employee who will bring out the materials.");
+        }
+
+        var signatureError = await ValidatePreparedSignatureAsync(
+            requester.UserId,
+            request.PreparedBySignatureFileId,
+            cancellationToken);
+        if (signatureError is not null)
+        {
+            return ServiceResult<GatePassCreationResult>.Failure(
+                "INVALID_PREPARED_SIGNATURE",
+                signatureError);
+        }
+
+        string[] routeCodes = ["SUPERIOR", "PAS"];
+        var route = new List<(string StepCode, long ApproverUserId)>();
+
+        foreach (var stepCode in routeCodes)
+        {
+            var approverId = await gatePassRepository.FindApproverAsync(
+                stepCode,
+                "MATERIAL_GATE_PASS",
+                stepCode == "PAS",
+                requester.UserId,
+                stepCode == "SUPERIOR" ? requester.DepartmentId : null,
+                stepCode == "SUPERIOR" ? requester.PositionId : null,
+                cancellationToken);
+
+            if (!approverId.HasValue)
+            {
+                return ServiceResult<GatePassCreationResult>.Failure(
+                    "APPROVER_NOT_CONFIGURED",
+                    stepCode == "PAS"
+                        ? "Ma'am Alona is not configured as the Material Gate Pass PAS approver."
+                        : "No active immediate superior is configured for this requester.");
+            }
+
+            route.Add((stepCode, approverId.Value));
+        }
+
+        var draft = await gatePassRepository.CreateMaterialDraftAsync(
+            requester,
+            authorizedEmployee,
+            request,
+            traceId,
+            cancellationToken);
+
+        await gatePassRepository.CreateApprovalRouteAsync(
+            draft.GatePassId,
+            route,
+            cancellationToken);
+
+        var submitted = await gatePassRepository.SubmitAsync(
+            draft.GatePassId,
+            requester.UserId,
+            "PENDING_SUPERIOR",
+            traceId,
+            cancellationToken);
+
+        await operationsRepository.WriteAuditAsync(
+            requester.UserId,
+            "MATERIAL_GATE_PASS_SUBMITTED",
+            "FORM_REQUEST",
+            submitted.GatePassId,
+            JsonSerializer.Serialize(new
+            {
+                submitted.GatePassNo,
+                submitted.ControlNo,
+                submitted.FormTypeCode,
+                AuthorizedEmployee = authorizedEmployee.EmployeeId,
+                ItemCount = request.Items.Count,
+                ApprovalRoute = routeCodes
+            }),
+            null,
+            null,
+            traceId,
+            cancellationToken);
+
+        return ServiceResult<GatePassCreationResult>.Success(
+            new GatePassCreationResult(submitted, routeCodes));
+    }
+
     public Task<GatePassDetail?> GetDetailAsync(
         long gatePassId,
         CancellationToken cancellationToken = default) =>
@@ -171,6 +299,13 @@ public sealed class GatePassService(
                 "Gate pass was not found.");
         }
 
+        if (detail.FormTypeCode != "PERSON_GATE_PASS")
+        {
+            return ServiceResult<QrTokenResponse>.Failure(
+                "QR_NOT_AVAILABLE",
+                "Material gate passes use the approved printable form and do not use Time Out/Time In QR scanning.");
+        }
+
         if (detail.ApprovedAt is null ||
             detail.GatePassStatusCode is
                 "REJECTED" or "CANCELLED" or "EXPIRED" or "DRAFT")
@@ -184,9 +319,13 @@ public sealed class GatePassService(
             new QrTokenResponse(
                 detail.GatePassId,
                 detail.GatePassNo,
-                qrTokenService.CreateEmployeeToken(
-                    detail.RequesterEmployeeId),
-                null));
+                qrTokenService.CreateToken(detail.GatePassId),
+                detail.QrExpiresAt.HasValue
+                    ? new DateTimeOffset(
+                        DateTime.SpecifyKind(
+                            detail.QrExpiresAt.Value,
+                            DateTimeKind.Utc))
+                    : null));
     }
 
     public Task<bool> DeleteForTestingAsync(
@@ -238,5 +377,57 @@ public sealed class GatePassService(
         }
 
         return null;
+    }
+
+    private static string? ValidateMaterial(
+        CreateMaterialGatePassRequest request)
+    {
+        if (request.AuthorizedEmployeeId <= 0)
+        {
+            return "Select the employee authorized to bring out the materials.";
+        }
+
+        if (request.FormDate == default)
+        {
+            return "Material gate pass date is required.";
+        }
+
+        if (request.Items.Count is < 1 or > 20)
+        {
+            return "Add between 1 and 20 material items.";
+        }
+
+        for (var index = 0; index < request.Items.Count; index++)
+        {
+            var item = request.Items[index];
+            if (string.IsNullOrWhiteSpace(item.Description) ||
+                string.IsNullOrWhiteSpace(item.Unit) ||
+                item.Quantity <= 0)
+            {
+                return $"Material item {index + 1} needs a description, positive quantity, and unit.";
+            }
+        }
+
+        return null;
+    }
+
+    private async Task<string?> ValidatePreparedSignatureAsync(
+        long requesterUserId,
+        long? signatureFileId,
+        CancellationToken cancellationToken)
+    {
+        if (!signatureFileId.HasValue)
+        {
+            return null;
+        }
+
+        var signature = await signatureRepository.GetAsync(
+            signatureFileId.Value,
+            cancellationToken);
+        return signature is null ||
+               signature.OwnerUserId != requesterUserId ||
+               !signature.IsActive
+            ? "The prepared-by signature must be an active signature uploaded by the requester."
+            : null;
     }
 }

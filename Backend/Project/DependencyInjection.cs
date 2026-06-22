@@ -34,6 +34,7 @@ public static class DependencyInjection
         services.AddSingleton<IQrTokenService, QrTokenService>();
         services.AddScoped<IJwtTokenService, JwtTokenService>();
         services.AddScoped<IAuthService, AuthService>();
+        services.AddScoped<IEmployeeService, EmployeeService>();
         services.AddScoped<IGatePassService, GatePassService>();
         services.AddScoped<IApprovalService, ApprovalService>();
         services.AddScoped<IFleetService, FleetService>();

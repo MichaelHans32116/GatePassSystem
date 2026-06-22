@@ -117,6 +117,23 @@ public sealed class SignatureRepository(
                             )
                         )
                   )
+                  OR EXISTS (
+                      SELECT 1
+                      FROM tbl_gate_pass_requests prepared_request
+                      WHERE prepared_request.prepared_by_signature_file_id =
+                            signature_file.signature_file_id
+                        AND (
+                            prepared_request.requester_user_id = @UserId
+                            OR EXISTS (
+                                SELECT 1
+                                FROM tbl_gate_pass_approval_steps prepared_viewer_step
+                                WHERE prepared_viewer_step.gate_pass_id =
+                                      prepared_request.gate_pass_id
+                                  AND prepared_viewer_step.assigned_approver_user_id =
+                                      @UserId
+                            )
+                        )
+                  )
               );
             """,
             new

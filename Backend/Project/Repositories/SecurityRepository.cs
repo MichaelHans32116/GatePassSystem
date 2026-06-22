@@ -97,17 +97,20 @@ public sealed class SecurityRepository(
                     JOIN tbl_gate_pass_statuses status_row
                         ON status_row.gate_pass_status_code =
                            request_row.gate_pass_status_code
-                    WHERE (
-                        @EmployeeRecordId IS NOT NULL
-                        AND request_row.requester_employee_id =
-                            @EmployeeRecordId
-                        AND status_row.is_terminal = FALSE
-                    ) OR (
-                        @QrTokenHash IS NOT NULL
-                        AND request_row.qr_token_hash = @QrTokenHash
-                    ) OR (
-                        @ManualGatePassNo IS NOT NULL
-                        AND request_row.gate_pass_no = @ManualGatePassNo
+                    WHERE request_row.form_type_code = 'PERSON_GATE_PASS'
+                      AND (
+                        (
+                            @EmployeeRecordId IS NOT NULL
+                            AND request_row.requester_employee_id =
+                                @EmployeeRecordId
+                            AND status_row.is_terminal = FALSE
+                        ) OR (
+                            @QrTokenHash IS NOT NULL
+                            AND request_row.qr_token_hash = @QrTokenHash
+                        ) OR (
+                            @ManualGatePassNo IS NOT NULL
+                            AND request_row.gate_pass_no = @ManualGatePassNo
+                        )
                     )
                     ORDER BY
                         CASE

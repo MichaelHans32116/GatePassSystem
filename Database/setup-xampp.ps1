@@ -101,6 +101,32 @@ if ($databaseExists -eq 0) {
             Write-Host 'Applying database migration 005...' -ForegroundColor Yellow
             Invoke-MySqlSource 'Database\Migrations\005_scan_cooldown_index.sql'
         }
+
+        $formRequestApplied = [int](Invoke-MySqlQuery(
+            "SELECT COUNT(*) FROM gate_pass_system.tbl_schema_versions WHERE version_no='006';"
+        ))[0]
+
+        if ($formRequestApplied -eq 0) {
+            if (-not $SkipBackup) {
+                $backupDirectory = Join-Path $repo 'LocalData\backups'
+                New-Item -ItemType Directory -Force -Path $backupDirectory | Out-Null
+                $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+                $backup = Join-Path $backupDirectory "gate_pass_system-before-006-$stamp.sql"
+                & $mysqldump @connectionArguments `
+                    '--single-transaction' `
+                    '--routines' `
+                    '--triggers' `
+                    "--result-file=$backup" `
+                    'gate_pass_system'
+                if ($LASTEXITCODE -ne 0) {
+                    throw 'MariaDB backup failed before migration 006.'
+                }
+                Write-Host "Database backup: $backup"
+            }
+
+            Write-Host 'Applying database migration 006...' -ForegroundColor Yellow
+            Invoke-MySqlSource 'Database\Migrations\006_form_request_material_gate_pass.sql'
+        }
     }
 }
 

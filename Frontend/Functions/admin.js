@@ -184,6 +184,7 @@ async function renderAdminLogs(page = 1) {
     const date = document.getElementById('logFilterDate')?.value || '';
     const departmentId = document.getElementById('logFilterDept')?.value || '';
     const statusCode = document.getElementById('logFilterStatus')?.value || '';
+    const formTypeCode = document.getElementById('logFilterFormType')?.value || '';
 
     if (isDatabaseSession()) {
         try {
@@ -194,6 +195,7 @@ async function renderAdminLogs(page = 1) {
             if (search) query.set('search', search);
             if (departmentId) query.set('departmentId', departmentId);
             if (statusCode) query.set('statusCode', statusCode);
+            if (formTypeCode) query.set('formTypeCode', formTypeCode);
             if (date) {
                 const from = new Date(`${date}T00:00:00`);
                 const to = new Date(from);
@@ -201,12 +203,12 @@ async function renderAdminLogs(page = 1) {
                 query.set('fromAppliedAt', from.toISOString());
                 query.set('toAppliedAt', to.toISOString());
             }
-            const response = await ApiClient.request(`/gate-pass-requests?${query}`);
+            const response = await ApiClient.request(`/form-requests?${query}`);
             renderDatabaseAdminLogs(response);
         } catch (error) {
             document.getElementById('adminLogsTable').innerHTML =
-                '<tr><td colspan="8" class="text-center py-6 text-gray-400">Unable to load gate pass logs.</td></tr>';
-            showToast(error instanceof ApiError ? error.message : 'Unable to load gate pass logs.', 'error');
+                '<tr><td colspan="9" class="text-center py-6 text-gray-400">Unable to load form request logs.</td></tr>';
+            showToast(error instanceof ApiError ? error.message : 'Unable to load form request logs.', 'error');
         }
         return;
     }
@@ -214,6 +216,7 @@ async function renderAdminLogs(page = 1) {
     const filtered = gatePasses.slice().reverse().filter(pass =>
         (!search || pass.userName.toLowerCase().includes(search.toLowerCase()) || pass.id.toLowerCase().includes(search.toLowerCase())) &&
         (!departmentId || pass.userDept === departmentId) &&
+        (!formTypeCode || pass.formTypeCode === formTypeCode) &&
         (!statusCode || pass.status === statusCode)
     );
     renderMockAdminLogsWithActions(filtered);
@@ -224,10 +227,11 @@ function renderDatabaseAdminLogs(response) {
     gatePasses = list;
     document.getElementById('adminLogsTable').innerHTML = list.map(pass => `
         <tr class="hover:bg-gray-50 transition border-b cursor-pointer" onclick="${getViewPassCall(pass)}">
-            <td class="px-5 py-2 font-mono text-xs">${adminEscape(pass.id)}</td>
+            <td class="px-5 py-2 font-mono text-xs">${adminEscape(pass.controlNo || pass.id)}</td>
+            <td class="px-5 py-2 text-[10px] font-bold ${pass.formTypeCode === 'MATERIAL_GATE_PASS' ? 'text-amber-600' : 'text-mpiBlue'}">${adminEscape(pass.formName)}</td>
             <td class="px-5 py-2 font-semibold">${adminEscape(pass.userName)}</td>
             <td class="px-5 py-2 text-gray-500 text-xs">${adminEscape(pass.userDept)}</td>
-            <td class="px-5 py-2 text-xs font-bold ${pass.willReturn ? 'text-gray-400' : 'text-red-500'}">${pass.willReturn ? 'No' : 'Yes'}</td>
+            <td class="px-5 py-2 max-w-[220px] truncate text-xs">${adminEscape(pass.formTypeCode === 'MATERIAL_GATE_PASS' ? (pass.authorizedEmployeeName || 'Material release') : pass.destination)}</td>
             <td class="px-5 py-2 text-blue-600 font-mono text-xs">${adminEscape(pass.actualOut || '--:--')}</td>
             <td class="px-5 py-2 text-green-600 font-mono text-xs">${adminEscape(pass.actualIn || '--:--')}</td>
             <td class="px-5 py-2 text-[10px]"><span class="px-2 py-1 rounded bg-gray-100">${adminEscape(pass.status)}</span></td>
@@ -237,7 +241,7 @@ function renderDatabaseAdminLogs(response) {
                     : '<span class="text-gray-300">--</span>'}
             </td>
         </tr>
-    `).join('') || '<tr><td colspan="8" class="text-center py-6 text-gray-400">No logs match your filters.</td></tr>';
+    `).join('') || '<tr><td colspan="9" class="text-center py-6 text-gray-400">No logs match your filters.</td></tr>';
 
     const start = response.totalCount ? ((response.page - 1) * response.pageSize) + 1 : 0;
     const end = Math.min(response.page * response.pageSize, response.totalCount);
@@ -325,8 +329,9 @@ async function deleteGatePassLog(idOrDbId) {
 
 async function renderAdminUsers(page = 1) {
     if (!isDatabaseSession()) {
-        document.getElementById('adminUsersList').innerHTML = mockUsers.map(user => `
-            <tr><td class="p-3">${adminEscape(user.id)}</td><td class="p-3">${adminEscape(user.name)}</td><td class="p-3">${adminEscape(user.role)}</td><td class="p-3">${adminEscape(user.dept)}</td><td></td></tr>`).join('');
+        document.getElementById('adminUsersCount').innerText = 'Backend connection required';
+        document.getElementById('adminUsersList').innerHTML =
+            '<tr><td colspan="6" class="p-6 text-center text-gray-400">Sign in through the backend API to manage users.</td></tr>';
         return;
     }
     const query = new URLSearchParams({ page, pageSize: adminUserPageSize });

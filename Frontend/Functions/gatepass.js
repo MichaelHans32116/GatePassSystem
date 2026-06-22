@@ -88,10 +88,22 @@ function mapApiGatePass(record) {
     return {
         id: record.gatePassNo,
         dbId: record.gatePassId,
+        controlNo: record.controlNo || record.gatePassNo,
+        formTypeCode: record.formTypeCode || 'PERSON_GATE_PASS',
+        formName: record.formName || 'Person Gate Pass',
+        formDate: record.formDate || record.expectedOutAt,
         userId: record.requesterUserId,
         userName: record.fullName,
         userDept: record.departmentName,
         position: record.positionName,
+        preparedBySignatureFileId: record.preparedBySignatureFileId || null,
+        authorizedEmployeeId: record.authorizedEmployeeId || null,
+        authorizedEmployeeNo: record.authorizedEmployeeNo || null,
+        authorizedEmployeeName: record.authorizedEmployeeName || null,
+        authorizedDepartmentId: record.authorizedDepartmentId || null,
+        authorizedDepartmentName: record.authorizedDepartmentName || null,
+        materialRemarks: record.materialRemarks || '',
+        materialItems: record.materialItems || [],
         dateFiled: formatDateTime(record.appliedAt || record.createdAt),
         destination: record.destination,
         expectedOut: formatDateTime(record.expectedOutAt, false),
@@ -253,10 +265,13 @@ async function submitGatePass(e) {
     submitButton.disabled = true;
     submitButton.classList.add('opacity-60', 'cursor-wait');
     try {
+        payload.preparedBySignatureFileId =
+            await uploadPreparedSignature('PERSON_GATE_PASS');
         const created = await ApiClient.post('/gate-pass-requests', payload);
         form.reset();
+        clearPreparedSignature('PERSON_GATE_PASS');
         toggleVehicleFields();
-        showToast(`Request ${created.gatePass.gatePassNo} submitted.`);
+        showToast(`Request ${created.gatePass.controlNo || created.gatePass.gatePassNo} submitted.`);
         await loadMyGatePasses();
         switchSection('dashBoard');
     } catch (error) {
@@ -365,7 +380,7 @@ function initializeGatePassForm() {
 
 async function loadMyGatePasses() {
     if (!isDatabaseSession()) return;
-    const response = await ApiClient.request('/gate-pass-requests/my?page=1&pageSize=100');
+    const response = await ApiClient.request('/form-requests/my?page=1&pageSize=100');
     gatePasses = response.items.map(mapApiGatePass);
 }
 
@@ -373,7 +388,7 @@ async function loadAllGatePasses(page = 1, pageSize = 100, search = '') {
     if (!isDatabaseSession()) return null;
     const query = new URLSearchParams({ page, pageSize });
     if (search) query.set('search', search);
-    const response = await ApiClient.request(`/gate-pass-requests?${query}`);
+    const response = await ApiClient.request(`/form-requests?${query}`);
     gatePasses = response.items.map(mapApiGatePass);
     return response;
 }
@@ -386,7 +401,7 @@ async function getGatePassDetail(id) {
     if (!Number.isFinite(dbId) || dbId <= 0) {
         if (typeof id === 'string' && id.trim()) {
             const lookup = await ApiClient.request(
-                `/gate-pass-requests?page=1&pageSize=20&search=${encodeURIComponent(id.trim())}`
+                `/form-requests?page=1&pageSize=20&search=${encodeURIComponent(id.trim())}`
             );
             const match = lookup.items
                 .map(mapApiGatePass)
@@ -403,7 +418,7 @@ async function getGatePassDetail(id) {
         }
     }
 
-    const detail = await ApiClient.get(`/gate-pass-requests/${dbId}`);
+    const detail = await ApiClient.get(`/form-requests/${dbId}`);
     const mapped = mapApiGatePass(detail);
     const index = gatePasses.findIndex(pass => pass.dbId === mapped.dbId);
     if (index >= 0) gatePasses[index] = mapped;
@@ -413,7 +428,7 @@ async function getGatePassDetail(id) {
 
 async function loadQrToken(pass) {
     if (!isDatabaseSession() || !pass?.dbId) return pass?.id || null;
-    const qr = await ApiClient.get(`/gate-pass-requests/${pass.dbId}/qr`);
+    const qr = await ApiClient.get(`/form-requests/${pass.dbId}/qr`);
     pass.qrToken = qr.qrToken;
     return qr.qrToken;
 }
@@ -426,7 +441,7 @@ async function renderStandardDashboard() {
     try {
         if (isDatabaseSession()) await loadMyGatePasses();
     } catch (error) {
-        showToast(error instanceof ApiError ? error.message : 'Unable to load gate pass records.', 'error');
+        showToast(error instanceof ApiError ? error.message : 'Unable to load form requests.', 'error');
     }
 
     const myPasses = isDatabaseSession()
@@ -441,9 +456,9 @@ async function renderStandardDashboard() {
 
     document.getElementById('myPassesTableBody').innerHTML = myPasses.map((pass) => `
         <tr class="hover:bg-gray-50 transition border-b cursor-pointer" onclick="${getViewPassCall(pass)}">
-            <td class="px-4 md:px-5 py-3 font-mono text-mpiBlue text-xs font-bold">${pass.id}</td>
+            <td class="px-4 md:px-5 py-3 font-mono text-mpiBlue text-xs font-bold">${materialEscape(pass.controlNo || pass.id)}</td>
             <td class="px-4 md:px-5 py-3">${pass.dateFiled}</td>
-            <td class="px-4 md:px-5 py-3 truncate max-w-[150px] md:max-w-[200px]">${pass.destination}</td>
+            <td class="px-4 md:px-5 py-3 max-w-[220px]"><span class="block text-[9px] font-bold uppercase tracking-wide ${pass.formTypeCode === 'MATERIAL_GATE_PASS' ? 'text-amber-600' : 'text-mpiBlue'}">${materialEscape(pass.formName)}</span><span class="block truncate text-xs text-gray-600">${materialEscape(pass.formTypeCode === 'MATERIAL_GATE_PASS' ? (pass.authorizedEmployeeName || 'Material release') : pass.destination)}</span></td>
             <td class="px-4 md:px-5 py-3"><span class="px-2 py-1 rounded text-[10px] font-bold ${['Approved'].includes(pass.status) ? 'bg-green-100 text-green-800' : (['Returned', 'Closed'].includes(pass.status) ? 'bg-gray-200 text-gray-700' : (pass.status === 'Outside' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'))}">${pass.status}</span></td>
             <td class="px-4 md:px-5 py-3 text-right"><button class="text-mpiBlue hover:underline text-xs"><i class="fas fa-eye"></i></button></td>
         </tr>

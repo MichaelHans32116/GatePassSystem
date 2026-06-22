@@ -1,6 +1,16 @@
-# Gate Pass System
+# Form Request System
 
-Internal gate pass workflow system for requesting, approving, printing, scanning, and tracking associate gate passes.
+Internal workflow system for requesting, approving, printing, and tracking
+Moriroku forms. The current release supports:
+
+- Person Gate Pass: approval routing, printable document, QR Time Out/Time In,
+  and optional company-vehicle reservation.
+- Material Gate Pass: itemized release form routed from Prepared By to the
+  Immediate Superior and then to Ma'am Alona/PAS.
+
+Both forms receive a daily control number in `MMDDYY-001` format. Material
+forms do not generate a QR because they are approved item-release documents,
+not employee movement records.
 
 ## Start the complete local system
 
@@ -15,7 +25,7 @@ serves the vanilla frontend on port `5500`, verifies `/api/health`, and opens
 the frontend. Do not open `index.html` directly because the API expects an
 HTTP origin.
 
-The default launcher is localhost-only for laptop testing on the current
+The default launcher is localhost-only for testing on the current
 computer. Manual QR entry works over HTTP; live phone-camera scanning requires
 HTTPS or localhost because of browser security rules.
 

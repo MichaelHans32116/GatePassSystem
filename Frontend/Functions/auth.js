@@ -27,6 +27,20 @@ function resolveInterfaceRole(roles) {
     return 'Associate';
 }
 
+function resolveInterfaceRoleLabel(roles) {
+    const roleSet = new Set(roles || []);
+    const labels = [];
+
+    if (roleSet.has('SYSTEM_ADMIN')) labels.push('System Admin');
+    if (roleSet.has('SECURITY')) labels.push('Security');
+    if (roleSet.has('PRESIDENT')) labels.push('President');
+    if (roleSet.has('IMMEDIATE_SUPERIOR')) labels.push('Immediate Superior');
+    if (roleSet.has('PAS_NOTER')) labels.push('PAS');
+    if (roleSet.has('DRIVER')) labels.push('Driver');
+
+    return labels.length > 0 ? labels.join(' / ') : 'Associate';
+}
+
 function mapAuthenticatedUser(apiUser) {
     const roles = apiUser.roles || [];
 
@@ -35,6 +49,7 @@ function mapAuthenticatedUser(apiUser) {
         accountId: apiUser.id,
         name: apiUser.fullName,
         role: resolveInterfaceRole(roles),
+        roleLabel: resolveInterfaceRoleLabel(roles),
         roles,
         permissions: apiUser.permissions || [],
         dept: apiUser.department || 'System',
@@ -56,7 +71,7 @@ function showAuthenticatedApp(user, showSignedInToast = true) {
     }, 300);
 
     document.getElementById('navUserName').innerText = user.name;
-    document.getElementById('navUserRole').innerText = user.role;
+    document.getElementById('navUserRole').innerText = user.roleLabel || user.role;
     setupRoleAccess(user);
     window.dispatchEvent(new CustomEvent('gatepass:authenticated', {
         detail: { database: ApiClient.isDatabaseSession(), user }
@@ -68,12 +83,6 @@ function showAuthenticatedApp(user, showSignedInToast = true) {
 
 }
 
-function quickLogin(id, pass) {
-    document.getElementById('empId').value = id;
-    document.getElementById('empPass').value = pass;
-    document.getElementById('loginForm').dispatchEvent(new Event('submit'));
-}
-
 async function handleLogin(e) {
     e.preventDefault();
 
@@ -81,21 +90,11 @@ async function handleLogin(e) {
     const submitButton = form.querySelector('button[type="submit"]');
     const username = document.getElementById('empId').value.trim();
     const password = document.getElementById('empPass').value;
-    const mockUser = mockUsers.find(
-        user => user.id === username && user.password === password
-    );
 
     submitButton.disabled = true;
     submitButton.classList.add('opacity-60', 'cursor-wait');
 
     try {
-        if (mockUser) {
-            ApiClient.clearAccessToken();
-            form.reset();
-            showAuthenticatedApp({ ...mockUser, roles: [], permissions: [] });
-            return;
-        }
-
         const result = await ApiClient.data('/auth/login', {
             method: 'POST',
             body: JSON.stringify({ username, password })
@@ -107,7 +106,7 @@ async function handleLogin(e) {
     } catch (error) {
         ApiClient.clearAccessToken();
         showToast(
-            error instanceof ApiError ? error.message : 'Unable to connect to the Gate Pass API.',
+            error instanceof ApiError ? error.message : 'Unable to connect to the Form Request API.',
             'error'
         );
     } finally {
@@ -158,4 +157,3 @@ document.addEventListener('DOMContentLoaded', () => {
 window.togglePassword = togglePassword;
 window.handleLogin = handleLogin;
 window.logout = logout;
-window.quickLogin = quickLogin;

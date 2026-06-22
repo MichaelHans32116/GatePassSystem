@@ -52,6 +52,20 @@ ON DUPLICATE KEY UPDATE
     sort_order = VALUES(sort_order),
     is_active = TRUE;
 
+INSERT INTO tbl_form_types (
+    form_type_code,
+    form_name,
+    description,
+    sort_order
+) VALUES
+('PERSON_GATE_PASS', 'Person Gate Pass', 'Gate pass for associates leaving company premises.', 10),
+('MATERIAL_GATE_PASS', 'Material Gate Pass', 'Gate pass for materials leaving company premises.', 20)
+ON DUPLICATE KEY UPDATE
+    form_name = VALUES(form_name),
+    description = VALUES(description),
+    sort_order = VALUES(sort_order),
+    is_active = TRUE;
+
 INSERT INTO tbl_gate_pass_statuses (
     gate_pass_status_code,
     status_name,
@@ -326,6 +340,88 @@ JOIN tbl_permissions p ON p.permission_code IN (
 WHERE r.role_code = 'SYSTEM_ADMIN'
 ON DUPLICATE KEY UPDATE permission_id = VALUES(permission_id);
 
+INSERT INTO tbl_user_roles (
+    user_id,
+    role_id,
+    assigned_by_user_id,
+    is_active
+)
+SELECT
+    user_account.user_id,
+    role_row.role_id,
+    NULL,
+    TRUE
+FROM tbl_user_accounts user_account
+JOIN tbl_employees employee
+    ON employee.employee_record_id = user_account.employee_record_id
+JOIN tbl_roles role_row
+    ON role_row.role_code = 'PAS_NOTER'
+WHERE employee.employee_id = 'GA409'
+ON DUPLICATE KEY UPDATE
+    is_active = TRUE;
+
+INSERT INTO tbl_approval_assignments (
+    approval_step_code,
+    form_type_code,
+    approver_user_id,
+    department_id,
+    position_id,
+    priority,
+    is_alternate,
+    is_active
+)
+SELECT
+    'PAS',
+    'PERSON_GATE_PASS',
+    user_account.user_id,
+    NULL,
+    NULL,
+    4,
+    TRUE,
+    TRUE
+FROM tbl_user_accounts user_account
+JOIN tbl_employees employee
+    ON employee.employee_record_id = user_account.employee_record_id
+WHERE employee.employee_id = 'GA409'
+  AND NOT EXISTS (
+      SELECT 1
+      FROM tbl_approval_assignments existing
+      WHERE existing.approval_step_code = 'PAS'
+        AND existing.form_type_code = 'PERSON_GATE_PASS'
+        AND existing.approver_user_id = user_account.user_id
+  );
+
+INSERT INTO tbl_approval_assignments (
+    approval_step_code,
+    form_type_code,
+    approver_user_id,
+    department_id,
+    position_id,
+    priority,
+    is_alternate,
+    is_active
+)
+SELECT
+    'PAS',
+    'MATERIAL_GATE_PASS',
+    user_account.user_id,
+    NULL,
+    NULL,
+    1,
+    FALSE,
+    TRUE
+FROM tbl_user_accounts user_account
+JOIN tbl_employees employee
+    ON employee.employee_record_id = user_account.employee_record_id
+WHERE employee.employee_id = 'GA409'
+  AND NOT EXISTS (
+      SELECT 1
+      FROM tbl_approval_assignments existing
+      WHERE existing.approval_step_code = 'PAS'
+        AND existing.form_type_code = 'MATERIAL_GATE_PASS'
+        AND existing.approver_user_id = user_account.user_id
+  );
+
 DELETE role_permission
 FROM tbl_role_permissions role_permission
 JOIN tbl_roles role_row
@@ -356,6 +452,19 @@ INSERT INTO tbl_schema_versions (
     '005',
     'Add the employee and gate pass scan cooldown lookup index.',
     'Database/Migrations/005_scan_cooldown_index.sql'
+)
+ON DUPLICATE KEY UPDATE
+    description = VALUES(description),
+    script_name = VALUES(script_name);
+
+INSERT INTO tbl_schema_versions (
+    version_no,
+    description,
+    script_name
+) VALUES (
+    '006',
+    'Generalize the app into a form request system and add material gate passes.',
+    'Database/Migrations/006_form_request_material_gate_pass.sql'
 )
 ON DUPLICATE KEY UPDATE
     description = VALUES(description),

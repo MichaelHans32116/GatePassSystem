@@ -63,15 +63,19 @@ public sealed class ApprovalService(
         }
 
         var issuedQrToken =
-            mutation.NewStatus == "APPROVED" ? rawQrToken : null;
+            mutation.NewStatus == "APPROVED" &&
+            mutation.FormTypeCode == "PERSON_GATE_PASS"
+                ? rawQrToken
+                : null;
 
         await operationsRepository.WriteAuditAsync(
             actorUserId,
-            approve ? "GATE_PASS_APPROVED" : "GATE_PASS_REJECTED",
-            "GATE_PASS",
+            approve ? "FORM_REQUEST_APPROVED" : "FORM_REQUEST_REJECTED",
+            "FORM_REQUEST",
             gatePassId,
             JsonSerializer.Serialize(new
             {
+                mutation.FormTypeCode,
                 mutation.PreviousStatus,
                 mutation.NewStatus,
                 request.Comment

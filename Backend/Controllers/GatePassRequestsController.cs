@@ -11,6 +11,7 @@ namespace GatePassSystem.Api.Controllers;
 [ApiController]
 [Authorize]
 [Route("api/gate-pass-requests")]
+[Route("api/form-requests")]
 public sealed class GatePassRequestsController(
     IGatePassService gatePassService) : ApiControllerBase
 {
@@ -26,7 +27,23 @@ public sealed class GatePassRequestsController(
             HttpContext.TraceIdentifier,
             cancellationToken);
         return result.IsSuccess
-            ? Success(result.Value!, "Gate pass submitted successfully.")
+            ? Success(result.Value!, "Person gate pass submitted successfully.")
+            : ServiceFailure(result);
+    }
+
+    [Authorize(Policy = GatePassPermissions.CreateOwn)]
+    [HttpPost("material")]
+    public async Task<ActionResult<ApiResponse<GatePassCreationResult>>> CreateMaterial(
+        [FromBody] CreateMaterialGatePassRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await gatePassService.CreateMaterialAsync(
+            CurrentUserId,
+            request,
+            HttpContext.TraceIdentifier,
+            cancellationToken);
+        return result.IsSuccess
+            ? Success(result.Value!, "Material gate pass submitted successfully.")
             : ServiceFailure(result);
     }
 

@@ -510,6 +510,24 @@ static async Task SyncApprovalAssignmentsAsync(
         null,
         2,
         true);
+    await InsertApprovalAssignmentAsync(
+        connection,
+        transaction,
+        "PAS",
+        "GA409",
+        null,
+        4,
+        true,
+        "PERSON_GATE_PASS");
+    await InsertApprovalAssignmentAsync(
+        connection,
+        transaction,
+        "PAS",
+        "GA409",
+        null,
+        1,
+        false,
+        "MATERIAL_GATE_PASS");
 }
 
 static async Task InsertApprovalAssignmentAsync(
@@ -519,12 +537,14 @@ static async Task InsertApprovalAssignmentAsync(
     string employeeId,
     string? departmentCode,
     int priority,
-    bool isAlternate)
+    bool isAlternate,
+    string? formTypeCode = null)
 {
     var inserted = await connection.ExecuteAsync(
         """
         INSERT INTO tbl_approval_assignments (
             approval_step_code,
+            form_type_code,
             approver_user_id,
             department_id,
             position_id,
@@ -534,6 +554,7 @@ static async Task InsertApprovalAssignmentAsync(
         )
         SELECT
             @ApprovalStepCode,
+            @FormTypeCode,
             account_row.user_id,
             department_row.department_id,
             NULL,
@@ -557,6 +578,7 @@ static async Task InsertApprovalAssignmentAsync(
         new
         {
             ApprovalStepCode = approvalStepCode,
+            FormTypeCode = formTypeCode,
             EmployeeId = employeeId,
             DepartmentCode = departmentCode,
             Priority = priority,
@@ -702,7 +724,8 @@ static readonly HashSet<string> PasNoterEmployeeIds =
 [
     "GA150",
     "GA133",
-    "GA120"
+    "GA120",
+    "GA409"
 ];
 
 static readonly HashSet<string> SystemAdminEmployeeIds =

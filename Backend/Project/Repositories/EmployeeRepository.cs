@@ -65,6 +65,81 @@ public sealed class EmployeeRepository(
         };
     }
 
+    public async Task<EmployeeLookupRecord?> GetActiveEmployeeAsync(
+        long employeeRecordId,
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection =
+            await connectionFactory.OpenConnectionAsync(cancellationToken);
+
+        return await connection.QuerySingleOrDefaultAsync<EmployeeLookupRecord>(
+            new CommandDefinition(
+                """
+                SELECT
+                    employee.employee_record_id AS EmployeeRecordId,
+                    employee.employee_id AS EmployeeId,
+                    employee.full_name AS FullName,
+                    employee.department_id AS DepartmentId,
+                    department.department_name AS DepartmentName,
+                    position.position_name AS PositionName
+                FROM tbl_employees employee
+                JOIN tbl_departments department
+                    ON department.department_id = employee.department_id
+                JOIN tbl_positions position
+                    ON position.position_id = employee.position_id
+                WHERE employee.employee_record_id = @EmployeeRecordId
+                  AND employee.employment_status_code = 'ACTIVE'
+                LIMIT 1;
+                """,
+                new { EmployeeRecordId = employeeRecordId },
+                cancellationToken: cancellationToken));
+    }
+
+    public async Task<IReadOnlyList<EmployeeLookupRecord>> SearchActiveEmployeesAsync(
+        string? search,
+        int limit,
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection =
+            await connectionFactory.OpenConnectionAsync(cancellationToken);
+
+        var items = await connection.QueryAsync<EmployeeLookupRecord>(
+            new CommandDefinition(
+                """
+                SELECT
+                    employee.employee_record_id AS EmployeeRecordId,
+                    employee.employee_id AS EmployeeId,
+                    employee.full_name AS FullName,
+                    employee.department_id AS DepartmentId,
+                    department.department_name AS DepartmentName,
+                    position.position_name AS PositionName
+                FROM tbl_employees employee
+                JOIN tbl_departments department
+                    ON department.department_id = employee.department_id
+                JOIN tbl_positions position
+                    ON position.position_id = employee.position_id
+                WHERE employee.employment_status_code = 'ACTIVE'
+                  AND (
+                      @Search IS NULL
+                      OR employee.employee_id LIKE CONCAT('%', @Search, '%')
+                      OR employee.full_name LIKE CONCAT('%', @Search, '%')
+                      OR department.department_name LIKE CONCAT('%', @Search, '%')
+                  )
+                ORDER BY employee.full_name
+                LIMIT @Limit;
+                """,
+                new
+                {
+                    Search = string.IsNullOrWhiteSpace(search)
+                        ? null
+                        : search.Trim(),
+                    Limit = Math.Clamp(limit, 1, 100)
+                },
+                cancellationToken: cancellationToken));
+
+        return items.AsList();
+    }
+
     private sealed class RequesterRow
     {
         public long UserId { get; init; }
@@ -75,4 +150,3 @@ public sealed class EmployeeRepository(
         public string FullName { get; init; } = string.Empty;
     }
 }
-

@@ -85,7 +85,7 @@ function switchSection(targetId) {
             }
 
             const titles = {
-                'dashBoard':'Overview Dashboard', 'applyPass':'New Gate Pass',
+                'dashBoard':'Overview Dashboard', 'applyPass':'New Form Request',
                 'approvals':'Workflow Approvals', 'guardScan':'Security QR Scanner',
                 'fleetManagement': 'Vehicles & Drivers',
                 'adminPanel': currentUser && currentUser.role === 'System Admin' ? 'System Configuration' : 'Department Logs'
@@ -101,7 +101,10 @@ function switchSection(targetId) {
 
             refreshDashboards();
             if(sectionTargetId === 'guardScan') initializeQrCameras();
-            if(sectionTargetId === 'applyPass') updateApprovalRoutePreview();
+            if(sectionTargetId === 'applyPass') {
+                selectRequestFormType('PERSON_GATE_PASS');
+                updateApprovalRoutePreview();
+            }
             if(sectionTargetId === 'adminPanel') {
                 if(targetId === 'fleetManagement') {
                     switchAdminTab('fleet');
