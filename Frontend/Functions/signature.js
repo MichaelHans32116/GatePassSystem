@@ -3,13 +3,21 @@
 var signaturePadState = { drawing: false, lastX: 0, lastY: 0 };
 var SAVED_SIGNATURE_STORAGE_PREFIX = 'gatepass:saved-signature:';
 
-function getSavedSignatureStorageKey(user = currentUser) {
+function getSavedSignatureStorageKey(
+            user = currentUser,
+            formTypeCode = 'MATERIAL_GATE_PASS',
+            requestKey = currentViewedPassId || 'default') {
             const accountKey = user?.accountId || user?.id;
-            return accountKey ? `${SAVED_SIGNATURE_STORAGE_PREFIX}${accountKey}` : null;
+            return accountKey
+                ? `${SAVED_SIGNATURE_STORAGE_PREFIX}${accountKey}:${formTypeCode}:${requestKey}`
+                : null;
         }
 
-function getSavedApprovalSignature(user = currentUser) {
-            const key = getSavedSignatureStorageKey(user);
+function getSavedApprovalSignature(
+            user = currentUser,
+            formTypeCode = 'MATERIAL_GATE_PASS',
+            requestKey = currentViewedPassId || 'default') {
+            const key = getSavedSignatureStorageKey(user, formTypeCode, requestKey);
             if (!key) return null;
 
             try {
@@ -36,8 +44,12 @@ function getSavedApprovalSignature(user = currentUser) {
             }
         }
 
-function saveApprovalSignaturePreference(signature, user = currentUser) {
-            const key = getSavedSignatureStorageKey(user);
+function saveApprovalSignaturePreference(
+            signature,
+            user = currentUser,
+            formTypeCode = 'MATERIAL_GATE_PASS',
+            requestKey = currentViewedPassId || 'default') {
+            const key = getSavedSignatureStorageKey(user, formTypeCode, requestKey);
             if (!key || !signature?.img) return;
 
             localStorage.setItem(key, JSON.stringify({
@@ -47,8 +59,11 @@ function saveApprovalSignaturePreference(signature, user = currentUser) {
             }));
         }
 
-function clearSavedApprovalSignature(user = currentUser) {
-            const key = getSavedSignatureStorageKey(user);
+function clearSavedApprovalSignature(
+            user = currentUser,
+            formTypeCode = 'MATERIAL_GATE_PASS',
+            requestKey = currentViewedPassId || 'default') {
+            const key = getSavedSignatureStorageKey(user, formTypeCode, requestKey);
             if (!key) return;
             localStorage.removeItem(key);
         }
@@ -69,6 +84,7 @@ function resetApprovalSignatureComposer() {
             const controls = document.getElementById('sigControls');
             const saveDefault = document.getElementById('saveDefaultSig');
             const canvas = document.getElementById('signaturePad');
+            const liveSignature = document.getElementById('liveDocumentSig');
 
             if (upload) upload.value = '';
             if (fileName) fileName.innerText = '';
@@ -86,8 +102,18 @@ function resetApprovalSignatureComposer() {
                 const ctx = canvas.getContext('2d');
                 ctx?.clearRect(0, 0, canvas.width, canvas.height);
             }
+            liveSignature?.remove();
 
             setSignatureStatus('Choose an image or switch to Draw Signature.', 'muted');
+        }
+
+function resetAllSignatureState(options = {}) {
+            const clearStoredApproval = options.clearStoredApproval === true;
+            resetApprovalSignatureComposer();
+            if (clearStoredApproval) {
+                clearSavedApprovalSignature();
+            }
+            window.resetMaterialPreparedSignatureState?.();
         }
 
 function removeSignatureBackground(img, options = {}) {
@@ -616,3 +642,7 @@ window.getSavedApprovalSignature = getSavedApprovalSignature;
 window.saveApprovalSignaturePreference = saveApprovalSignaturePreference;
 window.clearSavedApprovalSignature = clearSavedApprovalSignature;
 window.resetApprovalSignatureComposer = resetApprovalSignatureComposer;
+window.resetAllSignatureState = resetAllSignatureState;
+window.dataUrlToBlob = dataUrlToBlob;
+window.loadImageFromDataUrl = loadImageFromDataUrl;
+window.removeBackgroundWithPython = removeBackgroundWithPython;

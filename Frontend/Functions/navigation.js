@@ -70,7 +70,7 @@ function setupRoleAccess(user) {
             }
         }
 
-function switchSection(targetId) {
+async function switchSection(targetId) {
             const sectionTargetId = targetId === 'fleetManagement'
                 ? 'adminPanel'
                 : targetId;
@@ -99,12 +99,11 @@ function switchSection(targetId) {
                 targetSec.classList.remove('fade-in'); void targetSec.offsetWidth; targetSec.classList.add('fade-in');
             }
 
-            refreshDashboards();
-            if(sectionTargetId === 'guardScan') initializeQrCameras();
             if(sectionTargetId === 'applyPass') {
                 selectRequestFormType('PERSON_GATE_PASS');
-                updateApprovalRoutePreview();
             }
+            await refreshApplicationState('switch-section');
+            if(sectionTargetId === 'guardScan') initializeQrCameras();
             if(sectionTargetId === 'adminPanel') {
                 if(targetId === 'fleetManagement') {
                     switchAdminTab('fleet');

@@ -390,7 +390,7 @@
                                 <span><strong>Approval Flow:</strong> <span id="routeApprovalText">Immediate Superior → PAS</span></span>
                             </div>
 
-                            <div class="prepared-signature-panel">
+                            <div class="prepared-signature-panel hidden" aria-hidden="true">
                                 <div>
                                     <h3 class="text-xs font-bold uppercase tracking-wide text-gray-700">Prepared By Signature <span class="font-normal normal-case text-gray-400">(optional)</span></h3>
                                     <p class="mt-1 text-[11px] text-gray-500">Upload a signature image. White or blue backgrounds are cleaned automatically.</p>
@@ -453,13 +453,33 @@
                                     <h3 class="text-xs font-bold uppercase tracking-wide text-gray-700">Prepared By Signature <span class="font-normal normal-case text-gray-400">(optional)</span></h3>
                                     <p class="mt-1 text-[11px] text-gray-500">The logged-in requester is the Prepared By employee.</p>
                                 </div>
-                                <label class="prepared-signature-upload">
-                                    <i class="fas fa-upload"></i>
-                                    <span>Choose signature</span>
-                                    <input id="materialPreparedSignatureUpload" type="file" accept="image/png,image/jpeg" class="sr-only" onchange="handlePreparedSignatureUpload(event, 'MATERIAL_GATE_PASS')">
-                                </label>
-                                <div id="materialPreparedSignaturePreview" class="prepared-signature-preview hidden"></div>
-                                <button id="materialPreparedSignatureClear" type="button" onclick="clearPreparedSignature('MATERIAL_GATE_PASS')" class="hidden text-xs font-bold text-red-600">Remove</button>
+                                <div class="w-full space-y-3 rounded-lg border border-blue-100 bg-white p-3">
+                                    <div class="signature-source-toggle">
+                                        <label for="materialPreparedSignatureUpload" onclick="showMaterialPreparedSignatureSource('upload')" id="btnMaterialSignatureUploadPanel" class="cursor-pointer text-xs font-bold bg-mpiBlue text-white px-3 py-2 rounded"><i class="fas fa-upload mr-1"></i> Upload Image</label>
+                                        <input id="materialPreparedSignatureUpload" type="file" accept="image/png,image/jpeg" class="sr-only" onchange="handlePreparedSignatureUpload(event, 'MATERIAL_GATE_PASS')">
+                                        <button type="button" onclick="showMaterialPreparedSignatureSource('draw')" id="btnMaterialSignatureDrawPanel" class="text-xs font-bold bg-white border border-blue-200 text-mpiBlue px-3 py-2 rounded hover:bg-blue-50"><i class="fas fa-pen mr-1"></i> Draw Signature</button>
+                                    </div>
+
+                                    <div id="materialSignatureUploadPanel" class="space-y-3">
+                                        <div id="materialPreparedSignatureFileRow" class="hidden signature-upload-zone">
+                                            <i class="fas fa-image text-mpiBlue"></i>
+                                            <span id="materialPreparedSignatureFileName" class="min-w-0 flex-1 truncate text-xs font-semibold text-gray-600"></span>
+                                        </div>
+                                        <div id="materialPreparedSignatureBgOptions" class="hidden rounded border bg-gray-50 p-3 space-y-3">
+                                            <label class="block text-[10px] font-bold uppercase text-gray-500">Background Removal<select id="materialPreparedSignatureBgMode" class="mt-1 w-full rounded border border-gray-300 p-2 text-xs"><option value="none">Keep original</option><option value="autoSmart" selected>Automatic best result</option><option value="blue">Blue background</option><option value="white">White background</option><option value="aiServer">AI local remover</option></select></label>
+                                            <label class="flex flex-col text-[10px] font-bold uppercase text-gray-500"><span>Removal Strength: <span id="materialPreparedSignatureBgThresholdValue" class="text-mpiBlue">20</span></span><input type="range" id="materialPreparedSignatureBgThreshold" min="10" max="140" value="20"></label>
+                                        </div>
+                                    </div>
+
+                                    <div id="materialSignatureDrawPanel" class="hidden space-y-3">
+                                        <div class="signature-pad-bg p-2 rounded"><canvas id="materialSignaturePad" class="signature-pad-canvas"></canvas></div>
+                                        <div class="flex justify-end gap-2"><button type="button" onclick="clearMaterialPreparedSignaturePad()" class="text-xs px-3 py-1.5 rounded border">Clear</button><button type="button" onclick="useMaterialPreparedDrawnSignature()" class="text-xs px-3 py-1.5 rounded bg-mpiBlue text-white font-extrabold">Use Drawn Signature</button></div>
+                                    </div>
+
+                                    <div id="materialPreparedSignaturePreview" class="prepared-signature-preview hidden"></div>
+                                    <button id="materialPreparedSignatureClear" type="button" onclick="clearPreparedSignature('MATERIAL_GATE_PASS')" class="hidden text-xs font-bold text-red-600">Remove</button>
+                                    <p id="materialPreparedSignatureStatus" class="mt-2 text-[10px] text-gray-500 leading-relaxed">Choose an image or draw your signature.</p>
+                                </div>
                             </div>
 
                             <div class="flex items-center rounded bg-blue-50 p-3 text-[10px] text-gray-600 md:text-xs">
@@ -668,7 +688,7 @@
             <div class="modal-scroll-area w-full bg-gray-100 p-4 md:p-6 print:p-0 print:overflow-visible" id="modalScrollArea">
 
                 <!-- THE ACTUAL PRINT FORM (A6 Layout precisely matched to image_b33085.jpg) -->
-                <div id="printableArea" class="print-form shadow-lg">
+                <div id="printableArea" class="print-form person-print-form shadow-lg">
                     <table class="w-full border-collapse">
                         <!-- Header -->
                         <tr>
@@ -696,8 +716,8 @@
                             </td>
                             <td class="w-[30%] h-10 align-top">
                                 <div class="flex justify-between text-[7px] uppercase"><span>DATE FILED</span><span>CONTROL NO.</span></div>
-                                <div id="vDateF" class="font-bold text-[10px] pl-2"></div>
-                                <div id="vControlNo" class="text-right font-mono text-[8px] font-bold"></div>
+                                <div id="vDateF" class="person-date-filed font-bold pl-1.5 pt-0.5"></div>
+                                <div id="vControlNo" class="person-control-no text-right font-mono font-bold leading-none"></div>
                             </td>
                         </tr>
                         <!-- Purpose & Driver -->
@@ -745,7 +765,7 @@
                         </tr>
                         <!-- Signatures Layout Modified to give more space for image -->
                         <tr>
-                            <td colspan="2" class="align-top h-14 relative w-1/2">
+                            <td colspan="2" class="person-approval-cell align-top h-14 relative w-1/2">
                                 <div class="text-[7px] uppercase absolute top-1 left-1">APPROVED BY</div>
                                 <div class="absolute bottom-[14px] w-full flex justify-center items-end" style="height: 52px;">
                                     <div id="sigImm" class="w-full flex justify-center items-end"></div>
@@ -755,7 +775,7 @@
                                     <span class="text-[7px]">IMMEDIATE SUPERIOR</span>
                                 </div>
                             </td>
-                            <td class="align-top h-14 relative w-1/4 border-l-0">
+                            <td class="person-approval-cell align-top h-14 relative w-1/4 border-l-0">
                                 <div class="absolute bottom-[14px] w-full flex justify-center items-end" style="height: 52px;">
                                     <div id="sigPres" class="w-full flex justify-center items-end"></div>
                                 </div>
@@ -764,7 +784,7 @@
                                     <span class="text-[7px]">PRESIDENT</span>
                                 </div>
                             </td>
-                            <td class="align-top h-14 relative w-1/4">
+                            <td class="person-approval-cell align-top h-14 relative w-1/4">
                                 <div class="text-[7px] uppercase absolute top-1 left-1">NOTED BY</div>
                                 <div class="absolute bottom-[14px] w-full flex justify-center items-end" style="height: 52px;">
                                     <div id="sigPAS" class="w-full flex justify-center items-end"></div>
@@ -832,7 +852,7 @@
 
             <!-- Approval Action Area (E-Signature Input) -->
             <div id="approvalActionArea" class="w-full bg-white border-t border-gray-200 p-4 md:p-5 print-hide hidden rounded-b-lg flex-col space-y-4">
-                <div class="bg-blue-50 border border-blue-200 p-3 rounded">
+                <div id="approvalSignatureEditor" class="bg-blue-50 border border-blue-200 p-3 rounded hidden">
                     <h3 class="font-extrabold text-mpiBlue text-base mb-1"><i class="fas fa-pen-nib mr-1"></i> Use Digital Signature</h3>
                     <p class="text-xs text-gray-600 mb-3">Choose or draw a signature here. The actual document on the right updates live.</p>
 

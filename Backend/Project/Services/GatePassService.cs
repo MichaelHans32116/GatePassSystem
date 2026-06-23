@@ -337,6 +337,11 @@ public sealed class GatePassService(
 
     private static string? Validate(CreateGatePassRequest request)
     {
+        if (request.PreparedBySignatureFileId.HasValue)
+        {
+            return "Person gate passes do not use a prepared-by signature.";
+        }
+
         if (string.IsNullOrWhiteSpace(request.Destination) ||
             string.IsNullOrWhiteSpace(request.Purpose))
         {

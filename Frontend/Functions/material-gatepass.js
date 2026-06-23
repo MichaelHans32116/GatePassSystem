@@ -1,10 +1,9 @@
 // Material Gate Pass form, employee lookup, item rows, and prepared-by signature.
 
 var materialEmployeeDirectory = [];
-var preparedSignatureState = {
-    PERSON_GATE_PASS: null,
-    MATERIAL_GATE_PASS: null
-};
+var preparedSignatureState = null;
+var preparedSignatureOriginalData = null;
+var materialSignaturePadState = { drawing: false, lastX: 0, lastY: 0 };
 
 function materialEscape(value) {
     return String(value ?? '')
@@ -17,6 +16,7 @@ function materialEscape(value) {
 
 function selectRequestFormType(formTypeCode) {
     const isMaterial = formTypeCode === 'MATERIAL_GATE_PASS';
+    resetAllSignatureState?.();
     document.getElementById('applyForm')?.classList.toggle('hidden', isMaterial);
     document.getElementById('materialApplyForm')?.classList.toggle('hidden', !isMaterial);
 
@@ -154,10 +154,162 @@ function readMaterialItems() {
 }
 
 function preparedSignaturePrefix(formTypeCode) {
-    return formTypeCode === 'MATERIAL_GATE_PASS' ? 'material' : 'person';
+    return formTypeCode === 'MATERIAL_GATE_PASS' ? 'material' : '';
+}
+
+function resetMaterialPreparedSignatureState(options = {}) {
+    preparedSignatureState = null;
+    preparedSignatureOriginalData = null;
+
+    if (options.clearDirectory === true) {
+        materialEmployeeDirectory = [];
+    }
+
+    const input = document.getElementById('materialPreparedSignatureUpload');
+    const fileName = document.getElementById('materialPreparedSignatureFileName');
+    const selectedFileRow = document.getElementById('materialPreparedSignatureFileRow');
+    const mode = document.getElementById('materialPreparedSignatureBgMode');
+    const threshold = document.getElementById('materialPreparedSignatureBgThreshold');
+    const thresholdValue = document.getElementById('materialPreparedSignatureBgThresholdValue');
+    const bgOptions = document.getElementById('materialPreparedSignatureBgOptions');
+    const canvas = document.getElementById('materialSignaturePad');
+    const uploadPanel = document.getElementById('materialSignatureUploadPanel');
+    const drawPanel = document.getElementById('materialSignatureDrawPanel');
+    const uploadButton = document.getElementById('btnMaterialSignatureUploadPanel');
+    const drawButton = document.getElementById('btnMaterialSignatureDrawPanel');
+
+    if (input) input.value = '';
+    if (fileName) fileName.innerText = '';
+    selectedFileRow?.classList.add('hidden');
+    if (mode) mode.value = 'none';
+    if (threshold) threshold.value = 20;
+    if (thresholdValue) thresholdValue.innerText = '20';
+    bgOptions?.classList.add('hidden');
+    uploadPanel?.classList.remove('hidden');
+    drawPanel?.classList.add('hidden');
+    uploadButton?.classList.add('bg-mpiBlue', 'text-white');
+    uploadButton?.classList.remove('bg-white', 'text-mpiBlue', 'border');
+    drawButton?.classList.remove('bg-mpiBlue', 'text-white');
+    drawButton?.classList.add('bg-white', 'text-mpiBlue', 'border', 'border-blue-200');
+
+    if (canvas) {
+        const ctx = canvas.getContext('2d');
+        ctx?.clearRect(0, 0, canvas.width, canvas.height);
+    }
+
+    renderPreparedSignaturePreview('MATERIAL_GATE_PASS');
+    setMaterialPreparedSignatureStatus('Choose an image or draw your signature.', 'muted');
+}
+
+function setMaterialPreparedSignatureStatus(message, type = 'muted') {
+    const status = document.getElementById('materialPreparedSignatureStatus');
+    if (!status) return;
+
+    status.className = 'mt-2 text-[10px] leading-relaxed';
+    if (type === 'success') status.classList.add('text-green-700', 'font-semibold');
+    else if (type === 'error') status.classList.add('text-red-600', 'font-semibold');
+    else if (type === 'info') status.classList.add('text-mpiBlue', 'font-semibold');
+    else status.classList.add('text-gray-500');
+
+    status.innerText = message;
+}
+
+function showMaterialPreparedSignatureSource(source) {
+    const uploadPanel = document.getElementById('materialSignatureUploadPanel');
+    const drawPanel = document.getElementById('materialSignatureDrawPanel');
+    const uploadButton = document.getElementById('btnMaterialSignatureUploadPanel');
+    const drawButton = document.getElementById('btnMaterialSignatureDrawPanel');
+
+    if (source === 'draw') {
+        uploadPanel?.classList.add('hidden');
+        drawPanel?.classList.remove('hidden');
+        drawButton?.classList.add('bg-mpiBlue', 'text-white');
+        drawButton?.classList.remove('bg-white', 'text-mpiBlue', 'border');
+        uploadButton?.classList.remove('bg-mpiBlue', 'text-white');
+        uploadButton?.classList.add('bg-white', 'text-mpiBlue', 'border', 'border-blue-200');
+        requestAnimationFrame(resizeMaterialPreparedSignatureCanvas);
+        setMaterialPreparedSignatureStatus('Draw the prepared-by signature, then use it.', 'info');
+        return;
+    }
+
+    drawPanel?.classList.add('hidden');
+    uploadPanel?.classList.remove('hidden');
+    uploadButton?.classList.add('bg-mpiBlue', 'text-white');
+    uploadButton?.classList.remove('bg-white', 'text-mpiBlue', 'border');
+    drawButton?.classList.remove('bg-mpiBlue', 'text-white');
+    drawButton?.classList.add('bg-white', 'text-mpiBlue', 'border', 'border-blue-200');
+    if (!preparedSignatureOriginalData && !preparedSignatureState) {
+        setMaterialPreparedSignatureStatus('Choose an image or switch to Draw Signature.', 'muted');
+    }
+}
+
+function renderPreparedSignaturePreview(formTypeCode) {
+    if (formTypeCode !== 'MATERIAL_GATE_PASS') return;
+    const preview = document.getElementById('materialPreparedSignaturePreview');
+    const clear = document.getElementById('materialPreparedSignatureClear');
+    const dataUrl = preparedSignatureState;
+    if (preview) {
+        preview.innerHTML = dataUrl ? `<img src="${dataUrl}" alt="Prepared signature preview">` : '';
+        preview.classList.toggle('hidden', !dataUrl);
+    }
+    clear?.classList.toggle('hidden', !dataUrl);
+}
+
+async function processMaterialPreparedSignature(showMessage = true) {
+    if (!preparedSignatureOriginalData) return;
+
+    let mode = document.getElementById('materialPreparedSignatureBgMode')?.value || 'none';
+    const threshold = parseInt(
+        document.getElementById('materialPreparedSignatureBgThreshold')?.value || '20',
+        10
+    );
+
+    try {
+        if (mode === 'none') {
+            preparedSignatureState = preparedSignatureOriginalData;
+        } else if (mode === 'aiServer' && isDatabaseSession()) {
+            preparedSignatureState = await removeBackgroundWithPython(preparedSignatureOriginalData);
+        } else {
+            const image = await loadImageFromDataUrl(preparedSignatureOriginalData);
+            let effectiveMode = mode;
+            if (mode === 'aiServer') {
+                effectiveMode = 'autoSmart';
+            }
+            preparedSignatureState = removeSignatureBackground(image, {
+                mode: effectiveMode,
+                threshold
+            });
+        }
+
+        renderPreparedSignaturePreview('MATERIAL_GATE_PASS');
+        document.getElementById('materialPreparedSignatureBgOptions')?.classList.remove('hidden');
+        setMaterialPreparedSignatureStatus(
+            mode === 'none'
+                ? 'Prepared-by signature attached.'
+                : 'Prepared-by signature cleaned and previewed.',
+            'success'
+        );
+        if (showMessage) {
+            showToast('Prepared-by signature preview updated.');
+        }
+    } catch {
+        const image = await loadImageFromDataUrl(preparedSignatureOriginalData);
+        preparedSignatureState = removeSignatureBackground(image, {
+            mode: 'autoSmart',
+            threshold
+        });
+        renderPreparedSignaturePreview('MATERIAL_GATE_PASS');
+        document.getElementById('materialPreparedSignatureBgOptions')?.classList.remove('hidden');
+        setMaterialPreparedSignatureStatus('Local auto cleanup used instead.', 'info');
+    }
 }
 
 async function handlePreparedSignatureUpload(event, formTypeCode) {
+    if (formTypeCode !== 'MATERIAL_GATE_PASS') {
+        event.target.value = '';
+        return;
+    }
+
     const file = event.target.files?.[0];
     if (!file) return;
     if (!['image/png', 'image/jpeg'].includes(file.type) || file.size > 5 * 1024 * 1024) {
@@ -167,48 +319,36 @@ async function handlePreparedSignatureUpload(event, formTypeCode) {
     }
 
     try {
-        const original = await new Promise((resolve, reject) => {
+        preparedSignatureOriginalData = await new Promise((resolve, reject) => {
             const reader = new FileReader();
             reader.onload = () => resolve(reader.result);
             reader.onerror = reject;
             reader.readAsDataURL(file);
         });
-        const image = await loadImageFromDataUrl(original);
-        const cleaned = removeSignatureBackground(image, {
-            mode: 'autoSmart',
-            threshold: 20
-        });
-        preparedSignatureState[formTypeCode] = cleaned;
-        renderPreparedSignaturePreview(formTypeCode);
-        showToast('Prepared-by signature attached.');
+
+        const fileName = document.getElementById('materialPreparedSignatureFileName');
+        const selectedFileRow = document.getElementById('materialPreparedSignatureFileRow');
+        if (fileName) fileName.innerText = file.name;
+        selectedFileRow?.classList.remove('hidden');
+        document.getElementById('materialPreparedSignatureBgMode').value = 'autoSmart';
+        document.getElementById('materialPreparedSignatureBgThreshold').value = 20;
+        document.getElementById('materialPreparedSignatureBgThresholdValue').innerText = '20';
+        document.getElementById('materialPreparedSignatureBgOptions')?.classList.remove('hidden');
+        await processMaterialPreparedSignature();
     } catch {
         showToast('Unable to process that signature image.', 'error');
         event.target.value = '';
     }
 }
 
-function renderPreparedSignaturePreview(formTypeCode) {
-    const prefix = preparedSignaturePrefix(formTypeCode);
-    const preview = document.getElementById(`${prefix}PreparedSignaturePreview`);
-    const clear = document.getElementById(`${prefix}PreparedSignatureClear`);
-    const dataUrl = preparedSignatureState[formTypeCode];
-    if (preview) {
-        preview.innerHTML = dataUrl ? `<img src="${dataUrl}" alt="Prepared signature preview">` : '';
-        preview.classList.toggle('hidden', !dataUrl);
-    }
-    clear?.classList.toggle('hidden', !dataUrl);
-}
-
 function clearPreparedSignature(formTypeCode) {
-    preparedSignatureState[formTypeCode] = null;
-    const prefix = preparedSignaturePrefix(formTypeCode);
-    const input = document.getElementById(`${prefix}PreparedSignatureUpload`);
-    if (input) input.value = '';
-    renderPreparedSignaturePreview(formTypeCode);
+    if (formTypeCode !== 'MATERIAL_GATE_PASS') return;
+    resetMaterialPreparedSignatureState();
 }
 
 async function uploadPreparedSignature(formTypeCode) {
-    const dataUrl = preparedSignatureState[formTypeCode];
+    if (formTypeCode !== 'MATERIAL_GATE_PASS') return null;
+    const dataUrl = preparedSignatureState;
     if (!dataUrl) return null;
     const formData = new FormData();
     formData.append('file', dataUrlToBlob(dataUrl), 'prepared-signature.png');
@@ -253,8 +393,8 @@ async function submitMaterialGatePass(event) {
         initializeMaterialGatePassForm();
         renderMaterialEmployeeOptions();
         showToast(`Material request ${created.gatePass.controlNo} submitted.`);
-        await loadMyGatePasses();
-        switchSection('dashBoard');
+        await refreshApplicationState('submit-material-request');
+        await switchSection('dashBoard');
     } catch (error) {
         showToast(
             error instanceof ApiError ? error.message : 'Unable to submit material request.',
@@ -266,8 +406,119 @@ async function submitMaterialGatePass(event) {
     }
 }
 
-document.addEventListener('DOMContentLoaded', initializeMaterialGatePassForm);
-window.addEventListener('gatepass:authenticated', loadMaterialEmployees);
+function resizeMaterialPreparedSignatureCanvas() {
+    const canvas = document.getElementById('materialSignaturePad');
+    if (!canvas) return;
+    const existing = canvas.toDataURL('image/png');
+    const rect = canvas.getBoundingClientRect();
+    const dpr = window.devicePixelRatio || 1;
+    if (rect.width <= 0) return;
+    canvas.width = Math.floor(rect.width * dpr);
+    canvas.height = Math.floor(170 * dpr);
+    canvas.style.height = '170px';
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+    if (existing && existing.length > 1000) {
+        const img = new Image();
+        img.onload = () => ctx.drawImage(img, 0, 0, rect.width, 170);
+        img.src = existing;
+    }
+}
+
+function setupMaterialPreparedSignaturePad() {
+    const canvas = document.getElementById('materialSignaturePad');
+    if (!canvas) return;
+    resizeMaterialPreparedSignatureCanvas();
+
+    const getPoint = event => {
+        const rect = canvas.getBoundingClientRect();
+        return {
+            x: event.clientX - rect.left,
+            y: event.clientY - rect.top
+        };
+    };
+
+    const start = event => {
+        event.preventDefault();
+        materialSignaturePadState.drawing = true;
+        const point = getPoint(event);
+        materialSignaturePadState.lastX = point.x;
+        materialSignaturePadState.lastY = point.y;
+    };
+
+    const move = event => {
+        if (!materialSignaturePadState.drawing) return;
+        event.preventDefault();
+        const ctx = canvas.getContext('2d');
+        const point = getPoint(event);
+        ctx.lineWidth = 4;
+        ctx.lineCap = 'round';
+        ctx.lineJoin = 'round';
+        ctx.strokeStyle = '#020617';
+        ctx.beginPath();
+        ctx.moveTo(materialSignaturePadState.lastX, materialSignaturePadState.lastY);
+        ctx.lineTo(point.x, point.y);
+        ctx.stroke();
+        materialSignaturePadState.lastX = point.x;
+        materialSignaturePadState.lastY = point.y;
+    };
+
+    const end = () => {
+        materialSignaturePadState.drawing = false;
+    };
+
+    canvas.addEventListener('pointerdown', start);
+    canvas.addEventListener('pointermove', move);
+    canvas.addEventListener('pointerup', end);
+    canvas.addEventListener('pointerleave', end);
+    window.addEventListener('resize', resizeMaterialPreparedSignatureCanvas);
+}
+
+function clearMaterialPreparedSignaturePad() {
+    const canvas = document.getElementById('materialSignaturePad');
+    if (!canvas) return;
+    const ctx = canvas.getContext('2d');
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    setMaterialPreparedSignatureStatus('Signature pad cleared.', 'muted');
+}
+
+function useMaterialPreparedDrawnSignature() {
+    const canvas = document.getElementById('materialSignaturePad');
+    if (!canvas) return;
+    if (isSignatureCanvasBlank(canvas)) {
+        setMaterialPreparedSignatureStatus('Draw a signature before using it.', 'error');
+        showToast('Please draw a prepared-by signature first.', 'error');
+        return;
+    }
+
+    preparedSignatureOriginalData = null;
+    preparedSignatureState = canvas.toDataURL('image/png');
+    renderPreparedSignaturePreview('MATERIAL_GATE_PASS');
+    document.getElementById('materialPreparedSignatureBgOptions')?.classList.add('hidden');
+    setMaterialPreparedSignatureStatus('Drawn prepared-by signature added.', 'success');
+    showToast('Prepared-by signature preview updated.');
+}
+
+function initializeMaterialPreparedSignatureControls() {
+    const mode = document.getElementById('materialPreparedSignatureBgMode');
+    const threshold = document.getElementById('materialPreparedSignatureBgThreshold');
+
+    mode?.addEventListener('change', function() {
+        processMaterialPreparedSignature();
+    });
+
+    threshold?.addEventListener('input', function() {
+        document.getElementById('materialPreparedSignatureBgThresholdValue').innerText = this.value;
+        if (mode?.value !== 'none') processMaterialPreparedSignature(false);
+    });
+}
+
+document.addEventListener('DOMContentLoaded', () => {
+    initializeMaterialGatePassForm();
+    setupMaterialPreparedSignaturePad();
+    initializeMaterialPreparedSignatureControls();
+    resetMaterialPreparedSignatureState();
+});
 
 window.selectRequestFormType = selectRequestFormType;
 window.loadMaterialEmployees = loadMaterialEmployees;
@@ -278,3 +529,7 @@ window.handlePreparedSignatureUpload = handlePreparedSignatureUpload;
 window.clearPreparedSignature = clearPreparedSignature;
 window.uploadPreparedSignature = uploadPreparedSignature;
 window.submitMaterialGatePass = submitMaterialGatePass;
+window.showMaterialPreparedSignatureSource = showMaterialPreparedSignatureSource;
+window.clearMaterialPreparedSignaturePad = clearMaterialPreparedSignaturePad;
+window.useMaterialPreparedDrawnSignature = useMaterialPreparedDrawnSignature;
+window.resetMaterialPreparedSignatureState = resetMaterialPreparedSignatureState;

@@ -31,10 +31,10 @@
 
         /* Print Styles - A4 paper friendly, with the A6 gate pass centered on the page */
         @media print {
-            @page { size: A4 portrait; margin: 10mm; }
+            @page { size: A6 landscape; margin: 0; }
             html, body {
-                width: 210mm;
-                min-height: 297mm;
+                width: 148mm;
+                min-height: 105mm;
                 background: white !important;
                 overflow: visible !important;
             }
@@ -74,7 +74,7 @@
             #printableArea {
                 width: 148mm !important;
                 height: 105mm !important;
-                margin: 0 auto !important;
+                margin: 0 !important;
                 box-shadow: none !important;
                 page-break-inside: avoid;
                 break-inside: avoid;
@@ -106,7 +106,29 @@
         }
         .print-form table { border-collapse: collapse; width: 100%; }
         .print-form td { border: 1px solid black; padding: 4px; font-size: 10px; vertical-align: top; }
-
+        .person-print-form td {
+            padding: 3px;
+        }
+        .person-date-filed {
+            font-size: 8px;
+            line-height: 1.05;
+            min-height: 10px;
+            white-space: nowrap;
+        }
+        .person-control-no {
+            font-size: 7px;
+            letter-spacing: 0.2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        .person-print-form #vPurp,
+        .person-print-form #vDest {
+            line-height: 1.15;
+        }
+        .person-print-form .person-approval-cell {
+            overflow: hidden;
+        }
         .form-type-card.active {
             border-color: #155CA2;
             box-shadow: 0 8px 22px rgba(21, 92, 162, 0.12);
@@ -344,6 +366,10 @@
         }
         .document-modal.is-reviewing #printableArea {
             flex: 0 0 auto;
+        }
+        .document-modal #printableArea.person-print-form {
+            flex: 0 0 auto;
+            transform-origin: top center;
         }
         .document-modal:not(.is-floating) {
             margin: auto;

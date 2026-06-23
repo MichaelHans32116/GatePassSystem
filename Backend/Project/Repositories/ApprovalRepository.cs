@@ -125,7 +125,6 @@ public sealed class ApprovalRepository(
 
             var actedAt = DateTime.UtcNow;
             var decisionCode = approve ? "APPROVED" : "REJECTED";
-
             await connection.ExecuteAsync(new CommandDefinition(
                 """
                 UPDATE tbl_gate_pass_approval_steps

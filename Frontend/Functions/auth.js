@@ -60,8 +60,14 @@ function mapAuthenticatedUser(apiUser) {
     };
 }
 
+function updateAuthenticatedShell(user) {
+    document.getElementById('navUserName').innerText = user.name;
+    document.getElementById('navUserRole').innerText = user.roleLabel || user.role;
+}
+
 function showAuthenticatedApp(user, showSignedInToast = true) {
-    resetApprovalSignatureComposer?.();
+    clearTransientApplicationState?.();
+    resetRequestForms?.();
     currentUser = user;
     document.getElementById('loginView').style.opacity = '0';
 
@@ -71,8 +77,7 @@ function showAuthenticatedApp(user, showSignedInToast = true) {
         document.getElementById('loginView').style.opacity = '1';
     }, 300);
 
-    document.getElementById('navUserName').innerText = user.name;
-    document.getElementById('navUserRole').innerText = user.roleLabel || user.role;
+    updateAuthenticatedShell(user);
     setupRoleAccess(user);
     window.dispatchEvent(new CustomEvent('gatepass:authenticated', {
         detail: { database: ApiClient.isDatabaseSession(), user }
@@ -82,6 +87,22 @@ function showAuthenticatedApp(user, showSignedInToast = true) {
         showToast(`Signed in as ${user.name}`);
     }
 
+}
+
+async function refreshAuthenticatedProfile() {
+    if (!ApiClient.hasAccessToken()) return null;
+
+    try {
+        const apiUser = await ApiClient.data('/auth/me');
+        const user = mapAuthenticatedUser(apiUser);
+        currentUser = user;
+        updateAuthenticatedShell(user);
+        return user;
+    } catch {
+        ApiClient.clearAccessToken();
+        currentUser = null;
+        return null;
+    }
 }
 
 async function handleLogin(e) {
@@ -136,7 +157,8 @@ async function logout() {
         }
     }
     ApiClient.clearAccessToken();
-    resetApprovalSignatureComposer?.();
+    clearTransientApplicationState?.();
+    resetRequestForms?.();
     currentUser = null;
     document.getElementById('appView').classList.add('hidden');
     document.getElementById('loginView').classList.remove('hidden');
@@ -159,3 +181,4 @@ document.addEventListener('DOMContentLoaded', () => {
 window.togglePassword = togglePassword;
 window.handleLogin = handleLogin;
 window.logout = logout;
+window.refreshAuthenticatedProfile = refreshAuthenticatedProfile;

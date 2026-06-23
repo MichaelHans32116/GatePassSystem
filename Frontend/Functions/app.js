@@ -27,6 +27,115 @@ function showToast(message, type = 'success') {
             }, 3000);
         }
 
+function clearTransientApplicationState() {
+    gatePasses = [];
+    currentViewedPassId = null;
+    currentLogPage = 1;
+
+    if (typeof databaseApprovalQueue !== 'undefined') {
+        databaseApprovalQueue = [];
+    }
+    if (typeof databaseVehicles !== 'undefined') {
+        databaseVehicles = [];
+    }
+    if (typeof databaseDrivers !== 'undefined') {
+        databaseDrivers = [];
+    }
+    if (typeof materialEmployeeDirectory !== 'undefined') {
+        materialEmployeeDirectory = [];
+    }
+
+    forceCloseModal?.();
+}
+
+function resetRequestForms() {
+    document.getElementById('applyForm')?.reset();
+    document.getElementById('materialApplyForm')?.reset();
+    document.getElementById('materialItemsBody')?.replaceChildren();
+    toggleVehicleFields?.();
+    initializeMaterialGatePassForm?.();
+    resetAllSignatureState?.();
+}
+
+function getVisibleSectionId() {
+    return document.querySelector('.view-section:not(.hidden)')?.id || null;
+}
+
+async function renderVisibleSection() {
+    const visibleSectionId = getVisibleSectionId();
+
+    if (visibleSectionId === 'sec-dashBoard') {
+        await refreshDashboards();
+        return;
+    }
+
+    if (visibleSectionId === 'sec-approvals') {
+        await renderApprovalQueue();
+        return;
+    }
+
+    if (visibleSectionId === 'sec-guardScan') {
+        await renderGuardDashboard();
+        return;
+    }
+
+    if (visibleSectionId === 'sec-applyPass') {
+        const isMaterialView =
+            !document.getElementById('materialApplyForm')?.classList.contains('hidden');
+        if (isMaterialView) {
+            await loadMaterialEmployees();
+            initializeMaterialGatePassForm?.();
+        } else {
+            initializeGatePassForm?.();
+            updateApprovalRoutePreview?.();
+        }
+        return;
+    }
+
+    if (visibleSectionId === 'sec-adminPanel') {
+        renderAdminTables?.();
+    }
+}
+
+async function refreshApplicationState(reason = 'general', options = {}) {
+    const shouldResetState = options.resetState === true;
+    const shouldReloadUserProfile = options.reloadUserProfile === true;
+
+    if (shouldResetState) {
+        clearTransientApplicationState();
+        resetRequestForms();
+    }
+
+    if (
+        shouldReloadUserProfile &&
+        ApiClient.hasAccessToken() &&
+        typeof refreshAuthenticatedProfile === 'function'
+    ) {
+        const refreshedUser = await refreshAuthenticatedProfile();
+        if (!refreshedUser) return;
+    }
+
+    if (!currentUser) return;
+
+    try {
+        await loadFleetReferences();
+
+        if (isDatabaseSession() && currentUser.role !== 'Security') {
+            await loadMyGatePasses();
+        }
+
+        await renderApprovalQueue();
+        await renderVisibleSection();
+    } catch (error) {
+        showToast(
+            error instanceof ApiError
+                ? error.message
+                : `Unable to refresh application state (${reason}).`,
+            'error'
+        );
+    }
+}
+
 async function refreshDashboards() {
     if (!currentUser) return;
 
@@ -42,8 +151,6 @@ async function refreshDashboards() {
         guardWrapper.classList.add('hidden');
         await renderStandardDashboard();
     }
-
-    await renderApprovalQueue();
 }
 
 document.addEventListener('DOMContentLoaded', () => {
@@ -57,10 +164,10 @@ document.addEventListener('DOMContentLoaded', () => {
 });
 
 window.addEventListener('gatepass:authenticated', async () => {
-    await loadFleetReferences();
-    await refreshDashboards();
+    await refreshApplicationState('authenticated', { resetState: true });
 });
 
 window.updateDate = updateDate;
 window.showToast = showToast;
 window.refreshDashboards = refreshDashboards;
+window.refreshApplicationState = refreshApplicationState;

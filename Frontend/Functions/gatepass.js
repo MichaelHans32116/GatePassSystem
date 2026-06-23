@@ -265,15 +265,12 @@ async function submitGatePass(e) {
     submitButton.disabled = true;
     submitButton.classList.add('opacity-60', 'cursor-wait');
     try {
-        payload.preparedBySignatureFileId =
-            await uploadPreparedSignature('PERSON_GATE_PASS');
         const created = await ApiClient.post('/gate-pass-requests', payload);
         form.reset();
-        clearPreparedSignature('PERSON_GATE_PASS');
         toggleVehicleFields();
         showToast(`Request ${created.gatePass.controlNo || created.gatePass.gatePassNo} submitted.`);
-        await loadMyGatePasses();
-        switchSection('dashBoard');
+        await refreshApplicationState('submit-person-request');
+        await switchSection('dashBoard');
     } catch (error) {
         showToast(error instanceof ApiError ? error.message : 'Unable to submit gate pass.', 'error');
     } finally {
@@ -437,12 +434,6 @@ async function renderStandardDashboard() {
     renderMyEmployeeQr();
     document.getElementById('btnNewRequest').style.display =
         currentUser.role === 'President' ? 'none' : 'block';
-
-    try {
-        if (isDatabaseSession()) await loadMyGatePasses();
-    } catch (error) {
-        showToast(error instanceof ApiError ? error.message : 'Unable to load form requests.', 'error');
-    }
 
     const myPasses = isDatabaseSession()
         ? gatePasses

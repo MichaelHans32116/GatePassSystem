@@ -15,22 +15,16 @@ async function uploadCurrentSignature() {
 async function approveCurrentPass() {
     if (currentUser.role === 'System Admin') return;
 
-    const sigWidth = document.getElementById('sigSize')?.value || 100;
-    const sigY = document.getElementById('sigY')?.value || 0;
-    const saveCheck = document.getElementById('saveDefaultSig');
-
     if (!isDatabaseSession()) {
-        if (saveCheck?.checked && currentUploadedSig) {
-            saveApprovalSignaturePreference({ img: currentUploadedSig, w: sigWidth, y: sigY });
-        } else {
-            clearSavedApprovalSignature();
-        }
         approveCurrentMockPass();
         return;
     }
 
     const pass = findGatePassRecord();
     if (!pass) return;
+    const sigWidth = document.getElementById('sigSize')?.value || 100;
+    const sigY = document.getElementById('sigY')?.value || 0;
+    const saveCheck = document.getElementById('saveDefaultSig');
 
     const approveButton = document.getElementById('approveRequestButton');
     if (approveButton) approveButton.disabled = true;
@@ -41,14 +35,17 @@ async function approveCurrentPass() {
             comment: null
         });
         if (saveCheck?.checked && currentUploadedSig) {
-            saveApprovalSignaturePreference({ img: currentUploadedSig, w: sigWidth, y: sigY });
+            saveApprovalSignaturePreference(
+                { img: currentUploadedSig, w: sigWidth, y: sigY },
+                currentUser,
+                pass.formTypeCode
+            );
         } else {
-            clearSavedApprovalSignature();
+            clearSavedApprovalSignature(currentUser, pass.formTypeCode);
         }
         showToast('Form request approved.');
         closeModal();
-        await Promise.all([renderApprovalQueue(), loadMyGatePasses()]);
-        refreshDashboards();
+        await refreshApplicationState('approve-request');
     } catch (error) {
         showToast(error instanceof ApiError ? error.message : 'Unable to approve document.', 'error');
     } finally {
@@ -81,8 +78,7 @@ async function rejectCurrentPass() {
         });
         showToast('Form request rejected.', 'error');
         closeModal();
-        await renderApprovalQueue();
-        refreshDashboards();
+        await refreshApplicationState('reject-request');
     } catch (error) {
         showToast(error instanceof ApiError ? error.message : 'Unable to reject document.', 'error');
     }
@@ -102,6 +98,16 @@ function approveCurrentMockPass() {
         w: sigWidth,
         y: sigY
     };
+
+    if (saveCheck?.checked && currentUploadedSig) {
+        saveApprovalSignaturePreference(
+            { img: currentUploadedSig, w: sigWidth, y: sigY },
+            currentUser,
+            pass.formTypeCode
+        );
+    } else {
+        clearSavedApprovalSignature(currentUser, pass.formTypeCode);
+    }
 
     if (pass.status === 'Pending Superior') {
         pass.signatures.imm = sigObj;
@@ -127,6 +133,7 @@ async function renderApprovalQueue() {
             ['gatepass.approve.superior', 'gatepass.approve.president', 'gatepass.note.pas'].includes(permission)
         );
         if (!canApprove) {
+            databaseApprovalQueue = [];
             updateApprovalQueueDisplay([]);
             return;
         }
@@ -154,13 +161,9 @@ async function renderApprovalQueue() {
                 signatures: { imm: null, pres: null, pas: null },
                 willReturn: Boolean(item.expectedInAt)
             }));
-            queuePasses.forEach((pass) => {
-                const index = gatePasses.findIndex(item => item.dbId === pass.dbId);
-                if (index >= 0) gatePasses[index] = { ...gatePasses[index], ...pass };
-                else gatePasses.push(pass);
-            });
             updateApprovalQueueDisplay(queuePasses);
         } catch (error) {
+            databaseApprovalQueue = [];
             updateApprovalQueueDisplay([]);
             if (error.status !== 403) {
                 showToast(error instanceof ApiError ? error.message : 'Unable to load approvals.', 'error');

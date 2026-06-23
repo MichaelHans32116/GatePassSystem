@@ -265,6 +265,7 @@ async function viewPass(id, isReviewing = false) {
 
             const isMaterial =
                 p.formTypeCode === 'MATERIAL_GATE_PASS';
+            const printableArea = document.getElementById('printableArea');
             document.getElementById('printableArea')?.classList.toggle(
                 'hidden',
                 isMaterial
@@ -273,9 +274,34 @@ async function viewPass(id, isReviewing = false) {
                 'hidden',
                 !isMaterial
             );
+            printableArea?.classList.toggle('person-print-form', !isMaterial);
 
-            setVal('vDateF', p.dateFiled);
-            setVal('vControlNo', p.controlNo || p.id);
+            const compactPersonDateFiled = (value) => {
+                if (!value) return 'N/A';
+                const textValue = String(value).trim();
+                const textualDateMatch = textValue.match(/^([A-Za-z]{3}\s+\d{1,2},\s+\d{4})/);
+                if (textualDateMatch) return textualDateMatch[1];
+                const parsed = new Date(value.endsWith?.('Z') ? value : `${value}Z`);
+                if (Number.isNaN(parsed.getTime())) {
+                    const isoDateMatch = textValue.match(/^(\d{4}-\d{2}-\d{2})/);
+                    return isoDateMatch ? isoDateMatch[1] : textValue;
+                }
+                return parsed.toLocaleDateString([], {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                });
+            };
+
+            const printableControlNo = (value) => {
+                const raw = String(value || '').trim();
+                if (!raw) return '';
+                if (/^(GP-ID|TEMP|TMP|ID)-/i.test(raw)) return '';
+                return raw.length > 20 ? raw.slice(0, 20) : raw;
+            };
+
+            setVal('vDateF', isMaterial ? p.dateFiled : compactPersonDateFiled(p.dateFiled));
+            setVal('vControlNo', printableControlNo(p.controlNo));
             setVal('vName', p.userName);
             setVal('vDest', p.destination);
             setVal('vPurp', p.purpose);
@@ -448,10 +474,12 @@ async function viewPass(id, isReviewing = false) {
 
             // ACTION AREA & DEFAULT SIGNATURE LOADING
             const actionArea = document.getElementById('approvalActionArea');
+            const approvalSignatureEditor = document.getElementById('approvalSignatureEditor');
             if(actionArea) {
                 if(isReviewing) {
                     document.getElementById('printModalContent')?.classList.add('is-reviewing');
                     actionArea.style.display = 'flex';
+                    approvalSignatureEditor?.classList.remove('hidden');
                     resetApprovalSignatureComposer();
                     showSignatureSource('upload');
 
@@ -473,17 +501,13 @@ async function viewPass(id, isReviewing = false) {
                         }
                     }
 
-                    // Load saved default signature if it exists
-                    const savedSignature = getSavedApprovalSignature();
+                    const savedSignature = getSavedApprovalSignature(
+                        currentUser,
+                        p.formTypeCode
+                    );
                     if (savedSignature) {
                         currentUploadedSig = savedSignature.img;
                         currentOriginalSignatureData = null;
-
-                        // Determine which container to update based on user role
-                        let targetContainerId = null;
-                        if (currentUser.role === 'President') targetContainerId = 'sigPres';
-                        else if (currentUser.canNoteGatePass) targetContainerId = 'sigPAS';
-                        else targetContainerId = 'sigImm';
 
                         renderSignatureImage(
                             currentUploadedSig,
@@ -498,12 +522,11 @@ async function viewPass(id, isReviewing = false) {
                         document.getElementById('sigControls').classList.remove('hidden');
                         document.getElementById('saveDefaultSig').checked = true;
                         setSignatureStatus('Saved default signature loaded. Adjust size or upload/draw a replacement if needed.', 'success');
-                    } else {
-                        resetApprovalSignatureComposer();
                     }
                 } else {
                     document.getElementById('printModalContent')?.classList.remove('is-reviewing');
                     actionArea.style.display = 'none';
+                    approvalSignatureEditor?.classList.add('hidden');
                 }
             }
         }
@@ -517,8 +540,22 @@ function closeModal() {
                 modal.classList.add('hidden');
                 modal.classList.remove('flex');
                 currentViewedPassId = null;
+                resetApprovalSignatureComposer?.();
                 resetDocumentModalLayout();
             }, 300);
+        }
+
+function forceCloseModal() {
+            const modal = document.getElementById('printModal');
+            const content = document.getElementById('printModalContent');
+            if (!modal || !content) return;
+            modal.classList.add('hidden');
+            modal.classList.remove('flex', 'opacity-0');
+            content.classList.remove('scale-100');
+            content.classList.add('scale-95');
+            currentViewedPassId = null;
+            resetApprovalSignatureComposer?.();
+            resetDocumentModalLayout();
         }
 
 
@@ -532,3 +569,4 @@ window.toggleMaximizeModal = toggleMaximizeModal;
 window.updateModalExpandButton = updateModalExpandButton;
 window.viewPass = viewPass;
 window.closeModal = closeModal;
+window.forceCloseModal = forceCloseModal;
