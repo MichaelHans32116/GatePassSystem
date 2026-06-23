@@ -1,6 +1,8 @@
 // Material Gate Pass form, employee lookup, item rows, and prepared-by signature.
 
 var materialEmployeeDirectory = [];
+var selectedMaterialEmployee = null;
+var materialEmployeeSearchTimer = null;
 var preparedSignatureState = null;
 var preparedSignatureOriginalData = null;
 var materialSignaturePadState = { drawing: false, lastX: 0, lastY: 0 };
@@ -56,7 +58,8 @@ function initializeMaterialGatePassForm() {
 
     const routeText = document.getElementById('materialApprovalRouteText');
     if (routeText) {
-        routeText.innerText = (currentUser?.roles || []).includes(
+        const activeUser = typeof currentUser !== 'undefined' ? currentUser : null;
+        routeText.innerText = (activeUser?.roles || []).includes(
             'IMMEDIATE_SUPERIOR'
         )
             ? 'PAS'
@@ -65,23 +68,140 @@ function initializeMaterialGatePassForm() {
 }
 
 async function loadMaterialEmployees() {
-    const select = document.getElementById('materialAuthorizedEmployee');
-    if (!select || !isDatabaseSession()) return;
+    const input = document.getElementById('materialAuthorizedEmployeeSearch');
+    if (!input || !isDatabaseSession()) return;
     if (materialEmployeeDirectory.length > 0) {
-        renderMaterialEmployeeOptions();
+        renderMaterialEmployeeSuggestions();
         return;
     }
 
     try {
         materialEmployeeDirectory = await ApiClient.get('/employees?limit=100');
-        renderMaterialEmployeeOptions();
+        renderMaterialEmployeeSuggestions();
     } catch (error) {
-        select.innerHTML = '<option value="">Unable to load employees</option>';
+        const suggestions = document.getElementById('materialEmployeeSuggestions');
+        if (suggestions) {
+            suggestions.innerHTML = '<div class="px-3 py-2 text-xs text-red-500">Unable to load employees</div>';
+        }
         showToast(
             error instanceof ApiError ? error.message : 'Unable to load active employees.',
             'error'
         );
     }
+}
+
+function materialEmployeeLabel(employee) {
+    if (!employee) return '';
+    return `${employee.fullName} (${employee.employeeId})`;
+}
+
+function materialEmployeeMeta(employee) {
+    if (!employee) return '';
+    return [employee.departmentName, employee.positionName].filter(Boolean).join(' · ');
+}
+
+function selectMaterialEmployee(employee) {
+    selectedMaterialEmployee = employee || null;
+    const hidden = document.getElementById('materialAuthorizedEmployee');
+    const search = document.getElementById('materialAuthorizedEmployeeSearch');
+    const suggestions = document.getElementById('materialEmployeeSuggestions');
+    if (hidden) hidden.value = employee ? String(employee.employeeRecordId) : '';
+    if (search) search.value = employee ? materialEmployeeLabel(employee) : '';
+    suggestions?.classList.add('hidden');
+    updateMaterialAuthorizedDepartment();
+}
+
+function clearSelectedMaterialEmployee() {
+    selectedMaterialEmployee = null;
+    const hidden = document.getElementById('materialAuthorizedEmployee');
+    if (hidden) hidden.value = '';
+    updateMaterialAuthorizedDepartment();
+}
+
+function getFilteredMaterialEmployees() {
+    const term = (document.getElementById('materialAuthorizedEmployeeSearch')?.value || '')
+        .trim()
+        .toLowerCase();
+    const source = materialEmployeeDirectory || [];
+    if (!term) return source.slice(0, 10);
+    return source
+        .filter(employee =>
+            employee.fullName?.toLowerCase().includes(term) ||
+            employee.employeeId?.toLowerCase().includes(term) ||
+            employee.departmentName?.toLowerCase().includes(term)
+        )
+        .slice(0, 10);
+}
+
+function renderMaterialEmployeeSuggestions() {
+    const suggestions = document.getElementById('materialEmployeeSuggestions');
+    if (!suggestions) return;
+    const list = getFilteredMaterialEmployees();
+    suggestions.innerHTML = list.map(employee => `
+        <button type="button" class="block w-full px-3 py-2 text-left hover:bg-blue-50" onclick="selectMaterialEmployeeById(${employee.employeeRecordId})">
+            <span class="block text-xs font-bold text-gray-800">${materialEscape(materialEmployeeLabel(employee))}</span>
+            <span class="block text-[10px] text-gray-500">${materialEscape(materialEmployeeMeta(employee))}</span>
+        </button>
+    `).join('') || '<div class="px-3 py-2 text-xs text-red-500">No active employee found.</div>';
+}
+
+function showMaterialEmployeeSuggestions() {
+    const suggestions = document.getElementById('materialEmployeeSuggestions');
+    if (!suggestions) return;
+    renderMaterialEmployeeSuggestions();
+    suggestions.classList.remove('hidden');
+}
+
+async function searchMaterialEmployees(term) {
+    if (!isDatabaseSession()) return;
+    const query = term?.trim();
+    if (!query || query.length < 2) {
+        renderMaterialEmployeeSuggestions();
+        return;
+    }
+    try {
+        const results = await ApiClient.get(`/employees?search=${encodeURIComponent(query)}&limit=20`);
+        const byId = new Map(materialEmployeeDirectory.map(employee => [
+            String(employee.employeeRecordId),
+            employee
+        ]));
+        results.forEach(employee => byId.set(String(employee.employeeRecordId), employee));
+        materialEmployeeDirectory = Array.from(byId.values());
+        renderMaterialEmployeeSuggestions();
+        showMaterialEmployeeSuggestions();
+    } catch {
+        renderMaterialEmployeeSuggestions();
+    }
+}
+
+function handleMaterialEmployeeSearchInput(event) {
+    const value = event.target.value.trim();
+    if (
+        selectedMaterialEmployee &&
+        value !== materialEmployeeLabel(selectedMaterialEmployee)
+    ) {
+        clearSelectedMaterialEmployee();
+    }
+    renderMaterialEmployeeSuggestions();
+    showMaterialEmployeeSuggestions();
+    clearTimeout(materialEmployeeSearchTimer);
+    materialEmployeeSearchTimer = setTimeout(() => {
+        searchMaterialEmployees(value);
+    }, 250);
+}
+
+function handleMaterialEmployeeSearchKeydown(event) {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    const first = getFilteredMaterialEmployees()[0];
+    if (first) selectMaterialEmployee(first);
+}
+
+function selectMaterialEmployeeById(employeeRecordId) {
+    const employee = materialEmployeeDirectory.find(item =>
+        Number(item.employeeRecordId) === Number(employeeRecordId)
+    );
+    if (employee) selectMaterialEmployee(employee);
 }
 
 function renderMaterialEmployeeOptions() {
@@ -112,6 +232,33 @@ function updateMaterialAuthorizedDepartment() {
     display.innerText = employee
         ? `${employee.departmentName} · ${employee.positionName}`
         : 'Department appears after selecting an employee.';
+}
+
+function updateMaterialAuthorizedDepartment() {
+    const hidden = document.getElementById('materialAuthorizedEmployee');
+    const display = document.getElementById('materialAuthorizedDepartment');
+    if (!hidden || !display) return;
+    const employee = materialEmployeeDirectory.find(item =>
+        String(item.employeeRecordId) === hidden.value
+    );
+    display.innerText = employee
+        ? materialEmployeeMeta(employee)
+        : 'Type and select an active employee.';
+}
+
+function validateMaterialAuthorizedEmployee() {
+    const hidden = document.getElementById('materialAuthorizedEmployee');
+    const search = document.getElementById('materialAuthorizedEmployeeSearch');
+    const employee = materialEmployeeDirectory.find(item =>
+        String(item.employeeRecordId) === hidden?.value
+    );
+    if (!employee || search?.value.trim() !== materialEmployeeLabel(employee)) {
+        clearSelectedMaterialEmployee();
+        showToast('Select an active employee from the search results.', 'error');
+        search?.focus();
+        return null;
+    }
+    return employee;
 }
 
 function addMaterialItemRow(values = {}) {
@@ -383,6 +530,9 @@ async function submitMaterialGatePass(event) {
         showToast('Select the requesting department.', 'error');
         return;
     }
+    const authorizedEmployee = validateMaterialAuthorizedEmployee();
+    if (!authorizedEmployee) return;
+
     const items = readMaterialItems();
     if (items.some(item =>
         !item.description || !item.unit || !Number.isFinite(item.quantity) || item.quantity <= 0
@@ -397,7 +547,7 @@ async function submitMaterialGatePass(event) {
         const signatureFileId = await uploadPreparedSignature('MATERIAL_GATE_PASS');
         const created = await ApiClient.post('/form-requests/material', {
             requesterDepartmentId,
-            authorizedEmployeeId: Number(document.getElementById('materialAuthorizedEmployee').value),
+            authorizedEmployeeId: authorizedEmployee.employeeRecordId,
             formDate: document.getElementById('materialFormDate').value,
             remarks: document.getElementById('materialRemarks').value.trim() || null,
             preparedBySignatureFileId: signatureFileId,
@@ -405,10 +555,11 @@ async function submitMaterialGatePass(event) {
         });
 
         form.reset();
+        clearSelectedMaterialEmployee();
         document.getElementById('materialItemsBody').innerHTML = '';
         clearPreparedSignature('MATERIAL_GATE_PASS');
         initializeMaterialGatePassForm();
-        renderMaterialEmployeeOptions();
+        renderMaterialEmployeeSuggestions();
         showToast(`Material request ${created.gatePass.controlNo} submitted.`);
         await refreshApplicationState('submit-material-request');
         await switchSection('dashBoard');
@@ -535,10 +686,20 @@ document.addEventListener('DOMContentLoaded', () => {
     setupMaterialPreparedSignaturePad();
     initializeMaterialPreparedSignatureControls();
     resetMaterialPreparedSignatureState();
+    document.addEventListener('click', event => {
+        if (!event.target.closest('#materialAuthorizedEmployeeSearch') &&
+            !event.target.closest('#materialEmployeeSuggestions')) {
+            document.getElementById('materialEmployeeSuggestions')?.classList.add('hidden');
+        }
+    });
 });
 
 window.selectRequestFormType = selectRequestFormType;
 window.loadMaterialEmployees = loadMaterialEmployees;
+window.handleMaterialEmployeeSearchInput = handleMaterialEmployeeSearchInput;
+window.handleMaterialEmployeeSearchKeydown = handleMaterialEmployeeSearchKeydown;
+window.showMaterialEmployeeSuggestions = showMaterialEmployeeSuggestions;
+window.selectMaterialEmployeeById = selectMaterialEmployeeById;
 window.updateMaterialAuthorizedDepartment = updateMaterialAuthorizedDepartment;
 window.addMaterialItemRow = addMaterialItemRow;
 window.removeMaterialItemRow = removeMaterialItemRow;

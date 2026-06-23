@@ -443,9 +443,23 @@ async function renderStandardDashboard() {
     document.getElementById('btnNewRequest').style.display =
         currentUser.role === 'President' ? 'none' : 'block';
 
+    const dashboardSearch = (document.getElementById('myPassSearch')?.value || '')
+        .trim()
+        .toLowerCase();
     const myPasses = isDatabaseSession()
         ? gatePasses
         : gatePasses.filter(pass => pass.userId === currentUser.id);
+    const visiblePasses = dashboardSearch
+        ? myPasses.filter(pass => [
+            pass.controlNo,
+            pass.id,
+            pass.formName,
+            pass.status,
+            pass.destination,
+            pass.authorizedEmployeeName,
+            pass.userDept
+        ].some(value => String(value || '').toLowerCase().includes(dashboardSearch)))
+        : myPasses;
     document.getElementById('cntPending').innerText =
         myPasses.filter(pass => pass.status.startsWith('Pending')).length;
     document.getElementById('cntApproved').innerText =
@@ -453,7 +467,7 @@ async function renderStandardDashboard() {
     document.getElementById('cntCompleted').innerText =
         myPasses.filter(pass => ['Returned', 'Closed'].includes(pass.status)).length;
 
-    document.getElementById('myPassesTableBody').innerHTML = myPasses.map((pass) => `
+    document.getElementById('myPassesTableBody').innerHTML = visiblePasses.map((pass) => `
         <tr class="hover:bg-gray-50 transition border-b cursor-pointer" onclick="${getViewPassCall(pass)}">
             <td class="px-4 md:px-5 py-3 font-mono text-mpiBlue text-xs font-bold">${materialEscape(pass.controlNo || pass.id)}</td>
             <td class="px-4 md:px-5 py-3">${pass.dateFiled}</td>
@@ -461,7 +475,7 @@ async function renderStandardDashboard() {
             <td class="px-4 md:px-5 py-3"><span class="px-2 py-1 rounded text-[10px] font-bold ${['Approved'].includes(pass.status) ? 'bg-green-100 text-green-800' : (['Returned', 'Closed'].includes(pass.status) ? 'bg-gray-200 text-gray-700' : (pass.status === 'Outside' ? 'bg-blue-100 text-blue-800' : 'bg-yellow-100 text-yellow-800'))}">${pass.status}</span></td>
             <td class="px-4 md:px-5 py-3 text-right"><button class="text-mpiBlue hover:underline text-xs"><i class="fas fa-eye"></i></button></td>
         </tr>
-    `).join('') || '<tr><td colspan="5" class="px-5 py-8 text-center text-gray-400">No records found.</td></tr>';
+    `).join('') || '<tr><td colspan="5" class="px-5 py-8 text-center text-gray-400">No records match your search.</td></tr>';
 }
 
 function renderMyEmployeeQr() {
@@ -524,7 +538,8 @@ function renderExpandedEmployeeQr() {
     const dialog = document.getElementById('employeeQrDialog');
     const container = document.getElementById('employeeQrDialogCode');
     const employeeId = document.getElementById('employeeQrDialogId');
-    const token = currentUser?.employeeQrToken;
+    const activeUser = typeof currentUser !== 'undefined' ? currentUser : null;
+    const token = activeUser?.employeeQrToken;
     if (!dialog || dialog.classList.contains('hidden') || !container) return;
     if (!token || typeof window.QRCode !== 'function') return;
 

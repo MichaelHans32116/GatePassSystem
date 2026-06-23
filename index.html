@@ -260,7 +260,10 @@
                         <!-- My Passes Table -->
                         <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
                             <div class="px-4 md:px-5 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50/50">
-                                <h2 class="font-bold text-gray-800">Recent Form Requests</h2>
+                                <div class="min-w-0">
+                                    <h2 class="font-bold text-gray-800">Recent Form Requests</h2>
+                                    <input id="myPassSearch" oninput="renderStandardDashboard()" type="text" placeholder="Search control no., type, status..." class="mt-2 w-full max-w-xs border border-gray-300 px-3 py-2 text-xs rounded focus:outline-none focus:border-mpiBlue">
+                                </div>
                                 <button onclick="switchSection('applyPass')" id="btnNewRequest" class="text-xs bg-mpiBlue text-white px-3 py-2 rounded hover:bg-mpiDark transition"><i class="fas fa-plus mr-1"></i> New Request</button>
                             </div>
                             <div class="overflow-x-auto">
@@ -288,20 +291,19 @@
                     <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
                         <div class="px-4 md:px-6 py-5 border-b border-gray-200">
                             <h2 class="text-lg font-bold text-gray-800">New Form Request</h2>
-                            <p class="text-gray-500 text-xs mt-1">Choose the form you need, then complete the required details.</p>
                         </div>
 
                         <div class="grid grid-cols-1 gap-3 border-b bg-slate-50 p-4 sm:grid-cols-2 md:p-6">
                             <button id="formTypePersonButton" type="button" onclick="selectRequestFormType('PERSON_GATE_PASS')" class="form-type-card active rounded-xl border-2 border-mpiBlue bg-white p-4 text-left shadow-sm transition">
                                 <div class="flex items-start gap-3">
                                     <span class="rounded-lg bg-blue-50 p-3 text-mpiBlue"><i class="fas fa-person-walking-arrow-right text-xl"></i></span>
-                                    <span><strong class="block text-sm text-gray-900">Person Gate Pass</strong><small class="mt-1 block text-xs leading-relaxed text-gray-500">For an associate leaving company premises, with optional vehicle reservation.</small></span>
+                                    <span><strong class="block text-sm text-gray-900">Person Gate Pass</strong></span>
                                 </div>
                             </button>
                             <button id="formTypeMaterialButton" type="button" onclick="selectRequestFormType('MATERIAL_GATE_PASS')" class="form-type-card rounded-xl border-2 border-transparent bg-white p-4 text-left shadow-sm transition hover:border-blue-200">
                                 <div class="flex items-start gap-3">
                                     <span class="rounded-lg bg-amber-50 p-3 text-amber-600"><i class="fas fa-box-open text-xl"></i></span>
-                                    <span><strong class="block text-sm text-gray-900">Material Gate Pass</strong><small class="mt-1 block text-xs leading-relaxed text-gray-500">For an employee authorized to bring listed materials out of the premises.</small></span>
+                                    <span><strong class="block text-sm text-gray-900">Material Gate Pass</strong></span>
                                 </div>
                             </button>
                         </div>
@@ -426,9 +428,11 @@
                                 </div>
                                 <div>
                                     <label class="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-2">Employee Bringing Out Items <span class="text-red-500">*</span></label>
-                                    <select id="materialAuthorizedEmployee" class="w-full rounded border border-gray-300 bg-white p-2.5 text-sm focus:border-mpiBlue focus:ring-1 focus:ring-mpiBlue" required onchange="updateMaterialAuthorizedDepartment()">
-                                        <option value="">Loading active employees...</option>
-                                    </select>
+                                    <div class="relative">
+                                        <input id="materialAuthorizedEmployeeSearch" type="text" autocomplete="off" class="w-full rounded border border-gray-300 bg-white p-2.5 text-sm focus:border-mpiBlue focus:ring-1 focus:ring-mpiBlue" placeholder="Type employee ID or name..." required oninput="handleMaterialEmployeeSearchInput(event)" onfocus="showMaterialEmployeeSuggestions()" onkeydown="handleMaterialEmployeeSearchKeydown(event)">
+                                        <input id="materialAuthorizedEmployee" type="hidden" required>
+                                        <div id="materialEmployeeSuggestions" class="absolute z-30 mt-1 hidden max-h-56 w-full overflow-y-auto rounded border border-gray-200 bg-white shadow-lg"></div>
+                                    </div>
                                     <p id="materialAuthorizedDepartment" class="mt-1 text-[11px] text-gray-500">Department appears after selecting an employee.</p>
                                 </div>
                             </div>
@@ -868,13 +872,13 @@
     <script src="Frontend/Functions/mock-data.js?v=20260620-phase5"></script>
     <script src="Frontend/Connectors/api-client.js?v=20260620-public-qr"></script>
     <script src="Frontend/Functions/signature.js?v=20260622-form-request"></script>
-    <script src="Frontend/Functions/material-gatepass.js?v=20260622-form-request"></script>
+    <script src="Frontend/Functions/material-gatepass.js?v=20260624-phase6-5"></script>
     <script src="Frontend/Functions/modal.js?v=20260622-form-request"></script>
-    <script src="Frontend/Functions/gatepass.js?v=20260622-form-request"></script>
+    <script src="Frontend/Functions/gatepass.js?v=20260624-phase6-5"></script>
     <script src="Frontend/Functions/approvals.js?v=20260622-form-request"></script>
     <script src="Frontend/Functions/scanner.js?v=20260620-security-cooldown"></script>
-    <script src="Frontend/Functions/admin.js?v=20260622-form-request"></script>
-    <script src="Frontend/Functions/navigation.js?v=20260622-form-request"></script>
+    <script src="Frontend/Functions/admin.js?v=20260624-phase6-5"></script>
+    <script src="Frontend/Functions/navigation.js?v=20260624-phase6-5"></script>
     <script src="Frontend/Functions/auth.js?v=20260622-form-request"></script>
     <script src="Frontend/Functions/app.js?v=20260619-phase4-1"></script>
 </body>

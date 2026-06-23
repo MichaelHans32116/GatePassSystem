@@ -30,6 +30,21 @@ function adminDate(value) {
     return new Date(value).toLocaleDateString();
 }
 
+function compactDepartmentName(name) {
+    const value = String(name || '').trim();
+    const upper = value.toUpperCase();
+    if (upper === 'FINANCE DEPARTMENT') return 'Finance';
+    if (upper === 'HR DEPARTMENT' || upper === 'HUMAN RESOURCES DEPARTMENT') return 'HR';
+    if (upper === 'IT DEPARTMENT' || upper === 'I.T DEPARTMENT') return 'IT';
+    if (upper === 'FINANCE, HR & IT DEPARTMENT') return 'Finance + HR + IT';
+    return value.replace(/\s+DEPARTMENT$/i, '');
+}
+
+function compactLogText(value, maxLength = 34) {
+    const text = String(value || '—').trim();
+    return text.length > maxLength ? `${text.slice(0, maxLength - 1)}…` : text;
+}
+
 function compactRoleCell(user) {
     const roles = user.roleCodes || [];
     if (!roles.length) return '<span class="text-gray-400">—</span>';
@@ -49,10 +64,13 @@ function compactDepartmentCell(user) {
         return '<span class="text-gray-400">System / External</span>';
     }
 
+    const label = departments.length > 1
+        ? `${compactDepartmentName(departments[0])} +${departments.length - 1}`
+        : compactDepartmentName(departments[0]);
+
     return `
         <button type="button" onclick="showUserDepartmentDetails(${user.userId})" class="inline-flex max-w-[240px] items-center gap-1 rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-bold text-slate-700 hover:bg-slate-200" title="View all assigned departments">
-            <span class="truncate">${adminEscape(departments[0])}</span>
-            ${departments.length > 1 ? `<span class="rounded-full bg-slate-700 px-1.5 py-0.5 text-[9px] text-white">+${departments.length - 1}</span>` : ''}
+            <span class="truncate">${adminEscape(label)}</span>
         </button>`;
 }
 
@@ -230,14 +248,15 @@ function renderDatabaseAdminLogs(response) {
             <td class="px-5 py-2 font-mono text-xs">${adminEscape(pass.controlNo || pass.id)}</td>
             <td class="px-5 py-2 text-[10px] font-bold ${pass.formTypeCode === 'MATERIAL_GATE_PASS' ? 'text-amber-600' : 'text-mpiBlue'}">${adminEscape(pass.formName)}</td>
             <td class="px-5 py-2 font-semibold">${adminEscape(pass.userName)}</td>
-            <td class="px-5 py-2 text-gray-500 text-xs">${adminEscape(pass.userDept)}</td>
-            <td class="px-5 py-2 max-w-[220px] truncate text-xs">${adminEscape(pass.formTypeCode === 'MATERIAL_GATE_PASS' ? (pass.authorizedEmployeeName || 'Material release') : pass.destination)}</td>
+            <td class="px-5 py-2 text-gray-500 text-xs">${adminEscape(compactDepartmentName(pass.userDept))}</td>
+            <td class="px-5 py-2 max-w-[180px] truncate text-xs" title="${adminEscape(pass.formTypeCode === 'MATERIAL_GATE_PASS' ? (pass.authorizedEmployeeName || 'Material release') : pass.destination)}">${adminEscape(compactLogText(pass.formTypeCode === 'MATERIAL_GATE_PASS' ? (pass.authorizedEmployeeName || 'Material release') : pass.destination))}</td>
             <td class="px-5 py-2 text-blue-600 font-mono text-xs">${adminEscape(pass.actualOut || '--:--')}</td>
             <td class="px-5 py-2 text-green-600 font-mono text-xs">${adminEscape(pass.actualIn || '--:--')}</td>
             <td class="px-5 py-2 text-[10px]"><span class="px-2 py-1 rounded bg-gray-100">${adminEscape(pass.status)}</span></td>
-            <td class="px-5 py-2 text-right">
+            <td class="px-5 py-2 text-right whitespace-nowrap">
+                <button onclick="event.stopPropagation(); ${getViewPassCall(pass)}" class="rounded border border-blue-200 px-2.5 py-1 text-[11px] font-bold text-mpiBlue hover:bg-blue-50">View</button>
                 ${canDeleteGatePassLogs()
-                    ? `<button onclick="event.stopPropagation(); deleteGatePassLog(${pass.dbId})" class="rounded border border-red-200 px-2.5 py-1 text-[11px] font-bold text-red-600 hover:bg-red-50">Delete</button>`
+                    ? `<button onclick="event.stopPropagation(); deleteGatePassLog(${pass.dbId})" class="ml-1 rounded border border-red-200 px-2.5 py-1 text-[11px] font-bold text-red-600 hover:bg-red-50">Delete</button>`
                     : '<span class="text-gray-300">--</span>'}
             </td>
         </tr>
@@ -267,14 +286,15 @@ function renderMockAdminLogsWithActions(list) {
         <tr class="border-b hover:bg-gray-50 transition cursor-pointer" onclick="${getViewPassCall(pass)}">
             <td class="px-5 py-2">${adminEscape(pass.id)}</td>
             <td class="px-5 py-2">${adminEscape(pass.userName)}</td>
-            <td class="px-5 py-2">${adminEscape(pass.userDept)}</td>
+            <td class="px-5 py-2">${adminEscape(compactDepartmentName(pass.userDept))}</td>
             <td class="px-5 py-2">${pass.willReturn ? 'No' : 'Yes'}</td>
             <td class="px-5 py-2">${pass.actualOut || '--:--'}</td>
             <td class="px-5 py-2">${pass.actualIn || '--:--'}</td>
             <td class="px-5 py-2">${adminEscape(pass.status)}</td>
-            <td class="px-5 py-2 text-right">
+            <td class="px-5 py-2 text-right whitespace-nowrap">
+                <button onclick="event.stopPropagation(); ${getViewPassCall(pass)}" class="rounded border border-blue-200 px-2.5 py-1 text-[11px] font-bold text-mpiBlue hover:bg-blue-50">View</button>
                 ${canDeleteGatePassLogs()
-                    ? `<button onclick="event.stopPropagation(); deleteGatePassLog(${JSON.stringify(pass.id)})" class="rounded border border-red-200 px-2.5 py-1 text-[11px] font-bold text-red-600 hover:bg-red-50">Delete</button>`
+                    ? `<button onclick="event.stopPropagation(); deleteGatePassLog(${JSON.stringify(pass.id)})" class="ml-1 rounded border border-red-200 px-2.5 py-1 text-[11px] font-bold text-red-600 hover:bg-red-50">Delete</button>`
                     : '<span class="text-gray-300">--</span>'}
             </td>
         </tr>
@@ -747,6 +767,7 @@ async function archiveDriver(id) {
 }
 
 async function switchAdminTab(tabId) {
+    setNavigationForAdminTab?.(tabId);
     document.querySelectorAll('.admin-tab').forEach(button => {
         button.classList.remove('text-mpiBlue', 'border-b-2', 'border-mpiBlue');
         button.classList.add('text-gray-500');
@@ -770,7 +791,8 @@ function renderAdminTables() {
         renderAdminUsers(1);
         return;
     }
-    if (currentUser?.role === 'System Admin') {
+    const activeUser = typeof currentUser !== 'undefined' ? currentUser : null;
+    if (activeUser?.role === 'System Admin') {
         loadAdminReferences().catch(() => {});
     }
 }

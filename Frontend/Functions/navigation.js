@@ -115,6 +115,20 @@ async function switchSection(targetId) {
         }
 
 
+function setNavigationForAdminTab(tabId) {
+            const navTarget = tabId === 'fleet' ? 'fleetManagement' : 'adminPanel';
+            document.querySelectorAll('.nav-item').forEach(link => link.classList.remove('active'));
+            document.querySelector(`.nav-item[data-target="${navTarget}"]`)?.classList.add('active');
+
+            const title = tabId === 'fleet'
+                ? 'Vehicles & Drivers'
+                : (currentUser && currentUser.role === 'System Admin' ? 'System Configuration' : 'Department Logs');
+            const titleEl = document.getElementById('pageTitle');
+            if (titleEl) titleEl.innerText = title;
+        }
+
+
 window.toggleSidebar = toggleSidebar;
 window.setupRoleAccess = setupRoleAccess;
 window.switchSection = switchSection;
+window.setNavigationForAdminTab = setNavigationForAdminTab;
