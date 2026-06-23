@@ -247,6 +247,137 @@ function updateModalExpandButton(expanded) {
             }
         }
 
+function materialSignatureSlot(idPrefix, pageIndex) {
+            const isPrimary = pageIndex === 0;
+            return {
+                imageAttribute: isPrimary
+                    ? `id="${idPrefix}"`
+                    : `data-material-signature-copy="${idPrefix}"`,
+                nameAttribute: isPrimary
+                    ? `id="${idPrefix}Name"`
+                    : `data-material-signature-name-copy="${idPrefix}"`
+            };
+        }
+
+function renderMaterialBundle(pass) {
+            const container = document.getElementById('materialPrintableArea');
+            if (!container) return;
+
+            const itemRows = [...(pass.materialItems || [])];
+            const pageCount = Math.max(1, Math.ceil(itemRows.length / 9));
+            const formDate = pass.formDate
+                ? new Date(`${String(pass.formDate).slice(0, 10)}T00:00:00`)
+                    .toLocaleDateString()
+                : pass.dateFiled;
+            const controlNo = String(pass.controlNo || pass.id || '')
+                .trim()
+                .slice(0, 20);
+
+            container.innerHTML = Array.from({ length: pageCount }, (_, pageIndex) => {
+                const pageItems = itemRows.slice(pageIndex * 9, pageIndex * 9 + 9);
+                while (pageItems.length < 9) pageItems.push(null);
+
+                const prepared = materialSignatureSlot('sigMatPrepared', pageIndex);
+                const superior = materialSignatureSlot('sigMatSuperior', pageIndex);
+                const pas = materialSignatureSlot('sigMatPas', pageIndex);
+                const rowsHtml = pageItems.map(item => item
+                    ? `<tr>
+                        <td>${materialEscape(item.itemNo || '')}</td>
+                        <td>${materialEscape(item.description)}</td>
+                        <td class="text-center">${materialEscape(Number(item.quantity).toLocaleString(undefined, { maximumFractionDigits: 3 }))}</td>
+                        <td class="text-center">${materialEscape(item.unit)}</td>
+                    </tr>`
+                    : '<tr><td>&nbsp;</td><td></td><td></td><td></td></tr>')
+                    .join('');
+
+                return `
+                    <section class="material-print-page" data-material-page="${pageIndex + 1}">
+                        <div class="material-form-header">
+                            <div class="material-document-qr" data-material-document-qr></div>
+                            <div class="material-form-brand">
+                                <img src="Frontend/Design/images/logo.png" alt="MPI Logo">
+                                <div>
+                                    <h1>MORIROKU PHILIPPINES, INC.</h1>
+                                    <p>115 North Science Avenue, Laguna Technopark, Biñan, Laguna</p>
+                                </div>
+                            </div>
+                            <div class="material-header-control">
+                                <span>CONTROL NO.</span>
+                                <strong>${materialEscape(controlNo)}</strong>
+                            </div>
+                        </div>
+                        <h2 class="material-form-title">MATERIAL GATE PASS</h2>
+                        <div class="material-form-meta">
+                            <div><strong>TO</strong><span>GUARD ON DUTY</span></div>
+                            <div><strong>DATE</strong><span>${materialEscape(formDate)}</span></div>
+                            <div><strong>FROM</strong><span>PERSONNEL &amp; ADMIN. SECTION</span></div>
+                            <div><strong>PAGE</strong><span>${pageIndex + 1} OF ${pageCount}</span></div>
+                        </div>
+                        <div class="material-form-authorization">
+                            <p>This is to allow Mr. / Ms. <strong>${materialEscape(pass.authorizedEmployeeName || 'N/A')}</strong></p>
+                            <p>of <strong>${materialEscape(pass.authorizedDepartmentName || pass.userDept || 'N/A')}</strong> to bring out the following items.</p>
+                        </div>
+                        <table class="material-items-table">
+                            <thead><tr><th>ITEM NO.</th><th>DESCRIPTION</th><th>QUANTITY</th><th>UNIT</th></tr></thead>
+                            <tbody>${rowsHtml}</tbody>
+                        </table>
+                        <div class="material-form-remarks"><strong>REMARKS:</strong><span>${materialEscape(pass.materialRemarks || '—')}</span></div>
+                        <div class="material-form-signatures">
+                            <div>
+                                <strong>Prepared By:</strong>
+                                <div ${prepared.imageAttribute} class="material-signature-image"></div>
+                                <span ${prepared.nameAttribute} class="hidden"></span>
+                            </div>
+                            <div>
+                                <strong>Noted By:</strong>
+                                <div ${superior.imageAttribute} class="material-signature-image"></div>
+                                <span ${superior.nameAttribute} class="hidden"></span>
+                                <small>Immediate Superior</small>
+                            </div>
+                            <div>
+                                <strong>Approved By:</strong>
+                                <div ${pas.imageAttribute} class="material-signature-image"></div>
+                                <span ${pas.nameAttribute} class="hidden"></span>
+                                <small>Personnel &amp; Admin Section</small>
+                            </div>
+                        </div>
+                        <div class="material-page-number">Page ${pageIndex + 1} of ${pageCount}</div>
+                    </section>`;
+            }).join('');
+
+            const qrText = `FRS|MATERIAL_GATE_PASS|${pass.dbId || pass.id}|${controlNo}`;
+            container.querySelectorAll('[data-material-document-qr]').forEach(qrContainer => {
+                if (typeof QRCode === 'function') {
+                    new QRCode(qrContainer, {
+                        text: qrText,
+                        width: 54,
+                        height: 54
+                    });
+                } else {
+                    qrContainer.innerHTML = '<span>QR</span>';
+                }
+            });
+        }
+
+function syncMaterialSignatureCopies(idPrefix) {
+            const sourceImage = document.getElementById(idPrefix);
+            const sourceName = document.getElementById(idPrefix + 'Name');
+            document.querySelectorAll(
+                `[data-material-signature-copy="${idPrefix}"]`
+            ).forEach(target => {
+                target.innerHTML = sourceImage?.innerHTML || '';
+            });
+            document.querySelectorAll(
+                `[data-material-signature-name-copy="${idPrefix}"]`
+            ).forEach(target => {
+                target.innerText = sourceName?.innerText || '';
+                target.classList.toggle(
+                    'hidden',
+                    sourceName?.classList.contains('hidden') !== false
+                );
+            });
+        }
+
 async function viewPass(id, isReviewing = false) {
             let p;
             try {
@@ -319,23 +450,7 @@ async function viewPass(id, isReviewing = false) {
             setVal('vPlate', vehicleString);
 
             if (isMaterial) {
-                const formDate = p.formDate
-                    ? new Date(`${String(p.formDate).slice(0, 10)}T00:00:00`).toLocaleDateString()
-                    : p.dateFiled;
-                setVal('matControlNo', p.controlNo || p.id);
-                setVal('matDate', formDate);
-                setVal('matAuthorizedName', p.authorizedEmployeeName || 'N/A');
-                setVal('matAuthorizedDepartment', p.authorizedDepartmentName || 'N/A');
-                setVal('matRemarks', p.materialRemarks || '—');
-
-                const rows = [...(p.materialItems || [])];
-                while (rows.length < 8) rows.push(null);
-                document.getElementById('matItemsBody').innerHTML = rows
-                    .slice(0, 10)
-                    .map(item => item
-                        ? `<tr><td>${materialEscape(item.itemNo || '')}</td><td>${materialEscape(item.description)}</td><td class="text-center">${materialEscape(Number(item.quantity).toLocaleString(undefined, { maximumFractionDigits: 3 }))}</td><td class="text-center">${materialEscape(item.unit)}</td></tr>`
-                        : '<tr><td>&nbsp;</td><td></td><td></td><td></td></tr>')
-                    .join('');
+                renderMaterialBundle(p);
             }
 
             // Signatures handling
@@ -377,6 +492,9 @@ async function viewPass(id, isReviewing = false) {
                         sigDiv.innerHTML = `<span style="font-family: serif; font-style: italic; font-size: 14px; color: blue;">Digitally Signed</span>`;
                     }
                 }
+                if (idPrefix.startsWith('sigMat')) {
+                    syncMaterialSignatureCopies(idPrefix);
+                }
             };
 
             await handleSig(p.signatures.imm, 'sigImm');
@@ -404,13 +522,14 @@ async function viewPass(id, isReviewing = false) {
                         preparedContainer.innerHTML =
                             '<span style="font-family:serif;font-style:italic;font-size:11px;color:#155CA2;">Digitally Prepared</span>';
                     }
+                    syncMaterialSignatureCopies('sigMatPrepared');
                 }
             }
 
             const qrContainer = document.getElementById('qrCodeDisplay');
             if(qrContainer) {
                 qrContainer.innerHTML = '';
-                if (!isMaterial && ['Approved', 'Outside', 'Overdue'].includes(p.status)) {
+                if (!isMaterial && ['Approved', 'Outside', 'Overdue', 'Returned', 'Closed'].includes(p.status)) {
                     try {
                         const qrValue = await loadQrToken(p);
                         if (qrValue) {
@@ -499,6 +618,9 @@ async function viewPass(id, isReviewing = false) {
                             nameSpan.innerText = currentUser.name;
                             nameSpan.classList.remove('hidden');
                         }
+                        if (targetContainerId.startsWith('sigMat')) {
+                            syncMaterialSignatureCopies(targetContainerId);
+                        }
                     }
 
                     const savedSignature = getSavedApprovalSignature(
@@ -567,6 +689,8 @@ window.resetDocumentModalLayout = resetDocumentModalLayout;
 window.initializeModalDragResize = initializeModalDragResize;
 window.toggleMaximizeModal = toggleMaximizeModal;
 window.updateModalExpandButton = updateModalExpandButton;
+window.renderMaterialBundle = renderMaterialBundle;
+window.syncMaterialSignatureCopies = syncMaterialSignatureCopies;
 window.viewPass = viewPass;
 window.closeModal = closeModal;
 window.forceCloseModal = forceCloseModal;

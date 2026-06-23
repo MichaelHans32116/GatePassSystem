@@ -700,12 +700,19 @@
                     <table class="w-full border-collapse">
                         <!-- Header -->
                         <tr>
-                            <td colspan="4" class="text-center p-2" style="border-bottom: 2px solid black; border-top: none; border-left: none; border-right: none;">
-                                <div class="flex items-center justify-center space-x-2">
-                                    <img src="Frontend/Design/images/logo.png" alt="MPI Logo" style="height: 50px; object-fit: contain;">
-                                    <div class="text-left">
-                                        <h1 class="font-bold text-sm m-0" style="letter-spacing: 0.5px;">MORIROKU PHILIPPINES, INC.</h1>
-                                        <p class="text-[7px] m-0">115 North Science Avenue, Laguna Technopark 4024, Biñan, Laguna Philippines</p>
+                            <td colspan="4" class="person-header-cell">
+                                <div class="person-header-grid">
+                                    <div class="person-header-qr"><div id="qrCodeDisplay"></div></div>
+                                    <div class="person-header-brand">
+                                        <img src="Frontend/Design/images/logo.png" alt="MPI Logo">
+                                        <div class="text-left">
+                                            <h1>MORIROKU PHILIPPINES, INC.</h1>
+                                            <p>115 North Science Avenue, Laguna Technopark 4024, Biñan, Laguna Philippines</p>
+                                        </div>
+                                    </div>
+                                    <div class="person-header-control">
+                                        <span>CONTROL NO.</span>
+                                        <strong id="vControlNo"></strong>
                                     </div>
                                 </div>
                             </td>
@@ -723,9 +730,8 @@
                                 <div id="vName" class="font-bold text-xs uppercase pl-2 pt-1"></div>
                             </td>
                             <td class="w-[30%] h-10 align-top">
-                                <div class="flex justify-between text-[7px] uppercase"><span>DATE FILED</span><span>CONTROL NO.</span></div>
+                                <div class="text-[7px] uppercase">DATE FILED</div>
                                 <div id="vDateF" class="person-date-filed font-bold pl-1.5 pt-0.5"></div>
-                                <div id="vControlNo" class="person-control-no text-right font-mono font-bold leading-none"></div>
                             </td>
                         </tr>
                         <!-- Purpose & Driver -->
@@ -775,7 +781,7 @@
                         <tr>
                             <td colspan="2" class="person-approval-cell align-top h-14 relative w-1/2">
                                 <div class="text-[7px] uppercase absolute top-1 left-1">APPROVED BY</div>
-                                <div class="absolute bottom-[14px] w-full flex justify-center items-end" style="height: 52px;">
+                                <div class="person-signature-stage">
                                     <div id="sigImm" class="w-full flex justify-center items-end"></div>
                                 </div>
                                 <div class="absolute bottom-1 w-full text-center leading-none">
@@ -784,7 +790,7 @@
                                 </div>
                             </td>
                             <td class="person-approval-cell align-top h-14 relative w-1/4 border-l-0">
-                                <div class="absolute bottom-[14px] w-full flex justify-center items-end" style="height: 52px;">
+                                <div class="person-signature-stage">
                                     <div id="sigPres" class="w-full flex justify-center items-end"></div>
                                 </div>
                                 <div class="absolute bottom-1 w-full text-center leading-none">
@@ -794,7 +800,7 @@
                             </td>
                             <td class="person-approval-cell align-top h-14 relative w-1/4">
                                 <div class="text-[7px] uppercase absolute top-1 left-1">NOTED BY</div>
-                                <div class="absolute bottom-[14px] w-full flex justify-center items-end" style="height: 52px;">
+                                <div class="person-signature-stage">
                                     <div id="sigPAS" class="w-full flex justify-center items-end"></div>
                                 </div>
                                 <div class="absolute bottom-1 w-full text-center leading-none">
@@ -805,57 +811,9 @@
                         </tr>
                     </table>
 
-                    <!-- QR Code Overlay for Printing -->
-                    <div class="absolute top-2 left-2 opacity-90 scale-[0.65] transform origin-top-left z-20">
-                        <div id="qrCodeDisplay"></div>
-                    </div>
                 </div>
 
-                <div id="materialPrintableArea" class="material-print-form hidden shadow-lg">
-                    <div class="material-form-header">
-                        <img src="Frontend/Design/images/logo.png" alt="MPI Logo">
-                        <div>
-                            <h1>MORIROKU PHILIPPINES, INC.</h1>
-                            <p>115 North Science Avenue, Laguna Technopark, Biñan, Laguna</p>
-                            <p>FORM REQUEST SYSTEM</p>
-                        </div>
-                    </div>
-                    <h2 class="material-form-title">MATERIAL GATE PASS</h2>
-                    <div class="material-form-meta">
-                        <div><strong>TO</strong><span>GUARD ON DUTY</span></div>
-                        <div><strong>CONTROL NO.</strong><span id="matControlNo"></span></div>
-                        <div><strong>FROM</strong><span>PERSONNEL &amp; ADMIN. SECTION</span></div>
-                        <div><strong>DATE</strong><span id="matDate"></span></div>
-                    </div>
-                    <div class="material-form-authorization">
-                        <p>This is to allow Mr. / Ms. <strong id="matAuthorizedName"></strong></p>
-                        <p>of <strong id="matAuthorizedDepartment"></strong> to bring out the following items.</p>
-                    </div>
-                    <table class="material-items-table">
-                        <thead><tr><th>ITEM NO.</th><th>DESCRIPTION</th><th>QUANTITY</th><th>UNIT</th></tr></thead>
-                        <tbody id="matItemsBody"></tbody>
-                    </table>
-                    <div class="material-form-remarks"><strong>REMARKS:</strong><span id="matRemarks"></span></div>
-                    <div class="material-form-signatures">
-                        <div>
-                            <strong>Prepared By:</strong>
-                            <div id="sigMatPrepared" class="material-signature-image"></div>
-                            <span id="sigMatPreparedName"></span>
-                        </div>
-                        <div>
-                            <strong>Noted By:</strong>
-                            <div id="sigMatSuperior" class="material-signature-image"></div>
-                            <span id="sigMatSuperiorName"></span>
-                            <small>Immediate Superior</small>
-                        </div>
-                        <div>
-                            <strong>Approved By:</strong>
-                            <div id="sigMatPas" class="material-signature-image"></div>
-                            <span id="sigMatPasName"></span>
-                            <small>Personnel &amp; Admin Section</small>
-                        </div>
-                    </div>
-                </div>
+                <div id="materialPrintableArea" class="material-print-bundle hidden"></div>
             </div>
 
             <!-- Approval Action Area (E-Signature Input) -->

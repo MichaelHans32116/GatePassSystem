@@ -78,15 +78,25 @@
                 box-shadow: none !important;
                 page-break-inside: avoid;
                 break-inside: avoid;
-                overflow: hidden;
+                overflow: visible !important;
             }
-            #materialPrintableArea {
-                width: 190mm !important;
-                min-height: 135mm !important;
-                margin: 0 auto !important;
+            #materialPrintableArea:not(.hidden) {
+                display: block !important;
+                width: 148mm !important;
+                margin: 0 !important;
+                background: white !important;
+            }
+            .material-print-page {
+                width: 148mm !important;
+                height: 105mm !important;
+                margin: 0 !important;
                 box-shadow: none !important;
-                page-break-inside: avoid;
                 break-inside: avoid;
+                page-break-inside: avoid;
+            }
+            .material-print-page:not(:last-child) {
+                break-after: page;
+                page-break-after: always;
             }
             .print-hide { display: none !important; }
         }
@@ -95,7 +105,7 @@
         .print-form {
             width: 148mm; /* A6 width */
             height: 105mm; /* A6 height */
-            border: 2px solid black;
+            border: 0;
             padding: 0;
             margin: 0 auto;
             box-sizing: border-box;
@@ -104,7 +114,13 @@
             background: white;
             position: relative;
         }
-        .print-form table { border-collapse: collapse; width: 100%; }
+        .print-form table {
+            border-collapse: collapse;
+            width: 100%;
+            height: 100%;
+            table-layout: fixed;
+            border: 1.5px solid black;
+        }
         .print-form td { border: 1px solid black; padding: 4px; font-size: 10px; vertical-align: top; }
         .person-print-form td {
             padding: 3px;
@@ -116,7 +132,7 @@
             white-space: nowrap;
         }
         .person-control-no {
-            font-size: 7px;
+            font-size: 7.5px;
             letter-spacing: 0.2px;
             white-space: nowrap;
             overflow: hidden;
@@ -128,6 +144,89 @@
         }
         .person-print-form .person-approval-cell {
             overflow: hidden;
+            height: 15mm !important;
+            padding: 0;
+        }
+        .person-header-cell {
+            height: 18mm;
+            padding: 1mm 1.5mm !important;
+            border-bottom-width: 2px !important;
+        }
+        .person-header-grid {
+            height: 100%;
+            display: grid;
+            grid-template-columns: 18mm minmax(0, 1fr) 27mm;
+            align-items: center;
+            gap: 1.5mm;
+        }
+        .person-header-qr {
+            width: 15mm;
+            height: 15mm;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            overflow: hidden;
+        }
+        .person-header-qr canvas,
+        .person-header-qr img {
+            width: 15mm !important;
+            height: 15mm !important;
+        }
+        .person-header-brand {
+            min-width: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 2mm;
+        }
+        .person-header-brand img {
+            width: 25mm;
+            height: 12mm;
+            object-fit: contain;
+        }
+        .person-header-brand h1 {
+            margin: 0;
+            font-size: 10px;
+            line-height: 1.05;
+            letter-spacing: 0.25px;
+            white-space: nowrap;
+        }
+        .person-header-brand p {
+            margin: 1px 0 0;
+            font-size: 5px;
+            line-height: 1.1;
+            white-space: nowrap;
+        }
+        .person-header-control {
+            min-width: 0;
+            text-align: right;
+            align-self: start;
+            padding-top: 1mm;
+        }
+        .person-header-control span {
+            display: block;
+            font-size: 5.5px;
+            line-height: 1;
+        }
+        .person-header-control strong {
+            display: block;
+            margin-top: 1.5mm;
+            overflow: hidden;
+            font-family: monospace;
+            font-size: 7.5px;
+            line-height: 1;
+            text-overflow: ellipsis;
+            white-space: nowrap;
+        }
+        .person-signature-stage {
+            position: absolute;
+            left: 1mm;
+            right: 1mm;
+            bottom: 4.5mm;
+            height: 8.5mm;
+            display: flex;
+            align-items: end;
+            justify-content: center;
         }
         .form-type-card.active {
             border-color: #155CA2;
@@ -176,143 +275,205 @@
             filter: contrast(1.5) brightness(0.65);
         }
 
-        .material-print-form {
-            width: 190mm;
-            min-height: 135mm;
-            padding: 5mm;
+        .material-print-bundle {
+            width: 148mm;
+            display: flex;
+            flex-direction: column;
+            gap: 16px;
+            margin: 0 auto;
+        }
+        .material-print-page {
+            width: 148mm;
+            height: 105mm;
+            padding: 2.5mm 3mm;
             box-sizing: border-box;
-            border: 2px solid #111827;
+            border: 1.5px solid #111827;
             background: white;
             color: #111827;
             font-family: Arial, Helvetica, sans-serif;
+            position: relative;
+            overflow: hidden;
+            flex: 0 0 auto;
+            box-shadow: 0 8px 24px rgba(15, 23, 42, 0.18);
         }
         .material-form-header {
+            display: grid;
+            grid-template-columns: 17mm minmax(0, 1fr) 29mm;
+            align-items: center;
+            gap: 2mm;
+            min-height: 14mm;
+            text-align: center;
+        }
+        .material-form-brand {
             display: flex;
             align-items: center;
             justify-content: center;
-            gap: 4mm;
-            text-align: center;
+            gap: 2mm;
+            min-width: 0;
         }
-        .material-form-header img {
-            width: 30mm;
-            height: 14mm;
+        .material-form-brand img {
+            width: 24mm;
+            height: 11mm;
             object-fit: contain;
         }
         .material-form-header h1 {
             margin: 0;
-            font-size: 15px;
+            font-size: 10px;
             font-weight: 800;
-            letter-spacing: 0.4px;
+            line-height: 1.05;
+            letter-spacing: 0.2px;
+            white-space: nowrap;
         }
         .material-form-header p {
             margin: 1px 0 0;
-            font-size: 7px;
+            font-size: 5px;
+            line-height: 1.05;
+            white-space: nowrap;
+        }
+        .material-document-qr {
+            width: 14mm;
+            height: 14mm;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+        }
+        .material-document-qr canvas,
+        .material-document-qr img {
+            width: 14mm !important;
+            height: 14mm !important;
+        }
+        .material-header-control {
+            align-self: start;
+            padding-top: 1mm;
+            text-align: right;
+        }
+        .material-header-control span {
+            display: block;
+            font-size: 5.5px;
+        }
+        .material-header-control strong {
+            display: block;
+            margin-top: 1.5mm;
+            font-family: monospace;
+            font-size: 7.5px;
+            line-height: 1;
+            white-space: nowrap;
         }
         .material-form-title {
-            margin: 2mm 0;
+            margin: 0.5mm 0 1mm;
+            border-top: 1px solid #111827;
+            border-bottom: 1px solid #111827;
+            padding: 0.7mm 0;
             text-align: center;
-            font-size: 16px;
+            font-size: 9px;
             font-weight: 800;
-            letter-spacing: 1px;
+            letter-spacing: 0.8px;
         }
         .material-form-meta {
             display: grid;
             grid-template-columns: 1.6fr 1fr;
-            gap: 1.5mm 8mm;
-            margin-bottom: 2mm;
-            font-size: 9px;
+            gap: 0.7mm 5mm;
+            margin-bottom: 0.7mm;
+            font-size: 6.5px;
         }
         .material-form-meta div {
             display: grid;
-            grid-template-columns: 26mm 1fr;
+            grid-template-columns: 15mm 1fr;
             align-items: end;
-            gap: 2mm;
+            gap: 1mm;
         }
         .material-form-meta span,
         .material-form-authorization strong,
         .material-form-remarks span {
-            min-height: 4mm;
-            padding: 0 1mm;
+            min-height: 2.5mm;
+            padding: 0 0.5mm;
             border-bottom: 1px solid #111827;
         }
         .material-form-authorization {
-            margin-bottom: 2mm;
-            font-size: 10px;
-            line-height: 1.8;
+            margin-bottom: 0.7mm;
+            font-size: 7px;
+            line-height: 1.35;
         }
         .material-form-authorization p {
             margin: 0;
         }
         .material-form-authorization strong {
             display: inline-block;
-            min-width: 65mm;
+            min-width: 50mm;
         }
         .material-items-table {
             width: 100%;
             border-collapse: collapse;
             table-layout: fixed;
-            font-size: 9px;
+            font-size: 6.5px;
         }
         .material-items-table th,
         .material-items-table td {
-            height: 6mm;
-            padding: 1mm 1.5mm;
+            height: 4.2mm;
+            padding: 0.4mm 1mm;
             border: 1px solid #111827;
             vertical-align: middle;
         }
         .material-items-table th {
             text-align: center;
-            font-size: 8px;
+            font-size: 6.5px;
         }
-        .material-items-table th:nth-child(1) { width: 22mm; }
-        .material-items-table th:nth-child(3) { width: 25mm; }
-        .material-items-table th:nth-child(4) { width: 22mm; }
+        .material-items-table th:nth-child(1) { width: 19mm; }
+        .material-items-table th:nth-child(3) { width: 20mm; }
+        .material-items-table th:nth-child(4) { width: 17mm; }
         .material-form-remarks {
             display: grid;
-            grid-template-columns: 25mm 1fr;
-            gap: 2mm;
-            margin-top: 2mm;
-            font-size: 9px;
+            grid-template-columns: 16mm 1fr;
+            gap: 1mm;
+            margin-top: 0.8mm;
+            font-size: 6.5px;
         }
         .material-form-signatures {
             display: grid;
             grid-template-columns: repeat(3, 1fr);
-            gap: 8mm;
-            margin-top: 4mm;
+            gap: 5mm;
+            margin-top: 1.5mm;
             text-align: left;
-            font-size: 9px;
+            font-size: 6.5px;
         }
         .material-form-signatures > div {
-            min-height: 24mm;
+            min-height: 15mm;
             position: relative;
         }
         .material-form-signatures span {
             display: block;
-            min-height: 4mm;
-            padding-top: 1mm;
+            min-height: 2.5mm;
+            padding-top: 0.3mm;
             border-bottom: 1px solid #111827;
             text-align: center;
-            font-size: 8px;
+            font-size: 6.5px;
             font-weight: 700;
             text-transform: uppercase;
         }
         .material-form-signatures small {
             display: block;
-            margin-top: 1mm;
+            margin-top: 0.4mm;
             text-align: center;
-            font-size: 7px;
+            font-size: 5.5px;
         }
         .material-signature-image {
-            height: 11mm;
+            height: 7mm;
             display: flex;
             align-items: end;
             justify-content: center;
         }
         .material-signature-image img {
             max-width: 100%;
-            max-height: 14mm;
+            max-height: 8mm;
             object-fit: contain;
             filter: contrast(1.65) brightness(0.58);
+        }
+        .material-page-number {
+            position: absolute;
+            right: 3mm;
+            bottom: 1.2mm;
+            font-size: 5.5px;
+            color: #475569;
         }
 
         /* Signature Object Fit */

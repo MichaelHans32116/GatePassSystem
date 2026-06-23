@@ -303,9 +303,13 @@ function getSignatureTargetContainerId() {
         }
 
 function renderSignatureImage(dataUrl, width = 100, y = 0) {
-            const targetDiv = document.getElementById(getSignatureTargetContainerId());
+            const targetId = getSignatureTargetContainerId();
+            const targetDiv = document.getElementById(targetId);
             if (targetDiv) {
                 targetDiv.innerHTML = `<img src="${dataUrl}" id="liveDocumentSig" class="signature-img" style="width: ${width}%; margin-bottom: ${y}px;">`;
+            }
+            if (targetId?.startsWith('sigMat')) {
+                syncMaterialSignatureCopies?.(targetId);
             }
         }
 
