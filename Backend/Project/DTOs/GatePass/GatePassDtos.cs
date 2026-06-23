@@ -5,6 +5,7 @@ namespace GatePassSystem.Project.DTOs.GatePass;
 
 public sealed class CreateGatePassRequest
 {
+    public long? RequesterDepartmentId { get; init; }
     public long? PreparedBySignatureFileId { get; init; }
 
     [Required, StringLength(255)]
@@ -30,6 +31,7 @@ public sealed class CreateGatePassRequest
 
 public sealed class CreateMaterialGatePassRequest
 {
+    public long? RequesterDepartmentId { get; init; }
     public long AuthorizedEmployeeId { get; init; }
     public DateOnly FormDate { get; init; }
 
@@ -106,6 +108,6 @@ public sealed record EmployeeLookupResponse(
     long EmployeeRecordId,
     string EmployeeId,
     string FullName,
-    long DepartmentId,
-    string DepartmentName,
+    long? DepartmentId,
+    string? DepartmentName,
     string PositionName);

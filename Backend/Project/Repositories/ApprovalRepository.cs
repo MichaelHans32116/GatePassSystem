@@ -52,8 +52,31 @@ public sealed class ApprovalRepository(
                 LEFT JOIN tbl_departments authorized_department
                     ON authorized_department.department_id =
                        request_row.authorized_department_id
-                WHERE step.assigned_approver_user_id = @ApproverUserId
-                  AND step.approval_status_code = 'PENDING'
+                WHERE step.approval_status_code = 'PENDING'
+                  AND request_row.requester_user_id <> @ApproverUserId
+                  AND (
+                      step.assigned_approver_user_id = @ApproverUserId
+                      OR (
+                          step.approval_step_code = 'PAS'
+                          AND EXISTS (
+                              SELECT 1
+                              FROM tbl_user_roles actor_role
+                              JOIN tbl_role_permissions role_permission
+                                ON role_permission.role_id =
+                                   actor_role.role_id
+                              JOIN tbl_permissions permission_row
+                                ON permission_row.permission_id =
+                                   role_permission.permission_id
+                              JOIN tbl_roles role_row
+                                ON role_row.role_id = actor_role.role_id
+                              WHERE actor_role.user_id = @ApproverUserId
+                                AND actor_role.is_active = TRUE
+                                AND role_row.is_active = TRUE
+                                AND permission_row.permission_code =
+                                    'gatepass.note.pas'
+                          )
+                      )
+                  )
                   AND request_row.gate_pass_status_code = CONCAT(
                       'PENDING_',
                       step.approval_step_code
@@ -95,7 +118,31 @@ public sealed class ApprovalRepository(
                         step.approval_step_id AS ApprovalStepId,
                         step.sequence_no AS SequenceNo,
                         step.approval_step_code AS ApprovalStepCode,
-                        step.assigned_approver_user_id AS ApproverUserId
+                        step.assigned_approver_user_id AS ApproverUserId,
+                        (
+                            step.assigned_approver_user_id = @ActorUserId
+                            OR (
+                                step.approval_step_code = 'PAS'
+                                AND EXISTS (
+                                    SELECT 1
+                                    FROM tbl_user_roles actor_role
+                                    JOIN tbl_role_permissions role_permission
+                                      ON role_permission.role_id =
+                                         actor_role.role_id
+                                    JOIN tbl_permissions permission_row
+                                      ON permission_row.permission_id =
+                                         role_permission.permission_id
+                                    JOIN tbl_roles role_row
+                                      ON role_row.role_id =
+                                         actor_role.role_id
+                                    WHERE actor_role.user_id = @ActorUserId
+                                      AND actor_role.is_active = TRUE
+                                      AND role_row.is_active = TRUE
+                                      AND permission_row.permission_code =
+                                          'gatepass.note.pas'
+                                )
+                            )
+                        ) AS CanAct
                     FROM tbl_gate_pass_requests request_row
                     JOIN tbl_gate_pass_approval_steps step
                         ON step.gate_pass_id = request_row.gate_pass_id
@@ -107,11 +154,15 @@ public sealed class ApprovalRepository(
                       AND step.approval_status_code = 'PENDING'
                     FOR UPDATE;
                     """,
-                    new { GatePassId = gatePassId },
+                    new
+                    {
+                        GatePassId = gatePassId,
+                        ActorUserId = actorUserId
+                    },
                     transaction,
                     cancellationToken: cancellationToken));
 
-            if (current is null || current.ApproverUserId != actorUserId)
+            if (current is null || !current.CanAct)
             {
                 await transaction.RollbackAsync(cancellationToken);
                 return null;
@@ -129,6 +180,11 @@ public sealed class ApprovalRepository(
                 """
                 UPDATE tbl_gate_pass_approval_steps
                 SET approval_status_code = @DecisionCode,
+                    assigned_approver_user_id = CASE
+                        WHEN @ApprovalStepCode = 'PAS'
+                            THEN @ActorUserId
+                        ELSE assigned_approver_user_id
+                    END,
                     comments = NULLIF(TRIM(@Comment), ''),
                     acted_at = @ActedAt
                 WHERE approval_step_id = @ApprovalStepId
@@ -139,7 +195,9 @@ public sealed class ApprovalRepository(
                     DecisionCode = decisionCode,
                     Comment = comment,
                     ActedAt = actedAt,
-                    current.ApprovalStepId
+                    current.ApprovalStepId,
+                    current.ApprovalStepCode,
+                    ActorUserId = actorUserId
                 },
                 transaction,
                 cancellationToken: cancellationToken));
@@ -319,5 +377,6 @@ public sealed class ApprovalRepository(
         public int SequenceNo { get; init; }
         public string ApprovalStepCode { get; init; } = string.Empty;
         public long ApproverUserId { get; init; }
+        public bool CanAct { get; init; }
     }
 }

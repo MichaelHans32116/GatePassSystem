@@ -324,6 +324,26 @@ CREATE TABLE IF NOT EXISTS tbl_approval_assignments (
          is_active, priority)
 ) ENGINE=InnoDB;
 
+CREATE TABLE IF NOT EXISTS tbl_user_department_assignments (
+    user_id BIGINT UNSIGNED NOT NULL,
+    department_id BIGINT UNSIGNED NULL,
+    can_manage BOOLEAN NOT NULL DEFAULT FALSE,
+    can_request BOOLEAN NOT NULL DEFAULT TRUE,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    assigned_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, department_id),
+    CONSTRAINT fk_user_department_assignment_user
+        FOREIGN KEY (user_id) REFERENCES tbl_user_accounts(user_id),
+    CONSTRAINT fk_user_department_assignment_department
+        FOREIGN KEY (department_id) REFERENCES tbl_departments(department_id),
+    INDEX ix_user_department_request
+        (user_id, can_request, is_active),
+    INDEX ix_user_department_manage
+        (department_id, can_manage, is_active)
+) ENGINE=InnoDB;
+
 -- =========================================================
 -- FLEET TABLES
 -- =========================================================

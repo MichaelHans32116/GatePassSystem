@@ -4,11 +4,13 @@ public sealed class RequesterContext
 {
     public long UserId { get; init; }
     public long EmployeeRecordId { get; init; }
-    public long DepartmentId { get; init; }
+    public long? DepartmentId { get; init; }
+    public string? DepartmentName { get; init; }
     public long PositionId { get; init; }
     public string EmployeeId { get; init; } = string.Empty;
     public string FullName { get; init; } = string.Empty;
     public IReadOnlyList<string> Roles { get; init; } = [];
+    public IReadOnlyList<DepartmentAccessRecord> RequestableDepartments { get; init; } = [];
 }
 
 public class GatePassRecord
@@ -85,8 +87,8 @@ public sealed class EmployeeLookupRecord
     public long EmployeeRecordId { get; init; }
     public string EmployeeId { get; init; } = string.Empty;
     public string FullName { get; init; } = string.Empty;
-    public long DepartmentId { get; init; }
-    public string DepartmentName { get; init; } = string.Empty;
+    public long? DepartmentId { get; init; }
+    public string? DepartmentName { get; init; }
     public string PositionName { get; init; } = string.Empty;
 }
 

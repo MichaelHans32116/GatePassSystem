@@ -19,9 +19,10 @@ Current migrations:
 - `001` to `005`: person gate pass, authentication, employee, vehicle,
   signature, QR, and audit foundations.
 - `006_form_request_material_gate_pass.sql`: shared form types and daily control
-  numbers, material item rows, Material Gate Pass approval routing, Ma'am Alona
-  as the dedicated material PAS approver, and form-aware reporting views and
-  indexes.
+  numbers, material item rows, Material Gate Pass approval routing, and
+  form-aware reporting views and indexes.
+- `007_department_access_shared_pas.sql`: separate Finance, HR, and IT
+  departments, manager department access, and shared PAS approval.
 
 Gate pass lifecycle timestamps:
 
@@ -35,6 +36,10 @@ Gate pass lifecycle timestamps:
 Material Gate Pass records use the same request and approval foundation, with
 their item rows stored in `tbl_material_gate_pass_items`. They never receive a
 QR token and are excluded from the security scan queue.
+
+PAS steps are shared. Any active account with `gatepass.note.pas` may act on a
+pending PAS request, except the requester. The user who acts is recorded as the
+actual approver.
 
 Local setup order:
 

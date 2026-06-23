@@ -307,6 +307,10 @@
                         </div>
 
                         <form id="applyForm" onsubmit="submitGatePass(event)" class="p-4 md:p-6 space-y-5">
+                            <div id="personRequesterDepartmentGroup" class="hidden">
+                                <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Requesting Department <span class="text-red-500">*</span></label>
+                                <select id="personRequesterDepartment" class="w-full border border-gray-300 bg-white p-2.5 rounded focus:ring-1 focus:ring-mpiBlue focus:border-mpiBlue transition text-sm"></select>
+                            </div>
                             <div>
                                 <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Destination <span class="text-red-500">*</span></label>
                                 <input type="text" id="gpDestination" class="w-full border border-gray-300 p-2.5 rounded focus:ring-1 focus:ring-mpiBlue focus:border-mpiBlue transition text-sm" required>
@@ -411,6 +415,10 @@
                         </form>
 
                         <form id="materialApplyForm" onsubmit="submitMaterialGatePass(event)" class="hidden p-4 md:p-6 space-y-5">
+                            <div id="materialRequesterDepartmentGroup" class="hidden">
+                                <label class="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-2">Requesting Department <span class="text-red-500">*</span></label>
+                                <select id="materialRequesterDepartment" class="w-full rounded border border-gray-300 bg-white p-2.5 text-sm focus:border-mpiBlue focus:ring-1 focus:ring-mpiBlue"></select>
+                            </div>
                             <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
                                 <div>
                                     <label class="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-2">Date <span class="text-red-500">*</span></label>
@@ -484,7 +492,7 @@
 
                             <div class="flex items-center rounded bg-blue-50 p-3 text-[10px] text-gray-600 md:text-xs">
                                 <i class="fas fa-route mr-2 text-lg text-mpiBlue"></i>
-                                <span><strong>Approval Flow:</strong> Prepared By → Immediate Superior (Noted By) → PAS / Ma'am Alona (Approved By). No President approval.</span>
+                                <span><strong>Approval Flow:</strong> <span id="materialApprovalRouteText">Immediate Superior → PAS</span></span>
                             </div>
 
                             <div class="pt-2 flex flex-col justify-end gap-2 sm:flex-row">

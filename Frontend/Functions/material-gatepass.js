@@ -33,6 +33,7 @@ function selectRequestFormType(formTypeCode) {
         isMaterial ? 'New Material Gate Pass' : 'New Person Gate Pass';
 
     if (isMaterial) {
+        renderRequesterDepartmentSelectors?.();
         initializeMaterialGatePassForm();
         loadMaterialEmployees();
     } else {
@@ -51,6 +52,15 @@ function initializeMaterialGatePassForm() {
     const body = document.getElementById('materialItemsBody');
     if (body && body.children.length === 0) {
         addMaterialItemRow();
+    }
+
+    const routeText = document.getElementById('materialApprovalRouteText');
+    if (routeText) {
+        routeText.innerText = (currentUser?.roles || []).includes(
+            'IMMEDIATE_SUPERIOR'
+        )
+            ? 'PAS'
+            : 'Immediate Superior → PAS';
     }
 }
 
@@ -367,6 +377,12 @@ async function submitMaterialGatePass(event) {
 
     const form = event.target;
     const submitButton = form.querySelector('button[type="submit"]');
+    const requesterDepartmentId =
+        getRequesterDepartmentId?.('MATERIAL_GATE_PASS') || null;
+    if (!currentUser?.departmentId && !requesterDepartmentId) {
+        showToast('Select the requesting department.', 'error');
+        return;
+    }
     const items = readMaterialItems();
     if (items.some(item =>
         !item.description || !item.unit || !Number.isFinite(item.quantity) || item.quantity <= 0
@@ -380,6 +396,7 @@ async function submitMaterialGatePass(event) {
     try {
         const signatureFileId = await uploadPreparedSignature('MATERIAL_GATE_PASS');
         const created = await ApiClient.post('/form-requests/material', {
+            requesterDepartmentId,
             authorizedEmployeeId: Number(document.getElementById('materialAuthorizedEmployee').value),
             formDate: document.getElementById('materialFormDate').value,
             remarks: document.getElementById('materialRemarks').value.trim() || null,

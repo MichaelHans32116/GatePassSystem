@@ -52,7 +52,14 @@ function mapAuthenticatedUser(apiUser) {
         roleLabel: resolveInterfaceRoleLabel(roles),
         roles,
         permissions: apiUser.permissions || [],
-        dept: apiUser.department || 'System',
+        departmentId: apiUser.departmentId || null,
+        dept: apiUser.department || (
+            (apiUser.requestableDepartments || []).length > 1
+                ? 'Multiple Departments'
+                : 'System'
+        ),
+        managedDepartments: apiUser.managedDepartments || [],
+        requestableDepartments: apiUser.requestableDepartments || [],
         position: apiUser.position || '',
         employeeQrToken: apiUser.employeeQrToken || null,
         mustChangePassword: Boolean(apiUser.mustChangePassword),
@@ -65,10 +72,57 @@ function updateAuthenticatedShell(user) {
     document.getElementById('navUserRole').innerText = user.roleLabel || user.role;
 }
 
+function renderRequesterDepartmentSelectors() {
+    const requestable = currentUser?.requestableDepartments || [];
+    const needsSelection = !currentUser?.departmentId && requestable.length > 0;
+    const options = [
+        '<option value="">-- Select department --</option>',
+        ...requestable.map(department =>
+            `<option value="${department.departmentId}">${department.departmentName}</option>`
+        )
+    ].join('');
+
+    [
+        ['personRequesterDepartmentGroup', 'personRequesterDepartment'],
+        ['materialRequesterDepartmentGroup', 'materialRequesterDepartment']
+    ].forEach(([groupId, selectId]) => {
+        const group = document.getElementById(groupId);
+        const select = document.getElementById(selectId);
+        group?.classList.toggle('hidden', !needsSelection);
+        if (!select) return;
+        select.required = needsSelection;
+        select.disabled = !needsSelection;
+        if (needsSelection) {
+            const previous = select.value;
+            select.innerHTML = options;
+            if (requestable.some(item =>
+                String(item.departmentId) === previous
+            )) {
+                select.value = previous;
+            }
+        } else {
+            select.innerHTML = '';
+        }
+    });
+}
+
+function getRequesterDepartmentId(formTypeCode) {
+    if (currentUser?.departmentId) {
+        return currentUser.departmentId;
+    }
+
+    const selectId = formTypeCode === 'MATERIAL_GATE_PASS'
+        ? 'materialRequesterDepartment'
+        : 'personRequesterDepartment';
+    const selected = Number(document.getElementById(selectId)?.value);
+    return Number.isFinite(selected) && selected > 0 ? selected : null;
+}
+
 function showAuthenticatedApp(user, showSignedInToast = true) {
     clearTransientApplicationState?.();
     resetRequestForms?.();
     currentUser = user;
+    renderRequesterDepartmentSelectors();
     document.getElementById('loginView').style.opacity = '0';
 
     setTimeout(() => {
@@ -182,3 +236,5 @@ window.togglePassword = togglePassword;
 window.handleLogin = handleLogin;
 window.logout = logout;
 window.refreshAuthenticatedProfile = refreshAuthenticatedProfile;
+window.renderRequesterDepartmentSelectors = renderRequesterDepartmentSelectors;
+window.getRequesterDepartmentId = getRequesterDepartmentId;

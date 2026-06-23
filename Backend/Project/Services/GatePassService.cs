@@ -38,6 +38,17 @@ public sealed class GatePassService(
                 validationError);
         }
 
+        var departmentError = ResolveRequesterDepartment(
+            requester,
+            request.RequesterDepartmentId,
+            out requester);
+        if (departmentError is not null)
+        {
+            return ServiceResult<GatePassCreationResult>.Failure(
+                "INVALID_REQUESTER_DEPARTMENT",
+                departmentError);
+        }
+
         var signatureError = await ValidatePreparedSignatureAsync(
             requester.UserId,
             request.PreparedBySignatureFileId,
@@ -176,6 +187,17 @@ public sealed class GatePassService(
                 validationError);
         }
 
+        var departmentError = ResolveRequesterDepartment(
+            requester,
+            request.RequesterDepartmentId,
+            out requester);
+        if (departmentError is not null)
+        {
+            return ServiceResult<GatePassCreationResult>.Failure(
+                "INVALID_REQUESTER_DEPARTMENT",
+                departmentError);
+        }
+
         var authorizedEmployee =
             await employeeRepository.GetActiveEmployeeAsync(
                 request.AuthorizedEmployeeId,
@@ -185,6 +207,19 @@ public sealed class GatePassService(
             return ServiceResult<GatePassCreationResult>.Failure(
                 "AUTHORIZED_EMPLOYEE_NOT_FOUND",
                 "Select an active employee who will bring out the materials.");
+        }
+
+        if (!authorizedEmployee.DepartmentId.HasValue)
+        {
+            authorizedEmployee = new EmployeeLookupRecord
+            {
+                EmployeeRecordId = authorizedEmployee.EmployeeRecordId,
+                EmployeeId = authorizedEmployee.EmployeeId,
+                FullName = authorizedEmployee.FullName,
+                DepartmentId = requester.DepartmentId,
+                DepartmentName = requester.DepartmentName,
+                PositionName = authorizedEmployee.PositionName
+            };
         }
 
         var signatureError = await ValidatePreparedSignatureAsync(
@@ -198,7 +233,12 @@ public sealed class GatePassService(
                 signatureError);
         }
 
-        string[] routeCodes = ["SUPERIOR", "PAS"];
+        var requesterIsImmediateSuperior = requester.Roles.Contains(
+            "IMMEDIATE_SUPERIOR",
+            StringComparer.OrdinalIgnoreCase);
+        string[] routeCodes = requesterIsImmediateSuperior
+            ? ["PAS"]
+            : ["SUPERIOR", "PAS"];
         var route = new List<(string StepCode, long ApproverUserId)>();
 
         foreach (var stepCode in routeCodes)
@@ -206,7 +246,7 @@ public sealed class GatePassService(
             var approverId = await gatePassRepository.FindApproverAsync(
                 stepCode,
                 "MATERIAL_GATE_PASS",
-                stepCode == "PAS",
+                false,
                 requester.UserId,
                 stepCode == "SUPERIOR" ? requester.DepartmentId : null,
                 stepCode == "SUPERIOR" ? requester.PositionId : null,
@@ -217,7 +257,7 @@ public sealed class GatePassService(
                 return ServiceResult<GatePassCreationResult>.Failure(
                     "APPROVER_NOT_CONFIGURED",
                     stepCode == "PAS"
-                        ? "Ma'am Alona is not configured as the Material Gate Pass PAS approver."
+                        ? "No active PAS approver is configured."
                         : "No active immediate superior is configured for this requester.");
             }
 
@@ -239,7 +279,7 @@ public sealed class GatePassService(
         var submitted = await gatePassRepository.SubmitAsync(
             draft.GatePassId,
             requester.UserId,
-            "PENDING_SUPERIOR",
+            $"PENDING_{route[0].StepCode}",
             traceId,
             cancellationToken);
 
@@ -434,5 +474,51 @@ public sealed class GatePassService(
                !signature.IsActive
             ? "The prepared-by signature must be an active signature uploaded by the requester."
             : null;
+    }
+
+    private static string? ResolveRequesterDepartment(
+        RequesterContext source,
+        long? requestedDepartmentId,
+        out RequesterContext resolved)
+    {
+        resolved = source;
+
+        if (source.DepartmentId.HasValue)
+        {
+            if (requestedDepartmentId.HasValue &&
+                requestedDepartmentId.Value != source.DepartmentId.Value)
+            {
+                return "This account must submit under its assigned home department.";
+            }
+
+            return null;
+        }
+
+        if (!requestedDepartmentId.HasValue)
+        {
+            return "Select the department represented by this request.";
+        }
+
+        var selectedDepartment = source.RequestableDepartments.FirstOrDefault(
+            department =>
+                department.DepartmentId == requestedDepartmentId.Value);
+        if (selectedDepartment is null)
+        {
+            return "The selected department is not assigned to this account.";
+        }
+
+        resolved = new RequesterContext
+        {
+            UserId = source.UserId,
+            EmployeeRecordId = source.EmployeeRecordId,
+            DepartmentId = selectedDepartment.DepartmentId,
+            DepartmentName = selectedDepartment.DepartmentName,
+            PositionId = source.PositionId,
+            EmployeeId = source.EmployeeId,
+            FullName = source.FullName,
+            Roles = source.Roles,
+            RequestableDepartments = source.RequestableDepartments
+        };
+        return null;
     }
 }

@@ -12,3 +12,6 @@ Future database changes belong here as ordered scripts:
 `Database/schema.sql` remains the canonical clean-install schema during early
 development. Once the first deployed company database exists, every subsequent
 change must use a migration script and preserve existing data.
+
+- `007_department_access_shared_pas.sql`: splits Finance, HR, and IT, adds
+  manager requestable departments, and prepares the shared PAS workflow.

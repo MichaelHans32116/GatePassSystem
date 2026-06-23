@@ -115,6 +115,25 @@ public sealed class SignatureRepository(
                                   AND viewer_step.assigned_approver_user_id =
                                       @UserId
                             )
+                            OR (
+                                request_row.requester_user_id <> @UserId
+                                AND request_row.gate_pass_status_code =
+                                    'PENDING_PAS'
+                                AND EXISTS (
+                                    SELECT 1
+                                    FROM tbl_user_roles viewer_role
+                                    JOIN tbl_role_permissions viewer_permission
+                                      ON viewer_permission.role_id =
+                                         viewer_role.role_id
+                                    JOIN tbl_permissions permission_row
+                                      ON permission_row.permission_id =
+                                         viewer_permission.permission_id
+                                    WHERE viewer_role.user_id = @UserId
+                                      AND viewer_role.is_active = TRUE
+                                      AND permission_row.permission_code =
+                                          'gatepass.note.pas'
+                                )
+                            )
                         )
                   )
                   OR EXISTS (
@@ -131,6 +150,25 @@ public sealed class SignatureRepository(
                                       prepared_request.gate_pass_id
                                   AND prepared_viewer_step.assigned_approver_user_id =
                                       @UserId
+                            )
+                            OR (
+                                prepared_request.requester_user_id <> @UserId
+                                AND prepared_request.gate_pass_status_code =
+                                    'PENDING_PAS'
+                                AND EXISTS (
+                                    SELECT 1
+                                    FROM tbl_user_roles prepared_viewer_role
+                                    JOIN tbl_role_permissions prepared_permission
+                                      ON prepared_permission.role_id =
+                                         prepared_viewer_role.role_id
+                                    JOIN tbl_permissions permission_row
+                                      ON permission_row.permission_id =
+                                         prepared_permission.permission_id
+                                    WHERE prepared_viewer_role.user_id = @UserId
+                                      AND prepared_viewer_role.is_active = TRUE
+                                      AND permission_row.permission_code =
+                                          'gatepass.note.pas'
+                                )
                             )
                         )
                   )

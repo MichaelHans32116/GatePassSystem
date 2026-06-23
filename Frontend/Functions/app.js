@@ -55,6 +55,7 @@ function resetRequestForms() {
     toggleVehicleFields?.();
     initializeMaterialGatePassForm?.();
     resetAllSignatureState?.();
+    renderRequesterDepartmentSelectors?.();
 }
 
 function getVisibleSectionId() {

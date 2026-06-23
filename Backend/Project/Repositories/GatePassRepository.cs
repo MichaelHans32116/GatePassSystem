@@ -28,7 +28,7 @@ public sealed class GatePassRepository(
                 {
                     p_requester_user_id = requester.UserId,
                     p_requester_employee_id = requester.EmployeeRecordId,
-                    p_requester_department_id = requester.DepartmentId,
+                    p_requester_department_id = requester.DepartmentId!.Value,
                     p_requester_position_id = requester.PositionId,
                     p_prepared_by_signature_file_id =
                         request.PreparedBySignatureFileId,
@@ -66,14 +66,14 @@ public sealed class GatePassRepository(
                 {
                     p_requester_user_id = requester.UserId,
                     p_requester_employee_id = requester.EmployeeRecordId,
-                    p_requester_department_id = requester.DepartmentId,
+                    p_requester_department_id = requester.DepartmentId!.Value,
                     p_requester_position_id = requester.PositionId,
                     p_prepared_by_signature_file_id =
                         request.PreparedBySignatureFileId,
                     p_authorized_employee_id =
                         authorizedEmployee.EmployeeRecordId,
                     p_authorized_department_id =
-                        authorizedEmployee.DepartmentId,
+                        authorizedEmployee.DepartmentId!.Value,
                     p_form_date = request.FormDate.ToDateTime(TimeOnly.MinValue),
                     p_material_remarks = request.Remarks,
                     p_items_json = JsonSerializer.Serialize(

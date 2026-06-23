@@ -239,6 +239,13 @@ async function submitGatePass(e) {
     const expectedIn = willReturn
         ? localDateTimeFromTime(document.getElementById('gpExpectedIn').value)
         : null;
+    const requesterDepartmentId =
+        getRequesterDepartmentId?.('PERSON_GATE_PASS') || null;
+
+    if (!currentUser?.departmentId && !requesterDepartmentId) {
+        showToast('Select the requesting department.', 'error');
+        return;
+    }
 
     if (expectedIn && expectedIn <= expectedOut) {
         showToast('Expected Time In must be later than Expected Time Out.', 'error');
@@ -247,6 +254,7 @@ async function submitGatePass(e) {
 
     const isManual = needsVehicle && vehicleSelection === 'others';
     const payload = {
+        requesterDepartmentId,
         destination: document.getElementById('gpDestination').value.trim(),
         purpose: document.getElementById('gpPurpose').value.trim(),
         expectedOutAt: expectedOut.toISOString(),

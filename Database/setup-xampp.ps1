@@ -34,24 +34,29 @@ function Invoke-MySqlSource([string]$RelativePath) {
     }
 }
 
-$databaseExists = [int](Invoke-MySqlQuery(
+function Invoke-MySqlScalarInt([string]$Sql) {
+    $rows = @(Invoke-MySqlQuery $Sql)
+    if ($rows.Count -eq 0) {
+        throw "MariaDB scalar query returned no rows: $Sql"
+    }
+    return [int]([string]$rows[0])
+}
+
+$databaseExists = Invoke-MySqlScalarInt `
     "SELECT COUNT(*) FROM information_schema.SCHEMATA WHERE SCHEMA_NAME='gate_pass_system';"
-))[0]
 
 if ($databaseExists -eq 0) {
     Write-Host 'Creating fresh gate_pass_system database...' -ForegroundColor Yellow
     Invoke-MySqlSource 'Database\schema.sql'
 } else {
-    $requestTableExists = [int](Invoke-MySqlQuery(
+    $requestTableExists = Invoke-MySqlScalarInt `
         "SELECT COUNT(*) FROM information_schema.TABLES WHERE TABLE_SCHEMA='gate_pass_system' AND TABLE_NAME='tbl_gate_pass_requests';"
-    ))[0]
 
     if ($requestTableExists -eq 0) {
         Invoke-MySqlSource 'Database\schema.sql'
     } else {
-        $lifecycleColumns = [int](Invoke-MySqlQuery(
+        $lifecycleColumns = Invoke-MySqlScalarInt `
             "SELECT COUNT(*) FROM information_schema.COLUMNS WHERE TABLE_SCHEMA='gate_pass_system' AND TABLE_NAME='tbl_gate_pass_requests' AND COLUMN_NAME IN ('applied_at','approval_completed_at','version_no');"
-        ))[0]
 
         if ($lifecycleColumns -lt 3) {
             if (-not $SkipBackup) {
@@ -75,36 +80,32 @@ if ($databaseExists -eq 0) {
             Invoke-MySqlSource 'Database\Migrations\002_gate_pass_lifecycle_timestamps.sql'
         }
 
-        $phase5Applied = [int](Invoke-MySqlQuery(
+        $phase5Applied = Invoke-MySqlScalarInt `
             "SELECT COUNT(*) FROM gate_pass_system.tbl_schema_versions WHERE version_no='003';"
-        ))[0]
 
         if ($phase5Applied -eq 0) {
             Write-Host 'Applying database migration 003...' -ForegroundColor Yellow
             Invoke-MySqlSource 'Database\Migrations\003_phase5_workflow_defaults.sql'
         }
 
-        $employeeQrSecurityApplied = [int](Invoke-MySqlQuery(
+        $employeeQrSecurityApplied = Invoke-MySqlScalarInt `
             "SELECT COUNT(*) FROM gate_pass_system.tbl_schema_versions WHERE version_no='004';"
-        ))[0]
 
         if ($employeeQrSecurityApplied -eq 0) {
             Write-Host 'Applying database migration 004...' -ForegroundColor Yellow
             Invoke-MySqlSource 'Database\Migrations\004_security_employee_qr.sql'
         }
 
-        $scanCooldownIndexApplied = [int](Invoke-MySqlQuery(
+        $scanCooldownIndexApplied = Invoke-MySqlScalarInt `
             "SELECT COUNT(*) FROM gate_pass_system.tbl_schema_versions WHERE version_no='005';"
-        ))[0]
 
         if ($scanCooldownIndexApplied -eq 0) {
             Write-Host 'Applying database migration 005...' -ForegroundColor Yellow
             Invoke-MySqlSource 'Database\Migrations\005_scan_cooldown_index.sql'
         }
 
-        $formRequestApplied = [int](Invoke-MySqlQuery(
+        $formRequestApplied = Invoke-MySqlScalarInt `
             "SELECT COUNT(*) FROM gate_pass_system.tbl_schema_versions WHERE version_no='006';"
-        ))[0]
 
         if ($formRequestApplied -eq 0) {
             if (-not $SkipBackup) {
@@ -126,6 +127,31 @@ if ($databaseExists -eq 0) {
 
             Write-Host 'Applying database migration 006...' -ForegroundColor Yellow
             Invoke-MySqlSource 'Database\Migrations\006_form_request_material_gate_pass.sql'
+        }
+
+        $departmentAccessApplied = Invoke-MySqlScalarInt `
+            "SELECT COUNT(*) FROM gate_pass_system.tbl_schema_versions WHERE version_no='007';"
+
+        if ($departmentAccessApplied -eq 0) {
+            if (-not $SkipBackup) {
+                $backupDirectory = Join-Path $repo 'LocalData\backups'
+                New-Item -ItemType Directory -Force -Path $backupDirectory | Out-Null
+                $stamp = Get-Date -Format 'yyyyMMdd-HHmmss'
+                $backup = Join-Path $backupDirectory "gate_pass_system-before-007-$stamp.sql"
+                & $mysqldump @connectionArguments `
+                    '--single-transaction' `
+                    '--routines' `
+                    '--triggers' `
+                    "--result-file=$backup" `
+                    'gate_pass_system'
+                if ($LASTEXITCODE -ne 0) {
+                    throw 'MariaDB backup failed before migration 007.'
+                }
+                Write-Host "Database backup: $backup"
+            }
+
+            Write-Host 'Applying database migration 007...' -ForegroundColor Yellow
+            Invoke-MySqlSource 'Database\Migrations\007_department_access_shared_pas.sql'
         }
     }
 }

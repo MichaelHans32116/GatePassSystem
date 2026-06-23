@@ -6,7 +6,7 @@ Moriroku forms. The current release supports:
 - Person Gate Pass: approval routing, printable document, QR Time Out/Time In,
   and optional company-vehicle reservation.
 - Material Gate Pass: itemized release form routed from Prepared By to the
-  Immediate Superior and then to Ma'am Alona/PAS.
+  Immediate Superior and then to the shared PAS approval queue.
 
 Both forms receive a daily control number in `MMDDYY-001` format. Material
 forms do not generate a QR because they are approved item-release documents,

@@ -83,7 +83,16 @@ public sealed class GatePassRequestsController(
             detail.RequesterUserId == CurrentUserId ||
             HasPermission(GatePassPermissions.ReadAll) ||
             detail.ApprovalSteps.Any(
-                step => step.AssignedApproverUserId == CurrentUserId);
+                step => step.AssignedApproverUserId == CurrentUserId) ||
+            (
+                detail.RequesterUserId != CurrentUserId &&
+                HasPermission(GatePassPermissions.NotePas) &&
+                detail.GatePassStatusCode == "PENDING_PAS" &&
+                detail.ApprovalSteps.Any(
+                    step =>
+                        step.ApprovalStepCode == "PAS" &&
+                        step.ApprovalStatusCode == "PENDING")
+            );
 
         return canRead
             ? Success(detail)

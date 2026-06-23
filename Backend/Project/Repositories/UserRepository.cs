@@ -16,6 +16,8 @@ public sealed class UserRepository(IDatabaseConnectionFactory connectionFactory)
             ua.account_status_code AS AccountStatus,
             account_status.allows_login AS AccountAllowsLogin,
             ua.must_change_password AS MustChangePassword,
+            d.department_id AS DepartmentId,
+            d.department_code AS DepartmentCode,
             d.department_name AS Department,
             p.position_name AS Position
         FROM tbl_user_accounts ua
@@ -101,6 +103,46 @@ public sealed class UserRepository(IDatabaseConnectionFactory connectionFactory)
             new { user.AccountId },
             cancellationToken: cancellationToken))).AsList();
 
+        var departmentAccess = (await connection.QueryAsync<DepartmentAccessRow>(
+            new CommandDefinition(
+                """
+                SELECT
+                    department.department_id AS DepartmentId,
+                    department.department_code AS DepartmentCode,
+                    department.department_name AS DepartmentName,
+                    access.can_manage AS CanManage,
+                    access.can_request AS CanRequest
+                FROM tbl_user_department_assignments access
+                JOIN tbl_departments department
+                    ON department.department_id = access.department_id
+                WHERE access.user_id = @AccountId
+                  AND access.is_active = TRUE
+                  AND department.is_active = TRUE
+                ORDER BY department.department_name;
+                """,
+                new { user.AccountId },
+                cancellationToken: cancellationToken))).AsList();
+
+        var homeDepartment = user.DepartmentId.HasValue &&
+                             !string.IsNullOrWhiteSpace(user.Department)
+            ? new DepartmentAccessRecord(
+                user.DepartmentId.Value,
+                user.DepartmentCode ?? string.Empty,
+                user.Department)
+            : null;
+
+        var managedDepartments = departmentAccess
+            .Where(item => item.CanManage)
+            .Select(item => item.ToModel())
+            .ToArray();
+        var requestableDepartments = departmentAccess
+            .Where(item => item.CanRequest)
+            .Select(item => item.ToModel())
+            .Concat(homeDepartment is null ? [] : [homeDepartment])
+            .DistinctBy(item => item.DepartmentId)
+            .OrderBy(item => item.DepartmentName)
+            .ToArray();
+
         return new AuthUser
         {
             AccountId = user.AccountId,
@@ -112,10 +154,13 @@ public sealed class UserRepository(IDatabaseConnectionFactory connectionFactory)
             AccountStatus = user.AccountStatus,
             AccountAllowsLogin = user.AccountAllowsLogin,
             MustChangePassword = user.MustChangePassword,
+            DepartmentId = user.DepartmentId,
             Department = user.Department,
             Position = user.Position,
             Roles = roles,
-            Permissions = permissions
+            Permissions = permissions,
+            ManagedDepartments = managedDepartments,
+            RequestableDepartments = requestableDepartments
         };
     }
 
@@ -130,7 +175,21 @@ public sealed class UserRepository(IDatabaseConnectionFactory connectionFactory)
         public string AccountStatus { get; init; } = string.Empty;
         public bool AccountAllowsLogin { get; init; }
         public bool MustChangePassword { get; init; }
+        public long? DepartmentId { get; init; }
+        public string? DepartmentCode { get; init; }
         public string? Department { get; init; }
         public string? Position { get; init; }
+    }
+
+    private sealed class DepartmentAccessRow
+    {
+        public long DepartmentId { get; init; }
+        public string DepartmentCode { get; init; } = string.Empty;
+        public string DepartmentName { get; init; } = string.Empty;
+        public bool CanManage { get; init; }
+        public bool CanRequest { get; init; }
+
+        public DepartmentAccessRecord ToModel() =>
+            new(DepartmentId, DepartmentCode, DepartmentName);
     }
 }
