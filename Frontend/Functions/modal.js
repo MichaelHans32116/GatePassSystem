@@ -452,9 +452,7 @@ async function viewPass(id, isReviewing = false) {
                 if(isReviewing) {
                     document.getElementById('printModalContent')?.classList.add('is-reviewing');
                     actionArea.style.display = 'flex';
-                    document.getElementById('sigUpload').value = '';
-                    document.getElementById('sigFileName').innerText = '';
-                    document.getElementById('sigSelectedFileRow')?.classList.add('hidden');
+                    resetApprovalSignatureComposer();
                     showSignatureSource('upload');
 
                     // PRE-FILL USERNAME FOR TRUE LIVE PREVIEW ALIGNMENT
@@ -476,8 +474,10 @@ async function viewPass(id, isReviewing = false) {
                     }
 
                     // Load saved default signature if it exists
-                    if (currentUser.savedSignature) {
-                        currentUploadedSig = currentUser.savedSignature.img;
+                    const savedSignature = getSavedApprovalSignature();
+                    if (savedSignature) {
+                        currentUploadedSig = savedSignature.img;
+                        currentOriginalSignatureData = null;
 
                         // Determine which container to update based on user role
                         let targetContainerId = null;
@@ -487,29 +487,19 @@ async function viewPass(id, isReviewing = false) {
 
                         renderSignatureImage(
                             currentUploadedSig,
-                            currentUser.savedSignature.w || 100,
-                            currentUser.savedSignature.y || 0
+                            savedSignature.w || 100,
+                            savedSignature.y || 0
                         );
 
-                        document.getElementById('sigSize').value = currentUser.savedSignature.w || 100;
-                        document.getElementById('sigY').value = currentUser.savedSignature.y || 0;
+                        document.getElementById('sigSize').value = savedSignature.w || 100;
+                        document.getElementById('sigY').value = savedSignature.y || 0;
 
                         document.getElementById('sigBgOptions').classList.add('hidden');
                         document.getElementById('sigControls').classList.remove('hidden');
                         document.getElementById('saveDefaultSig').checked = true;
                         setSignatureStatus('Saved default signature loaded. Adjust size or upload/draw a replacement if needed.', 'success');
                     } else {
-                        currentUploadedSig = null;
-                        currentOriginalSignatureData = null;
-                        document.getElementById('sigSize').value = 100;
-                        document.getElementById('sigY').value = 0;
-                        document.getElementById('sigBgMode').value = 'none';
-                        document.getElementById('sigBgThreshold').value = 20;
-                        document.getElementById('sigBgThresholdValue').innerText = '20';
-                        document.getElementById('sigBgOptions').classList.add('hidden');
-                        document.getElementById('sigControls').classList.add('hidden');
-                        document.getElementById('saveDefaultSig').checked = false;
-                        setSignatureStatus('Choose an image or switch to Draw Signature.', 'muted');
+                        resetApprovalSignatureComposer();
                     }
                 } else {
                     document.getElementById('printModalContent')?.classList.remove('is-reviewing');

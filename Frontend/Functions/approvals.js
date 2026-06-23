@@ -15,7 +15,16 @@ async function uploadCurrentSignature() {
 async function approveCurrentPass() {
     if (currentUser.role === 'System Admin') return;
 
+    const sigWidth = document.getElementById('sigSize')?.value || 100;
+    const sigY = document.getElementById('sigY')?.value || 0;
+    const saveCheck = document.getElementById('saveDefaultSig');
+
     if (!isDatabaseSession()) {
+        if (saveCheck?.checked && currentUploadedSig) {
+            saveApprovalSignaturePreference({ img: currentUploadedSig, w: sigWidth, y: sigY });
+        } else {
+            clearSavedApprovalSignature();
+        }
         approveCurrentMockPass();
         return;
     }
@@ -31,6 +40,11 @@ async function approveCurrentPass() {
             signatureFileId: signature?.signatureFileId || null,
             comment: null
         });
+        if (saveCheck?.checked && currentUploadedSig) {
+            saveApprovalSignaturePreference({ img: currentUploadedSig, w: sigWidth, y: sigY });
+        } else {
+            clearSavedApprovalSignature();
+        }
         showToast('Form request approved.');
         closeModal();
         await Promise.all([renderApprovalQueue(), loadMyGatePasses()]);
@@ -81,10 +95,6 @@ function approveCurrentMockPass() {
     const sigWidth = document.getElementById('sigSize').value;
     const sigY = document.getElementById('sigY').value;
     const saveCheck = document.getElementById('saveDefaultSig');
-
-    currentUser.savedSignature = saveCheck?.checked
-        ? { img: currentUploadedSig, w: sigWidth, y: sigY }
-        : null;
 
     const sigObj = {
         name: currentUser.name,

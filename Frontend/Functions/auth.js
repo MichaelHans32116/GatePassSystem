@@ -61,6 +61,7 @@ function mapAuthenticatedUser(apiUser) {
 }
 
 function showAuthenticatedApp(user, showSignedInToast = true) {
+    resetApprovalSignatureComposer?.();
     currentUser = user;
     document.getElementById('loginView').style.opacity = '0';
 
@@ -135,6 +136,7 @@ async function logout() {
         }
     }
     ApiClient.clearAccessToken();
+    resetApprovalSignatureComposer?.();
     currentUser = null;
     document.getElementById('appView').classList.add('hidden');
     document.getElementById('loginView').classList.remove('hidden');

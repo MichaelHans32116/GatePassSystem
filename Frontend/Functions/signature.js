@@ -1,6 +1,95 @@
 // Signature upload, draw, optional background removal, and placement.
 
 var signaturePadState = { drawing: false, lastX: 0, lastY: 0 };
+var SAVED_SIGNATURE_STORAGE_PREFIX = 'gatepass:saved-signature:';
+
+function getSavedSignatureStorageKey(user = currentUser) {
+            const accountKey = user?.accountId || user?.id;
+            return accountKey ? `${SAVED_SIGNATURE_STORAGE_PREFIX}${accountKey}` : null;
+        }
+
+function getSavedApprovalSignature(user = currentUser) {
+            const key = getSavedSignatureStorageKey(user);
+            if (!key) return null;
+
+            try {
+                const raw = localStorage.getItem(key);
+                if (!raw) return null;
+
+                const parsed = JSON.parse(raw);
+                if (
+                    !parsed ||
+                    typeof parsed.img !== 'string' ||
+                    !parsed.img.startsWith('data:image/')
+                ) {
+                    localStorage.removeItem(key);
+                    return null;
+                }
+
+                return {
+                    img: parsed.img,
+                    w: Number(parsed.w) > 0 ? Number(parsed.w) : 100,
+                    y: Number.isFinite(Number(parsed.y)) ? Number(parsed.y) : 0
+                };
+            } catch {
+                return null;
+            }
+        }
+
+function saveApprovalSignaturePreference(signature, user = currentUser) {
+            const key = getSavedSignatureStorageKey(user);
+            if (!key || !signature?.img) return;
+
+            localStorage.setItem(key, JSON.stringify({
+                img: signature.img,
+                w: Number(signature.w) > 0 ? Number(signature.w) : 100,
+                y: Number.isFinite(Number(signature.y)) ? Number(signature.y) : 0
+            }));
+        }
+
+function clearSavedApprovalSignature(user = currentUser) {
+            const key = getSavedSignatureStorageKey(user);
+            if (!key) return;
+            localStorage.removeItem(key);
+        }
+
+function resetApprovalSignatureComposer() {
+            currentUploadedSig = null;
+            currentOriginalSignatureData = null;
+
+            const upload = document.getElementById('sigUpload');
+            const fileName = document.getElementById('sigFileName');
+            const selectedFileRow = document.getElementById('sigSelectedFileRow');
+            const size = document.getElementById('sigSize');
+            const offset = document.getElementById('sigY');
+            const mode = document.getElementById('sigBgMode');
+            const threshold = document.getElementById('sigBgThreshold');
+            const thresholdValue = document.getElementById('sigBgThresholdValue');
+            const bgOptions = document.getElementById('sigBgOptions');
+            const controls = document.getElementById('sigControls');
+            const saveDefault = document.getElementById('saveDefaultSig');
+            const canvas = document.getElementById('signaturePad');
+
+            if (upload) upload.value = '';
+            if (fileName) fileName.innerText = '';
+            selectedFileRow?.classList.add('hidden');
+            if (size) size.value = 100;
+            if (offset) offset.value = 0;
+            if (mode) mode.value = 'none';
+            if (threshold) threshold.value = 20;
+            if (thresholdValue) thresholdValue.innerText = '20';
+            bgOptions?.classList.add('hidden');
+            controls?.classList.add('hidden');
+            if (saveDefault) saveDefault.checked = false;
+
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                ctx?.clearRect(0, 0, canvas.width, canvas.height);
+            }
+
+            setSignatureStatus('Choose an image or switch to Draw Signature.', 'muted');
+        }
+
 function removeSignatureBackground(img, options = {}) {
             let mode = options.mode || 'autoSmart';
             const threshold = Number(options.threshold || 20);
@@ -523,3 +612,7 @@ window.initializeSignatureControls = initializeSignatureControls;
 window.setupSignaturePad = setupSignaturePad;
 window.resizeSignatureCanvas = resizeSignatureCanvas;
 window.setSignatureStatus = setSignatureStatus;
+window.getSavedApprovalSignature = getSavedApprovalSignature;
+window.saveApprovalSignaturePreference = saveApprovalSignaturePreference;
+window.clearSavedApprovalSignature = clearSavedApprovalSignature;
+window.resetApprovalSignatureComposer = resetApprovalSignatureComposer;
