@@ -2,6 +2,21 @@
 
 var signaturePadState = { drawing: false, lastX: 0, lastY: 0 };
 var SAVED_SIGNATURE_STORAGE_PREFIX = 'gatepass:saved-signature:';
+var SIGNATURE_WIDTH_MIN = 50;
+var SIGNATURE_WIDTH_MAX = 150;
+var SIGNATURE_WIDTH_DEFAULT = 100;
+var SIGNATURE_VERTICAL_OFFSET_DEFAULT = 0;
+
+function clampSignatureWidth(width) {
+            const parsed = Number(width);
+            if (!Number.isFinite(parsed)) return SIGNATURE_WIDTH_DEFAULT;
+            return Math.max(SIGNATURE_WIDTH_MIN, Math.min(SIGNATURE_WIDTH_MAX, parsed));
+        }
+
+function clampSignatureYOffset(y) {
+            const parsed = Number(y);
+            return Number.isFinite(parsed) ? parsed : SIGNATURE_VERTICAL_OFFSET_DEFAULT;
+        }
 
 function getSavedSignatureStorageKey(
             user = currentUser,
@@ -36,8 +51,8 @@ function getSavedApprovalSignature(
 
                 return {
                     img: parsed.img,
-                    w: Number(parsed.w) > 0 ? Number(parsed.w) : 100,
-                    y: Number.isFinite(Number(parsed.y)) ? Number(parsed.y) : 0
+                    w: clampSignatureWidth(parsed.w),
+                    y: clampSignatureYOffset(parsed.y)
                 };
             } catch {
                 return null;
@@ -54,8 +69,8 @@ function saveApprovalSignaturePreference(
 
             localStorage.setItem(key, JSON.stringify({
                 img: signature.img,
-                w: Number(signature.w) > 0 ? Number(signature.w) : 100,
-                y: Number.isFinite(Number(signature.y)) ? Number(signature.y) : 0
+                w: clampSignatureWidth(signature.w),
+                y: clampSignatureYOffset(signature.y)
             }));
         }
 
@@ -89,8 +104,8 @@ function resetApprovalSignatureComposer() {
             if (upload) upload.value = '';
             if (fileName) fileName.innerText = '';
             selectedFileRow?.classList.add('hidden');
-            if (size) size.value = 100;
-            if (offset) offset.value = 0;
+            if (size) size.value = SIGNATURE_WIDTH_DEFAULT;
+            if (offset) offset.value = SIGNATURE_VERTICAL_OFFSET_DEFAULT;
             if (mode) mode.value = 'none';
             if (threshold) threshold.value = 20;
             if (thresholdValue) thresholdValue.innerText = '20';
@@ -302,11 +317,13 @@ function getSignatureTargetContainerId() {
             return 'sigImm';
         }
 
-function renderSignatureImage(dataUrl, width = 100, y = 0) {
+function renderSignatureImage(dataUrl, width = SIGNATURE_WIDTH_DEFAULT, y = SIGNATURE_VERTICAL_OFFSET_DEFAULT) {
             const targetId = getSignatureTargetContainerId();
             const targetDiv = document.getElementById(targetId);
             if (targetDiv) {
-                targetDiv.innerHTML = `<img src="${dataUrl}" id="liveDocumentSig" class="signature-img" style="width: ${width}%; margin-bottom: ${y}px;">`;
+                const safeWidth = clampSignatureWidth(width);
+                const safeYOffset = clampSignatureYOffset(y);
+                targetDiv.innerHTML = `<img src="${dataUrl}" id="liveDocumentSig" class="signature-img" style="width: ${safeWidth}%; margin-bottom: ${safeYOffset}px;">`;
             }
             if (targetId?.startsWith('sigMat')) {
                 syncMaterialSignatureCopies?.(targetId);
@@ -391,8 +408,8 @@ async function processAndRenderSignature(showMessage = true) {
             let mode = document.getElementById('sigBgMode')?.value || 'none';
             const threshold = parseInt(document.getElementById('sigBgThreshold')?.value || '20', 10);
 
-            const currentWidth = document.getElementById('sigSize')?.value || 100;
-            const currentY = document.getElementById('sigY')?.value || 0;
+            const currentWidth = clampSignatureWidth(document.getElementById('sigSize')?.value);
+            const currentY = clampSignatureYOffset(document.getElementById('sigY')?.value);
 
             try {
                 setSignatureBusy(true);
@@ -575,9 +592,9 @@ function useDrawnSignature() {
             }
             currentOriginalSignatureData = null;
             currentUploadedSig = canvas.toDataURL('image/png');
-            document.getElementById('sigSize').value = 100;
-            document.getElementById('sigY').value = 0;
-            renderSignatureImage(currentUploadedSig, 100, 0);
+            document.getElementById('sigSize').value = SIGNATURE_WIDTH_DEFAULT;
+            document.getElementById('sigY').value = SIGNATURE_VERTICAL_OFFSET_DEFAULT;
+            renderSignatureImage(currentUploadedSig, SIGNATURE_WIDTH_DEFAULT, SIGNATURE_VERTICAL_OFFSET_DEFAULT);
             document.getElementById('sigBgOptions')?.classList.add('hidden');
             document.getElementById('sigControls')?.classList.remove('hidden');
             document.getElementById('saveDefaultSig').checked = true;
@@ -599,8 +616,8 @@ function initializeSignatureControls() {
         const reader = new FileReader();
         reader.onload = function(event) {
             currentOriginalSignatureData = event.target.result;
-            size.value = 100;
-            offset.value = 0;
+            size.value = SIGNATURE_WIDTH_DEFAULT;
+            offset.value = SIGNATURE_VERTICAL_OFFSET_DEFAULT;
             mode.value = 'none';
             threshold.value = 20;
             document.getElementById('sigBgThresholdValue').innerText = '20';
@@ -624,8 +641,8 @@ function initializeSignatureControls() {
     const applySignaturePlacement = () => {
         const liveSignature = document.getElementById('liveDocumentSig');
         if (liveSignature) {
-            liveSignature.style.width = size.value + '%';
-            liveSignature.style.marginBottom = offset.value + 'px';
+            liveSignature.style.width = clampSignatureWidth(size.value) + '%';
+            liveSignature.style.marginBottom = clampSignatureYOffset(offset.value) + 'px';
         }
     };
 

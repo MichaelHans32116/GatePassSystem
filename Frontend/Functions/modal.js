@@ -633,12 +633,12 @@ async function viewPass(id, isReviewing = false) {
 
                         renderSignatureImage(
                             currentUploadedSig,
-                            savedSignature.w || 100,
-                            savedSignature.y || 0
+                            clampSignatureWidth(savedSignature.w),
+                            clampSignatureYOffset(savedSignature.y)
                         );
 
-                        document.getElementById('sigSize').value = savedSignature.w || 100;
-                        document.getElementById('sigY').value = savedSignature.y || 0;
+                        document.getElementById('sigSize').value = clampSignatureWidth(savedSignature.w);
+                        document.getElementById('sigY').value = clampSignatureYOffset(savedSignature.y);
 
                         document.getElementById('sigBgOptions').classList.add('hidden');
                         document.getElementById('sigControls').classList.remove('hidden');
