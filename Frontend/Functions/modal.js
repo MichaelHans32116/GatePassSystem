@@ -886,7 +886,24 @@ async function renderPersonGatePassClone(p) {
     const qrBackContainer = clone.querySelector('.qrCodeBackDisplay');
     const controlNoDisplay = clone.querySelector('.control-no-display');
     if (controlNoDisplay) {
-        controlNoDisplay.innerText = p.controlNo || p.gatePassNo || '';
+        controlNoDisplay.innerText = p.controlNo || '';
+    }
+
+    const gpIdTextDisplay = clone.querySelector('.gp-id-text-display');
+    if (gpIdTextDisplay && p.gatePassNo) {
+        const gpId = String(p.gatePassNo);
+        let formattedGpId = gpId;
+        if (gpId.includes('-')) {
+            const parts = gpId.split('-');
+            if (parts.length === 2 && parts[1].length > 0) {
+                formattedGpId = `${parts[0]}-<u>${parts[1]}</u>`;
+            }
+        } else if (gpId.length >= 3) {
+            const prefix = gpId.slice(0, -3);
+            const suffix = gpId.slice(-3);
+            formattedGpId = `${prefix}<u>${suffix}</u>`;
+        }
+        gpIdTextDisplay.innerHTML = `To input: ${formattedGpId}`;
     }
 
     if (qrBackContainer) {
@@ -1092,10 +1109,25 @@ async function renderMaterialGatePassClone(p) {
     const backDiv = document.createElement('div');
     backDiv.className = 'qr-back-page material-print-page multi-print-item';
     backDiv.style.cssText = 'page-break-before: always; height: 105mm; width: 148mm; display: flex; align-items: center; justify-content: center; flex-direction: column; box-sizing: border-box; border: 1px dashed #ccc;';
+    let formattedGpId = p.gatePassNo || '';
+    if (formattedGpId) {
+        if (formattedGpId.includes('-')) {
+            const parts = formattedGpId.split('-');
+            if (parts.length === 2 && parts[1].length > 0) {
+                formattedGpId = `${parts[0]}-<u>${parts[1]}</u>`;
+            }
+        } else if (formattedGpId.length >= 3) {
+            const prefix = formattedGpId.slice(0, -3);
+            const suffix = formattedGpId.slice(-3);
+            formattedGpId = `${prefix}<u>${suffix}</u>`;
+        }
+    }
+
     backDiv.innerHTML = `
         <h3 class="text-2xl font-bold mb-4">Gate Pass QR Code</h3>
         <div class="material-document-qr-back flex items-center justify-center p-4 bg-white border-4 border-black rounded-lg"></div>
         <p class="mt-4 text-gray-500 font-mono text-center">${controlNo}</p>
+        ${formattedGpId ? `<p class="mt-2 text-gray-800 text-lg font-mono text-center">To input: ${formattedGpId}</p>` : ''}
     `;
 
     if (['Approved', 'Outside', 'Overdue', 'Returned', 'Closed'].includes(p.status)) {
