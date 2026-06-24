@@ -115,22 +115,6 @@ function mapApiGatePass(record) {
         expectedIn: record.expectedInAt ? formatDateTime(record.expectedInAt, false) : 'N/A',
         purpose: record.purpose,
         vehicle,
-        status,
-        statusCode: record.gatePassStatusCode,
-        requiresSuperiorApproval: steps.some(step => step.approvalStepCode === 'SUPERIOR'),
-        requiresPresidentApproval: steps.some(step => step.approvalStepCode === 'PRESIDENT'),
-        signatures: mapApprovalSignatures(steps),
-        approvalSteps: steps,
-        scanCount: (record.scans || []).filter(scan =>
-            scan.resultCode === 'TIME_OUT_RECORDED' || scan.resultCode === 'TIME_IN_RECORDED'
-        ).length,
-        actualOut: record.actualOutAt ? formatDateTime(record.actualOutAt, false) : null,
-        actualIn: record.actualInAt ? formatDateTime(record.actualInAt, false) : null,
-        willReturn: record.willReturn !== false,
-        qrToken: record.qrToken || null
-    };
-}
-
 function setNowTime(inputId) {
     const now = new Date();
     document.getElementById(inputId).value =

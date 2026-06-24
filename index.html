@@ -31,7 +31,7 @@
             }
         }
     </script>
-    <link rel="stylesheet" href="Frontend/Design/styles.css?v=20260624-phase7-4">
+    <link rel="stylesheet" href="Frontend/Design/styles.css?v=20260624-phase7-6">
 </head>
 <body class="h-screen overflow-hidden flex flex-col font-sans text-sm md:text-base">
 
@@ -822,20 +822,20 @@
                                 </div>
                             </td>
                         </tr>
-                        <tr class="guard-status-row hidden print:table-row">
+                        <tr id="guardStatusRow" class="guard-status-row hidden">
                             <td colspan="4" class="align-middle py-1 bg-gray-50 border-t border-black" style="-webkit-print-color-adjust: exact; print-color-adjust: exact;">
                                 <div class="flex justify-around items-center w-full">
                                     <div class="flex items-center space-x-2">
                                         <span class="text-[8px] font-bold text-gray-500">ACTUAL OUT</span>
-                                        <div class="vActOut w-16 h-4 flex items-center justify-center font-bold text-[8px] border-b border-gray-400"></div>
+                                        <div id="vActOut" class="vActOut w-16 h-4 flex items-center justify-center font-bold text-[8px] border-b border-gray-400"></div>
                                     </div>
                                     <div class="flex items-center space-x-2">
                                         <span class="text-[8px] font-bold text-gray-500">ACTUAL IN</span>
-                                        <div class="vActIn w-16 h-4 flex items-center justify-center font-bold text-[8px] border-b border-gray-400"></div>
+                                        <div id="vActIn" class="vActIn w-16 h-4 flex items-center justify-center font-bold text-[8px] border-b border-gray-400"></div>
                                     </div>
                                     <div class="flex items-center space-x-2">
                                         <span class="text-[8px] font-bold text-gray-500">REMARKS</span>
-                                        <div class="vGuardRemarks bg-gray-200 text-gray-600 px-2 py-0.5 rounded font-bold text-[8px]">PENDING</div>
+                                        <div id="vGuardRemarks" class="vGuardRemarks bg-gray-200 text-gray-600 px-2 py-0.5 rounded font-bold text-[8px]">PENDING</div>
                                     </div>
                                 </div>
                             </td>
@@ -911,7 +911,7 @@
     <script src="Frontend/Connectors/api-client.js?v=20260624-7.2"></script>
     <script src="Frontend/Functions/signature.js?v=20260624-7.4"></script>
     <script src="Frontend/Functions/material-gatepass.js?v=20260624-7.2"></script>
-    <script src="Frontend/Functions/modal.js?v=20260624-7.8"></script>
+    <script src="Frontend/Functions/modal.js?v=20260624-7.12"></script>
     <script src="Frontend/Functions/gatepass.js?v=20260624-7.4"></script>
     <script src="Frontend/Functions/approvals.js?v=20260624-7.4"></script>
     <script src="Frontend/Functions/scanner.js?v=20260624-7.2"></script>

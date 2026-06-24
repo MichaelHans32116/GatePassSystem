@@ -14,14 +14,24 @@ var modalFrameRequest = null;
 var pendingModalBox = null;
 var QR_BACK_CODE_SIZE = 136;
 
+function getGuardRemarksText(p) {
+    let remarkText = ['Returned', 'Closed'].includes(p.status) ? 'RETURNED' : (['Outside', 'Overdue'].includes(p.status) ? 'OUTSIDE' : 'APPROVED');
+    if (p.scans && p.scans.length > 0) {
+        const sortedScans = [...p.scans].sort((a,b) => new Date(b.scannedAt || 0) - new Date(a.scannedAt || 0));
+        if (sortedScans[0].message) remarkText = sortedScans[0].message;
+    }
+    return remarkText;
+}
+
 function escapeDocumentText(value) {
-            return String(value ?? '')
-                .replaceAll('&', '&amp;')
-                .replaceAll('<', '&lt;')
-                .replaceAll('>', '&gt;')
-                .replaceAll('"', '&quot;')
-                .replaceAll("'", '&#039;');
-        }
+    if (value === null || value === undefined) return '';
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
 
 function formatManualScanId(gpId) {
             const raw = String(gpId || '').trim();
@@ -353,7 +363,6 @@ async function renderMaterialBundle(pass) {
                 return `
                     <section class="material-print-page" data-material-page="${pageIndex + 1}">
                         <div class="material-form-header">
-                            <div class="material-document-qr" data-material-document-qr></div>
                             <div class="material-form-brand">
                                 <img src="Frontend/Design/images/logo.png" alt="MPI Logo">
                                 <div>
@@ -386,21 +395,40 @@ async function renderMaterialBundle(pass) {
                             <div>
                                 <strong>Prepared By:</strong>
                                 <div ${prepared.imageAttribute} class="material-signature-image"></div>
-                                <span ${prepared.nameAttribute} class="hidden"></span>
+                                <span ${prepared.nameAttribute}></span>
                             </div>
                             <div>
                                 <strong>Noted By:</strong>
                                 <div ${superior.imageAttribute} class="material-signature-image"></div>
-                                <span ${superior.nameAttribute} class="hidden"></span>
+                                <span ${superior.nameAttribute}></span>
                                 <small>Immediate Superior</small>
                             </div>
                             <div>
                                 <strong>Approved By:</strong>
                                 <div ${pas.imageAttribute} class="material-signature-image"></div>
-                                <span ${pas.nameAttribute} class="hidden"></span>
+                                <span ${pas.nameAttribute}></span>
                                 <small>Personnel &amp; Admin Section</small>
                             </div>
                         </div>
+
+                        <!-- GUARD TRACKING ROW FOR MATERIAL (Document View) -->
+                        <div class="guard-status-row ${['Approved', 'Outside', 'Overdue', 'Returned', 'Closed'].includes(pass.status) ? 'flex' : 'hidden'} flex-row justify-around items-center w-full mt-2 pt-1 border-t border-black bg-gray-50" style="-webkit-print-color-adjust: exact; print-color-adjust: exact;">
+                            <div class="flex items-center space-x-2">
+                                <span class="text-[8px] font-bold text-gray-500">ACTUAL OUT</span>
+                                <div class="w-16 h-4 flex items-center justify-center font-bold text-[8px] border-b border-gray-400">${pass.actualOut || ''}</div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-[8px] font-bold text-gray-500">ACTUAL IN</span>
+                                <div class="w-16 h-4 flex items-center justify-center font-bold text-[8px] border-b border-gray-400">${pass.actualIn || ''}</div>
+                            </div>
+                            <div class="flex items-center space-x-2">
+                                <span class="text-[8px] font-bold text-gray-500">REMARKS</span>
+                                <div class="${['Returned', 'Closed', 'Approved'].includes(pass.status) ? 'bg-green-100 text-green-800' : (['Outside', 'Overdue'].includes(pass.status) ? 'bg-blue-100 text-mpiBlue' : 'bg-gray-200 text-gray-600')} px-2 py-0.5 rounded font-bold text-[8px]">
+                                    ${materialEscape(getGuardRemarksText(pass))}
+                                </div>
+                            </div>
+                        </div>
+
                         <div class="material-page-number">Page ${pageIndex + 1} of ${pageCount}</div>
                     </section>`;
             }).join('') + `
@@ -416,17 +444,6 @@ async function renderMaterialBundle(pass) {
                     qrText = '';
                 }
             }
-            container.querySelectorAll('[data-material-document-qr]').forEach(qrContainer => {
-                if (qrText && typeof QRCode === 'function') {
-                    new QRCode(qrContainer, {
-                        text: qrText,
-                        width: 54,
-                        height: 54
-                    });
-                } else {
-                    qrContainer.innerHTML = '<span>QR</span>';
-                }
-            });
 
             const qrBackContainer = container.querySelector('.materialQrCodeBackDisplay');
             const qrBackPage = container.querySelector('.qr-back-page');
@@ -743,17 +760,28 @@ async function viewPass(id, isReviewing = false) {
                 const guardStatusRow = document.getElementById('guardStatusRow');
                 
                 if (vActOut && vActIn && vGuardRemarks && guardStatusRow) {
-                    if (p.actualOut || p.actualIn || p.status === 'Outside' || p.status === 'Returned' || p.status === 'Overdue' || p.status === 'Closed') {
+                    if (p.actualOut || p.actualIn || ['Approved', 'Outside', 'Returned', 'Overdue', 'Closed'].includes(p.status)) {
+                        const safeFormatTime = (ts) => {
+                            if (!ts) return '';
+                            if (typeof ts === 'string' && ts.includes(':') && !ts.includes('-')) return ts;
+                            const d = new Date(ts);
+                            if (isNaN(d.getTime()) || d.getFullYear() < 2000) return '';
+                            return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        };
                         guardStatusRow.classList.remove('hidden');
-                        vActOut.innerText = p.actualOut ? new Date(p.actualOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
-                        vActIn.innerText = p.actualIn ? new Date(p.actualIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
-                        vGuardRemarks.innerText = (p.status === 'Outside' || p.status === 'Returned' || p.status === 'Closed') ? 'APPROVED' : 'PENDING';
-                        if (vGuardRemarks.innerText === 'APPROVED') {
-                            vGuardRemarks.classList.remove('bg-gray-200', 'text-gray-600');
+                        vActOut.innerText = safeFormatTime(p.actualOut);
+                        vActIn.innerText = safeFormatTime(p.actualIn);
+                        
+                        vGuardRemarks.innerText = getGuardRemarksText(p);
+                        if (['Returned', 'Closed', 'Approved'].includes(p.status)) {
+                            vGuardRemarks.classList.remove('bg-gray-200', 'text-gray-600', 'bg-blue-100', 'text-mpiBlue');
                             vGuardRemarks.classList.add('bg-green-100', 'text-green-800');
+                        } else if (['Outside', 'Overdue'].includes(p.status)) {
+                            vGuardRemarks.classList.remove('bg-gray-200', 'text-gray-600', 'bg-green-100', 'text-green-800');
+                            vGuardRemarks.classList.add('bg-blue-100', 'text-mpiBlue');
                         } else {
                             vGuardRemarks.classList.add('bg-gray-200', 'text-gray-600');
-                            vGuardRemarks.classList.remove('bg-green-100', 'text-green-800');
+                            vGuardRemarks.classList.remove('bg-green-100', 'text-green-800', 'bg-blue-100', 'text-mpiBlue');
                         }
                     } else {
                         guardStatusRow.classList.add('hidden');
@@ -769,10 +797,10 @@ async function viewPass(id, isReviewing = false) {
                         if (btnApprove) {
                             if (p.status === 'Approved' || p.status === 'Overdue') {
                                 btnApprove.innerHTML = '<i class="fas fa-sign-out-alt mr-1"></i> Confirm Time Out';
-                                btnApprove.onclick = () => { window.executeSecurityScan(p.id); forceCloseModal(); };
+                                btnApprove.onclick = () => { window.executeSecurityScan(p.controlNo); forceCloseModal(); };
                             } else if (p.status === 'Outside') {
                                 btnApprove.innerHTML = '<i class="fas fa-sign-in-alt mr-1"></i> Confirm Time In';
-                                btnApprove.onclick = () => { window.executeSecurityScan(p.id); forceCloseModal(); };
+                                btnApprove.onclick = () => { window.executeSecurityScan(p.controlNo); forceCloseModal(); };
                             }
                         }
                         if (btnReject) btnReject.classList.add('hidden');
@@ -961,12 +989,18 @@ async function renderPersonGatePassClone(p) {
         const vIn = clone.querySelector('.vActIn');
         const vRem = clone.querySelector('.vGuardRemarks');
         
-        const formatTime = (ts) => ts ? new Date(ts).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '';
-        if (vOut) vOut.innerText = formatTime(p.actualOut);
-        if (vIn) vIn.innerText = formatTime(p.actualIn);
+        const safeFormatTime = (ts) => {
+            if (!ts) return '';
+            if (typeof ts === 'string' && ts.includes(':') && !ts.includes('-')) return ts;
+            const d = new Date(ts);
+            if (isNaN(d.getTime()) || d.getFullYear() < 2000) return '';
+            return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        };
+        if (vOut) vOut.innerText = safeFormatTime(p.actualOut);
+        if (vIn) vIn.innerText = safeFormatTime(p.actualIn);
         if (vRem) {
-            vRem.innerText = ['Returned', 'Closed'].includes(p.status) ? 'RETURNED' : (['Outside', 'Overdue'].includes(p.status) ? 'OUTSIDE' : 'APPROVED');
-            vRem.className = ['Returned', 'Closed'].includes(p.status) ? 'bg-green-100 text-green-700 px-2 py-0.5 rounded font-bold text-[8px]' : (['Outside', 'Overdue'].includes(p.status) ? 'bg-blue-100 text-mpiBlue px-2 py-0.5 rounded font-bold text-[8px]' : 'bg-gray-200 text-gray-600 px-2 py-0.5 rounded font-bold text-[8px]');
+            vRem.innerText = getGuardRemarksText(p);
+            vRem.className = ['Returned', 'Closed', 'Approved'].includes(p.status) ? 'bg-green-100 text-green-800 px-2 py-0.5 rounded font-bold text-[8px]' : (['Outside', 'Overdue'].includes(p.status) ? 'bg-blue-100 text-mpiBlue px-2 py-0.5 rounded font-bold text-[8px]' : 'bg-gray-200 text-gray-600 px-2 py-0.5 rounded font-bold text-[8px]');
         }
     }
     
@@ -1044,7 +1078,6 @@ async function renderMaterialGatePassClone(p) {
 
         div.innerHTML = `
             <div class="material-form-header">
-                <div class="material-document-qr" data-material-document-qr></div>
                 <div class="material-form-brand">
                     <img src="Frontend/Design/images/logo.png" alt="MPI Logo">
                     <div>
@@ -1100,29 +1133,29 @@ async function renderMaterialGatePassClone(p) {
                 <strong>REMARKS:</strong> <span class="ml-1">${materialEscape(p.materialRemarks || p.purpose || '')}</span>
             </div>
 
-            <div class="material-form-signatures mt-1 border-t border-gray-900 pt-1 flex justify-between">
-                <div class="text-center w-[30%]">
-                    <strong class="block mb-1">Prepared By:</strong>
-                    <div class="sig-wrapper sig-mat-prepared material-signature-image h-8 flex items-end justify-center"></div>
-                    <span class="name sig-mat-prepared-name block font-bold underline text-[9px]"></span>
-                    <small class="block text-[7px] text-gray-600">Employee</small>
+            <div class="material-form-signatures border-t border-gray-900 pt-1">
+                <div>
+                    <strong>Prepared By:</strong>
+                    <div class="sig-wrapper sig-mat-prepared material-signature-image"></div>
+                    <span class="name sig-mat-prepared-name"></span>
+                    <small>Employee</small>
                 </div>
-                <div class="text-center w-[30%]">
-                    <strong class="block mb-1">Noted By:</strong>
-                    <div class="sig-wrapper sig-mat-superior material-signature-image h-8 flex items-end justify-center"></div>
-                    <span class="name sig-mat-superior-name block font-bold underline text-[9px]"></span>
-                    <small class="block text-[7px] text-gray-600">Immediate Superior</small>
+                <div>
+                    <strong>Noted By:</strong>
+                    <div class="sig-wrapper sig-mat-superior material-signature-image"></div>
+                    <span class="name sig-mat-superior-name"></span>
+                    <small>Immediate Superior</small>
                 </div>
-                <div class="text-center w-[30%]">
-                    <strong class="block mb-1">Approved By:</strong>
-                    <div class="sig-wrapper sig-mat-pas material-signature-image h-8 flex items-end justify-center"></div>
-                    <span class="name sig-mat-pas-name block font-bold underline text-[9px]"></span>
-                    <small class="block text-[7px] text-gray-600">Personnel &amp; Admin Section</small>
+                <div>
+                    <strong>Approved By:</strong>
+                    <div class="sig-wrapper sig-mat-pas material-signature-image"></div>
+                    <span class="name sig-mat-pas-name"></span>
+                    <small>Personnel &amp; Admin Section</small>
                 </div>
             </div>
 
             <!-- GUARD TRACKING ROW FOR MATERIAL -->
-            <div class="guard-status-row hidden print:flex flex-row justify-around items-center w-full mt-2 pt-1 border-t border-black bg-gray-50" style="-webkit-print-color-adjust: exact; print-color-adjust: exact;">
+            <div class="guard-status-row hidden flex-row justify-around items-center w-full mt-2 pt-1 border-t border-black bg-gray-50" style="-webkit-print-color-adjust: exact; print-color-adjust: exact;">
                 <div class="flex items-center space-x-2">
                     <span class="text-[8px] font-bold text-gray-500">ACTUAL OUT</span>
                     <div class="vActOut w-16 h-4 flex items-center justify-center font-bold text-[8px] border-b border-gray-400"></div>
@@ -1140,16 +1173,27 @@ async function renderMaterialGatePassClone(p) {
             <div class="text-[7.5px] text-right text-gray-500 absolute bottom-1.5 right-3 leading-none select-none">Page ${pageIndex + 1} of ${pageCount}</div>
         `;
 
-        const frontQr = div.querySelector('[data-material-document-qr]');
-        if (frontQr) {
-            if (qrValue && typeof QRCode === 'function') {
-                new QRCode(frontQr, {
-                    text: String(qrValue),
-                    width: 54,
-                    height: 54
-                });
-            } else {
-                frontQr.innerHTML = '<span>QR</span>';
+        const matGuardRow = div.querySelector('.guard-status-row');
+        if (matGuardRow && ['Approved', 'Outside', 'Overdue', 'Returned', 'Closed'].includes(p.status)) {
+            matGuardRow.classList.remove('hidden');
+            matGuardRow.classList.add('flex');
+            
+            const vOut = div.querySelector('.vActOut');
+            const vIn = div.querySelector('.vActIn');
+            const vRem = div.querySelector('.vGuardRemarks');
+            
+            const safeFormatTime = (ts) => {
+                if (!ts) return '';
+                if (typeof ts === 'string' && ts.includes(':') && !ts.includes('-')) return ts;
+                const d = new Date(ts);
+                if (isNaN(d.getTime()) || d.getFullYear() < 2000) return '';
+                return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            };
+            if (vOut) vOut.innerText = safeFormatTime(p.actualOut);
+            if (vIn) vIn.innerText = safeFormatTime(p.actualIn);
+            if (vRem) {
+                vRem.innerText = getGuardRemarksText(p);
+                vRem.className = ['Returned', 'Closed', 'Approved'].includes(p.status) ? 'bg-green-100 text-green-800 px-2 py-0.5 rounded font-bold text-[8px]' : (['Outside', 'Overdue'].includes(p.status) ? 'bg-blue-100 text-mpiBlue px-2 py-0.5 rounded font-bold text-[8px]' : 'bg-gray-200 text-gray-600 px-2 py-0.5 rounded font-bold text-[8px]');
             }
         }
 

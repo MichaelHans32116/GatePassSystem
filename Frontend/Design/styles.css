@@ -449,7 +449,7 @@
         }
         .material-form-header {
             display: grid;
-            grid-template-columns: 15mm minmax(0, 1fr) 27mm;
+            grid-template-columns: minmax(0, 1fr) 27mm;
             align-items: center;
             gap: 2mm;
             min-height: 13mm;
@@ -481,18 +481,7 @@
             line-height: 1.08;
             white-space: nowrap;
         }
-        .material-document-qr {
-            width: 12.5mm;
-            height: 12.5mm;
-            display: flex;
-            align-items: center;
-            justify-content: center;
-        }
-        .material-document-qr canvas,
-        .material-document-qr img {
-            width: 12.5mm !important;
-            height: 12.5mm !important;
-        }
+
         .material-header-control {
             align-self: start;
             padding-top: 0.6mm;
@@ -605,7 +594,7 @@
             padding-top: 0.25mm;
             border-bottom: 1px solid #111827;
             text-align: center;
-            font-size: 6.4px;
+            font-size: 8px;
             font-weight: 700;
             text-transform: uppercase;
         }

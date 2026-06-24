@@ -110,9 +110,13 @@ public sealed class SecurityRepository(
                             @ManualGatePassNo IS NOT NULL
                             AND (
                                 request_row.gate_pass_no = @ManualGatePassNo
+                                OR request_row.control_no = @ManualGatePassNo
                                 OR (
                                     LENGTH(@ManualGatePassNo) = 3
-                                    AND request_row.gate_pass_no LIKE CONCAT('%-', @ManualGatePassNo)
+                                    AND (
+                                        request_row.gate_pass_no LIKE CONCAT('%-', @ManualGatePassNo)
+                                        OR request_row.control_no LIKE CONCAT('%-', @ManualGatePassNo)
+                                    )
                                 )
                             )
                         )
