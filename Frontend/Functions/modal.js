@@ -568,26 +568,18 @@ async function viewPass(id, isReviewing = false) {
                     try {
                         const qrValue = await loadQrToken(p);
                         if (qrValue && typeof QRCode === 'function') {
-                            const tempDiv = document.createElement('div');
-                            document.body.appendChild(tempDiv);
-                            new QRCode(tempDiv, {
+                            new QRCode(qrContainer, {
                                 text: String(qrValue),
                                 width: 60,
                                 height: 60
                             });
-                            qrContainer.innerHTML = tempDiv.innerHTML;
-                            document.body.removeChild(tempDiv);
 
                             if (qrBackContainer) {
-                                const backTempDiv = document.createElement('div');
-                                document.body.appendChild(backTempDiv);
-                                new QRCode(backTempDiv, {
+                                new QRCode(qrBackContainer, {
                                     text: String(qrValue),
                                     width: 150,
                                     height: 150
                                 });
-                                qrBackContainer.innerHTML = backTempDiv.innerHTML;
-                                document.body.removeChild(backTempDiv);
                             }
                         }
                     } catch {
@@ -904,15 +896,11 @@ async function renderPersonGatePassClone(p) {
             try {
                 const qrValue = await loadQrToken(p);
                 if (qrValue && typeof QRCode === 'function') {
-                    const tempDiv = document.createElement('div');
-                    document.body.appendChild(tempDiv);
-                    new QRCode(tempDiv, {
+                    new QRCode(qrBackContainer, {
                         text: String(qrValue),
                         width: 140,
                         height: 140
                     });
-                    qrBackContainer.innerHTML = tempDiv.innerHTML;
-                    document.body.removeChild(tempDiv);
                 }
             } catch {}
         }
@@ -1114,15 +1102,11 @@ async function renderMaterialGatePassClone(p) {
         try {
             const qrValue = await loadQrToken(p);
             if (qrValue && typeof QRCode === 'function') {
-                const tempDiv = document.createElement('div');
-                document.body.appendChild(tempDiv);
-                new QRCode(tempDiv, {
+                new QRCode(backDiv.querySelector('.material-document-qr-back'), {
                     text: String(qrValue),
                     width: 200,
                     height: 200
                 });
-                backDiv.querySelector('.material-document-qr-back').innerHTML = tempDiv.innerHTML;
-                document.body.removeChild(tempDiv);
             }
         } catch {}
     }
