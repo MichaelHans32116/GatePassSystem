@@ -55,6 +55,7 @@ public sealed class SignaturesController(
 
         var canRead =
             User.HasClaim("permission", "gatepass.read.all") ||
+            User.HasClaim("permission", "gatepass.scan") ||
             await signatureService.CanReadAsync(
                 id,
                 CurrentUserId,

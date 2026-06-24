@@ -875,12 +875,16 @@ async function renderPersonGatePassClone(p) {
         if (['Approved', 'Outside', 'Overdue', 'Returned', 'Closed'].includes(p.status)) {
             try {
                 const qrValue = await loadQrToken(p);
-                if (qrValue) {
-                    new QRCode(qrBackContainer, {
+                if (qrValue && typeof QRCode === 'function') {
+                    const tempDiv = document.createElement('div');
+                    document.body.appendChild(tempDiv);
+                    new QRCode(tempDiv, {
                         text: String(qrValue),
                         width: 140,
                         height: 140
                     });
+                    qrBackContainer.innerHTML = tempDiv.innerHTML;
+                    document.body.removeChild(tempDiv);
                 }
             } catch {}
         }
@@ -1082,11 +1086,15 @@ async function renderMaterialGatePassClone(p) {
         try {
             const qrValue = await loadQrToken(p);
             if (qrValue && typeof QRCode === 'function') {
-                new QRCode(backDiv.querySelector('.material-document-qr-back'), {
+                const tempDiv = document.createElement('div');
+                document.body.appendChild(tempDiv);
+                new QRCode(tempDiv, {
                     text: String(qrValue),
                     width: 200,
                     height: 200
                 });
+                backDiv.querySelector('.material-document-qr-back').innerHTML = tempDiv.innerHTML;
+                document.body.removeChild(tempDiv);
             }
         } catch {}
     }
