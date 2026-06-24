@@ -79,7 +79,11 @@ async function simulateQrScan(identifierOverride = null, fromCamera = false) {
             }
         } else {
             const queue = await ApiClient.get('/security/queue');
-            const match = queue.find(item => item.gatePassNo === identifier || item.gatePassNo.endsWith('-' + identifier));
+            const match = queue.find(item => {
+                const gpId = String(item.gatePassNo).toLowerCase();
+                const searchId = String(identifier).toLowerCase();
+                return gpId === searchId || gpId.endsWith('-' + searchId) || gpId.endsWith(searchId);
+            });
             if (match) {
                 viewPass(match.gatePassId, true);
             } else {

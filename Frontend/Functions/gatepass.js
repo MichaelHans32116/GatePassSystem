@@ -436,8 +436,9 @@ async function getGatePassDetail(id) {
 }
 
 async function loadQrToken(pass) {
-    if (!isDatabaseSession() || !pass?.dbId) return pass?.id || null;
-    const qr = await ApiClient.get(`/form-requests/${pass.dbId}/qr`);
+    const passId = pass?.dbId || pass?.id;
+    if (!isDatabaseSession() || !passId) return pass?.id || null;
+    const qr = await ApiClient.get(`/form-requests/${passId}/qr`);
     pass.qrToken = qr.qrToken;
     return qr.qrToken;
 }
