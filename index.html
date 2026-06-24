@@ -30,7 +30,7 @@
             }
         }
     </script>
-        <link rel="stylesheet" href="Frontend/Design/styles.css?v=20260624-phase6-6">
+        <link rel="stylesheet" href="Frontend/Design/styles.css?v=20260624-phase6-10">
 </head>
 <body class="h-screen overflow-hidden flex flex-col font-sans text-sm md:text-base">
 
@@ -484,8 +484,8 @@
                                             <span id="materialPreparedSignatureFileName" class="min-w-0 flex-1 truncate text-xs font-semibold text-gray-600"></span>
                                         </div>
                                         <div id="materialPreparedSignatureBgOptions" class="hidden rounded border bg-gray-50 p-3 space-y-3">
-                                            <label class="block text-[10px] font-bold uppercase text-gray-500">Background Removal<select id="materialPreparedSignatureBgMode" class="mt-1 w-full rounded border border-gray-300 p-2 text-xs"><option value="none">Keep original</option><option value="autoSmart" selected>Automatic best result</option><option value="blue">Blue background</option><option value="white">White background</option><option value="aiServer">AI local remover</option></select></label>
-                                            <label class="flex flex-col text-[10px] font-bold uppercase text-gray-500"><span>Removal Strength: <span id="materialPreparedSignatureBgThresholdValue" class="text-mpiBlue">20</span></span><input type="range" id="materialPreparedSignatureBgThreshold" min="10" max="140" value="20"></label>
+                                            <label class="block text-[10px] font-bold uppercase text-gray-500">Background Removal<select id="materialPreparedSignatureBgMode" class="mt-1 w-full rounded border border-gray-300 p-2 text-xs"><option value="none" selected>Keep background</option><option value="aiServer">AI local remover</option></select></label>
+                                            <label class="hidden flex-col text-[10px] font-bold uppercase text-gray-500"><span>Removal Strength: <span id="materialPreparedSignatureBgThresholdValue" class="text-mpiBlue">20</span></span><input type="range" id="materialPreparedSignatureBgThreshold" min="10" max="140" value="20"></label>
                                         </div>
                                     </div>
 
@@ -846,8 +846,8 @@
                                 <span id="sigFileName" class="min-w-0 flex-1 truncate text-xs font-semibold text-gray-600"></span>
                             </div>
                             <div id="sigBgOptions" class="hidden p-3 bg-gray-50 border rounded space-y-3">
-                                <label class="block text-[10px] font-bold text-gray-500 uppercase">Background Removal<select id="sigBgMode" class="mt-1 w-full border border-gray-300 p-2 rounded text-xs"><option value="none">Keep original</option><option value="autoSmart" selected>Automatic best result</option><option value="blue">Blue background</option><option value="white">White background</option><option value="aiServer">AI local remover</option></select></label>
-                                <label class="flex flex-col text-[10px] font-bold text-gray-500 uppercase"><span>Removal Strength: <span id="sigBgThresholdValue" class="text-mpiBlue">20</span></span><input type="range" id="sigBgThreshold" min="10" max="140" value="20"></label>
+                                <label class="block text-[10px] font-bold text-gray-500 uppercase">Background Removal<select id="sigBgMode" class="mt-1 w-full border border-gray-300 p-2 rounded text-xs"><option value="none" selected>Keep background</option><option value="aiServer">AI local remover</option></select></label>
+                                <label class="hidden flex-col text-[10px] font-bold text-gray-500 uppercase"><span>Removal Strength: <span id="sigBgThresholdValue" class="text-mpiBlue">20</span></span><input type="range" id="sigBgThreshold" min="10" max="140" value="20"></label>
                             </div>
                         </div>
 
