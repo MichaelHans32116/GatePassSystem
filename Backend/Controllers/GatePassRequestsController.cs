@@ -112,7 +112,8 @@ public sealed class GatePassRequestsController(
         var detail = await gatePassService.GetDetailAsync(id, cancellationToken);
         if (detail is null ||
             (detail.RequesterUserId != CurrentUserId &&
-             !HasPermission(GatePassPermissions.ReadAll)))
+             !HasPermission(GatePassPermissions.ReadAll) &&
+             !HasPermission(GatePassPermissions.Scan)))
         {
             return NotFound(new ApiErrorResponse(
                 "GATE_PASS_NOT_FOUND",
