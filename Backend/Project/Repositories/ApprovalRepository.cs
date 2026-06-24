@@ -307,13 +307,11 @@ public sealed class ApprovalRepository(
                     END,
                     qr_token_hash = CASE
                         WHEN @NewStatus = 'APPROVED'
-                         AND @FormTypeCode = 'PERSON_GATE_PASS'
                             THEN @QrTokenHash
                         ELSE qr_token_hash
                     END,
                     qr_expires_at = CASE
                         WHEN @NewStatus = 'APPROVED'
-                         AND @FormTypeCode = 'PERSON_GATE_PASS'
                             THEN @QrExpiresAt
                         ELSE qr_expires_at
                     END,

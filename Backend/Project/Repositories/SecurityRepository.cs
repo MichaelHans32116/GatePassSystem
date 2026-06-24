@@ -97,8 +97,7 @@ public sealed class SecurityRepository(
                     JOIN tbl_gate_pass_statuses status_row
                         ON status_row.gate_pass_status_code =
                            request_row.gate_pass_status_code
-                    WHERE request_row.form_type_code = 'PERSON_GATE_PASS'
-                      AND (
+                    WHERE (
                         (
                             @EmployeeRecordId IS NOT NULL
                             AND request_row.requester_employee_id =

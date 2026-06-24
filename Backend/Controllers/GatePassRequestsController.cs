@@ -110,10 +110,26 @@ public sealed class GatePassRequestsController(
         CancellationToken cancellationToken)
     {
         var detail = await gatePassService.GetDetailAsync(id, cancellationToken);
-        if (detail is null ||
-            (detail.RequesterUserId != CurrentUserId &&
-             !HasPermission(GatePassPermissions.ReadAll) &&
-             !HasPermission(GatePassPermissions.Scan)))
+        var canRead =
+            detail is not null &&
+            (
+                detail.RequesterUserId == CurrentUserId ||
+                HasPermission(GatePassPermissions.ReadAll) ||
+                HasPermission(GatePassPermissions.Scan) ||
+                detail.ApprovalSteps.Any(
+                    step => step.AssignedApproverUserId == CurrentUserId) ||
+                (
+                    detail.RequesterUserId != CurrentUserId &&
+                    HasPermission(GatePassPermissions.NotePas) &&
+                    detail.GatePassStatusCode == "PENDING_PAS" &&
+                    detail.ApprovalSteps.Any(
+                        step =>
+                            step.ApprovalStepCode == "PAS" &&
+                            step.ApprovalStatusCode == "PENDING")
+                )
+            );
+
+        if (!canRead)
         {
             return NotFound(new ApiErrorResponse(
                 "GATE_PASS_NOT_FOUND",

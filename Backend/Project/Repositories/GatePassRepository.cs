@@ -344,6 +344,39 @@ public sealed class GatePassRepository(
         return CopyDetail(detail, steps, scans, materialItems);
     }
 
+    public async Task EnsureQrTokenAsync(
+        long gatePassId,
+        string qrTokenHash,
+        DateTime qrExpiresAt,
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection =
+            await connectionFactory.OpenConnectionAsync(cancellationToken);
+
+        await connection.ExecuteAsync(
+            new CommandDefinition(
+                """
+                UPDATE tbl_gate_pass_requests
+                SET qr_token_hash = COALESCE(qr_token_hash, @QrTokenHash),
+                    qr_expires_at = COALESCE(qr_expires_at, @QrExpiresAt)
+                WHERE gate_pass_id = @GatePassId
+                  AND approved_at IS NOT NULL
+                  AND gate_pass_status_code NOT IN (
+                      'REJECTED',
+                      'CANCELLED',
+                      'EXPIRED',
+                      'DRAFT'
+                  );
+                """,
+                new
+                {
+                    GatePassId = gatePassId,
+                    QrTokenHash = qrTokenHash,
+                    QrExpiresAt = qrExpiresAt
+                },
+                cancellationToken: cancellationToken));
+    }
+
     public async Task<PagedResult<GatePassRecord>> GetPagedAsync(
         GatePassQuery query,
         long? requesterUserId,

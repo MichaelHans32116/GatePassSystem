@@ -339,13 +339,6 @@ public sealed class GatePassService(
                 "Gate pass was not found.");
         }
 
-        if (detail.FormTypeCode != "PERSON_GATE_PASS")
-        {
-            return ServiceResult<QrTokenResponse>.Failure(
-                "QR_NOT_AVAILABLE",
-                "Material gate passes use the approved printable form and do not use Time Out/Time In QR scanning.");
-        }
-
         if (detail.ApprovedAt is null ||
             detail.GatePassStatusCode is
                 "REJECTED" or "CANCELLED" or "EXPIRED" or "DRAFT")
@@ -355,15 +348,24 @@ public sealed class GatePassService(
                 "QR is available only after final approval.");
         }
 
+        var qrToken = qrTokenService.CreateToken(detail.GatePassId);
+        var qrExpiresAt = detail.QrExpiresAt ??
+            DateTime.UtcNow.AddDays(7);
+        await gatePassRepository.EnsureQrTokenAsync(
+            detail.GatePassId,
+            qrTokenService.HashToken(qrToken),
+            qrExpiresAt,
+            cancellationToken);
+
         return ServiceResult<QrTokenResponse>.Success(
             new QrTokenResponse(
                 detail.GatePassId,
                 detail.GatePassNo,
-                qrTokenService.CreateToken(detail.GatePassId),
-                detail.QrExpiresAt.HasValue
+                qrToken,
+                qrExpiresAt != default
                     ? new DateTimeOffset(
                         DateTime.SpecifyKind(
-                            detail.QrExpiresAt.Value,
+                            qrExpiresAt,
                             DateTimeKind.Utc))
                     : null));
     }

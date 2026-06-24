@@ -46,6 +46,12 @@ public interface IGatePassRepository
         long gatePassId,
         CancellationToken cancellationToken = default);
 
+    Task EnsureQrTokenAsync(
+        long gatePassId,
+        string qrTokenHash,
+        DateTime qrExpiresAt,
+        CancellationToken cancellationToken = default);
+
     Task<PagedResult<GatePassRecord>> GetPagedAsync(
         GatePassQuery query,
         long? requesterUserId,

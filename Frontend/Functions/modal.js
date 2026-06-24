@@ -265,7 +265,7 @@ function materialSignatureSlot(idPrefix, pageIndex) {
             };
         }
 
-function renderMaterialBundle(pass) {
+async function renderMaterialBundle(pass) {
             const container = document.getElementById('materialPrintableArea');
             if (!container) return;
 
@@ -356,9 +356,16 @@ function renderMaterialBundle(pass) {
                     <p class="mt-4 text-gray-500 font-mono">${materialEscape(controlNo)}</p>
                 </div>`;
 
-            const qrText = `FRS|MATERIAL_GATE_PASS|${pass.dbId || pass.id}|${controlNo}`;
+            let qrText = '';
+            if (['Approved', 'Outside', 'Overdue', 'Returned', 'Closed'].includes(pass.status)) {
+                try {
+                    qrText = await loadQrToken(pass);
+                } catch {
+                    qrText = '';
+                }
+            }
             container.querySelectorAll('[data-material-document-qr]').forEach(qrContainer => {
-                if (typeof QRCode === 'function') {
+                if (qrText && typeof QRCode === 'function') {
                     new QRCode(qrContainer, {
                         text: qrText,
                         width: 54,
@@ -371,7 +378,7 @@ function renderMaterialBundle(pass) {
 
             const qrBackContainer = container.querySelector('#materialQrCodeBackDisplay');
             if (qrBackContainer) {
-                if (['Approved', 'Outside', 'Overdue', 'Returned', 'Closed'].includes(pass.status)) {
+                if (qrText) {
                     if (typeof QRCode === 'function') {
                         new QRCode(qrBackContainer, {
                             text: qrText,
@@ -476,7 +483,7 @@ async function viewPass(id, isReviewing = false) {
             setVal('vPlate', vehicleString);
 
             if (isMaterial) {
-                renderMaterialBundle(p);
+                await renderMaterialBundle(p);
             }
 
             // Signatures handling
@@ -553,8 +560,10 @@ async function viewPass(id, isReviewing = false) {
             }
 
             const qrContainer = document.getElementById('qrCodeDisplay');
+            const qrBackContainer = document.querySelector('.qrCodeBackDisplay');
             if(qrContainer) {
                 qrContainer.innerHTML = '';
+                if (qrBackContainer) qrBackContainer.innerHTML = '';
                 if (!isMaterial && ['Approved', 'Outside', 'Overdue', 'Returned', 'Closed'].includes(p.status)) {
                     try {
                         const qrValue = await loadQrToken(p);
@@ -568,9 +577,24 @@ async function viewPass(id, isReviewing = false) {
                             });
                             qrContainer.innerHTML = tempDiv.innerHTML;
                             document.body.removeChild(tempDiv);
+
+                            if (qrBackContainer) {
+                                const backTempDiv = document.createElement('div');
+                                document.body.appendChild(backTempDiv);
+                                new QRCode(backTempDiv, {
+                                    text: String(qrValue),
+                                    width: 150,
+                                    height: 150
+                                });
+                                qrBackContainer.innerHTML = backTempDiv.innerHTML;
+                                document.body.removeChild(backTempDiv);
+                            }
                         }
                     } catch {
                         qrContainer.innerHTML = '<span class="text-[9px] text-gray-400">QR unavailable</span>';
+                        if (qrBackContainer) {
+                            qrBackContainer.innerHTML = '<span class="text-xs text-gray-400">QR unavailable</span>';
+                        }
                     }
                 }
             }

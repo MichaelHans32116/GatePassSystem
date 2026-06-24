@@ -63,8 +63,7 @@ public sealed class ApprovalService(
         }
 
         var issuedQrToken =
-            mutation.NewStatus == "APPROVED" &&
-            mutation.FormTypeCode == "PERSON_GATE_PASS"
+            mutation.NewStatus == "APPROVED"
                 ? rawQrToken
                 : null;
 
