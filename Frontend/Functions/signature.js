@@ -2,9 +2,9 @@
 
 var signaturePadState = { drawing: false, lastX: 0, lastY: 0 };
 var SAVED_SIGNATURE_STORAGE_PREFIX = 'gatepass:saved-signature:';
-var SIGNATURE_WIDTH_MIN = 50;
-var SIGNATURE_WIDTH_MAX = 150;
-var SIGNATURE_WIDTH_DEFAULT = 100;
+var SIGNATURE_WIDTH_MIN = 12;
+var SIGNATURE_WIDTH_MAX = 70;
+var SIGNATURE_WIDTH_DEFAULT = 34;
 var SIGNATURE_VERTICAL_OFFSET_DEFAULT = 0;
 
 function clampSignatureWidth(width) {
@@ -323,7 +323,12 @@ function renderSignatureImage(dataUrl, width = SIGNATURE_WIDTH_DEFAULT, y = SIGN
             if (targetDiv) {
                 const safeWidth = clampSignatureWidth(width);
                 const safeYOffset = clampSignatureYOffset(y);
-                targetDiv.innerHTML = `<img src="${dataUrl}" id="liveDocumentSig" class="signature-img" style="width: ${safeWidth}%; margin-bottom: ${safeYOffset}px;">`;
+
+                // IMPORTANT:
+                // Use max-width so the slider can enlarge the signature, but it will not spill outside
+                // the approval cell. The drawn signature is also cropped before rendering, so blank
+                // canvas space will no longer make the signature look tiny.
+                targetDiv.innerHTML = `<img src="${dataUrl}" id="liveDocumentSig" class="signature-img" style="width: ${safeWidth}%; max-width: 96%; margin-bottom: ${safeYOffset}px;">`;
             }
             if (targetId?.startsWith('sigMat')) {
                 syncMaterialSignatureCopies?.(targetId);
@@ -582,6 +587,55 @@ function clearSignaturePad() {
             setSignatureStatus('Signature pad cleared.', 'muted');
         }
 
+function cropTransparentCanvasToSignature(canvas, padding = 14) {
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+
+            let minX = canvas.width;
+            let minY = canvas.height;
+            let maxX = -1;
+            let maxY = -1;
+
+            // Find only the real ink pixels. The rest of the signature pad is transparent blank space.
+            for (let y = 0; y < canvas.height; y++) {
+                for (let x = 0; x < canvas.width; x++) {
+                    const alpha = data[(y * canvas.width + x) * 4 + 3];
+                    if (alpha > 12) {
+                        if (x < minX) minX = x;
+                        if (y < minY) minY = y;
+                        if (x > maxX) maxX = x;
+                        if (y > maxY) maxY = y;
+                    }
+                }
+            }
+
+            if (maxX < 0 || maxY < 0) {
+                return canvas.toDataURL('image/png');
+            }
+
+            const dpr = window.devicePixelRatio || 1;
+            const pad = Math.max(8, Math.round(padding * dpr));
+            minX = Math.max(0, minX - pad);
+            minY = Math.max(0, minY - pad);
+            maxX = Math.min(canvas.width - 1, maxX + pad);
+            maxY = Math.min(canvas.height - 1, maxY + pad);
+
+            const trimmedWidth = maxX - minX + 1;
+            const trimmedHeight = maxY - minY + 1;
+            const output = document.createElement('canvas');
+            output.width = trimmedWidth;
+            output.height = trimmedHeight;
+
+            output.getContext('2d').drawImage(
+                canvas,
+                minX, minY, trimmedWidth, trimmedHeight,
+                0, 0, trimmedWidth, trimmedHeight
+            );
+
+            return output.toDataURL('image/png');
+        }
+
 function useDrawnSignature() {
             const canvas = document.getElementById('signaturePad');
             if (!canvas) return;
@@ -591,7 +645,7 @@ function useDrawnSignature() {
                 return;
             }
             currentOriginalSignatureData = null;
-            currentUploadedSig = canvas.toDataURL('image/png');
+            currentUploadedSig = cropTransparentCanvasToSignature(canvas);
             document.getElementById('sigSize').value = SIGNATURE_WIDTH_DEFAULT;
             document.getElementById('sigY').value = SIGNATURE_VERTICAL_OFFSET_DEFAULT;
             renderSignatureImage(currentUploadedSig, SIGNATURE_WIDTH_DEFAULT, SIGNATURE_VERTICAL_OFFSET_DEFAULT);
@@ -600,6 +654,23 @@ function useDrawnSignature() {
             document.getElementById('saveDefaultSig').checked = true;
             setSignatureStatus('Drawn signature added. Adjust size or vertical offset if needed.', 'success');
             showToast('Drawn signature added to document.', 'success');
+        }
+
+function applySignaturePlacementFromControls() {
+            const liveSignature = document.getElementById('liveDocumentSig');
+            const size = document.getElementById('sigSize');
+            const offset = document.getElementById('sigY');
+
+            if (liveSignature && size && offset) {
+                liveSignature.style.width = clampSignatureWidth(size.value) + '%';
+                liveSignature.style.maxWidth = '96%';
+                liveSignature.style.marginBottom = clampSignatureYOffset(offset.value) + 'px';
+
+                const targetId = getSignatureTargetContainerId();
+                if (targetId?.startsWith('sigMat')) {
+                    syncMaterialSignatureCopies?.(targetId);
+                }
+            }
         }
 
 function initializeSignatureControls() {
@@ -638,16 +709,8 @@ function initializeSignatureControls() {
         if (mode?.value !== 'none') processAndRenderSignature(false);
     });
 
-    const applySignaturePlacement = () => {
-        const liveSignature = document.getElementById('liveDocumentSig');
-        if (liveSignature) {
-            liveSignature.style.width = clampSignatureWidth(size.value) + '%';
-            liveSignature.style.marginBottom = clampSignatureYOffset(offset.value) + 'px';
-        }
-    };
-
-    size?.addEventListener('input', applySignaturePlacement);
-    offset?.addEventListener('input', applySignaturePlacement);
+    size?.addEventListener('input', applySignaturePlacementFromControls);
+    offset?.addEventListener('input', applySignaturePlacementFromControls);
 }
 
 window.removeSignatureBackground = removeSignatureBackground;
@@ -658,6 +721,8 @@ window.processAndRenderSignature = processAndRenderSignature;
 window.initializeSignatureControls = initializeSignatureControls;
 window.setupSignaturePad = setupSignaturePad;
 window.resizeSignatureCanvas = resizeSignatureCanvas;
+window.cropTransparentCanvasToSignature = cropTransparentCanvasToSignature;
+window.applySignaturePlacementFromControls = applySignaturePlacementFromControls;
 window.setSignatureStatus = setSignatureStatus;
 window.getSavedApprovalSignature = getSavedApprovalSignature;
 window.saveApprovalSignaturePreference = saveApprovalSignaturePreference;

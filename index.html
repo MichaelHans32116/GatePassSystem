@@ -1,3 +1,4 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -30,7 +31,7 @@
             }
         }
     </script>
-        <link rel="stylesheet" href="Frontend/Design/styles.css?v=20260624-phase6-10">
+        <link rel="stylesheet" href="Frontend/Design/styles.css?v=20260624-phase6-11">
 </head>
 <body class="h-screen overflow-hidden flex flex-col font-sans text-sm md:text-base">
 
@@ -584,11 +585,13 @@
                             <div class="w-full sm:w-auto"><label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Form Type</label><select id="logFilterFormType" class="w-full border border-gray-300 p-2 rounded text-sm"><option value="">All Forms</option><option value="PERSON_GATE_PASS">Person Gate Pass</option><option value="MATERIAL_GATE_PASS">Material Gate Pass</option></select></div>
                             <div class="w-full sm:w-auto"><label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Status</label><select id="logFilterStatus" class="w-full border border-gray-300 p-2 rounded text-sm"><option value="">All Statuses</option><option value="PENDING_SUPERIOR">Pending Superior</option><option value="PENDING_PRESIDENT">Pending President</option><option value="PENDING_PAS">Pending PAS</option><option value="APPROVED">Approved</option><option value="OUTSIDE">Outside</option><option value="RETURNED">Returned</option><option value="REJECTED">Rejected</option><option value="CANCELLED">Cancelled</option></select></div>
                             <div class="w-full sm:w-auto"><button onclick="renderAdminLogs(1)" class="w-full bg-mpiBlue text-white px-5 py-2 rounded shadow text-sm font-bold hover:bg-mpiDark transition"><i class="fas fa-filter mr-2"></i>Apply Filters</button></div>
+                            <div class="w-full sm:w-auto"><button id="btnPrintSelected" onclick="printSelectedLogs()" class="w-full hidden bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded shadow text-sm font-bold transition"><i class="fas fa-print mr-2"></i>Print Selected (<span id="selectedLogsCount">0</span>)</button></div>
                         </div>
                         <div class="overflow-x-auto min-h-[300px]">
                             <table class="w-full text-left border-collapse min-w-max">
                                 <thead>
                                     <tr class="bg-white text-gray-500 text-[11px] uppercase tracking-wider border-b">
+                                        <th class="px-5 py-3 font-semibold w-10 text-center"><input type="checkbox" id="selectAllLogs" onclick="toggleSelectAllLogs(this)" class="rounded border-gray-300 text-mpiBlue focus:ring-mpiBlue"></th>
                                         <th class="px-5 py-3 font-semibold">Control No.</th><th class="px-5 py-3 font-semibold">Type</th><th class="px-5 py-3 font-semibold">Requester</th><th class="px-5 py-3 font-semibold">Dept</th><th class="px-5 py-3 font-semibold">Subject</th><th class="px-5 py-3 font-semibold">Actual Out</th><th class="px-5 py-3 font-semibold">Actual In</th><th class="px-5 py-3 font-semibold">Status</th><th class="px-5 py-3 font-semibold text-right">Action</th>
                                     </tr>
                                 </thead>
@@ -824,6 +827,7 @@
                 </div>
 
                 <div id="materialPrintableArea" class="material-print-bundle hidden"></div>
+                <div id="multiPrintableArea" class="hidden"></div>
             </div>
 
             <!-- Approval Action Area (E-Signature Input) -->
@@ -857,8 +861,8 @@
                         </div>
 
                         <div id="sigControls" class="hidden mt-3 grid grid-cols-1 gap-3 border-t pt-3">
-                            <label class="text-[10px] font-bold text-gray-500 uppercase">Signature Size<input type="range" id="sigSize" min="50" max="150" step="1" value="100" class="w-full"></label>
-                            <label class="text-[10px] font-bold text-gray-500 uppercase">Up / Down<input type="range" id="sigY" min="-100" max="100" step="1" value="0" class="w-full"></label>
+                            <label class="text-[10px] font-bold text-gray-500 uppercase">Signature Size<input type="range" id="sigSize" min="12" max="70" step="1" value="34" class="w-full" oninput="applySignaturePlacementFromControls()" onchange="applySignaturePlacementFromControls()"></label>
+                            <label class="text-[10px] font-bold text-gray-500 uppercase">Up / Down<input type="range" id="sigY" min="-100" max="100" step="1" value="0" class="w-full" oninput="applySignaturePlacementFromControls()" onchange="applySignaturePlacementFromControls()"></label>
                             <label class="flex items-center gap-2 text-xs font-bold text-mpiBlue"><input type="checkbox" id="saveDefaultSig" class="rounded text-mpiBlue"> Save as my default signature</label>
                         </div>
                         <p id="sigStatus" class="mt-2 text-[10px] text-gray-500 leading-relaxed">Choose an image or draw your signature.</p>
@@ -877,7 +881,7 @@
     <script src="Frontend/runtime-config.js?v=20260620-public-qr"></script>
     <script src="Frontend/Functions/mock-data.js?v=20260620-phase5"></script>
     <script src="Frontend/Connectors/api-client.js?v=20260620-public-qr"></script>
-    <script src="Frontend/Functions/signature.js?v=20260622-form-request"></script>
+    <script src="Frontend/Functions/signature.js?v=20260624-phase6-11"></script>
     <script src="Frontend/Functions/material-gatepass.js?v=20260624-phase6-5"></script>
     <script src="Frontend/Functions/modal.js?v=20260622-form-request"></script>
     <script src="Frontend/Functions/gatepass.js?v=20260624-phase6-6"></script>

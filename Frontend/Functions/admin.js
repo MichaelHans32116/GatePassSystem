@@ -245,6 +245,7 @@ function renderDatabaseAdminLogs(response) {
     gatePasses = list;
     document.getElementById('adminLogsTable').innerHTML = list.map(pass => `
         <tr class="hover:bg-gray-50 transition border-b cursor-pointer" onclick="${getViewPassCall(pass)}">
+            <td class="px-5 py-2 text-center" onclick="event.stopPropagation()"><input type="checkbox" class="log-checkbox rounded border-gray-300 text-mpiBlue focus:ring-mpiBlue" data-id="${pass.dbId}" onchange="updateSelectedLogsCount()"></td>
             <td class="px-5 py-2 font-mono text-xs">${adminEscape(pass.controlNo || pass.id)}</td>
             <td class="px-5 py-2 text-[10px] font-bold ${pass.formTypeCode === 'MATERIAL_GATE_PASS' ? 'text-amber-600' : 'text-mpiBlue'}">${adminEscape(pass.formName)}</td>
             <td class="px-5 py-2 font-semibold">${adminEscape(pass.userName)}</td>
@@ -260,7 +261,11 @@ function renderDatabaseAdminLogs(response) {
                     : '<span class="text-gray-300">--</span>'}
             </td>
         </tr>
-    `).join('') || '<tr><td colspan="9" class="text-center py-6 text-gray-400">No logs match your filters.</td></tr>';
+    `).join('') || '<tr><td colspan="10" class="text-center py-6 text-gray-400">No logs match your filters.</td></tr>';
+
+    const selectAll = document.getElementById('selectAllLogs');
+    if (selectAll) selectAll.checked = false;
+    updateSelectedLogsCount();
 
     const start = response.totalCount ? ((response.page - 1) * response.pageSize) + 1 : 0;
     const end = Math.min(response.page * response.pageSize, response.totalCount);
@@ -284,6 +289,7 @@ function changeLogPage(step) {
 function renderMockAdminLogsWithActions(list) {
     document.getElementById('adminLogsTable').innerHTML = list.map(pass => `
         <tr class="border-b hover:bg-gray-50 transition cursor-pointer" onclick="${getViewPassCall(pass)}">
+            <td class="px-5 py-2 text-center" onclick="event.stopPropagation()"><input type="checkbox" class="log-checkbox rounded border-gray-300 text-mpiBlue focus:ring-mpiBlue" data-id="${pass.id}" onchange="updateSelectedLogsCount()"></td>
             <td class="px-5 py-2">${adminEscape(pass.id)}</td>
             <td class="px-5 py-2">${adminEscape(pass.userName)}</td>
             <td class="px-5 py-2">${adminEscape(compactDepartmentName(pass.userDept))}</td>
@@ -298,7 +304,11 @@ function renderMockAdminLogsWithActions(list) {
                     : '<span class="text-gray-300">--</span>'}
             </td>
         </tr>
-    `).join('') || '<tr><td colspan="8" class="text-center py-6 text-gray-400">No logs found.</td></tr>';
+    `).join('') || '<tr><td colspan="9" class="text-center py-6 text-gray-400">No logs found.</td></tr>';
+
+    const selectAll = document.getElementById('selectAllLogs');
+    if (selectAll) selectAll.checked = false;
+    updateSelectedLogsCount();
 }
 
 async function deleteGatePassLog(idOrDbId) {
@@ -797,6 +807,27 @@ function renderAdminTables() {
     }
 }
 
+function toggleSelectAllLogs(master) {
+    const checkboxes = document.querySelectorAll('#adminLogsTable .log-checkbox');
+    checkboxes.forEach(cb => cb.checked = master.checked);
+    updateSelectedLogsCount();
+}
+
+function updateSelectedLogsCount() {
+    const checked = document.querySelectorAll('#adminLogsTable .log-checkbox:checked');
+    const btn = document.getElementById('btnPrintSelected');
+    const countSpan = document.getElementById('selectedLogsCount');
+    
+    if (btn && countSpan) {
+        if (checked.length > 0) {
+            countSpan.innerText = checked.length;
+            btn.classList.remove('hidden');
+        } else {
+            btn.classList.add('hidden');
+        }
+    }
+}
+
 window.renderAdminLogs = renderAdminLogs;
 window.changeLogPage = changeLogPage;
 window.switchAdminTab = switchAdminTab;
@@ -821,3 +852,5 @@ window.openDriverEditor = openDriverEditor;
 window.handleDriverTypeChange = handleDriverTypeChange;
 window.archiveDriver = archiveDriver;
 window.closeAdminEditor = closeAdminEditor;
+window.toggleSelectAllLogs = toggleSelectAllLogs;
+window.updateSelectedLogsCount = updateSelectedLogsCount;
