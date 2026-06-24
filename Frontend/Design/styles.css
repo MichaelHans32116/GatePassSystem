@@ -144,6 +144,19 @@
                 break-after: page;
                 page-break-after: always;
             }
+            .a4-wrapper .multi-print-item {
+                break-before: auto !important;
+                page-break-before: auto !important;
+                break-after: auto !important;
+                page-break-after: auto !important;
+            }
+            .a4-wrapper .multi-print-item::after {
+                content: none !important;
+            }
+            .a4-wrapper {
+                break-after: page;
+                page-break-after: always;
+            }
             .material-print-page {
                 width: 148mm !important;
                 height: 105mm !important;
@@ -157,7 +170,7 @@
                 page-break-after: always;
             }
             .print-hide { display: none !important; }
-            .person-header-qr { visibility: hidden !important; }
+            .person-header-qr { display: none !important; }
             .qr-back-page {
                 display: flex !important;
                 width: 148mm !important;
@@ -168,8 +181,69 @@
                 page-break-before: always;
                 box-sizing: border-box;
             }
+            .a4-wrapper .material-print-page,
+            .a4-wrapper .material-print-page:not(:last-child),
+            .a4-wrapper .qr-back-page {
+                break-before: auto !important;
+                page-break-before: auto !important;
+                break-after: auto !important;
+                page-break-after: auto !important;
+            }
         }
         .qr-back-page { display: none; }
+        .qr-back-card {
+            width: 148mm;
+            height: 105mm;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-direction: column;
+            box-sizing: border-box;
+            border: 1px dashed #cbd5e1;
+            background: #ffffff;
+            color: #111827;
+            font-family: Arial, Helvetica, sans-serif;
+        }
+        .qr-back-title {
+            margin: 0 0 4mm;
+            font-size: 16px;
+            line-height: 1;
+            font-weight: 800;
+            text-align: center;
+        }
+        .qr-back-code {
+            width: 42mm;
+            height: 42mm;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            box-sizing: border-box;
+            padding: 2mm;
+            border: 1.5px solid #111827;
+            border-radius: 2mm;
+            background: #ffffff;
+        }
+        .qr-back-code canvas,
+        .qr-back-code img {
+            width: 36mm !important;
+            height: 36mm !important;
+        }
+        .qr-back-meta {
+            margin-top: 3mm;
+            text-align: center;
+            font-family: Consolas, "Courier New", monospace;
+            font-size: 8.5px;
+            line-height: 1.45;
+            color: #1f2937;
+        }
+        .qr-back-meta strong {
+            font-weight: 800;
+        }
+        .qr-manual-suffix {
+            text-decoration: underline;
+            text-decoration-thickness: 1.2px;
+            text-underline-offset: 1.5px;
+        }
 
         /* Enforce exact box styling for screen preview AND print */
         .print-form {
@@ -225,14 +299,14 @@
         .person-header-grid {
             height: 100%;
             display: grid;
-            grid-template-columns: 18mm minmax(0, 1fr) 27mm;
+            grid-template-columns: minmax(0, 1fr) 27mm;
             align-items: center;
             gap: 1.5mm;
         }
         .person-header-qr {
             width: 15mm;
             height: 15mm;
-            display: flex;
+            display: none;
             align-items: center;
             justify-content: center;
             overflow: hidden;
@@ -299,6 +373,10 @@
             justify-content: center;
             z-index: 2;
             overflow: hidden;
+        }
+        .person-signature-stage > div {
+            width: 31mm;
+            max-width: 96%;
         }
         .form-type-card.active {
             border-color: #155CA2;
@@ -473,6 +551,12 @@
             min-width: 50mm;
             text-align: center;
         }
+        .material-line-value {
+            display: inline-block;
+            min-width: 38mm;
+            text-align: center;
+            text-decoration: underline;
+        }
         .material-items-table {
             width: 100%;
             border-collapse: collapse;
@@ -549,6 +633,21 @@
             bottom: 1.2mm;
             font-size: 5.5px;
             color: #475569;
+        }
+        .a4-wrapper {
+            width: 210mm;
+            min-height: 297mm;
+            background: white;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: flex-start;
+            box-sizing: border-box;
+            padding-top: 10mm;
+            overflow: hidden;
+        }
+        .a4-wrapper .multi-print-item {
+            flex: 0 0 auto;
         }
 
         /* Signature Object Fit */

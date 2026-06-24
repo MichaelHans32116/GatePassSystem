@@ -142,6 +142,7 @@ async function renderApprovalQueue() {
             databaseApprovalQueue = await ApiClient.get('/approvals/queue');
             const queuePasses = databaseApprovalQueue.map(item => ({
                 id: item.gatePassNo,
+                gatePassNo: item.gatePassNo,
                 dbId: item.gatePassId,
                 controlNo: item.controlNo || item.gatePassNo,
                 formTypeCode: item.formTypeCode || 'PERSON_GATE_PASS',

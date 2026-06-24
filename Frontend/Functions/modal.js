@@ -12,6 +12,60 @@ var modalStartHeight = 0;
 var modalRestoreLayout = null;
 var modalFrameRequest = null;
 var pendingModalBox = null;
+var QR_BACK_CODE_SIZE = 136;
+
+function escapeDocumentText(value) {
+            return String(value ?? '')
+                .replaceAll('&', '&amp;')
+                .replaceAll('<', '&lt;')
+                .replaceAll('>', '&gt;')
+                .replaceAll('"', '&quot;')
+                .replaceAll("'", '&#039;');
+        }
+
+function formatManualScanId(gpId) {
+            const raw = String(gpId || '').trim();
+            if (!raw) return '';
+            const suffixMatch = raw.match(/(\d{3})$/);
+            if (!suffixMatch) return escapeDocumentText(raw);
+            const suffix = suffixMatch[1];
+            const prefix = raw.slice(0, -suffix.length);
+            return `${escapeDocumentText(prefix)}<span class="qr-manual-suffix">${escapeDocumentText(suffix)}</span>`;
+        }
+
+function deriveGatePassNoFromControlNo(controlNo) {
+            const match = String(controlNo || '').trim().match(/^(\d{2})(\d{2})(\d{2})-(\d{1,6})$/);
+            if (!match) return '';
+            const [, month, day, year, sequence] = match;
+            return `GP-20${year}${month}${day}-${sequence.padStart(6, '0')}`;
+        }
+
+function getPrintableGatePassNo(pass) {
+            const direct = String(pass?.gatePassNo || pass?.id || '').trim();
+            if (direct && /^GP-/i.test(direct)) return direct;
+            return deriveGatePassNoFromControlNo(pass?.controlNo) || direct;
+        }
+
+function getQrBackMetaHtml(pass) {
+            const controlNo = escapeDocumentText(pass?.controlNo || '');
+            const scanId = formatManualScanId(getPrintableGatePassNo(pass));
+            return `
+                <div class="qr-back-meta">
+                    ${controlNo ? `<div>Control No.: <strong>${controlNo}</strong></div>` : ''}
+                    ${scanId ? `<div>To Scan: <strong>${scanId}</strong></div>` : ''}
+                </div>
+            `;
+        }
+
+function getQrBackPageHtml(pass, codeClassName = 'qrCodeBackDisplay') {
+            return `
+                <div class="qr-back-card">
+                    <h3 class="qr-back-title">Gate Pass QR Code</h3>
+                    <div class="${codeClassName} qr-back-code"></div>
+                    ${getQrBackMetaHtml(pass)}
+                </div>
+            `;
+        }
 function clamp(value, min, max) {
             return Math.min(Math.max(value, min), max);
         }
@@ -279,20 +333,6 @@ async function renderMaterialBundle(pass) {
                 .trim()
                 .slice(0, 20);
 
-            let formattedGpId = pass.gatePassNo || '';
-            if (formattedGpId) {
-                if (formattedGpId.includes('-')) {
-                    const parts = formattedGpId.split('-');
-                    if (parts.length === 2 && parts[1].length > 0) {
-                        formattedGpId = `${parts[0]}-<u>${parts[1]}</u>`;
-                    }
-                } else if (formattedGpId.length >= 3) {
-                    const prefix = formattedGpId.slice(0, -3);
-                    const suffix = formattedGpId.slice(-3);
-                    formattedGpId = `${prefix}<u>${suffix}</u>`;
-                }
-            }
-
             container.innerHTML = Array.from({ length: pageCount }, (_, pageIndex) => {
                 const pageItems = itemRows.slice(pageIndex * 9, pageIndex * 9 + 9);
                 while (pageItems.length < 9) pageItems.push(null);
@@ -364,11 +404,8 @@ async function renderMaterialBundle(pass) {
                         <div class="material-page-number">Page ${pageIndex + 1} of ${pageCount}</div>
                     </section>`;
             }).join('') + `
-                <div class="qr-back-page" style="page-break-before: always; height: 100vh; display: flex; align-items: center; justify-content: center; flex-direction: column;">
-                    <h3 class="text-2xl font-bold mb-4">Gate Pass QR Code</h3>
-                    <div id="materialQrCodeBackDisplay" class="flex items-center justify-center p-4 bg-white border-4 border-black rounded-lg"></div>
-                    <p class="mt-4 text-gray-500 font-mono">${materialEscape(controlNo)}</p>
-                    ${formattedGpId ? `<p class="mt-2 text-gray-800 text-lg font-mono">To input: ${formattedGpId}</p>` : ''}
+                <div class="qr-back-page">
+                    ${getQrBackPageHtml(pass, 'materialQrCodeBackDisplay')}
                 </div>`;
 
             let qrText = '';
@@ -391,7 +428,7 @@ async function renderMaterialBundle(pass) {
                 }
             });
 
-            const qrBackContainer = container.querySelector('#materialQrCodeBackDisplay');
+            const qrBackContainer = container.querySelector('.materialQrCodeBackDisplay');
             const qrBackPage = container.querySelector('.qr-back-page');
             const isApprovedOrPast = ['Approved', 'Outside', 'Overdue', 'Returned', 'Closed'].includes(pass.status);
             
@@ -410,8 +447,8 @@ async function renderMaterialBundle(pass) {
                     if (typeof QRCode === 'function') {
                         new QRCode(qrBackContainer, {
                             text: qrText,
-                            width: 200,
-                            height: 200
+                            width: QR_BACK_CODE_SIZE,
+                            height: QR_BACK_CODE_SIZE
                         });
                     }
                 } else {
@@ -592,25 +629,22 @@ async function viewPass(id, isReviewing = false) {
             const qrBackPage = document.querySelector('.qr-back-page');
             const gpIdTextDisplay = document.querySelector('.gp-id-text-display');
 
-            if (gpIdTextDisplay && p.gatePassNo) {
-                const gpId = String(p.gatePassNo);
-                let formattedGpId = gpId;
-                if (gpId.includes('-')) {
-                    const parts = gpId.split('-');
-                    if (parts.length === 2 && parts[1].length > 0) {
-                        formattedGpId = `${parts[0]}-<u>${parts[1]}</u>`;
-                    }
-                } else if (gpId.length >= 3) {
-                    const prefix = gpId.slice(0, -3);
-                    const suffix = gpId.slice(-3);
-                    formattedGpId = `${prefix}<u>${suffix}</u>`;
-                }
-                gpIdTextDisplay.innerHTML = `To input: ${formattedGpId}`;
+            if (gpIdTextDisplay) {
+                const printableGatePassNo = getPrintableGatePassNo(p);
+                gpIdTextDisplay.innerHTML = printableGatePassNo
+                    ? `To Scan: <strong>${formatManualScanId(printableGatePassNo)}</strong>`
+                    : '';
             }
 
             if(qrContainer) {
                 qrContainer.innerHTML = '';
                 if (qrBackContainer) qrBackContainer.innerHTML = '';
+                const controlNoDisplay = document.querySelector('.control-no-display');
+                if (controlNoDisplay) {
+                    controlNoDisplay.innerHTML = p.controlNo
+                        ? `Control No.: <strong>${escapeDocumentText(p.controlNo)}</strong>`
+                        : '';
+                }
                 
                 const isApprovedOrPast = ['Approved', 'Outside', 'Overdue', 'Returned', 'Closed'].includes(p.status);
 
@@ -628,22 +662,15 @@ async function viewPass(id, isReviewing = false) {
                     try {
                         const qrValue = await loadQrToken(p);
                         if (qrValue && typeof QRCode === 'function') {
-                            new QRCode(qrContainer, {
-                                text: String(qrValue),
-                                width: 60,
-                                height: 60
-                            });
-
                             if (qrBackContainer) {
                                 new QRCode(qrBackContainer, {
                                     text: String(qrValue),
-                                    width: 150,
-                                    height: 150
+                                    width: QR_BACK_CODE_SIZE,
+                                    height: QR_BACK_CODE_SIZE
                                 });
                             }
                         }
                     } catch {
-                        qrContainer.innerHTML = '<span class="text-[9px] text-gray-400">QR unavailable</span>';
                         if (qrBackContainer) {
                             qrBackContainer.innerHTML = '<span class="text-xs text-gray-400">QR unavailable</span>';
                         }
@@ -946,24 +973,17 @@ async function renderPersonGatePassClone(p) {
     const qrBackContainer = clone.querySelector('.qrCodeBackDisplay');
     const controlNoDisplay = clone.querySelector('.control-no-display');
     if (controlNoDisplay) {
-        controlNoDisplay.innerText = p.controlNo || '';
+        controlNoDisplay.innerHTML = p.controlNo
+            ? `Control No.: <strong>${escapeDocumentText(p.controlNo)}</strong>`
+            : '';
     }
 
     const gpIdTextDisplay = clone.querySelector('.gp-id-text-display');
-    if (gpIdTextDisplay && p.gatePassNo) {
-        const gpId = String(p.gatePassNo);
-        let formattedGpId = gpId;
-        if (gpId.includes('-')) {
-            const parts = gpId.split('-');
-            if (parts.length === 2 && parts[1].length > 0) {
-                formattedGpId = `${parts[0]}-<u>${parts[1]}</u>`;
-            }
-        } else if (gpId.length >= 3) {
-            const prefix = gpId.slice(0, -3);
-            const suffix = gpId.slice(-3);
-            formattedGpId = `${prefix}<u>${suffix}</u>`;
-        }
-        gpIdTextDisplay.innerHTML = `To input: ${formattedGpId}`;
+    if (gpIdTextDisplay) {
+        const printableGatePassNo = getPrintableGatePassNo(p);
+        gpIdTextDisplay.innerHTML = printableGatePassNo
+            ? `To Scan: <strong>${formatManualScanId(printableGatePassNo)}</strong>`
+            : '';
     }
 
     if (qrBackContainer) {
@@ -975,8 +995,8 @@ async function renderPersonGatePassClone(p) {
                 if (qrValue && typeof QRCode === 'function') {
                     new QRCode(qrBackContainer, {
                         text: String(qrValue),
-                        width: 140,
-                        height: 140
+                        width: QR_BACK_CODE_SIZE,
+                        height: QR_BACK_CODE_SIZE
                     });
                 }
             } catch {}
@@ -994,6 +1014,15 @@ async function renderMaterialGatePassClone(p) {
         ? new Date(`${String(p.formDate).slice(0, 10)}T00:00:00`).toLocaleDateString()
         : p.dateFiled;
     const controlNo = String(p.controlNo || p.id || '').trim().slice(0, 20);
+    const isApprovedOrPast = ['Approved', 'Outside', 'Overdue', 'Returned', 'Closed'].includes(p.status);
+    let qrValue = '';
+    if (isApprovedOrPast) {
+        try {
+            qrValue = await loadQrToken(p);
+        } catch {
+            qrValue = '';
+        }
+    }
 
     for (let pageIndex = 0; pageIndex < pageCount; pageIndex++) {
         const pageItems = itemRows.slice(pageIndex * 9, pageIndex * 9 + 9);
@@ -1014,39 +1043,40 @@ async function renderMaterialGatePassClone(p) {
             .join('');
 
         div.innerHTML = `
-            <div class="material-form-header mt-2">
-                <div class="material-form-brand justify-center w-full">
-                    <img src="Frontend/Design/images/logo.png" alt="MPI Logo" class="mx-auto block" style="height: 35px;">
-                    <div class="text-center w-full">
-                        <h1 class="text-[12px] font-bold">MORIROKU PHILIPPINES, INC.</h1>
+            <div class="material-form-header">
+                <div class="material-document-qr" data-material-document-qr></div>
+                <div class="material-form-brand">
+                    <img src="Frontend/Design/images/logo.png" alt="MPI Logo">
+                    <div>
+                        <h1>MORIROKU PHILIPPINES, INC.</h1>
                         <p class="text-[7px]">115 North Science Avenue, Laguna Technopark 4024, Biñan, Laguna Philippines</p>
                     </div>
                 </div>
-                <div class="absolute top-2 right-2 text-right">
-                    <span class="text-[6.5px] block font-bold text-gray-500 uppercase leading-none">CONTROL NO.</span>
-                    <strong class="text-[10px] font-mono leading-none tracking-wider">${controlNo}</strong>
+                <div class="material-header-control">
+                    <span>CONTROL NO.</span>
+                    <strong>${materialEscape(controlNo)}</strong>
                 </div>
             </div>
             
-            <h2 class="text-center font-bold text-xs py-0.5 border-y border-gray-900 mt-2 uppercase" style="background-color: #f3f4f6; -webkit-print-color-adjust: exact; print-color-adjust: exact;">MATERIAL GATE PASS</h2>
+            <h2 class="material-form-title">MATERIAL GATE PASS</h2>
             
             <table class="w-full text-left border-collapse border border-gray-900 mt-1.5 text-[9px] leading-tight">
                 <tbody>
                     <tr>
                         <td class="w-[8%] border border-gray-900 p-1 font-bold text-gray-500">TO:</td>
-                        <td class="w-[42%] border border-gray-900 p-1">${materialEscape(p.authorizedEmployeeName || 'GUARD ON DUTY')}</td>
+                        <td class="w-[42%] border border-gray-900 p-1">GUARD ON DUTY</td>
                         <td class="w-[12%] border border-gray-900 p-1 font-bold text-gray-500">DATE:</td>
                         <td class="w-[38%] border border-gray-900 p-1">${formDate}</td>
                     </tr>
                     <tr>
                         <td class="border border-gray-900 p-1 font-bold text-gray-500">FROM:</td>
-                        <td class="border border-gray-900 p-1">${materialEscape(p.userDept || '')}</td>
+                        <td class="border border-gray-900 p-1">PERSONNEL &amp; ADMIN. SECTION</td>
                         <td class="border border-gray-900 p-1 font-bold text-gray-500">PAGE:</td>
                         <td class="border border-gray-900 p-1 font-mono">${pageIndex + 1} OF ${pageCount}</td>
                     </tr>
                     <tr>
                         <td colspan="4" class="p-1 leading-normal">
-                            This is to allow Mr. / Ms. <strong class="underline">${materialEscape(p.userName || '')}</strong> of <strong class="underline">${materialEscape(p.userDept || '')}</strong> to bring out the following items:
+                            This is to allow Mr. / Ms. <strong class="underline material-line-value">${materialEscape(p.authorizedEmployeeName || 'N/A')}</strong> of <strong class="underline material-line-value">${materialEscape(p.authorizedDepartmentName || p.userDept || 'N/A')}</strong> to bring out the following items:
                         </td>
                     </tr>
                 </tbody>
@@ -1067,7 +1097,7 @@ async function renderMaterialGatePassClone(p) {
             </table>
 
             <div class="mt-1 text-[8.5px] leading-tight">
-                <strong>REMARKS:</strong> <span class="ml-1">${materialEscape(p.purpose || '')}</span>
+                <strong>REMARKS:</strong> <span class="ml-1">${materialEscape(p.materialRemarks || p.purpose || '')}</span>
             </div>
 
             <div class="material-form-signatures mt-1 border-t border-gray-900 pt-1 flex justify-between">
@@ -1109,6 +1139,19 @@ async function renderMaterialGatePassClone(p) {
             
             <div class="text-[7.5px] text-right text-gray-500 absolute bottom-1.5 right-3 leading-none select-none">Page ${pageIndex + 1} of ${pageCount}</div>
         `;
+
+        const frontQr = div.querySelector('[data-material-document-qr]');
+        if (frontQr) {
+            if (qrValue && typeof QRCode === 'function') {
+                new QRCode(frontQr, {
+                    text: String(qrValue),
+                    width: 54,
+                    height: 54
+                });
+            } else {
+                frontQr.innerHTML = '<span>QR</span>';
+            }
+        }
 
         const handleSig = async (sigData, wrapperSelector, nameSelector) => {
             const wrapperEls = div.querySelectorAll(wrapperSelector);
@@ -1168,39 +1211,14 @@ async function renderMaterialGatePassClone(p) {
     
     const backDiv = document.createElement('div');
     backDiv.className = 'qr-back-page material-print-page multi-print-item';
-    backDiv.style.cssText = 'page-break-before: always; height: 105mm; width: 148mm; display: flex; align-items: center; justify-content: center; flex-direction: column; box-sizing: border-box; border: 1px dashed #ccc;';
-    let formattedGpId = p.gatePassNo || '';
-    if (formattedGpId) {
-        if (formattedGpId.includes('-')) {
-            const parts = formattedGpId.split('-');
-            if (parts.length === 2 && parts[1].length > 0) {
-                formattedGpId = `${parts[0]}-<u>${parts[1]}</u>`;
-            }
-        } else if (formattedGpId.length >= 3) {
-            const prefix = formattedGpId.slice(0, -3);
-            const suffix = formattedGpId.slice(-3);
-            formattedGpId = `${prefix}<u>${suffix}</u>`;
-        }
-    }
+    backDiv.innerHTML = getQrBackPageHtml(p, 'material-document-qr-back');
 
-    backDiv.innerHTML = `
-        <h3 class="text-2xl font-bold mb-4">Gate Pass QR Code</h3>
-        <div class="material-document-qr-back flex items-center justify-center p-4 bg-white border-4 border-black rounded-lg"></div>
-        <p class="mt-4 text-gray-500 font-mono text-center">${controlNo}</p>
-        ${formattedGpId ? `<p class="mt-2 text-gray-800 text-lg font-mono text-center">To input: ${formattedGpId}</p>` : ''}
-    `;
-
-    if (['Approved', 'Outside', 'Overdue', 'Returned', 'Closed'].includes(p.status)) {
-        try {
-            const qrValue = await loadQrToken(p);
-            if (qrValue && typeof QRCode === 'function') {
-                new QRCode(backDiv.querySelector('.material-document-qr-back'), {
-                    text: String(qrValue),
-                    width: 200,
-                    height: 200
-                });
-            }
-        } catch {}
+    if (qrValue && typeof QRCode === 'function') {
+        new QRCode(backDiv.querySelector('.material-document-qr-back'), {
+            text: String(qrValue),
+            width: QR_BACK_CODE_SIZE,
+            height: QR_BACK_CODE_SIZE
+        });
     }
     pages.push(backDiv);
 

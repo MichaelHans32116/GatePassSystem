@@ -21,7 +21,7 @@ function clampSignatureYOffset(y) {
 function getSavedSignatureStorageKey(
             user = currentUser,
             formTypeCode = 'MATERIAL_GATE_PASS',
-            requestKey = currentViewedPassId || 'default') {
+            requestKey = 'default') {
             const accountKey = user?.accountId || user?.id;
             return accountKey
                 ? `${SAVED_SIGNATURE_STORAGE_PREFIX}${accountKey}:${formTypeCode}:${requestKey}`
@@ -31,12 +31,17 @@ function getSavedSignatureStorageKey(
 function getSavedApprovalSignature(
             user = currentUser,
             formTypeCode = 'MATERIAL_GATE_PASS',
-            requestKey = currentViewedPassId || 'default') {
+            requestKey = 'default') {
             const key = getSavedSignatureStorageKey(user, formTypeCode, requestKey);
             if (!key) return null;
 
             try {
-                const raw = localStorage.getItem(key);
+                let raw = localStorage.getItem(key);
+                if (!raw && requestKey === 'default' && currentViewedPassId) {
+                    raw = localStorage.getItem(
+                        getSavedSignatureStorageKey(user, formTypeCode, currentViewedPassId)
+                    );
+                }
                 if (!raw) return null;
 
                 const parsed = JSON.parse(raw);
@@ -63,7 +68,7 @@ function saveApprovalSignaturePreference(
             signature,
             user = currentUser,
             formTypeCode = 'MATERIAL_GATE_PASS',
-            requestKey = currentViewedPassId || 'default') {
+            requestKey = 'default') {
             const key = getSavedSignatureStorageKey(user, formTypeCode, requestKey);
             if (!key || !signature?.img) return;
 
@@ -77,7 +82,7 @@ function saveApprovalSignaturePreference(
 function clearSavedApprovalSignature(
             user = currentUser,
             formTypeCode = 'MATERIAL_GATE_PASS',
-            requestKey = currentViewedPassId || 'default') {
+            requestKey = 'default') {
             const key = getSavedSignatureStorageKey(user, formTypeCode, requestKey);
             if (!key) return;
             localStorage.removeItem(key);

@@ -91,6 +91,7 @@ function mapApiGatePass(record) {
 
     return {
         id: record.gatePassNo,
+        gatePassNo: record.gatePassNo,
         dbId: record.gatePassId,
         controlNo: record.controlNo || record.gatePassNo,
         formTypeCode: record.formTypeCode || 'PERSON_GATE_PASS',

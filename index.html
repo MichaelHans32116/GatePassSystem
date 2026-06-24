@@ -31,7 +31,7 @@
             }
         }
     </script>
-        <link rel="stylesheet" href="Frontend/Design/styles.css?v=20260624-phase7">
+    <link rel="stylesheet" href="Frontend/Design/styles.css?v=20260624-phase7-4">
 </head>
 <body class="h-screen overflow-hidden flex flex-col font-sans text-sm md:text-base">
 
@@ -842,11 +842,15 @@
                         </tr>
                     </table>
                     
-                    <div class="qr-back-page" style="page-break-before: always; height: 105mm; width: 148mm; display: flex; align-items: center; justify-content: center; flex-direction: column; box-sizing: border-box; border: 1px dashed #ccc;">
-                        <h3 class="text-2xl font-bold mb-4">Gate Pass QR Code</h3>
-                        <div class="qrCodeBackDisplay border-2 border-black p-4 bg-white rounded-xl shadow-sm flex items-center justify-center min-w-[150px] min-h-[150px]"></div>
-                        <p class="mt-4 text-gray-500 font-mono text-center control-no-display"></p>
-                        <p class="mt-2 text-gray-800 text-lg font-mono text-center gp-id-text-display"></p>
+                    <div class="qr-back-page">
+                        <div class="qr-back-card">
+                            <h3 class="qr-back-title">Gate Pass QR Code</h3>
+                            <div class="qrCodeBackDisplay qr-back-code"></div>
+                            <div class="qr-back-meta">
+                                <div class="control-no-display"></div>
+                                <div class="gp-id-text-display"></div>
+                            </div>
+                        </div>
                     </div>
                 </div>
 
@@ -905,11 +909,11 @@
     <script src="Frontend/runtime-config.js?v=20260624-7.2"></script>
     <script src="Frontend/Functions/mock-data.js?v=20260624-7.2"></script>
     <script src="Frontend/Connectors/api-client.js?v=20260624-7.2"></script>
-    <script src="Frontend/Functions/signature.js?v=20260624-7.2"></script>
+    <script src="Frontend/Functions/signature.js?v=20260624-7.4"></script>
     <script src="Frontend/Functions/material-gatepass.js?v=20260624-7.2"></script>
-    <script src="Frontend/Functions/modal.js?v=20260624-7.7"></script>
-    <script src="Frontend/Functions/gatepass.js?v=20260624-7.2"></script>
-    <script src="Frontend/Functions/approvals.js?v=20260624-7.2"></script>
+    <script src="Frontend/Functions/modal.js?v=20260624-7.8"></script>
+    <script src="Frontend/Functions/gatepass.js?v=20260624-7.4"></script>
+    <script src="Frontend/Functions/approvals.js?v=20260624-7.4"></script>
     <script src="Frontend/Functions/scanner.js?v=20260624-7.2"></script>
     <script src="Frontend/Functions/admin.js?v=20260624-7.2"></script>
     <script src="Frontend/Functions/navigation.js?v=20260624-7.2"></script>
