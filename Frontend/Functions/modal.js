@@ -354,6 +354,7 @@ async function renderMaterialBundle(pass) {
                     <h3 class="text-2xl font-bold mb-4">Gate Pass QR Code</h3>
                     <div id="materialQrCodeBackDisplay" class="flex items-center justify-center p-4 bg-white border-4 border-black rounded-lg"></div>
                     <p class="mt-4 text-gray-500 font-mono">${materialEscape(controlNo)}</p>
+                    ${formattedGpId ? `<p class="mt-2 text-gray-800 text-lg font-mono">To input: ${formattedGpId}</p>` : ''}
                 </div>`;
 
             let qrText = '';
@@ -377,6 +378,19 @@ async function renderMaterialBundle(pass) {
             });
 
             const qrBackContainer = container.querySelector('#materialQrCodeBackDisplay');
+            const qrBackPage = container.querySelector('.qr-back-page');
+            const isApprovedOrPast = ['Approved', 'Outside', 'Overdue', 'Returned', 'Closed'].includes(pass.status);
+            
+            if (qrBackPage) {
+                if (isApprovedOrPast) {
+                    qrBackPage.classList.remove('hidden');
+                    qrBackPage.style.display = 'flex';
+                } else {
+                    qrBackPage.classList.add('hidden');
+                    qrBackPage.style.display = 'none';
+                }
+            }
+
             if (qrBackContainer) {
                 if (qrText) {
                     if (typeof QRCode === 'function') {
@@ -561,10 +575,42 @@ async function viewPass(id, isReviewing = false) {
 
             const qrContainer = document.getElementById('qrCodeDisplay');
             const qrBackContainer = document.querySelector('.qrCodeBackDisplay');
+            const qrBackPage = document.querySelector('.qr-back-page');
+            const gpIdTextDisplay = document.querySelector('.gp-id-text-display');
+
+            if (gpIdTextDisplay && p.gatePassNo) {
+                const gpId = String(p.gatePassNo);
+                let formattedGpId = gpId;
+                if (gpId.includes('-')) {
+                    const parts = gpId.split('-');
+                    if (parts.length === 2 && parts[1].length > 0) {
+                        formattedGpId = `${parts[0]}-<u>${parts[1]}</u>`;
+                    }
+                } else if (gpId.length >= 3) {
+                    const prefix = gpId.slice(0, -3);
+                    const suffix = gpId.slice(-3);
+                    formattedGpId = `${prefix}<u>${suffix}</u>`;
+                }
+                gpIdTextDisplay.innerHTML = `To input: ${formattedGpId}`;
+            }
+
             if(qrContainer) {
                 qrContainer.innerHTML = '';
                 if (qrBackContainer) qrBackContainer.innerHTML = '';
-                if (!isMaterial && ['Approved', 'Outside', 'Overdue', 'Returned', 'Closed'].includes(p.status)) {
+                
+                const isApprovedOrPast = ['Approved', 'Outside', 'Overdue', 'Returned', 'Closed'].includes(p.status);
+
+                if (qrBackPage) {
+                    if (isApprovedOrPast) {
+                        qrBackPage.classList.remove('hidden');
+                        qrBackPage.style.display = 'flex';
+                    } else {
+                        qrBackPage.classList.add('hidden');
+                        qrBackPage.style.display = 'none';
+                    }
+                }
+
+                if (!isMaterial && isApprovedOrPast) {
                     try {
                         const qrValue = await loadQrToken(p);
                         if (qrValue && typeof QRCode === 'function') {
