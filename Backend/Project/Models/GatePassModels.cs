@@ -122,26 +122,7 @@ public sealed class ApprovalQueueItem
     public string DepartmentName { get; init; } = string.Empty;
     public string Destination { get; init; } = string.Empty;
     public string Purpose { get; init; } = string.Empty;
-    public string? AuthorizedEmployeeName { get; init; }
-    public string? AuthorizedDepartmentName { get; init; }
-    public string? MaterialRemarks { get; init; }
-    public DateTime ExpectedOutAt { get; init; }
-    public DateTime? ExpectedInAt { get; init; }
-    public DateTime? AppliedAt { get; init; }
-}
 
-    public long GatePassId { get; init; }
-    public string GatePassNo { get; init; } = string.Empty;
-    public string ControlNo { get; init; } = string.Empty;
-    public string FormTypeCode { get; init; } = "PERSON_GATE_PASS";
-    public string FormName { get; init; } = "Person Gate Pass";
-    public long ApprovalStepId { get; init; }
-    public string ApprovalStepCode { get; init; } = string.Empty;
-    public string EmployeeId { get; init; } = string.Empty;
-    public string FullName { get; init; } = string.Empty;
-    public string DepartmentName { get; init; } = string.Empty;
-    public string Destination { get; init; } = string.Empty;
-    public string Purpose { get; init; } = string.Empty;
     public string? AuthorizedEmployeeName { get; init; }
     public string? AuthorizedDepartmentName { get; init; }
     public string? MaterialRemarks { get; init; }
