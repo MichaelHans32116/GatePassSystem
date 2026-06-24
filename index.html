@@ -822,28 +822,30 @@
                                 </div>
                             </td>
                         </tr>
-                        <tr id="guardStatusRow" class="hidden print:table-row">
-                            <td colspan="4" class="align-middle py-1 bg-gray-50" style="-webkit-print-color-adjust: exact; print-color-adjust: exact;">
+                        <tr class="guard-status-row hidden print:table-row">
+                            <td colspan="4" class="align-middle py-1 bg-gray-50 border-t border-black" style="-webkit-print-color-adjust: exact; print-color-adjust: exact;">
                                 <div class="flex justify-around items-center w-full">
                                     <div class="flex items-center space-x-2">
                                         <span class="text-[8px] font-bold text-gray-500">ACTUAL OUT</span>
-                                        <div id="vActOut" class="w-16 h-4 flex items-center justify-center font-bold text-[8px] border-b border-gray-400"></div>
+                                        <div class="vActOut w-16 h-4 flex items-center justify-center font-bold text-[8px] border-b border-gray-400"></div>
                                     </div>
                                     <div class="flex items-center space-x-2">
                                         <span class="text-[8px] font-bold text-gray-500">ACTUAL IN</span>
-                                        <div id="vActIn" class="w-16 h-4 flex items-center justify-center font-bold text-[8px] border-b border-gray-400"></div>
+                                        <div class="vActIn w-16 h-4 flex items-center justify-center font-bold text-[8px] border-b border-gray-400"></div>
                                     </div>
                                     <div class="flex items-center space-x-2">
                                         <span class="text-[8px] font-bold text-gray-500">REMARKS</span>
-                                        <div id="vGuardRemarks" class="bg-gray-200 text-gray-600 px-2 py-0.5 rounded font-bold text-[8px]">PENDING</div>
+                                        <div class="vGuardRemarks bg-gray-200 text-gray-600 px-2 py-0.5 rounded font-bold text-[8px]">PENDING</div>
                                     </div>
                                 </div>
                             </td>
                         </tr>
                     </table>
                     
-                    <div class="qr-back-page">
-                        <div id="qrCodeBackDisplay" class="border-2 border-black p-4 bg-white rounded-xl shadow-sm"></div>
+                    <div class="qr-back-page" style="page-break-before: always; height: 105mm; width: 148mm; display: flex; align-items: center; justify-content: center; flex-direction: column; box-sizing: border-box; border: 1px dashed #ccc;">
+                        <h3 class="text-2xl font-bold mb-4">Gate Pass QR Code</h3>
+                        <div class="qrCodeBackDisplay border-2 border-black p-4 bg-white rounded-xl shadow-sm flex items-center justify-center min-w-[150px] min-h-[150px]"></div>
+                        <p class="mt-4 text-gray-500 font-mono text-center control-no-display"></p>
                     </div>
                 </div>
 
@@ -899,18 +901,18 @@
         </div>
     </div>
 
-    <script src="Frontend/runtime-config.js?v=20260624-phase7"></script>
-    <script src="Frontend/Functions/mock-data.js?v=20260624-phase7"></script>
-    <script src="Frontend/Connectors/api-client.js?v=20260624-phase7"></script>
-    <script src="Frontend/Functions/signature.js?v=20260624-phase7"></script>
-    <script src="Frontend/Functions/material-gatepass.js?v=20260624-phase7"></script>
-    <script src="Frontend/Functions/modal.js?v=20260624-phase7"></script>
-    <script src="Frontend/Functions/gatepass.js?v=20260624-phase7"></script>
-    <script src="Frontend/Functions/approvals.js?v=20260624-phase7"></script>
-    <script src="Frontend/Functions/scanner.js?v=20260624-phase7"></script>
-    <script src="Frontend/Functions/admin.js?v=20260624-phase7"></script>
-    <script src="Frontend/Functions/navigation.js?v=20260624-phase7"></script>
-    <script src="Frontend/Functions/auth.js?v=20260624-phase7"></script>
-    <script src="Frontend/Functions/app.js?v=20260624-phase7"></script>
+    <script src="Frontend/runtime-config.js?v=20260624-phase8"></script>
+    <script src="Frontend/Functions/mock-data.js?v=20260624-phase8"></script>
+    <script src="Frontend/Connectors/api-client.js?v=20260624-phase8"></script>
+    <script src="Frontend/Functions/signature.js?v=20260624-phase8"></script>
+    <script src="Frontend/Functions/material-gatepass.js?v=20260624-phase8"></script>
+    <script src="Frontend/Functions/modal.js?v=20260624-phase8"></script>
+    <script src="Frontend/Functions/gatepass.js?v=20260624-phase8"></script>
+    <script src="Frontend/Functions/approvals.js?v=20260624-phase8"></script>
+    <script src="Frontend/Functions/scanner.js?v=20260624-phase8"></script>
+    <script src="Frontend/Functions/admin.js?v=20260624-phase8"></script>
+    <script src="Frontend/Functions/navigation.js?v=20260624-phase8"></script>
+    <script src="Frontend/Functions/auth.js?v=20260624-phase8"></script>
+    <script src="Frontend/Functions/app.js?v=20260624-phase8"></script>
 </body>
 </html>

@@ -846,28 +846,32 @@ async function renderPersonGatePassClone(p) {
     await handleSig(p.signatures.pres, '#sigPres');
     await handleSig(p.signatures.pas, '#sigPAS');
     
-    const qrContainer = clone.querySelector('#qrCodeDisplay');
-    if (qrContainer) {
-        qrContainer.innerHTML = '';
-        if (['Approved', 'Outside', 'Overdue', 'Returned', 'Closed'].includes(p.status)) {
-            try {
-                const qrValue = await loadQrToken(p);
-                if (qrValue) {
-                    new QRCode(qrContainer, {
-                        text: String(qrValue),
-                        width: 60,
-                        height: 60
-                    });
-                }
-            } catch {
-                qrContainer.innerHTML = '<span class="text-[9px] text-gray-400">QR unavailable</span>';
-            }
+    const guardRow = clone.querySelector('.guard-status-row');
+    if (guardRow && ['Approved', 'Outside', 'Overdue', 'Returned', 'Closed'].includes(p.status)) {
+        guardRow.classList.remove('hidden');
+        // print:table-row is already applied in css via classes
+        const vOut = clone.querySelector('.vActOut');
+        const vIn = clone.querySelector('.vActIn');
+        const vRem = clone.querySelector('.vGuardRemarks');
+        
+        const formatTime = (ts) => ts ? new Date(ts).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '';
+        if (vOut) vOut.innerText = formatTime(p.actualOut);
+        if (vIn) vIn.innerText = formatTime(p.actualIn);
+        if (vRem) {
+            vRem.innerText = ['Returned', 'Closed'].includes(p.status) ? 'RETURNED' : (['Outside', 'Overdue'].includes(p.status) ? 'OUTSIDE' : 'APPROVED');
+            vRem.className = ['Returned', 'Closed'].includes(p.status) ? 'bg-green-100 text-green-700 px-2 py-0.5 rounded font-bold text-[8px]' : (['Outside', 'Overdue'].includes(p.status) ? 'bg-blue-100 text-mpiBlue px-2 py-0.5 rounded font-bold text-[8px]' : 'bg-gray-200 text-gray-600 px-2 py-0.5 rounded font-bold text-[8px]');
         }
     }
     
-    const qrBackContainer = clone.querySelector('#qrCodeBackDisplay');
+    const qrBackContainer = clone.querySelector('.qrCodeBackDisplay');
+    const controlNoDisplay = clone.querySelector('.control-no-display');
+    if (controlNoDisplay) {
+        controlNoDisplay.innerText = p.controlNo || p.gatePassNo || '';
+    }
+
     if (qrBackContainer) {
         qrBackContainer.innerHTML = '';
+        
         if (['Approved', 'Outside', 'Overdue', 'Returned', 'Closed'].includes(p.status)) {
             try {
                 const qrValue = await loadQrToken(p);
@@ -913,22 +917,21 @@ async function renderMaterialGatePassClone(p) {
             .join('');
 
         div.innerHTML = `
-            <div class="material-form-header">
-                <div class="material-document-qr"></div>
-                <div class="material-form-brand">
-                    <img src="Frontend/Design/images/logo.png" alt="MPI Logo">
-                    <div>
-                        <h1>MORIROKU PHILIPPINES, INC.</h1>
-                        <p>115 North Science Avenue, Laguna Technopark 4024, Biñan, Laguna Philippines</p>
+            <div class="material-form-header mt-2">
+                <div class="material-form-brand justify-center w-full">
+                    <img src="Frontend/Design/images/logo.png" alt="MPI Logo" class="mx-auto block" style="height: 35px;">
+                    <div class="text-center w-full">
+                        <h1 class="text-[12px] font-bold">MORIROKU PHILIPPINES, INC.</h1>
+                        <p class="text-[7px]">115 North Science Avenue, Laguna Technopark 4024, Biñan, Laguna Philippines</p>
                     </div>
                 </div>
-                <div class="material-form-control">
+                <div class="absolute top-2 right-2 text-right">
                     <span class="text-[6.5px] block font-bold text-gray-500 uppercase leading-none">CONTROL NO.</span>
                     <strong class="text-[10px] font-mono leading-none tracking-wider">${controlNo}</strong>
                 </div>
             </div>
             
-            <h2 class="text-center font-bold text-xs py-0.5 border-y border-gray-900 mt-1 uppercase" style="background-color: #f3f4f6; -webkit-print-color-adjust: exact; print-color-adjust: exact;">MATERIAL GATE PASS</h2>
+            <h2 class="text-center font-bold text-xs py-0.5 border-y border-gray-900 mt-2 uppercase" style="background-color: #f3f4f6; -webkit-print-color-adjust: exact; print-color-adjust: exact;">MATERIAL GATE PASS</h2>
             
             <table class="w-full text-left border-collapse border border-gray-900 mt-1.5 text-[9px] leading-tight">
                 <tbody>
@@ -970,44 +973,45 @@ async function renderMaterialGatePassClone(p) {
                 <strong>REMARKS:</strong> <span class="ml-1">${materialEscape(p.purpose || '')}</span>
             </div>
 
-            <div class="material-form-signatures mt-1 border-t border-gray-900 pt-1">
-                <div>
-                    <strong>Prepared By:</strong>
-                    <div class="sig-wrapper sig-mat-prepared material-signature-image"></div>
-                    <span class="name sig-mat-prepared-name">${materialEscape(p.userName || '')}</span>
+            <div class="material-form-signatures mt-1 border-t border-gray-900 pt-1 flex justify-between">
+                <div class="text-center w-[30%]">
+                    <strong class="block mb-1">Prepared By:</strong>
+                    <div class="sig-wrapper sig-mat-prepared material-signature-image h-8 flex items-end justify-center"></div>
+                    <span class="name sig-mat-prepared-name block font-bold underline text-[9px]"></span>
+                    <small class="block text-[7px] text-gray-600">Employee</small>
                 </div>
-                <div>
-                    <strong>Noted By:</strong>
-                    <div class="sig-wrapper sig-mat-superior material-signature-image"></div>
-                    <span class="name sig-mat-superior-name"></span>
-                    <small>Immediate Superior</small>
+                <div class="text-center w-[30%]">
+                    <strong class="block mb-1">Noted By:</strong>
+                    <div class="sig-wrapper sig-mat-superior material-signature-image h-8 flex items-end justify-center"></div>
+                    <span class="name sig-mat-superior-name block font-bold underline text-[9px]"></span>
+                    <small class="block text-[7px] text-gray-600">Immediate Superior</small>
                 </div>
-                <div>
-                    <strong>Approved By:</strong>
-                    <div class="sig-wrapper sig-mat-pas material-signature-image"></div>
-                    <span class="name sig-mat-pas-name"></span>
-                    <small>Personnel &amp; Admin Section</small>
+                <div class="text-center w-[30%]">
+                    <strong class="block mb-1">Approved By:</strong>
+                    <div class="sig-wrapper sig-mat-pas material-signature-image h-8 flex items-end justify-center"></div>
+                    <span class="name sig-mat-pas-name block font-bold underline text-[9px]"></span>
+                    <small class="block text-[7px] text-gray-600">Personnel &amp; Admin Section</small>
+                </div>
+            </div>
+
+            <!-- GUARD TRACKING ROW FOR MATERIAL -->
+            <div class="guard-status-row hidden print:flex flex-row justify-around items-center w-full mt-2 pt-1 border-t border-black bg-gray-50" style="-webkit-print-color-adjust: exact; print-color-adjust: exact;">
+                <div class="flex items-center space-x-2">
+                    <span class="text-[8px] font-bold text-gray-500">ACTUAL OUT</span>
+                    <div class="vActOut w-16 h-4 flex items-center justify-center font-bold text-[8px] border-b border-gray-400"></div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <span class="text-[8px] font-bold text-gray-500">ACTUAL IN</span>
+                    <div class="vActIn w-16 h-4 flex items-center justify-center font-bold text-[8px] border-b border-gray-400"></div>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <span class="text-[8px] font-bold text-gray-500">REMARKS</span>
+                    <div class="vGuardRemarks bg-gray-200 text-gray-600 px-2 py-0.5 rounded font-bold text-[8px]">PENDING</div>
                 </div>
             </div>
             
             <div class="text-[7.5px] text-right text-gray-500 absolute bottom-1.5 right-3 leading-none select-none">Page ${pageIndex + 1} of ${pageCount}</div>
         `;
-
-        const qrContainer = div.querySelector('.material-document-qr');
-        if (qrContainer && ['Approved', 'Outside', 'Overdue', 'Returned', 'Closed'].includes(p.status)) {
-            try {
-                const qrValue = await loadQrToken(p);
-                if (qrValue) {
-                    new QRCode(qrContainer, {
-                        text: String(qrValue),
-                        width: 50,
-                        height: 50
-                    });
-                }
-            } catch {
-                qrContainer.innerHTML = '<span class="text-[8px] text-gray-400">QR error</span>';
-            }
-        }
 
         const handleSig = async (sigData, wrapperSelector, nameSelector) => {
             const wrapperEls = div.querySelectorAll(wrapperSelector);
