@@ -488,6 +488,11 @@
             object-fit: contain;
             filter: contrast(1.65) brightness(0.58);
         }
+        #liveDocumentSig.signature-img {
+            max-height: none;
+            display: block;
+            transition: width 90ms linear, margin-bottom 90ms linear;
+        }
 
         /* Resizable / draggable document review modal */
         .document-modal {
