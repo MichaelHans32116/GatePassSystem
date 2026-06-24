@@ -304,7 +304,7 @@ function renderMaterialBundle(pass) {
                                 <img src="Frontend/Design/images/logo.png" alt="MPI Logo">
                                 <div>
                                     <h1>MORIROKU PHILIPPINES, INC.</h1>
-                                    <p>115 North Science Avenue, Laguna Technopark, Biñan, Laguna</p>
+                                    <p>115 North Science Avenue, Laguna Technopark 4024, Biñan, Laguna Philippines</p>
                                 </div>
                             </div>
                             <div class="material-header-control">
@@ -349,7 +349,12 @@ function renderMaterialBundle(pass) {
                         </div>
                         <div class="material-page-number">Page ${pageIndex + 1} of ${pageCount}</div>
                     </section>`;
-            }).join('');
+            }).join('') + `
+                <div class="qr-back-page" style="page-break-before: always; height: 100vh; display: flex; align-items: center; justify-content: center; flex-direction: column;">
+                    <h3 class="text-2xl font-bold mb-4">Gate Pass QR Code</h3>
+                    <div id="materialQrCodeBackDisplay" class="flex items-center justify-center p-4 bg-white border-4 border-black rounded-lg"></div>
+                    <p class="mt-4 text-gray-500 font-mono">${materialEscape(controlNo)}</p>
+                </div>`;
 
             const qrText = `FRS|MATERIAL_GATE_PASS|${pass.dbId || pass.id}|${controlNo}`;
             container.querySelectorAll('[data-material-document-qr]').forEach(qrContainer => {
@@ -363,6 +368,21 @@ function renderMaterialBundle(pass) {
                     qrContainer.innerHTML = '<span>QR</span>';
                 }
             });
+
+            const qrBackContainer = container.querySelector('#materialQrCodeBackDisplay');
+            if (qrBackContainer) {
+                if (['Approved', 'Outside', 'Overdue', 'Returned', 'Closed'].includes(pass.status)) {
+                    if (typeof QRCode === 'function') {
+                        new QRCode(qrBackContainer, {
+                            text: qrText,
+                            width: 200,
+                            height: 200
+                        });
+                    }
+                } else {
+                    qrBackContainer.innerHTML = '<span class="text-gray-400">QR unavailable (Not Approved)</span>';
+                }
+            }
         }
 
 function syncMaterialSignatureCopies(idPrefix) {
@@ -600,23 +620,74 @@ async function viewPass(id, isReviewing = false) {
             // ACTION AREA & DEFAULT SIGNATURE LOADING
             const actionArea = document.getElementById('approvalActionArea');
             const approvalSignatureEditor = document.getElementById('approvalSignatureEditor');
+            const btnApprove = document.getElementById('approveRequestButton');
+            const btnReject = document.querySelector('button[onclick="rejectCurrentPass()"]');
+
             if(actionArea) {
+                const btnPrintForm = document.getElementById('btnPrintForm');
+                if(btnPrintForm) {
+                    if(currentUser.role === 'Security') btnPrintForm.classList.add('hidden');
+                    else btnPrintForm.classList.remove('hidden');
+                }
+
+                const vActOut = document.getElementById('vActOut');
+                const vActIn = document.getElementById('vActIn');
+                const vGuardRemarks = document.getElementById('vGuardRemarks');
+                const guardStatusRow = document.getElementById('guardStatusRow');
+                
+                if (vActOut && vActIn && vGuardRemarks && guardStatusRow) {
+                    if (p.actualOut || p.actualIn || p.status === 'Outside' || p.status === 'Returned' || p.status === 'Overdue' || p.status === 'Closed') {
+                        guardStatusRow.classList.remove('hidden');
+                        vActOut.innerText = p.actualOut ? new Date(p.actualOut).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+                        vActIn.innerText = p.actualIn ? new Date(p.actualIn).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '';
+                        vGuardRemarks.innerText = (p.status === 'Outside' || p.status === 'Returned' || p.status === 'Closed') ? 'APPROVED' : 'PENDING';
+                        if (vGuardRemarks.innerText === 'APPROVED') {
+                            vGuardRemarks.classList.remove('bg-gray-200', 'text-gray-600');
+                            vGuardRemarks.classList.add('bg-green-100', 'text-green-800');
+                        } else {
+                            vGuardRemarks.classList.add('bg-gray-200', 'text-gray-600');
+                            vGuardRemarks.classList.remove('bg-green-100', 'text-green-800');
+                        }
+                    } else {
+                        guardStatusRow.classList.add('hidden');
+                    }
+                }
+
                 if(isReviewing) {
                     document.getElementById('printModalContent')?.classList.add('is-reviewing');
                     actionArea.style.display = 'flex';
-                    approvalSignatureEditor?.classList.remove('hidden');
-                    resetApprovalSignatureComposer();
-                    showSignatureSource('upload');
+                    
+                    if (currentUser.role === 'Security') {
+                        approvalSignatureEditor?.classList.add('hidden');
+                        if (btnApprove) {
+                            if (p.status === 'Approved' || p.status === 'Overdue') {
+                                btnApprove.innerHTML = '<i class="fas fa-sign-out-alt mr-1"></i> Confirm Time Out';
+                                btnApprove.onclick = () => { window.executeSecurityScan(p.id); forceCloseModal(); };
+                            } else if (p.status === 'Outside') {
+                                btnApprove.innerHTML = '<i class="fas fa-sign-in-alt mr-1"></i> Confirm Time In';
+                                btnApprove.onclick = () => { window.executeSecurityScan(p.id); forceCloseModal(); };
+                            }
+                        }
+                        if (btnReject) btnReject.classList.add('hidden');
+                    } else {
+                        approvalSignatureEditor?.classList.remove('hidden');
+                        if (btnApprove) {
+                            btnApprove.innerHTML = '<i class="fas fa-check-circle mr-1"></i> Approve Request';
+                            btnApprove.onclick = approveCurrentPass;
+                        }
+                        if (btnReject) btnReject.classList.remove('hidden');
+                        resetApprovalSignatureComposer();
+                        showSignatureSource('upload');
 
-                    // PRE-FILL USERNAME FOR TRUE LIVE PREVIEW ALIGNMENT
-                    let targetContainerId = null;
-                    if (p.status === 'Pending Superior') {
-                        targetContainerId = isMaterial ? 'sigMatSuperior' : 'sigImm';
-                    } else if (p.status === 'Pending President') {
-                        targetContainerId = 'sigPres';
-                    } else if (p.status === 'Pending PAS') {
-                        targetContainerId = isMaterial ? 'sigMatPas' : 'sigPAS';
-                    }
+                        // PRE-FILL USERNAME FOR TRUE LIVE PREVIEW ALIGNMENT
+                        let targetContainerId = null;
+                        if (p.status === 'Pending Superior') {
+                            targetContainerId = isMaterial ? 'sigMatSuperior' : 'sigImm';
+                        } else if (p.status === 'Pending President') {
+                            targetContainerId = 'sigPres';
+                        } else if (p.status === 'Pending PAS') {
+                            targetContainerId = isMaterial ? 'sigMatPas' : 'sigPAS';
+                        }
 
                     if (targetContainerId) {
                         const nameSpan = document.getElementById(targetContainerId + 'Name');
@@ -650,6 +721,7 @@ async function viewPass(id, isReviewing = false) {
                         document.getElementById('sigControls').classList.remove('hidden');
                         document.getElementById('saveDefaultSig').checked = true;
                         setSignatureStatus('Saved default signature loaded. Adjust size or upload/draw a replacement if needed.', 'success');
+                    }
                     }
                 } else {
                     document.getElementById('printModalContent')?.classList.remove('is-reviewing');
@@ -793,6 +865,23 @@ async function renderPersonGatePassClone(p) {
         }
     }
     
+    const qrBackContainer = clone.querySelector('#qrCodeBackDisplay');
+    if (qrBackContainer) {
+        qrBackContainer.innerHTML = '';
+        if (['Approved', 'Outside', 'Overdue', 'Returned', 'Closed'].includes(p.status)) {
+            try {
+                const qrValue = await loadQrToken(p);
+                if (qrValue) {
+                    new QRCode(qrBackContainer, {
+                        text: String(qrValue),
+                        width: 140,
+                        height: 140
+                    });
+                }
+            } catch {}
+        }
+    }
+    
     return clone;
 }
 
@@ -830,7 +919,7 @@ async function renderMaterialGatePassClone(p) {
                     <img src="Frontend/Design/images/logo.png" alt="MPI Logo">
                     <div>
                         <h1>MORIROKU PHILIPPINES, INC.</h1>
-                        <p>115 North Science Avenue, LTI Biñan, Laguna</p>
+                        <p>115 North Science Avenue, Laguna Technopark 4024, Biñan, Laguna Philippines</p>
                     </div>
                 </div>
                 <div class="material-form-control">
@@ -975,6 +1064,30 @@ async function renderMaterialGatePassClone(p) {
 
         pages.push(div);
     }
+    
+    const backDiv = document.createElement('div');
+    backDiv.className = 'qr-back-page material-print-page multi-print-item';
+    backDiv.style.cssText = 'page-break-before: always; height: 105mm; width: 148mm; display: flex; align-items: center; justify-content: center; flex-direction: column; box-sizing: border-box; border: 1px dashed #ccc;';
+    backDiv.innerHTML = `
+        <h3 class="text-2xl font-bold mb-4">Gate Pass QR Code</h3>
+        <div class="material-document-qr-back flex items-center justify-center p-4 bg-white border-4 border-black rounded-lg"></div>
+        <p class="mt-4 text-gray-500 font-mono text-center">${controlNo}</p>
+    `;
+
+    if (['Approved', 'Outside', 'Overdue', 'Returned', 'Closed'].includes(p.status)) {
+        try {
+            const qrValue = await loadQrToken(p);
+            if (qrValue && typeof QRCode === 'function') {
+                new QRCode(backDiv.querySelector('.material-document-qr-back'), {
+                    text: String(qrValue),
+                    width: 200,
+                    height: 200
+                });
+            }
+        } catch {}
+    }
+    pages.push(backDiv);
+
     return pages;
 }
 
@@ -994,6 +1107,8 @@ async function printSelectedLogs() {
         document.getElementById('printableArea')?.classList.add('hidden');
         document.getElementById('materialPrintableArea')?.classList.add('hidden');
 
+        const pagesPairs = [];
+
         for (const id of ids) {
             const p = await getGatePassDetail(id);
             if (!p) continue;
@@ -1001,11 +1116,77 @@ async function printSelectedLogs() {
             const isMaterial = p.formTypeCode === 'MATERIAL_GATE_PASS';
             if (isMaterial) {
                 const pages = await renderMaterialGatePassClone(p);
-                pages.forEach(page => multiContainer.appendChild(page));
+                const back = pages.pop(); 
+                for (let i = 0; i < pages.length; i++) {
+                    if (i === pages.length - 1) {
+                        pagesPairs.push({ front: pages[i], back: back });
+                    } else {
+                        const emptyBack = document.createElement('div');
+                        emptyBack.style.cssText = 'height: 105mm; width: 148mm; display: flex; align-items: center; justify-content: center; color: #ccc; font-size: 10px;';
+                        emptyBack.innerText = '(Intentionally Blank)';
+                        pagesPairs.push({ front: pages[i], back: emptyBack });
+                    }
+                }
             } else {
-                const element = await renderPersonGatePassClone(p);
-                multiContainer.appendChild(element);
+                const front = await renderPersonGatePassClone(p);
+                const back = front.querySelector('.qr-back-page');
+                if (back) front.removeChild(back);
+                
+                // Enforce A6 bounds on Person Pass so it stacks nicely
+                front.style.width = '148mm';
+                front.style.height = '105mm';
+                front.style.border = '1px dashed #ccc';
+                if(back) {
+                    back.style.width = '148mm';
+                    back.style.height = '105mm';
+                    back.style.border = '1px dashed #ccc';
+                }
+                
+                pagesPairs.push({ front, back });
             }
+        }
+
+        for (let i = 0; i < pagesPairs.length; i += 2) {
+            const pair1 = pagesPairs[i];
+            const pair2 = pagesPairs[i + 1];
+
+            const a4Front = document.createElement('div');
+            a4Front.className = 'a4-wrapper';
+            a4Front.style.cssText = 'display: flex; flex-direction: column; gap: 0; page-break-after: always; width: 210mm; height: 297mm; max-height: 297mm; overflow: hidden; align-items: center; justify-content: flex-start; padding-top: 10mm; box-sizing: border-box;';
+            
+            pair1.front.style.cssText += 'page-break-after: avoid !important; break-after: avoid !important; margin-bottom: 10mm !important; box-shadow: none !important; margin-top: 0 !important;';
+            a4Front.appendChild(pair1.front);
+            
+            if (pair2) {
+                pair2.front.style.cssText += 'page-break-after: avoid !important; break-after: avoid !important; margin-bottom: 0 !important; box-shadow: none !important; margin-top: 0 !important;';
+                a4Front.appendChild(pair2.front);
+            }
+            multiContainer.appendChild(a4Front);
+
+            const a4Back = document.createElement('div');
+            a4Back.className = 'a4-wrapper';
+            a4Back.style.cssText = 'display: flex; flex-direction: column; gap: 0; page-break-after: always; width: 210mm; height: 297mm; max-height: 297mm; overflow: hidden; align-items: center; justify-content: flex-start; padding-top: 10mm; box-sizing: border-box;';
+            
+            if (pair1.back) {
+                pair1.back.style.cssText += 'page-break-before: avoid !important; break-before: avoid !important; page-break-after: avoid !important; break-after: avoid !important; margin-bottom: 10mm !important; margin-top: 0 !important;';
+                a4Back.appendChild(pair1.back);
+            } else {
+                const empty = document.createElement('div');
+                empty.style.cssText = 'height: 105mm; width: 148mm; margin-bottom: 10mm;';
+                a4Back.appendChild(empty);
+            }
+            
+            if (pair2) {
+                if (pair2.back) {
+                    pair2.back.style.cssText += 'page-break-before: avoid !important; break-before: avoid !important; page-break-after: avoid !important; break-after: avoid !important; margin-bottom: 0 !important; margin-top: 0 !important;';
+                    a4Back.appendChild(pair2.back);
+                } else {
+                    const empty = document.createElement('div');
+                    empty.style.cssText = 'height: 105mm; width: 148mm; margin-bottom: 0;';
+                    a4Back.appendChild(empty);
+                }
+            }
+            multiContainer.appendChild(a4Back);
         }
 
         const modal = document.getElementById('printModal');

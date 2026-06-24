@@ -157,7 +157,19 @@
                 page-break-after: always;
             }
             .print-hide { display: none !important; }
+            .person-header-qr { visibility: hidden !important; }
+            .qr-back-page {
+                display: flex !important;
+                width: 148mm !important;
+                height: 105mm !important;
+                align-items: center;
+                justify-content: center;
+                break-before: page;
+                page-break-before: always;
+                box-sizing: border-box;
+            }
         }
+        .qr-back-page { display: none; }
 
         /* Enforce exact box styling for screen preview AND print */
         .print-form {
@@ -202,11 +214,11 @@
         }
         .person-print-form .person-approval-cell {
             overflow: hidden;
-            height: 15mm !important;
+            height: 12mm !important;
             padding: 0;
         }
         .person-header-cell {
-            height: 18mm;
+            height: 15mm;
             padding: 1mm 1.5mm !important;
             border-bottom-width: 2px !important;
         }

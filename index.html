@@ -822,8 +822,29 @@
                                 </div>
                             </td>
                         </tr>
+                        <tr id="guardStatusRow" class="hidden print:table-row">
+                            <td colspan="4" class="align-middle py-1 bg-gray-50" style="-webkit-print-color-adjust: exact; print-color-adjust: exact;">
+                                <div class="flex justify-around items-center w-full">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="text-[8px] font-bold text-gray-500">ACTUAL OUT</span>
+                                        <div id="vActOut" class="w-16 h-4 flex items-center justify-center font-bold text-[8px] border-b border-gray-400"></div>
+                                    </div>
+                                    <div class="flex items-center space-x-2">
+                                        <span class="text-[8px] font-bold text-gray-500">ACTUAL IN</span>
+                                        <div id="vActIn" class="w-16 h-4 flex items-center justify-center font-bold text-[8px] border-b border-gray-400"></div>
+                                    </div>
+                                    <div class="flex items-center space-x-2">
+                                        <span class="text-[8px] font-bold text-gray-500">REMARKS</span>
+                                        <div id="vGuardRemarks" class="bg-gray-200 text-gray-600 px-2 py-0.5 rounded font-bold text-[8px]">PENDING</div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
                     </table>
-
+                    
+                    <div class="qr-back-page">
+                        <div id="qrCodeBackDisplay" class="border-2 border-black p-4 bg-white rounded-xl shadow-sm"></div>
+                    </div>
                 </div>
 
                 <div id="materialPrintableArea" class="material-print-bundle hidden"></div>

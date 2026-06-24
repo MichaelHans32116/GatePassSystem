@@ -7,27 +7,14 @@ var qrCameraLastDetectionAt = 0;
 var qrCameraScanning = false;
 var qrClientCooldowns = new Map();
 
-async function simulateQrScan(identifierOverride = null, fromCamera = false) {
-    const canScan = currentUser.role === 'Security';
-    if (!canScan) return;
-    const input = document.getElementById('manualQrInput');
-    const identifier = (identifierOverride || input.value).trim();
-    if (!identifier) {
-        showToast('Enter a QR or GP-ID.', 'error');
-        return;
-    }
-
+async function executeSecurityScan(identifier) {
     if (!isDatabaseSession()) {
         simulateMockQrScan(identifier);
         return;
     }
-
+    
     try {
-        const inputButton = document.querySelector('#manualQrInput + button');
-        if (inputButton) inputButton.disabled = true;
-        const isQrToken =
-            identifier.startsWith('GP1.') ||
-            identifier.startsWith('EMP1.');
+        const isQrToken = identifier.startsWith('GP1.') || identifier.startsWith('EMP1.') || identifier.startsWith('FRS|');
         const result = await ApiClient.post('/security/scans', {
             qrToken: isQrToken ? identifier : null,
             manualGatePassNo: isQrToken ? null : identifier
@@ -39,34 +26,73 @@ async function simulateQrScan(identifierOverride = null, fromCamera = false) {
             result.message,
             recorded ? 'success' : ignored || cooldown ? 'info' : 'error'
         );
-        input.value = '';
-        if (fromCamera) {
-            const cooldownSeconds =
-                result.cooldownSecondsRemaining || 30;
-            qrClientCooldowns.set(
-                identifier,
-                Date.now() + cooldownSeconds * 1000
-            );
-            qrCameraScanning = true;
-            setQrCameraStatus(
-                `${result.message} Ready for next scan.`,
-                recorded
-                    ? 'success'
-                    : ignored || cooldown
-                        ? 'info'
-                        : 'error'
-            );
-            qrCameraAnimationFrame =
-                requestAnimationFrame(scanQrCameraFrame);
-        }
         await renderGuardDashboard();
     } catch (error) {
         showToast(error instanceof ApiError ? error.message : 'Scan failed.', 'error');
-        if (fromCamera) {
-            qrCameraScanning = true;
-            qrCameraAnimationFrame =
-                requestAnimationFrame(scanQrCameraFrame);
+    }
+}
+
+async function simulateQrScan(identifierOverride = null, fromCamera = false) {
+    const canScan = currentUser.role === 'Security';
+    if (!canScan) return;
+    const input = document.getElementById('manualQrInput');
+    const identifier = (identifierOverride || input.value).trim();
+    if (!identifier) {
+        showToast('Enter a QR or GP-ID.', 'error');
+        return;
+    }
+
+    if (!isDatabaseSession()) {
+        const pass = gatePasses.find(item => item.id === identifier || item.id.endsWith('-' + identifier));
+        if (pass) {
+            viewPass(pass.id, true);
+        } else {
+            showToast('Invalid ID', 'error');
         }
+        input.value = '';
+        return;
+    }
+
+    try {
+        const inputButton = document.querySelector('#manualQrInput + button');
+        if (inputButton) inputButton.disabled = true;
+
+        const isQrToken = identifier.startsWith('GP1.') || identifier.startsWith('EMP1.');
+        
+        if (isQrToken) {
+            try {
+                const payload = identifier.slice(4);
+                const decoded = atob(payload);
+                const parsed = JSON.parse(decoded);
+                if (parsed.dbId) {
+                    viewPass(parsed.dbId, true);
+                } else {
+                    showToast('Invalid QR payload', 'error');
+                }
+            } catch (e) {
+                showToast('Failed to decode QR', 'error');
+            }
+        } else if (identifier.startsWith('FRS|')) {
+            const parts = identifier.split('|');
+            if (parts.length >= 3) {
+                viewPass(parts[2], true);
+            }
+        } else {
+            const queue = await ApiClient.get('/security/queue');
+            const match = queue.find(item => item.gatePassNo === identifier || item.gatePassNo.endsWith('-' + identifier));
+            if (match) {
+                viewPass(match.gatePassId, true);
+            } else {
+                showToast('ID not found in active queue.', 'error');
+            }
+        }
+
+        input.value = '';
+        if (fromCamera) {
+            stopQrCamera();
+        }
+    } catch (error) {
+        showToast(error instanceof ApiError ? error.message : 'Lookup failed.', 'error');
     } finally {
         const inputButton = document.querySelector('#manualQrInput + button');
         if (inputButton) inputButton.disabled = false;
@@ -329,6 +355,7 @@ async function renderGuardDashboard() {
 }
 
 window.simulateQrScan = simulateQrScan;
+window.executeSecurityScan = executeSecurityScan;
 window.renderGuardDashboard = renderGuardDashboard;
 window.initializeQrCameras = initializeQrCameras;
 window.startQrCamera = startQrCamera;

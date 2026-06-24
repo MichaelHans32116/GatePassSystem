@@ -82,6 +82,7 @@ public sealed class GatePassRequestsController(
         var canRead =
             detail.RequesterUserId == CurrentUserId ||
             HasPermission(GatePassPermissions.ReadAll) ||
+            HasPermission(GatePassPermissions.Scan) ||
             detail.ApprovalSteps.Any(
                 step => step.AssignedApproverUserId == CurrentUserId) ||
             (

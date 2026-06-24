@@ -296,17 +296,20 @@ public sealed class GatePassRepository(
             ORDER BY step.sequence_no;
 
             SELECT
-                scan_id AS ScanId,
-                gate_pass_id AS GatePassId,
-                scanned_by_user_id AS ScannedByUserId,
-                scan_method_code AS ScanMethodCode,
-                scan_action_code AS ScanActionCode,
-                result_code AS ResultCode,
-                message AS Message,
-                scanned_at AS ScannedAt
-            FROM tbl_gate_pass_scans
-            WHERE gate_pass_id = @GatePassId
-            ORDER BY scanned_at;
+                scan.scan_id AS ScanId,
+                scan.gate_pass_id AS GatePassId,
+                scan.scanned_by_user_id AS ScannedByUserId,
+                guard.display_name AS GuardName,
+                scan.scan_method_code AS ScanMethodCode,
+                scan.scan_action_code AS ScanActionCode,
+                scan.result_code AS ResultCode,
+                scan.message AS Message,
+                scan.scanned_at AS ScannedAt
+            FROM tbl_gate_pass_scans scan
+            LEFT JOIN tbl_user_accounts guard
+                ON guard.user_id = scan.scanned_by_user_id
+            WHERE scan.gate_pass_id = @GatePassId
+            ORDER BY scan.scanned_at;
 
             SELECT
                 material_item_id AS MaterialItemId,

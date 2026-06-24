@@ -109,7 +109,13 @@ public sealed class SecurityRepository(
                             AND request_row.qr_token_hash = @QrTokenHash
                         ) OR (
                             @ManualGatePassNo IS NOT NULL
-                            AND request_row.gate_pass_no = @ManualGatePassNo
+                            AND (
+                                request_row.gate_pass_no = @ManualGatePassNo
+                                OR (
+                                    LENGTH(@ManualGatePassNo) = 3
+                                    AND request_row.gate_pass_no LIKE CONCAT('%-', @ManualGatePassNo)
+                                )
+                            )
                         )
                     )
                     ORDER BY
