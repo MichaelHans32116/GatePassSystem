@@ -62,8 +62,12 @@ function mapApprovalSignatures(steps = []) {
             name: step.approverName,
             img: step.signatureUrl || null,
             fileId: step.signatureFileId || null,
-            w: 100,
-            y: 0
+            w: Number(step.signatureWidthPercent) > 0
+                ? Number(step.signatureWidthPercent)
+                : 100,
+            y: Number.isFinite(Number(step.signatureYOffset))
+                ? Number(step.signatureYOffset)
+                : 0
         };
         if (step.approvalStepCode === 'SUPERIOR') signatures.imm = signature;
         if (step.approvalStepCode === 'PRESIDENT') signatures.pres = signature;

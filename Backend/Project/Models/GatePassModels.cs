@@ -104,6 +104,8 @@ public sealed class ApprovalStepRecord
     public string? Comments { get; init; }
     public DateTime? ActedAt { get; init; }
     public long? SignatureFileId { get; init; }
+    public int? SignatureWidthPercent { get; init; }
+    public int? SignatureYOffset { get; init; }
 }
 
 public sealed class ApprovalQueueItem
