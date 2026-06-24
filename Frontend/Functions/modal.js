@@ -558,12 +558,16 @@ async function viewPass(id, isReviewing = false) {
                 if (!isMaterial && ['Approved', 'Outside', 'Overdue', 'Returned', 'Closed'].includes(p.status)) {
                     try {
                         const qrValue = await loadQrToken(p);
-                        if (qrValue) {
-                            new QRCode(qrContainer, {
-                                text: qrValue,
+                        if (qrValue && typeof QRCode === 'function') {
+                            const tempDiv = document.createElement('div');
+                            document.body.appendChild(tempDiv);
+                            new QRCode(tempDiv, {
+                                text: String(qrValue),
                                 width: 60,
                                 height: 60
                             });
+                            qrContainer.innerHTML = tempDiv.innerHTML;
+                            document.body.removeChild(tempDiv);
                         }
                     } catch {
                         qrContainer.innerHTML = '<span class="text-[9px] text-gray-400">QR unavailable</span>';
