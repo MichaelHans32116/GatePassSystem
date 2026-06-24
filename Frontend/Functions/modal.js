@@ -279,6 +279,20 @@ async function renderMaterialBundle(pass) {
                 .trim()
                 .slice(0, 20);
 
+            let formattedGpId = pass.gatePassNo || '';
+            if (formattedGpId) {
+                if (formattedGpId.includes('-')) {
+                    const parts = formattedGpId.split('-');
+                    if (parts.length === 2 && parts[1].length > 0) {
+                        formattedGpId = `${parts[0]}-<u>${parts[1]}</u>`;
+                    }
+                } else if (formattedGpId.length >= 3) {
+                    const prefix = formattedGpId.slice(0, -3);
+                    const suffix = formattedGpId.slice(-3);
+                    formattedGpId = `${prefix}<u>${suffix}</u>`;
+                }
+            }
+
             container.innerHTML = Array.from({ length: pageCount }, (_, pageIndex) => {
                 const pageItems = itemRows.slice(pageIndex * 9, pageIndex * 9 + 9);
                 while (pageItems.length < 9) pageItems.push(null);
