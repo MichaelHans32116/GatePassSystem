@@ -77,3 +77,20 @@ public sealed class DashboardStatusCount
     public long RecordCount { get; init; }
 }
 
+public sealed class FixedScheduleRecord
+{
+    public long FixedScheduleId { get; init; }
+    public long VehicleId { get; init; }
+    public string VehicleName { get; init; } = string.Empty;
+    public string PlateNumber { get; init; } = string.Empty;
+    public long? DriverId { get; init; }
+    public string? DriverName { get; init; }
+    public byte DayOfWeek { get; init; }
+    public TimeSpan StartTime { get; init; }
+    public TimeSpan EndTime { get; init; }
+    public string Title { get; init; } = string.Empty;
+    public string? Description { get; init; }
+    public string ScheduleType { get; init; } = string.Empty;
+    public bool IsActive { get; init; }
+}
+

@@ -115,5 +115,57 @@ public sealed class FleetController(
         var toDate = to ?? fromDate.AddDays(42); // ~6 weeks
         return Success(await fleetService.GetScheduleAsync(fromDate, toDate, cancellationToken));
     }
+
+    [AllowAnonymous]
+    [HttpGet("fleet/fixed-schedules")]
+    public async Task<ActionResult<ApiResponse<IReadOnlyList<FixedScheduleRecord>>>> FixedSchedules(
+        CancellationToken cancellationToken) =>
+        Success(await fleetService.GetFixedSchedulesAsync(cancellationToken));
+
+    [HttpPost("fleet/fixed-schedule")]
+    public async Task<ActionResult<ApiResponse<object>>> CreateFixedSchedule(
+        [FromBody] SaveFixedScheduleRequest request,
+        CancellationToken cancellationToken)
+    {
+        var username = User.FindFirst("username")?.Value;
+        if (username != "GA120" && username != "GA150" && username != "GA133" && username != "GA407")
+        {
+            return Forbid();
+        }
+
+        var id = await fleetService.SaveFixedScheduleAsync(null, request, cancellationToken);
+        return Success<object>(new { id }, "Fixed schedule created.");
+    }
+
+    [HttpPut("fleet/fixed-schedule/{id:long}")]
+    public async Task<ActionResult<ApiResponse<object>>> UpdateFixedSchedule(
+        long id,
+        [FromBody] SaveFixedScheduleRequest request,
+        CancellationToken cancellationToken)
+    {
+        var username = User.FindFirst("username")?.Value;
+        if (username != "GA120" && username != "GA150" && username != "GA133" && username != "GA407")
+        {
+            return Forbid();
+        }
+
+        await fleetService.SaveFixedScheduleAsync(id, request, cancellationToken);
+        return Success<object>(new { id }, "Fixed schedule updated.");
+    }
+
+    [HttpDelete("fleet/fixed-schedule/{id:long}")]
+    public async Task<IActionResult> DeleteFixedSchedule(
+        long id,
+        CancellationToken cancellationToken)
+    {
+        var username = User.FindFirst("username")?.Value;
+        if (username != "GA120" && username != "GA150" && username != "GA133" && username != "GA407")
+        {
+            return Forbid();
+        }
+
+        await fleetService.DeleteFixedScheduleAsync(id, cancellationToken);
+        return NoContent();
+    }
 }
 

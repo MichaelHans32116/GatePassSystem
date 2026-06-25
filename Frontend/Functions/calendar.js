@@ -187,6 +187,19 @@ function populateScheduleFilterDropdowns() {
 // ─── Initialize ──────────────────────────────────────────────────────
 async function initializeScheduleCalendar() {
     populateScheduleFilterDropdowns();
+    
+    // Check if current user is an authorized HR manager
+    const authorizedHR = ['GA120', 'GA150', 'GA133', 'GA407'];
+    const activeUser = typeof currentUser !== 'undefined' ? currentUser : null;
+    const btn = document.getElementById('btnManageFixedSchedules');
+    if (btn) {
+        if (activeUser && authorizedHR.includes(activeUser.id)) {
+            btn.classList.remove('hidden');
+        } else {
+            btn.classList.add('hidden');
+        }
+    }
+
     await loadAndRenderScheduleMonth();
 }
 
@@ -807,6 +820,176 @@ async function showPublicDriverCalendar() {
     }
 }
 
+// ─── Manage Fixed Weekly Schedules ──────────────────────────────────
+let loadedFixedSchedules = [];
+
+async function openFixedSchedulesModal() {
+    const modal = document.getElementById('fixedSchedulesModal');
+    if (!modal) return;
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+    await loadFixedSchedulesList();
+}
+
+function closeFixedSchedulesModal() {
+    const modal = document.getElementById('fixedSchedulesModal');
+    if (!modal) return;
+    modal.classList.remove('flex');
+    modal.classList.add('hidden');
+}
+
+async function loadFixedSchedulesList() {
+    try {
+        const res = await ApiClient.get('/fleet/fixed-schedules');
+        loadedFixedSchedules = Array.isArray(res) ? res : [];
+        renderFixedSchedulesList();
+    } catch (err) {
+        showToast('Unable to load fixed schedules.', 'error');
+    }
+}
+
+const daysOfWeekNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+function renderFixedSchedulesList() {
+    const tbody = document.getElementById('fixedSchedulesTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    if (loadedFixedSchedules.length === 0) {
+        tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-6 text-center text-gray-400">No fixed weekly schedules seeded.</td></tr>';
+        return;
+    }
+
+    loadedFixedSchedules.forEach(item => {
+        const tr = document.createElement('tr');
+        tr.className = 'border-b hover:bg-gray-50';
+        tr.innerHTML = `
+            <td class="px-4 py-3 font-semibold text-gray-700">${daysOfWeekNames[item.dayOfWeek] || item.dayOfWeek}</td>
+            <td class="px-4 py-3 text-gray-600 font-mono">${(item.startTime || '').substring(0, 5)} - ${(item.endTime || '').substring(0, 5)}</td>
+            <td class="px-4 py-3 text-gray-800">${item.vehicleName} <span class="text-xs text-gray-500 font-mono">(${item.plateNumber})</span></td>
+            <td class="px-4 py-3 text-gray-600">${item.driverName || 'Unassigned'}</td>
+            <td class="px-4 py-3">
+                <div class="font-bold text-gray-800">${item.title}</div>
+                \${item.description ? `<div class="text-gray-500 text-[10px]">\${item.description}</div>` : ''}
+            </td>
+            <td class="px-4 py-3 space-x-2">
+                <button onclick="openEditFixedScheduleForm(\${item.fixedScheduleId})" class="text-blue-600 hover:underline"><i class="fas fa-edit"></i> Edit</button>
+                <button onclick="deleteFixedSchedule(\${item.fixedScheduleId})" class="text-red-600 hover:underline"><i class="fas fa-trash"></i> Delete</button>
+            </td>
+        `;
+        tbody.appendChild(tr);
+    });
+}
+
+function openAddFixedScheduleForm() {
+    const modal = document.getElementById('fixedScheduleFormModal');
+    if (!modal) return;
+    document.getElementById('fixedScheduleFormTitle').innerText = 'Add Fixed Schedule';
+    document.getElementById('fixedScheduleForm').reset();
+    document.getElementById('fsId').value = '';
+    
+    populateFixedScheduleFormDropdowns();
+    
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+}
+
+function openEditFixedScheduleForm(id) {
+    const record = loadedFixedSchedules.find(r => r.fixedScheduleId === id);
+    if (!record) return;
+
+    const modal = document.getElementById('fixedScheduleFormModal');
+    if (!modal) return;
+    document.getElementById('fixedScheduleFormTitle').innerText = 'Edit Fixed Schedule';
+    
+    populateFixedScheduleFormDropdowns();
+
+    document.getElementById('fsId').value = record.fixedScheduleId;
+    document.getElementById('fsVehicle').value = record.vehicleId;
+    document.getElementById('fsDriver').value = record.driverId || '';
+    document.getElementById('fsDayOfWeek').value = record.dayOfWeek;
+    document.getElementById('fsStartTime').value = (record.startTime || '').substring(0, 5);
+    document.getElementById('fsEndTime').value = (record.endTime || '').substring(0, 5);
+    document.getElementById('fsTitle').value = record.title;
+    document.getElementById('fsDescription').value = record.description || '';
+    document.getElementById('fsType').value = record.scheduleType || 'RECURRING';
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+}
+
+function closeFixedScheduleFormModal() {
+    const modal = document.getElementById('fixedScheduleFormModal');
+    if (!modal) return;
+    modal.classList.remove('flex');
+    modal.classList.add('hidden');
+}
+
+function populateFixedScheduleFormDropdowns() {
+    const vSelect = document.getElementById('fsVehicle');
+    const dSelect = document.getElementById('fsDriver');
+    if (!vSelect || !dSelect) return;
+
+    // Populate Vehicles
+    vSelect.innerHTML = '<option value="">Select Vehicle</option>';
+    (databaseVehicles || []).forEach(v => {
+        vSelect.innerHTML += `<option value="\${v.id}">\${v.name} (\${v.plate})</option>`;
+    });
+
+    // Populate Drivers
+    dSelect.innerHTML = '<option value="">Select Driver (Optional)</option>';
+    (databaseDrivers || []).forEach(d => {
+        dSelect.innerHTML += `<option value="\${d.driverId}">\${d.fullName}</option>`;
+    });
+}
+
+async function saveFixedScheduleForm(event) {
+    event.preventDefault();
+    
+    const id = document.getElementById('fsId').value;
+    const body = {
+        vehicleId: Number(document.getElementById('fsVehicle').value),
+        driverId: document.getElementById('fsDriver').value ? Number(document.getElementById('fsDriver').value) : null,
+        dayOfWeek: Number(document.getElementById('fsDayOfWeek').value),
+        startTime: document.getElementById('fsStartTime').value + ':00',
+        endTime: document.getElementById('fsEndTime').value + ':00',
+        title: document.getElementById('fsTitle').value.trim(),
+        description: document.getElementById('fsDescription').value.trim() || null,
+        scheduleType: document.getElementById('fsType').value
+    };
+
+    try {
+        if (id) {
+            await ApiClient.put(`/fleet/fixed-schedule/\${id}`, {
+                body: JSON.stringify(body)
+            });
+            showToast('Fixed schedule updated successfully.');
+        } else {
+            await ApiClient.post('/fleet/fixed-schedule', {
+                body: JSON.stringify(body)
+            });
+            showToast('Fixed schedule created successfully.');
+        }
+        closeFixedScheduleFormModal();
+        await loadFixedSchedulesList();
+        await loadAndRenderScheduleMonth();
+    } catch (err) {
+        showToast(err instanceof ApiError ? err.message : 'Failed to save fixed schedule.', 'error');
+    }
+}
+
+async function deleteFixedSchedule(id) {
+    if (!confirm('Are you sure you want to delete this fixed schedule?')) return;
+    try {
+        await ApiClient.delete(`/fleet/fixed-schedule/\${id}`);
+        showToast('Fixed schedule deleted successfully.');
+        await loadFixedSchedulesList();
+        await loadAndRenderScheduleMonth();
+    } catch (err) {
+        showToast(err instanceof ApiError ? err.message : 'Failed to delete fixed schedule.', 'error');
+    }
+}
+
 // ─── Window exports ──────────────────────────────────────────────────
 window.initializeScheduleCalendar = initializeScheduleCalendar;
 window.loadScheduleData = loadScheduleData;
@@ -819,3 +1002,10 @@ window.closeScheduleDayModal = closeScheduleDayModal;
 window.exportScheduleExcel = exportScheduleExcel;
 window.populateScheduleFilterDropdowns = populateScheduleFilterDropdowns;
 window.showPublicDriverCalendar = showPublicDriverCalendar;
+window.openFixedSchedulesModal = openFixedSchedulesModal;
+window.closeFixedSchedulesModal = closeFixedSchedulesModal;
+window.openAddFixedScheduleForm = openAddFixedScheduleForm;
+window.closeFixedScheduleFormModal = closeFixedScheduleFormModal;
+window.saveFixedScheduleForm = saveFixedScheduleForm;
+window.openEditFixedScheduleForm = openEditFixedScheduleForm;
+window.deleteFixedSchedule = deleteFixedSchedule;

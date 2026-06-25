@@ -368,6 +368,7 @@
 
                     <!-- Export Bar -->
                     <div class="mt-4 flex flex-wrap gap-3 justify-end">
+                        <button id="btnManageFixedSchedules" onclick="openFixedSchedulesModal()" class="text-xs bg-amber-600 text-white px-4 py-2 rounded hover:bg-amber-700 transition hidden"><i class="fas fa-cog mr-1"></i> Manage Fixed Schedules</button>
                         <button onclick="exportScheduleExcel('vehicle')" class="text-xs bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition"><i class="fas fa-file-excel mr-1"></i> Export Vehicles (Weekly)</button>
                         <button onclick="exportScheduleExcel('truck')" class="text-xs bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"><i class="fas fa-file-excel mr-1"></i> Export Trucks (Weekly)</button>
                         <button onclick="exportScheduleExcel('both')" class="text-xs bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 transition"><i class="fas fa-file-excel mr-1"></i> Export Both</button>
@@ -1063,6 +1064,108 @@
                     <button onclick="closeScheduleDayModal()" class="text-xs text-gray-600 px-3 py-1.5 rounded border border-gray-300 hover:bg-gray-100 transition">Close</button>
                 </div>
             </div>
+        </div>
+    </div>
+
+    <!-- Fixed Weekly Schedules List Modal -->
+    <div id="fixedSchedulesModal" class="fixed inset-0 z-[80] hidden items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+        <div class="w-full max-w-4xl rounded-2xl bg-white shadow-2xl max-h-[85vh] flex flex-col">
+            <div class="px-5 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50/50 rounded-t-2xl">
+                <h3 class="font-bold text-gray-800"><i class="fas fa-cog text-mpiBlue mr-2"></i> Manage Fixed Weekly Schedules</h3>
+                <button onclick="closeFixedSchedulesModal()" class="rounded-full bg-gray-100 px-3 py-2 text-xs font-bold text-gray-600 transition hover:bg-gray-200"><i class="fas fa-times"></i></button>
+            </div>
+            <div class="p-5 overflow-y-auto flex-grow">
+                <div class="mb-4 flex justify-between items-center">
+                    <p class="text-xs text-gray-500">Manage permanent weekly schedules for trucks and drivers.</p>
+                    <button onclick="openAddFixedScheduleForm()" class="text-xs bg-mpiBlue text-white font-bold px-3 py-1.5 rounded hover:bg-mpiDark transition"><i class="fas fa-plus mr-1"></i> Add Schedule</button>
+                </div>
+                <div class="overflow-x-auto border border-gray-200 rounded-lg">
+                    <table class="w-full text-left border-collapse text-xs">
+                        <thead>
+                            <tr class="bg-gray-50 text-gray-500 font-bold border-b">
+                                <th class="px-4 py-3">Day</th>
+                                <th class="px-4 py-3">Time</th>
+                                <th class="px-4 py-3">Vehicle</th>
+                                <th class="px-4 py-3">Driver</th>
+                                <th class="px-4 py-3">Title / Description</th>
+                                <th class="px-4 py-3">Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody id="fixedSchedulesTableBody" class="divide-y divide-gray-100">
+                            <!-- Populated dynamically -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            <div class="px-5 py-3 border-t border-gray-200 flex justify-end bg-gray-50/50 rounded-b-2xl">
+                <button onclick="closeFixedSchedulesModal()" class="text-xs text-gray-600 px-4 py-2 rounded border border-gray-300 hover:bg-gray-100 transition">Close</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Add/Edit Fixed Schedule Form Modal -->
+    <div id="fixedScheduleFormModal" class="fixed inset-0 z-[90] hidden items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+        <div class="w-full max-w-md rounded-2xl bg-white shadow-2xl flex flex-col">
+            <div class="px-5 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50/50 rounded-t-2xl">
+                <h3 class="font-bold text-gray-800" id="fixedScheduleFormTitle">Add Fixed Schedule</h3>
+                <button onclick="closeFixedScheduleFormModal()" class="rounded-full bg-gray-100 px-3 py-2 text-xs font-bold text-gray-600 transition hover:bg-gray-200"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="fixedScheduleForm" onsubmit="saveFixedScheduleForm(event)" class="p-5 space-y-4">
+                <input type="hidden" id="fsId">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Vehicle</label>
+                    <select id="fsVehicle" class="w-full border border-gray-300 rounded px-3 py-2 text-xs focus:outline-none focus:border-mpiBlue" required>
+                        <option value="">Select Vehicle</option>
+                    </select>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Driver</label>
+                    <select id="fsDriver" class="w-full border border-gray-300 rounded px-3 py-2 text-xs focus:outline-none focus:border-mpiBlue">
+                        <option value="">Select Driver (Optional)</option>
+                    </select>
+                </div>
+                <div class="grid grid-cols-3 gap-2">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Day of Week</label>
+                        <select id="fsDayOfWeek" class="w-full border border-gray-300 rounded px-3 py-2 text-xs focus:outline-none focus:border-mpiBlue" required>
+                            <option value="1">Monday</option>
+                            <option value="2">Tuesday</option>
+                            <option value="3">Wednesday</option>
+                            <option value="4">Thursday</option>
+                            <option value="5">Friday</option>
+                            <option value="6">Saturday</option>
+                            <option value="0">Sunday</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Start Time</label>
+                        <input type="time" id="fsStartTime" class="w-full border border-gray-300 rounded px-3 py-2 text-xs focus:outline-none focus:border-mpiBlue" required>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">End Time</label>
+                        <input type="time" id="fsEndTime" class="w-full border border-gray-300 rounded px-3 py-2 text-xs focus:outline-none focus:border-mpiBlue" required>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Schedule Title</label>
+                    <input type="text" id="fsTitle" placeholder="e.g. IN of Mr. Maekawa, MDD Transfer..." class="w-full border border-gray-300 rounded px-3 py-2 text-xs focus:outline-none focus:border-mpiBlue" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Description</label>
+                    <textarea id="fsDescription" rows="2" placeholder="e.g. 5 pallets, PEZA documentation..." class="w-full border border-gray-300 rounded px-3 py-2 text-xs focus:outline-none focus:border-mpiBlue"></textarea>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Type</label>
+                    <select id="fsType" class="w-full border border-gray-300 rounded px-3 py-2 text-xs focus:outline-none focus:border-mpiBlue" required>
+                        <option value="RECURRING">RECURRING (Weekly)</option>
+                        <option value="BLOCK">BLOCK (Temporary Restriction)</option>
+                    </select>
+                </div>
+                <div class="flex justify-end gap-2 pt-2 border-t">
+                    <button type="button" onclick="closeFixedScheduleFormModal()" class="text-xs text-gray-600 px-3 py-1.5 rounded border border-gray-300 hover:bg-gray-100 transition">Cancel</button>
+                    <button type="submit" class="text-xs bg-mpiBlue text-white font-bold px-4 py-1.5 rounded hover:bg-mpiDark transition">Save</button>
+                </div>
+            </form>
         </div>
     </div>
 

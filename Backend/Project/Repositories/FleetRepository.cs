@@ -593,5 +593,138 @@ public sealed class FleetRepository(
                 cancellationToken: cancellationToken));
         return schedules.AsList();
     }
+
+    public async Task<long> SaveFixedScheduleAsync(
+        long? id,
+        SaveFixedScheduleRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection = await connectionFactory.OpenConnectionAsync(cancellationToken);
+        
+        // Parse time strings (can be "HH:mm" or "HH:mm:ss")
+        var startTime = TimeSpan.Parse(request.StartTime);
+        var endTime = TimeSpan.Parse(request.EndTime);
+
+        if (id.HasValue)
+        {
+            await connection.ExecuteAsync(
+                new CommandDefinition(
+                    """
+                    UPDATE tbl_fixed_vehicle_schedules
+                    SET vehicle_id = @VehicleId,
+                        driver_id = @DriverId,
+                        day_of_week = @DayOfWeek,
+                        start_time = @StartTime,
+                        end_time = @EndTime,
+                        title = @Title,
+                        description = @Description,
+                        schedule_type = @ScheduleType
+                    WHERE fixed_schedule_id = @Id;
+                    """,
+                    new
+                    {
+                        Id = id.Value,
+                        request.VehicleId,
+                        request.DriverId,
+                        request.DayOfWeek,
+                        StartTime = startTime,
+                        EndTime = endTime,
+                        request.Title,
+                        request.Description,
+                        request.ScheduleType
+                    },
+                    cancellationToken: cancellationToken));
+            return id.Value;
+        }
+        else
+        {
+            var newId = await connection.ExecuteScalarAsync<long>(
+                new CommandDefinition(
+                    """
+                    INSERT INTO tbl_fixed_vehicle_schedules (
+                        vehicle_id,
+                        driver_id,
+                        day_of_week,
+                        start_time,
+                        end_time,
+                        title,
+                        description,
+                        schedule_type,
+                        is_active
+                    ) VALUES (
+                        @VehicleId,
+                        @DriverId,
+                        @DayOfWeek,
+                        @StartTime,
+                        @EndTime,
+                        @Title,
+                        @Description,
+                        @ScheduleType,
+                        TRUE
+                    );
+                    SELECT LAST_INSERT_ID();
+                    """,
+                    new
+                    {
+                        request.VehicleId,
+                        request.DriverId,
+                        request.DayOfWeek,
+                        StartTime = startTime,
+                        EndTime = endTime,
+                        request.Title,
+                        request.Description,
+                        request.ScheduleType
+                    },
+                    cancellationToken: cancellationToken));
+            return newId;
+        }
+    }
+
+    public async Task DeleteFixedScheduleAsync(
+        long id,
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection = await connectionFactory.OpenConnectionAsync(cancellationToken);
+        await connection.ExecuteAsync(
+            new CommandDefinition(
+                """
+                UPDATE tbl_fixed_vehicle_schedules
+                SET is_active = FALSE
+                WHERE fixed_schedule_id = @Id;
+                """,
+                new { Id = id },
+                cancellationToken: cancellationToken));
+    }
+
+    public async Task<IReadOnlyList<FixedScheduleRecord>> GetFixedSchedulesAsync(
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection = await connectionFactory.OpenConnectionAsync(cancellationToken);
+        var schedules = await connection.QueryAsync<FixedScheduleRecord>(
+            new CommandDefinition(
+                """
+                SELECT
+                    fs.fixed_schedule_id AS FixedScheduleId,
+                    fs.vehicle_id AS VehicleId,
+                    v.vehicle_name AS VehicleName,
+                    v.plate_number AS PlateNumber,
+                    fs.driver_id AS DriverId,
+                    d.full_name AS DriverName,
+                    fs.day_of_week AS DayOfWeek,
+                    fs.start_time AS StartTime,
+                    fs.end_time AS EndTime,
+                    fs.title AS Title,
+                    fs.description AS Description,
+                    fs.schedule_type AS ScheduleType,
+                    fs.is_active AS IsActive
+                FROM tbl_fixed_vehicle_schedules fs
+                JOIN tbl_vehicles v ON v.vehicle_id = fs.vehicle_id
+                LEFT JOIN tbl_drivers d ON d.driver_id = fs.driver_id
+                WHERE fs.is_active = TRUE
+                ORDER BY fs.day_of_week, fs.start_time, v.vehicle_name;
+                """,
+                cancellationToken: cancellationToken));
+        return schedules.AsList();
+    }
 }
 

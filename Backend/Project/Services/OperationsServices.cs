@@ -98,6 +98,35 @@ public sealed class FleetService(IFleetRepository repository) : IFleetService
         DateTime to,
         CancellationToken cancellationToken = default) =>
         repository.GetScheduleAsync(from, to, cancellationToken);
+
+    public Task<long> SaveFixedScheduleAsync(
+        long? id,
+        SaveFixedScheduleRequest request,
+        CancellationToken cancellationToken = default)
+    {
+        if (request.VehicleId <= 0)
+        {
+            throw new InvalidOperationException("A valid vehicle is required.");
+        }
+        if (string.IsNullOrWhiteSpace(request.StartTime) || string.IsNullOrWhiteSpace(request.EndTime))
+        {
+            throw new InvalidOperationException("Start time and end time are required.");
+        }
+        if (string.IsNullOrWhiteSpace(request.Title))
+        {
+            throw new InvalidOperationException("Title is required.");
+        }
+        return repository.SaveFixedScheduleAsync(id, request, cancellationToken);
+    }
+
+    public Task DeleteFixedScheduleAsync(
+        long id,
+        CancellationToken cancellationToken = default) =>
+        repository.DeleteFixedScheduleAsync(id, cancellationToken);
+
+    public Task<IReadOnlyList<FixedScheduleRecord>> GetFixedSchedulesAsync(
+        CancellationToken cancellationToken = default) =>
+        repository.GetFixedSchedulesAsync(cancellationToken);
 }
 
 public sealed class SignatureService(
