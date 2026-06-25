@@ -116,6 +116,9 @@ async function simulateQrScan(identifierOverride = null, fromCamera = false) {
             if (success) {
                 stopQrCamera();
             } else {
+                if (typeof qrClientCooldowns !== 'undefined' && qrClientCooldowns.has(identifier)) {
+                    qrClientCooldowns.delete(identifier);
+                }
                 resumeQrScanning();
             }
         }
@@ -123,6 +126,9 @@ async function simulateQrScan(identifierOverride = null, fromCamera = false) {
         console.error(`[simulateQrScan] Lookup failed with error:`, error);
         showToast(error instanceof ApiError ? error.message : 'Lookup failed.', 'error');
         if (fromCamera) {
+            if (typeof qrClientCooldowns !== 'undefined' && qrClientCooldowns.has(identifier)) {
+                qrClientCooldowns.delete(identifier);
+            }
             resumeQrScanning();
         }
     } finally {
