@@ -916,6 +916,48 @@
         </div>
     </div>
 
+    <!-- Global QR: Pass Selection Modal (multiple active passes) -->
+    <div id="globalQrPassSelectionModal" class="fixed inset-0 z-[95] hidden items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm" style="display:none;">
+        <div class="w-full rounded-2xl bg-white shadow-2xl overflow-hidden" style="max-width:min(92vw,28rem);max-height:calc(100vh - 3rem);">
+            <div class="bg-gradient-to-r from-blue-600 to-blue-700 px-5 py-4 flex items-center justify-between">
+                <div>
+                    <h3 class="text-base font-extrabold text-white"><i class="fas fa-qrcode mr-2"></i>Multiple Active Passes</h3>
+                    <p id="globalQrSelectionName" class="text-xs text-blue-200 mt-0.5 font-medium"></p>
+                </div>
+                <button type="button" onclick="closeGlobalQrSelectionModal()" class="rounded-full bg-white/20 px-3 py-2 text-xs font-bold text-white transition hover:bg-white/30">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="px-4 py-3">
+                <p class="text-xs text-gray-500 mb-3"><i class="fas fa-info-circle mr-1 text-blue-500"></i>This employee has multiple active gate passes. Select which one to process.</p>
+                <div id="globalQrSelectionList" class="space-y-2 max-h-[50vh] overflow-y-auto pr-1"></div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Global QR: Employee History Modal (no active passes) -->
+    <div id="globalQrHistoryModal" class="fixed inset-0 z-[95] hidden items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm" style="display:none;">
+        <div class="w-full rounded-2xl bg-white shadow-2xl overflow-hidden" style="max-width:min(92vw,32rem);max-height:calc(100vh - 3rem);">
+            <div class="bg-gradient-to-r from-gray-700 to-gray-800 px-5 py-4 flex items-center justify-between">
+                <div>
+                    <h3 class="text-base font-extrabold text-white"><i class="fas fa-history mr-2"></i>Recent Transactions</h3>
+                    <p id="globalQrHistoryName" class="text-xs text-gray-300 mt-0.5 font-medium"></p>
+                </div>
+                <button type="button" onclick="closeGlobalQrHistoryModal()" class="rounded-full bg-white/20 px-3 py-2 text-xs font-bold text-white transition hover:bg-white/30">
+                    <i class="fas fa-times"></i>
+                </button>
+            </div>
+            <div class="px-4 py-3">
+                <p class="text-xs text-gray-500 mb-3"><i class="fas fa-info-circle mr-1 text-gray-400"></i>No active gate pass. Showing recent completed transactions.</p>
+                <div id="globalQrHistoryList" class="space-y-2 max-h-[55vh] overflow-y-auto pr-1"></div>
+                <div id="globalQrHistoryEmpty" class="hidden py-8 text-center">
+                    <i class="fas fa-inbox text-3xl text-gray-300 mb-2"></i>
+                    <p class="text-sm text-gray-400">No transaction history found.</p>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="Frontend/runtime-config.js?v=20260624-7.2"></script>
     <script src="Frontend/Functions/mock-data.js?v=20260624-7.2"></script>
     <script src="Frontend/Connectors/api-client.js?v=20260624-7.2"></script>
@@ -924,7 +966,7 @@
     <script src="Frontend/Functions/modal.js?v=20260625-7.7"></script>
     <script src="Frontend/Functions/gatepass.js?v=20260625-guard-scan"></script>
     <script src="Frontend/Functions/approvals.js?v=20260624-7.4"></script>
-    <script src="Frontend/Functions/scanner.js?v=20260625-guard-scan"></script>
+    <script src="Frontend/Functions/scanner.js?v=20260625-phase8-globalqr"></script>
     <script src="Frontend/Functions/admin.js?v=20260624-7.2"></script>
     <script src="Frontend/Functions/navigation.js?v=20260624-7.2"></script>
     <script src="Frontend/Functions/auth.js?v=20260624-7.2"></script>

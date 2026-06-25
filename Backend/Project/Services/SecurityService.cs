@@ -1,6 +1,7 @@
 using System.Text.Json;
 using GatePassSystem.Project.DTOs.Common;
 using GatePassSystem.Project.DTOs.GatePass;
+using GatePassSystem.Project.DTOs.Security;
 using GatePassSystem.Project.Models;
 using GatePassSystem.Project.Repositories;
 
@@ -78,4 +79,9 @@ public sealed class SecurityService(
 
         return ServiceResult<SecurityScanResult>.Success(result);
     }
+
+    public Task<EmployeePassesResult> GetEmployeePassesAsync(
+        long employeeRecordId,
+        CancellationToken cancellationToken = default) =>
+        securityRepository.GetEmployeePassesAsync(employeeRecordId, cancellationToken);
 }

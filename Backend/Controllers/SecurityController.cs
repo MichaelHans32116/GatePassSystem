@@ -1,6 +1,7 @@
 using GatePassSystem.Api.Infrastructure;
 using GatePassSystem.Api.Infrastructure.Authorization;
 using GatePassSystem.Project.DTOs.GatePass;
+using GatePassSystem.Project.DTOs.Security;
 using GatePassSystem.Project.Models;
 using GatePassSystem.Project.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -33,5 +34,9 @@ public sealed class SecurityController(
             ? Success(result.Value!, result.Value!.Message)
             : ServiceFailure(result);
     }
-}
 
+    [HttpGet("employee/{employeeRecordId:long}/passes")]
+    public async Task<ActionResult<ApiResponse<EmployeePassesResult>>> EmployeePasses(
+        long employeeRecordId, CancellationToken cancellationToken) =>
+        Success(await securityService.GetEmployeePassesAsync(employeeRecordId, cancellationToken));
+}
