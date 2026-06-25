@@ -1,6 +1,8 @@
 using GatePassSystem.Api.Infrastructure;
 using GatePassSystem.Api.Infrastructure.Authorization;
+using GatePassSystem.Project.DTOs.Common;
 using GatePassSystem.Project.DTOs.GatePass;
+using GatePassSystem.Project.DTOs.Security;
 using GatePassSystem.Project.Models;
 using GatePassSystem.Project.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -33,5 +35,38 @@ public sealed class SecurityController(
             ? Success(result.Value!, result.Value!.Message)
             : ServiceFailure(result);
     }
-}
 
+    [HttpGet("employee/{employeeRecordId:long}/passes")]
+    public async Task<ActionResult<ApiResponse<EmployeePassesResult>>> EmployeePasses(
+        long employeeRecordId, CancellationToken cancellationToken) =>
+        Success(await securityService.GetEmployeePassesAsync(employeeRecordId, cancellationToken));
+
+    [HttpGet("employee/by-id/{employeeId}/passes")]
+    public async Task<ActionResult<ApiResponse<EmployeePassesResult>>> EmployeePassesById(
+        string employeeId, CancellationToken cancellationToken)
+    {
+        var recordId = await securityService.GetEmployeeRecordIdByEmployeeIdAsync(employeeId, cancellationToken);
+        if (!recordId.HasValue)
+        {
+            return ServiceFailure(ServiceResult<EmployeePassesResult>.Failure(
+                "EMPLOYEE_NOT_FOUND",
+                $"No active employee found with ID '{employeeId}'."));
+        }
+
+        return Success(await securityService.GetEmployeePassesAsync(recordId.Value, cancellationToken));
+    }
+
+    [HttpGet("passes/lookup/{identifier}")]
+    public async Task<ActionResult<ApiResponse<long>>> LookupPass(
+        string identifier, CancellationToken cancellationToken)
+    {
+        var dbId = await securityService.LookupGatePassIdAsync(identifier, cancellationToken);
+        if (!dbId.HasValue)
+        {
+            return ServiceFailure(ServiceResult<long>.Failure(
+                "GATE_PASS_NOT_FOUND",
+                "Gate pass was not found."));
+        }
+        return Success(dbId.Value);
+    }
+}

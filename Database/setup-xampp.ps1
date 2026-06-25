@@ -185,6 +185,14 @@ if ($databaseExists -eq 0) {
             Write-Host 'Applying database migration 011...' -ForegroundColor Yellow
             Invoke-MySqlSource 'Database\Migrations\011_unify_control_numbers_and_view.sql'
         }
+
+        $vehicleScheduleApplied = Invoke-MySqlScalarInt `
+            "SELECT COUNT(*) FROM gate_pass_system.tbl_schema_versions WHERE version_no='012';"
+
+        if ($vehicleScheduleApplied -eq 0) {
+            Write-Host 'Applying database migration 012...' -ForegroundColor Yellow
+            Invoke-MySqlSource 'Database\Migrations\012_vehicle_schedule_and_constants.sql'
+        }
     }
 }
 

@@ -1,4 +1,5 @@
 // Security queue and QR/manual Time Out/Time In scans.
+// Phase 8: Global QR — Employee QR as Universal Gate Pass Scanner
 
 var qrCameraStream = null;
 var qrCameraAnimationFrame = null;
@@ -58,90 +59,307 @@ async function simulateQrScan(identifierOverride = null, fromCamera = false) {
         return;
     }
 
+    let success = false;
     try {
         const inputButton = document.querySelector('#manualQrInput + button');
         if (inputButton) inputButton.disabled = true;
 
         const isQrToken = identifier.startsWith('GP1.') || identifier.startsWith('EMP1.');
+        console.log(`[simulateQrScan] Scanned identifier: "${identifier}", isQrToken: ${isQrToken}`);
         
         if (isQrToken) {
             try {
                 const parts = identifier.split('.');
+                console.log(`[simulateQrScan] QR parts:`, parts);
                 if (parts.length >= 2) {
                     const idVal = parseInt(parts[1], 10);
+                    console.log(`[simulateQrScan] Parsed ID value: ${idVal}`);
                     if (identifier.startsWith('GP1.')) {
+                        // Per-pass QR — direct to that specific pass (unchanged)
                         viewPass(idVal, true);
+                        success = true;
                     } else if (identifier.startsWith('EMP1.')) {
-                        const queue = await ApiClient.get('/security/queue');
-                        const match = queue.find(item => item.employeeRecordId === idVal);
-                        if (match) {
-                            viewPass(match.gatePassId, true);
-                        } else {
-                            // If not in active queue, check if there's any pass in history
-                            try {
-                                const lookup = await ApiClient.request(
-                                    `/form-requests?page=1&pageSize=20&search=`
-                                );
-                                // Since we don't have search by employeeRecordId, we can search for the employee by typing their name
-                                showToast('No active gate pass queue for this employee.', 'info');
-                            } catch {
-                                showToast('No active gate pass queue for this employee.', 'info');
-                            }
-                        }
+                        // === GLOBAL QR LOGIC ===
+                        success = await handleGlobalQrScan(idVal);
                     }
                 } else {
                     showToast('Invalid QR payload', 'error');
                 }
             } catch (e) {
+                console.error(`[simulateQrScan] Error decoding QR:`, e);
                 showToast('Failed to decode QR', 'error');
             }
         } else if (identifier.startsWith('FRS|')) {
             const parts = identifier.split('|');
+            console.log(`[simulateQrScan] FRS parts:`, parts);
             if (parts.length >= 3) {
                 viewPass(parts[2], true);
+                success = true;
             }
         } else {
-            const queue = await ApiClient.get('/security/queue');
-            const searchId = String(identifier).toLowerCase();
-            const match = queue.find(item => {
-                const gpId = String(item.gatePassNo).toLowerCase();
-                const ctrlId = String(item.controlNo || '').toLowerCase();
-                return gpId === searchId || ctrlId === searchId;
-            });
-            if (match) {
-                viewPass(match.gatePassId, true);
-            } else {
-                try {
-                    const lookup = await ApiClient.request(
-                        `/form-requests?page=1&pageSize=20&search=${encodeURIComponent(identifier)}`
-                    );
-                    const dbMatch = lookup.items.find(item => 
-                        String(item.gatePassNo).toLowerCase() === searchId || 
-                        String(item.controlNo || '').toLowerCase() === searchId
-                    );
-                    if (dbMatch) {
-                        viewPass(dbMatch.gatePassId, false);
-                    } else {
-                        showToast('ID/Control No. not found in active queue or history.', 'error');
-                    }
-                } catch (err) {
-                    showToast('ID/Control No. not found in active queue.', 'error');
-                }
+            // === MANUAL ENTRY / RAW EMPLOYEE ID PATH ===
+            try {
+                console.log(`[simulateQrScan] Attempting manual lookup for employee ID: "${identifier}"`);
+                // First, check if the identifier is an Employee ID
+                const empData = await ApiClient.get(`/security/employee/by-id/${encodeURIComponent(identifier)}/passes`);
+                console.log(`[simulateQrScan] Employee lookup data:`, empData);
+                success = await processGlobalQrData(empData);
+            } catch (err) {
+                console.warn(`[simulateQrScan] Employee ID lookup failed, trying Control/GP No:`, err);
+                // Not an Employee ID (or API failed), fallback to Control No lookup
+                success = await handleManualEntryLookup(identifier);
             }
         }
 
         input.value = '';
         if (fromCamera) {
-            stopQrCamera();
+            if (success) {
+                stopQrCamera();
+            } else {
+                if (typeof qrClientCooldowns !== 'undefined' && qrClientCooldowns.has(identifier)) {
+                    qrClientCooldowns.delete(identifier);
+                }
+                resumeQrScanning();
+            }
         }
     } catch (error) {
+        console.error(`[simulateQrScan] Lookup failed with error:`, error);
         showToast(error instanceof ApiError ? error.message : 'Lookup failed.', 'error');
+        if (fromCamera) {
+            if (typeof qrClientCooldowns !== 'undefined' && qrClientCooldowns.has(identifier)) {
+                qrClientCooldowns.delete(identifier);
+            }
+            resumeQrScanning();
+        }
     } finally {
         const inputButton = document.querySelector('#manualQrInput + button');
         if (inputButton) inputButton.disabled = false;
     }
 }
 
+// ============================================================
+// GLOBAL QR: Employee QR scan handler
+// ============================================================
+async function handleGlobalQrScan(employeeRecordId) {
+    try {
+        console.log(`[handleGlobalQrScan] Querying passes for record ID: ${employeeRecordId}`);
+        const data = await ApiClient.get(`/security/employee/${employeeRecordId}/passes`);
+        console.log(`[handleGlobalQrScan] Passes data returned:`, data);
+        return await processGlobalQrData(data);
+    } catch (error) {
+        console.warn(`[handleGlobalQrScan] API query failed for record ID ${employeeRecordId}, falling back to queue match:`, error);
+        // Fallback: try the old queue-based lookup if new endpoint unavailable
+        try {
+            const queue = await ApiClient.get('/security/queue');
+            const match = queue.find(item => item.employeeRecordId === employeeRecordId);
+            if (match) {
+                viewPass(match.gatePassId, true);
+                return true;
+            } else {
+                showToast('No active gate pass queue for this employee.', 'info');
+                return false;
+            }
+        } catch {
+            showToast('Unable to look up employee passes.', 'error');
+            return false;
+        }
+    }
+}
+
+async function processGlobalQrData(data) {
+    const active = data.active || [];
+    const recent = data.recent || [];
+    const employeeName = data.employeeName || 'Employee';
+
+    if (active.length === 1) {
+        // Single active pass — go directly to scan mode
+        viewPass(active[0].gatePassId, true);
+        return true;
+    } else if (active.length > 1) {
+        // Multiple active passes — show selection modal
+        showPassSelectionModal(active, employeeName);
+        return true;
+    } else if (recent.length > 0) {
+        // No active passes but has history — show history modal
+        showEmployeeHistoryModal(recent, employeeName);
+        return true;
+    } else {
+        // No passes at all
+        showToast('No gate pass records found for this employee.', 'info');
+        return false;
+    }
+}
+
+// ============================================================
+// MANUAL ENTRY: Control No / GP No lookup (Bug fix)
+// ============================================================
+async function handleManualEntryLookup(identifier) {
+    const queue = await ApiClient.get('/security/queue');
+    const searchId = String(identifier).toLowerCase();
+    const match = queue.find(item => {
+        const gpId = String(item.gatePassNo).toLowerCase();
+        const ctrlId = String(item.controlNo || '').toLowerCase();
+        return gpId === searchId || ctrlId === searchId;
+    });
+
+    if (match) {
+        // Found in active queue — open in scan/review mode
+        viewPass(match.gatePassId, true);
+        return true;
+    } else {
+        // Not in active queue — search in history using the new security lookup endpoint
+        try {
+            const lookupId = await ApiClient.get(`/security/passes/lookup/${encodeURIComponent(identifier)}`);
+            if (lookupId) {
+                showToast('This gate pass is completed. Opening in view-only mode.', 'info');
+                viewPass(lookupId, false);
+                return true;
+            } else {
+                showToast('Not found in queue or history.', 'info');
+                return false;
+            }
+        } catch (err) {
+            showToast('ID/Control No. not found.', 'error');
+            return false;
+        }
+    }
+}
+
+// ============================================================
+// GLOBAL QR UI: Pass Selection Modal (multiple active passes)
+// ============================================================
+function showPassSelectionModal(activePasses, employeeName) {
+    const modal = document.getElementById('globalQrPassSelectionModal');
+    const nameEl = document.getElementById('globalQrSelectionName');
+    const listEl = document.getElementById('globalQrSelectionList');
+    if (!modal || !listEl) return;
+
+    nameEl.textContent = employeeName;
+    listEl.innerHTML = activePasses.map(pass => {
+        const isWaitingOut = (pass.statusName || '').toUpperCase().includes('APPROVED');
+        const statusLabel = isWaitingOut ? 'Waiting OUT' : 'Waiting IN';
+        const statusClass = isWaitingOut
+            ? 'bg-yellow-100 text-yellow-800'
+            : 'bg-blue-100 text-blue-800';
+        const icon = pass.formTypeName.toUpperCase().includes('MATERIAL')
+            ? 'fa-box' : 'fa-user';
+        const iconColor = pass.formTypeName.toUpperCase().includes('MATERIAL')
+            ? 'text-amber-600' : 'text-mpiBlue';
+
+        return `
+            <button onclick="selectGlobalQrPass(${pass.gatePassId})"
+                    class="w-full text-left p-3 rounded-xl border border-gray-200 hover:border-blue-400 hover:bg-blue-50 transition group flex items-center gap-3">
+                <div class="flex-shrink-0 w-9 h-9 rounded-full bg-gray-100 group-hover:bg-blue-100 flex items-center justify-center">
+                    <i class="fas ${icon} ${iconColor} text-sm"></i>
+                </div>
+                <div class="flex-1 min-w-0">
+                    <div class="flex items-center gap-2">
+                        <span class="font-mono text-xs font-bold text-gray-800">${materialEscape(pass.controlNo || pass.gatePassNo || '')}</span>
+                        <span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${statusClass}">${statusLabel}</span>
+                    </div>
+                    <p class="text-[10px] text-gray-500 mt-0.5 truncate">
+                        <span class="font-semibold ${iconColor}">${materialEscape(pass.formTypeName)}</span>
+                        ${pass.destination ? ` · ${materialEscape(pass.destination)}` : ''}
+                    </p>
+                </div>
+                <i class="fas fa-chevron-right text-gray-300 group-hover:text-blue-500 text-xs"></i>
+            </button>
+        `;
+    }).join('');
+
+    modal.style.display = 'flex';
+    modal.classList.remove('hidden');
+}
+
+function selectGlobalQrPass(gatePassId) {
+    closeGlobalQrSelectionModal();
+    viewPass(gatePassId, true);
+}
+
+function closeGlobalQrSelectionModal() {
+    const modal = document.getElementById('globalQrPassSelectionModal');
+    if (modal) {
+        modal.style.display = 'none';
+        modal.classList.add('hidden');
+    }
+}
+
+// ============================================================
+// GLOBAL QR UI: Employee History Modal (no active passes)
+// ============================================================
+function showEmployeeHistoryModal(recentPasses, employeeName) {
+    const modal = document.getElementById('globalQrHistoryModal');
+    const nameEl = document.getElementById('globalQrHistoryName');
+    const listEl = document.getElementById('globalQrHistoryList');
+    const emptyEl = document.getElementById('globalQrHistoryEmpty');
+    if (!modal || !listEl) return;
+
+    nameEl.textContent = employeeName;
+
+    if (recentPasses.length === 0) {
+        listEl.innerHTML = '';
+        if (emptyEl) emptyEl.classList.remove('hidden');
+    } else {
+        if (emptyEl) emptyEl.classList.add('hidden');
+        listEl.innerHTML = recentPasses.map(pass => {
+            const statusColor = getHistoryStatusColor(pass.statusGroup);
+            const icon = pass.formTypeName.toUpperCase().includes('MATERIAL')
+                ? 'fa-box' : 'fa-user';
+            const iconColor = pass.formTypeName.toUpperCase().includes('MATERIAL')
+                ? 'text-amber-600' : 'text-mpiBlue';
+            const dateStr = pass.dateFiled || '';
+
+            return `
+                <button onclick="viewHistoryPass(${pass.gatePassId})"
+                        class="w-full text-left p-3 rounded-xl border border-gray-200 hover:border-gray-400 hover:bg-gray-50 transition group flex items-center gap-3">
+                    <div class="flex-shrink-0 w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center">
+                        <i class="fas ${icon} ${iconColor} text-sm"></i>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <div class="flex items-center gap-2">
+                            <span class="font-mono text-xs font-bold text-gray-700">${materialEscape(pass.controlNo || pass.gatePassNo || '')}</span>
+                            <span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${statusColor}">${materialEscape(pass.statusName)}</span>
+                        </div>
+                        <p class="text-[10px] text-gray-500 mt-0.5 truncate">
+                            <span class="font-semibold ${iconColor}">${materialEscape(pass.formTypeName)}</span>
+                            ${dateStr ? ` · ${materialEscape(dateStr)}` : ''}
+                            ${pass.destination ? ` · ${materialEscape(pass.destination)}` : ''}
+                        </p>
+                    </div>
+                    <i class="fas fa-eye text-gray-300 group-hover:text-gray-500 text-xs"></i>
+                </button>
+            `;
+        }).join('');
+    }
+
+    modal.style.display = 'flex';
+    modal.classList.remove('hidden');
+}
+
+function getHistoryStatusColor(statusGroup) {
+    switch ((statusGroup || '').toUpperCase()) {
+        case 'COMPLETED': return 'bg-green-100 text-green-700';
+        case 'TERMINAL': return 'bg-red-100 text-red-700';
+        default: return 'bg-gray-200 text-gray-600';
+    }
+}
+
+function viewHistoryPass(gatePassId) {
+    closeGlobalQrHistoryModal();
+    viewPass(gatePassId, false); // view-only
+}
+
+function closeGlobalQrHistoryModal() {
+    const modal = document.getElementById('globalQrHistoryModal');
+    if (modal) {
+        modal.style.display = 'none';
+        modal.classList.add('hidden');
+    }
+}
+
+// ============================================================
+// QR Camera management (unchanged from Phase 7)
+// ============================================================
 function setQrCameraStatus(message, type = 'muted') {
     const status = document.getElementById('qrCameraStatus');
     if (!status) return;
@@ -329,6 +547,14 @@ function stopQrCamera() {
     if (stopButton) stopButton.disabled = true;
 }
 
+function resumeQrScanning() {
+    if (qrCameraStream && !qrCameraScanning) {
+        qrCameraScanning = true;
+        setQrCameraStatus('Camera active. Hold QR in frame.', 'success');
+        scanQrCameraFrame();
+    }
+}
+
 function simulateMockQrScan(gatePassNo) {
     const pass = gatePasses.find(item => item.id === gatePassNo);
     if (!pass) {
@@ -416,5 +642,10 @@ window.renderGuardDashboard = renderGuardDashboard;
 window.initializeQrCameras = initializeQrCameras;
 window.startQrCamera = startQrCamera;
 window.stopQrCamera = stopQrCamera;
+window.resumeQrScanning = resumeQrScanning;
+window.selectGlobalQrPass = selectGlobalQrPass;
+window.closeGlobalQrSelectionModal = closeGlobalQrSelectionModal;
+window.viewHistoryPass = viewHistoryPass;
+window.closeGlobalQrHistoryModal = closeGlobalQrHistoryModal;
 
 window.addEventListener('beforeunload', stopQrCamera);

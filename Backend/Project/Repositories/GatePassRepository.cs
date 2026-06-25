@@ -260,7 +260,13 @@ public sealed class GatePassRepository(
                 request_row.driver_id AS DriverId,
                 driver.full_name AS DriverName,
                 request_row.qr_expires_at AS QrExpiresAt,
-                request_row.version_no AS VersionNo
+                request_row.version_no AS VersionNo,
+                prep_sig.width_percent AS PreparedBySignatureWidth,
+                prep_sig.y_offset AS PreparedBySignatureYOffset,
+                out_sig.width_percent AS ActualOutSignatureWidth,
+                out_sig.y_offset AS ActualOutSignatureYOffset,
+                in_sig.width_percent AS ActualInSignatureWidth,
+                in_sig.y_offset AS ActualInSignatureYOffset
             FROM view_gate_pass_records records
             JOIN tbl_gate_pass_requests request_row
                 ON request_row.gate_pass_id = records.gate_pass_id
@@ -268,6 +274,12 @@ public sealed class GatePassRepository(
                 ON vehicle.vehicle_id = request_row.vehicle_id
             LEFT JOIN tbl_drivers driver
                 ON driver.driver_id = request_row.driver_id
+            LEFT JOIN tbl_signature_files prep_sig
+                ON prep_sig.signature_file_id = request_row.prepared_by_signature_file_id
+            LEFT JOIN tbl_signature_files out_sig
+                ON out_sig.signature_file_id = request_row.actual_out_signature_file_id
+            LEFT JOIN tbl_signature_files in_sig
+                ON in_sig.signature_file_id = request_row.actual_in_signature_file_id
             WHERE records.gate_pass_id = @GatePassId;
 
             SELECT
@@ -645,7 +657,9 @@ public sealed class GatePassRepository(
             ExpectedOutAt = source.ExpectedOutAt,
             ExpectedInAt = source.ExpectedInAt,
             ActualOutAt = source.ActualOutAt,
+            ActualOutSignatureFileId = source.ActualOutSignatureFileId,
             ActualInAt = source.ActualInAt,
+            ActualInSignatureFileId = source.ActualInSignatureFileId,
             CompletedAt = source.CompletedAt,
             ApplicationOutcomeCode = source.ApplicationOutcomeCode,
             CreatedAt = source.CreatedAt,
@@ -659,6 +673,12 @@ public sealed class GatePassRepository(
             DriverName = source.DriverName,
             QrExpiresAt = source.QrExpiresAt,
             VersionNo = source.VersionNo,
+            PreparedBySignatureWidth = source.PreparedBySignatureWidth,
+            PreparedBySignatureYOffset = source.PreparedBySignatureYOffset,
+            ActualOutSignatureWidth = source.ActualOutSignatureWidth,
+            ActualOutSignatureYOffset = source.ActualOutSignatureYOffset,
+            ActualInSignatureWidth = source.ActualInSignatureWidth,
+            ActualInSignatureYOffset = source.ActualInSignatureYOffset,
             ApprovalSteps = steps,
             Scans = scans,
             MaterialItems = materialItems

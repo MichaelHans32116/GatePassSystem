@@ -19,6 +19,16 @@ public interface IFleetService
         CancellationToken cancellationToken = default);
     Task ArchiveVehicleAsync(long vehicleId, CancellationToken cancellationToken = default);
     Task ArchiveDriverAsync(long driverId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<VehicleScheduleRecord>> GetScheduleAsync(
+        DateTime from,
+        DateTime to,
+        CancellationToken cancellationToken = default);
+    Task<long> SaveFixedScheduleAsync(
+        long? id,
+        SaveFixedScheduleRequest request,
+        CancellationToken cancellationToken = default);
+    Task DeleteFixedScheduleAsync(long id, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<FixedScheduleRecord>> GetFixedSchedulesAsync(CancellationToken cancellationToken = default);
 }
 
 public interface ISignatureService

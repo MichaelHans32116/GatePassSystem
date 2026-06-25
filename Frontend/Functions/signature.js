@@ -341,7 +341,7 @@ function renderSignatureImage(dataUrl, width = SIGNATURE_WIDTH_DEFAULT, y = SIGN
                 // Use max-width so the slider can enlarge the signature, but it will not spill outside
                 // the approval cell. The drawn signature is also cropped before rendering, so blank
                 // canvas space will no longer make the signature look tiny.
-                targetDiv.innerHTML = `<img src="${dataUrl}" id="liveDocumentSig" class="signature-img" style="width: ${safeWidth}%; max-width: 96%; margin-bottom: ${safeYOffset}px;">`;
+                targetDiv.innerHTML = `<img src="${dataUrl}" id="liveDocumentSig" class="signature-img" style="width: ${safeWidth}%; max-width: 96%; max-height: 100%; height: 100%; object-fit: contain; margin-bottom: ${safeYOffset}px;">`;
             }
             if (targetId?.startsWith('sigMat')) {
                 syncMaterialSignatureCopies?.(targetId);

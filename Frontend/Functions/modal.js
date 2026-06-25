@@ -26,6 +26,29 @@ function normalizeDocumentStatus(status) {
         .toUpperCase();
 }
 
+function isFinishedDocumentStatus(status) {
+    const normalized = normalizeDocumentStatus(status);
+    return [
+        'CLOSED',
+        'RETURNED',
+        'REJECTED',
+        'CANCELLED',
+        'CANCELED',
+        'EXPIRED'
+    ].includes(normalized);
+}
+
+function isSecurityScanActionableStatus(status) {
+    const normalized = normalizeDocumentStatus(status);
+    return [
+        'APPROVED',
+        'OUTSIDE',
+        'OVERDUE',
+        'WAITING OUT',
+        'WAITING IN'
+    ].includes(normalized);
+}
+
 function shouldShowGuardStatusRow(pass) {
     const status = normalizeDocumentStatus(pass?.status);
     return status !== '' && status !== 'DRAFT';
@@ -508,7 +531,7 @@ async function renderMaterialBundle(pass) {
                             <div style="display: flex; align-items: center; gap: 1.5mm; min-width: 0; width: 100%;">
                                 <strong style="font-size: 7px; color: #4b5563; font-weight: 700; white-space: nowrap; text-transform: uppercase;">ACTUAL OUT</strong>
                                 <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; position: relative; min-width: 0;">
-                                    <div class="sig-wrapper sig-mat-guard-out guard-scan-sig" ${guardOutSlot.imageAttribute} style="height: 6mm; display: flex; align-items: end; justify-content: center; width: 100%;"></div>
+                                    <div class="sig-wrapper sig-mat-guard-out guard-scan-sig" ${guardOutSlot.imageAttribute} style="height: 9.5mm; display: flex; align-items: end; justify-content: center; width: 100%;"></div>
                                     <span class="guard-scan-time vActOut" style="display: block; text-align: center; font-size: 7px; font-weight: 700; min-height: 3.5mm; line-height: 1;">${pass.actualOut ? new Date(pass.actualOut).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '—'}</span>
                                     <div style="width: 100%; border-top: 1px solid #111827; margin-top: 0.2mm; margin-bottom: 0.2mm;"></div>
                                     <small class="name sig-mat-guard-out-name guard-scan-name" ${guardOutSlot.nameAttribute} style="display: block; text-align: center; font-size: 5.4px; color: #4b5563; font-weight: bold; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${materialEscape(getGuardScanName(pass, 'TIME_OUT')) || 'Guard'}</small>
@@ -517,7 +540,7 @@ async function renderMaterialBundle(pass) {
                             <div style="display: flex; align-items: center; gap: 1.5mm; min-width: 0; width: 100%;">
                                 <strong style="font-size: 7px; color: #4b5563; font-weight: 700; white-space: nowrap; text-transform: uppercase;">ACTUAL IN</strong>
                                 <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; position: relative; min-width: 0;">
-                                    <div class="sig-wrapper sig-mat-guard-in guard-scan-sig" ${guardInSlot.imageAttribute} style="height: 6mm; display: flex; align-items: end; justify-content: center; width: 100%;"></div>
+                                    <div class="sig-wrapper sig-mat-guard-in guard-scan-sig" ${guardInSlot.imageAttribute} style="height: 9.5mm; display: flex; align-items: end; justify-content: center; width: 100%;"></div>
                                     <span class="guard-scan-time vActIn" style="display: block; text-align: center; font-size: 7px; font-weight: 700; min-height: 3.5mm; line-height: 1;">${pass.actualIn ? new Date(pass.actualIn).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '—'}</span>
                                     <div style="width: 100%; border-top: 1px solid #111827; margin-top: 0.2mm; margin-bottom: 0.2mm;"></div>
                                     <small class="name sig-mat-guard-in-name guard-scan-name" ${guardInSlot.nameAttribute} style="display: block; text-align: center; font-size: 5.4px; color: #4b5563; font-weight: bold; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${materialEscape(getGuardScanName(pass, 'TIME_IN')) || 'Guard'}</small>
@@ -588,7 +611,10 @@ async function viewPass(id, isReviewing = false) {
                 return;
             }
             if(!p) return;
-            if (['Closed', 'Returned', 'Rejected', 'Cancelled'].includes(p.status)) {
+            if (isFinishedDocumentStatus(p.status) ||
+                (currentUser?.role === 'Security' &&
+                    isReviewing &&
+                    !isSecurityScanActionableStatus(p.status))) {
                 isReviewing = false;
             }
             currentViewedPassId = getGatePassViewKey(p);
@@ -690,7 +716,8 @@ async function viewPass(id, isReviewing = false) {
                     if(sigData.img) {
                         const w = sigData.w || 100;
                         const y = sigData.y || 0;
-                        sigDiv.innerHTML = `<img src="${sigData.img}" class="signature-img" style="width: ${w}%; margin-bottom: ${y}px;">`;
+                        const wStyle = sigData.w && sigData.w !== 100 ? `width: ${w}%;` : 'width: auto; max-width: 100%;';
+                        sigDiv.innerHTML = `<img src="${sigData.img}" class="signature-img" style="${wStyle} margin-bottom: ${y}px; max-height: 100%; object-fit: contain;">`;
                     }
                     else {
                         sigDiv.innerHTML = `<span style="font-family: serif; font-style: italic; font-size: 14px; color: blue;">Digitally Signed</span>`;
@@ -712,8 +739,8 @@ async function viewPass(id, isReviewing = false) {
                     ? {
                         name: p.userName,
                         fileId: p.preparedBySignatureFileId,
-                        w: 100,
-                        y: 0
+                        w: p.preparedBySignatureWidth || 100,
+                        y: p.preparedBySignatureYOffset || 0
                     }
                     : null;
                 if (preparedSignature) {
@@ -734,16 +761,16 @@ async function viewPass(id, isReviewing = false) {
                     ? {
                         name: getGuardScanName(p, 'TIME_OUT'),
                         fileId: p.actualOutSignatureFileId,
-                        w: 100,
-                        y: 0
+                        w: p.actualOutSignatureWidth || 100,
+                        y: p.actualOutSignatureYOffset || 0
                     }
                     : null;
                 const inGuardSignature = p.actualInSignatureFileId
                     ? {
                         name: getGuardScanName(p, 'TIME_IN'),
                         fileId: p.actualInSignatureFileId,
-                        w: 100,
-                        y: 0
+                        w: p.actualInSignatureWidth || 100,
+                        y: p.actualInSignatureYOffset || 0
                     }
                     : null;
 
@@ -928,13 +955,16 @@ async function viewPass(id, isReviewing = false) {
                             containerEl.innerHTML = '';
                             if (!fileId) return;
                             try {
+                                const metadataResponse = await ApiClient.get(`/signatures/${fileId}/metadata`);
                                 const blob = await ApiClient.blob(`/signatures/${fileId}`);
                                 const imgUrl = await new Promise((resolve) => {
                                     const reader = new FileReader();
                                     reader.onload = () => resolve(reader.result);
                                     reader.readAsDataURL(blob);
                                 });
-                                containerEl.innerHTML = `<img src="${imgUrl}" class="max-h-full w-auto object-contain">`;
+                                const w = metadataResponse.widthPercent || 100;
+                                const y = metadataResponse.yOffset || 0;
+                                containerEl.innerHTML = `<img src="${imgUrl}" style="height: ${w}%; transform: translateY(${y}%);" class="w-auto object-contain transition-all duration-300">`;
                             } catch {
                                 containerEl.innerHTML = `<span style="font-family: serif; font-style: italic; font-size: 8px; color: blue;">Signed</span>`;
                             }
@@ -1167,7 +1197,8 @@ async function renderPersonGatePassClone(p) {
             if (sigData.img) {
                 const w = sigData.w || 100;
                 const y = sigData.y || 0;
-                el.innerHTML = `<img src="${sigData.img}" class="signature-img" style="width: ${w}%; margin-bottom: ${y}px;">`;
+                const wStyle = sigData.w && sigData.w !== 100 ? `width: ${w}%;` : 'width: auto; max-width: 100%;';
+                el.innerHTML = `<img src="${sigData.img}" class="signature-img" style="${wStyle} max-height: 100%; margin-bottom: ${y}px; object-fit: contain;">`;
             } else {
                 el.innerHTML = `<span style="font-family: serif; font-style: italic; font-size: 14px; color: blue;">Digitally Signed</span>`;
             }
@@ -1207,13 +1238,16 @@ async function renderPersonGatePassClone(p) {
             containerEl.innerHTML = '';
             if (!fileId) return;
             try {
+                const metadataResponse = await ApiClient.get(`/signatures/${fileId}/metadata`);
                 const blob = await ApiClient.blob(`/signatures/${fileId}`);
                 const imgUrl = await new Promise((resolve) => {
                     const reader = new FileReader();
                     reader.onload = () => resolve(reader.result);
                     reader.readAsDataURL(blob);
                 });
-                containerEl.innerHTML = `<img src="${imgUrl}" class="max-h-full w-auto object-contain">`;
+                const w = metadataResponse.widthPercent || 100;
+                const y = metadataResponse.yOffset || 0;
+                containerEl.innerHTML = `<img src="${imgUrl}" style="height: ${w}%; transform: translateY(${y}%);" class="w-auto object-contain transition-all duration-300">`;
             } catch {
                 containerEl.innerHTML = `<span style="font-family: serif; font-style: italic; font-size: 8px; color: blue;">Signed</span>`;
             }
@@ -1407,7 +1441,7 @@ async function renderMaterialGatePassClone(p) {
                 <div style="display: flex; align-items: center; gap: 1.5mm; min-width: 0; width: 100%;">
                     <strong style="font-size: 7px; color: #4b5563; font-weight: 700; white-space: nowrap; text-transform: uppercase;">ACTUAL OUT</strong>
                     <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; position: relative; min-width: 0;">
-                        <div class="sig-wrapper sig-mat-guard-out guard-scan-sig" ${guardOutSlot.imageAttribute} style="height: 6mm; display: flex; align-items: end; justify-content: center; width: 100%;"></div>
+                        <div class="sig-wrapper sig-mat-guard-out guard-scan-sig" ${guardOutSlot.imageAttribute} style="height: 9.5mm; display: flex; align-items: end; justify-content: center; width: 100%;"></div>
                         <span class="guard-scan-time vActOut" style="display: block; text-align: center; font-size: 7px; font-weight: 700; min-height: 3.5mm; line-height: 1;"></span>
                         <div style="width: 100%; border-top: 1px solid #111827; margin-top: 0.2mm; margin-bottom: 0.2mm;"></div>
                         <small class="name sig-mat-guard-out-name guard-scan-name" ${guardOutSlot.nameAttribute} style="display: block; text-align: center; font-size: 5.4px; color: #4b5563; font-weight: bold; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></small>
@@ -1416,7 +1450,7 @@ async function renderMaterialGatePassClone(p) {
                 <div style="display: flex; align-items: center; gap: 1.5mm; min-width: 0; width: 100%;">
                     <strong style="font-size: 7px; color: #4b5563; font-weight: 700; white-space: nowrap; text-transform: uppercase;">ACTUAL IN</strong>
                     <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; position: relative; min-width: 0;">
-                        <div class="sig-wrapper sig-mat-guard-in guard-scan-sig" ${guardInSlot.imageAttribute} style="height: 6mm; display: flex; align-items: end; justify-content: center; width: 100%;"></div>
+                        <div class="sig-wrapper sig-mat-guard-in guard-scan-sig" ${guardInSlot.imageAttribute} style="height: 9.5mm; display: flex; align-items: end; justify-content: center; width: 100%;"></div>
                         <span class="guard-scan-time vActIn" style="display: block; text-align: center; font-size: 7px; font-weight: 700; min-height: 3.5mm; line-height: 1;"></span>
                         <div style="width: 100%; border-top: 1px solid #111827; margin-top: 0.2mm; margin-bottom: 0.2mm;"></div>
                         <small class="name sig-mat-guard-in-name guard-scan-name" ${guardInSlot.nameAttribute} style="display: block; text-align: center; font-size: 5.4px; color: #4b5563; font-weight: bold; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></small>
@@ -1474,16 +1508,16 @@ async function renderMaterialGatePassClone(p) {
             ? {
                 name: getGuardScanName(p, 'TIME_OUT'),
                 fileId: p.actualOutSignatureFileId,
-                w: 100,
-                y: 0
+                w: p.actualOutSignatureWidth || 100,
+                y: p.actualOutSignatureYOffset || 0
             }
             : null;
         const inGuardSignature = p.actualInSignatureFileId
             ? {
                 name: getGuardScanName(p, 'TIME_IN'),
                 fileId: p.actualInSignatureFileId,
-                w: 100,
-                y: 0
+                w: p.actualInSignatureWidth || 100,
+                y: p.actualInSignatureYOffset || 0
             }
             : null;
 
@@ -1504,7 +1538,7 @@ async function renderMaterialGatePassClone(p) {
             if (inName) inName.innerText = 'Guard';
         }
 
-        const handleSig = async (sigData, wrapperSelector, nameSelector) => {
+        async function handleSig(sigData, wrapperSelector, nameSelector) {
             const wrapperEls = div.querySelectorAll(wrapperSelector);
             const nameEls = div.querySelectorAll(nameSelector);
 
@@ -1529,13 +1563,16 @@ async function renderMaterialGatePassClone(p) {
             wrapperEls.forEach(el => {
                 if (sigData) {
                     if (sigData.img) {
-                        el.innerHTML = `<img src="${sigData.img}" class="signature-img" style="width: 100%; max-height: 45px; object-fit: contain;">`;
+                        const w = sigData.w || 100;
+                        const y = sigData.y || 0;
+                        const wStyle = sigData.w && sigData.w !== 100 ? `width: ${w}%;` : 'width: auto; max-width: 100%;';
+                        el.innerHTML = `<img src="${sigData.img}" class="signature-img" style="${wStyle} max-height: 100%; margin-bottom: ${y}px; object-fit: contain;">`;
                     } else {
                         el.innerHTML = `<span style="font-family: serif; font-style: italic; font-size: 11px; color: blue;">Digitally Signed</span>`;
                     }
                 }
             });
-        };
+        }
 
         await handleSig(p.signatures.imm, '.sig-mat-superior', '.sig-mat-superior-name');
         await handleSig(p.signatures.pas, '.sig-mat-pas', '.sig-mat-pas-name');
@@ -1544,8 +1581,8 @@ async function renderMaterialGatePassClone(p) {
             ? {
                 name: p.userName,
                 fileId: p.preparedBySignatureFileId,
-                w: 100,
-                y: 0
+                w: p.preparedBySignatureWidth || 100,
+                y: p.preparedBySignatureYOffset || 0
             }
             : null;
         if (preparedSignature) {
@@ -1613,12 +1650,18 @@ async function printSelectedLogs() {
         for (let i = 0; i < pagesPairs.length; i += 2) {
             const pair1 = pagesPairs[i];
             const pair2 = pagesPairs[i + 1];
+            const a4LayoutStyle = pair2
+                ? 'display: grid; grid-template-rows: 148.5mm 148.5mm; align-items: center; justify-items: center; align-content: start; justify-content: center;'
+                : 'display: flex; flex-direction: column; gap: 0; align-items: center; justify-content: flex-start;';
+            const a4PaddingStyle = pair2
+                ? 'padding-top: 0; padding-bottom: 0;'
+                : 'padding-top: 4mm; padding-bottom: 0;';
 
             const a4Front = document.createElement('div');
-            a4Front.className = 'a4-wrapper is-batch-print';
-            a4Front.style.cssText = 'display: flex; flex-direction: column; gap: 0; page-break-after: always; width: 210mm; height: 297mm; max-height: 297mm; overflow: hidden; align-items: center; justify-content: flex-start; padding-top: 4mm; box-sizing: border-box;';
+            a4Front.className = `a4-wrapper is-batch-print${pair2 ? ' has-multiple-passes' : ''}`;
+            a4Front.style.cssText = `${a4LayoutStyle} page-break-after: always; width: 210mm; height: 297mm; max-height: 297mm; overflow: hidden; ${a4PaddingStyle} box-sizing: border-box;`;
 
-            pair1.front.style.cssText += 'page-break-after: avoid !important; break-after: avoid !important; margin-bottom: 4mm !important; box-shadow: none !important; margin-top: 0 !important;';
+            pair1.front.style.cssText += `page-break-after: avoid !important; break-after: avoid !important; margin-bottom: ${pair2 ? '0' : '4mm'} !important; box-shadow: none !important; margin-top: 0 !important;`;
             a4Front.appendChild(pair1.front);
 
             if (pair2) {
@@ -1630,15 +1673,15 @@ async function printSelectedLogs() {
             const hasBack = !!(pair1.back || (pair2 && pair2.back));
             if (hasBack) {
                 const a4Back = document.createElement('div');
-                a4Back.className = 'a4-wrapper is-batch-print';
-                a4Back.style.cssText = 'display: flex; flex-direction: column; gap: 0; page-break-after: always; width: 210mm; height: 297mm; max-height: 297mm; overflow: hidden; align-items: center; justify-content: flex-start; padding-top: 4mm; box-sizing: border-box;';
+                a4Back.className = `a4-wrapper is-batch-print${pair2 ? ' has-multiple-passes' : ''}`;
+                a4Back.style.cssText = `${a4LayoutStyle} page-break-after: always; width: 210mm; height: 297mm; max-height: 297mm; overflow: hidden; ${a4PaddingStyle} box-sizing: border-box;`;
 
                 if (pair1.back) {
-                    pair1.back.style.cssText += 'page-break-before: avoid !important; break-before: avoid !important; page-break-after: avoid !important; break-after: avoid !important; margin-bottom: 4mm !important; margin-top: 0 !important;';
+                    pair1.back.style.cssText += `page-break-before: avoid !important; break-before: avoid !important; page-break-after: avoid !important; break-after: avoid !important; margin-bottom: ${pair2 ? '0' : '4mm'} !important; margin-top: 0 !important;`;
                     a4Back.appendChild(pair1.back);
                 } else {
                     const empty = document.createElement('div');
-                    empty.style.cssText = 'height: 105mm; width: 148mm; margin-bottom: 4mm;';
+                    empty.style.cssText = `height: 105mm; width: 148mm; margin-bottom: ${pair2 ? '0' : '4mm'};`;
                     a4Back.appendChild(empty);
                 }
 

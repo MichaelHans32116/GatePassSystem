@@ -1,5 +1,6 @@
 using Dapper;
 using GatePassSystem.Project.DTOs.GatePass;
+using GatePassSystem.Project.DTOs.Security;
 using GatePassSystem.Project.Models;
 
 namespace GatePassSystem.Project.Repositories;
@@ -365,6 +366,92 @@ public sealed class SecurityRepository(
         }
     }
 
+    public async Task<EmployeePassesResult> GetEmployeePassesAsync(
+        long employeeRecordId,
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection =
+            await connectionFactory.OpenConnectionAsync(cancellationToken);
+
+        var employeeName =
+            await connection.QuerySingleOrDefaultAsync<string>(
+                new CommandDefinition(
+                    """
+                    SELECT full_name
+                    FROM tbl_employees
+                    WHERE employee_record_id = @EmployeeRecordId;
+                    """,
+                    new { EmployeeRecordId = employeeRecordId },
+                    cancellationToken: cancellationToken))
+            ?? "Unknown Employee";
+
+        var active = await connection.QueryAsync<EmployeePassItem>(
+            new CommandDefinition(
+                """
+                SELECT
+                    CAST(r.gate_pass_id AS SIGNED) AS GatePassId,
+                    r.gate_pass_no      AS GatePassNo,
+                    r.control_no        AS ControlNo,
+                    ft.form_name        AS FormTypeName,
+                    r.destination       AS Destination,
+                    s.status_name       AS StatusName,
+                    s.status_group      AS StatusGroup,
+                    r.created_at        AS DateFiled,
+                    r.expected_out_at   AS ExpectedOut,
+                    r.completed_at      AS CompletedAt,
+                    r.will_return       AS WillReturn
+                FROM tbl_gate_pass_requests r
+                JOIN tbl_gate_pass_statuses s
+                    ON s.gate_pass_status_code = r.gate_pass_status_code
+                JOIN tbl_form_types ft
+                    ON ft.form_type_code = r.form_type_code
+                WHERE s.is_terminal = FALSE
+                  AND (
+                      r.requester_employee_id = @EmployeeRecordId
+                      OR r.authorized_employee_id = @EmployeeRecordId
+                  )
+                ORDER BY r.expected_out_at, r.gate_pass_id;
+                """,
+                new { EmployeeRecordId = employeeRecordId },
+                cancellationToken: cancellationToken));
+
+        var recent = await connection.QueryAsync<EmployeePassItem>(
+            new CommandDefinition(
+                """
+                SELECT
+                    CAST(r.gate_pass_id AS SIGNED) AS GatePassId,
+                    r.gate_pass_no      AS GatePassNo,
+                    r.control_no        AS ControlNo,
+                    ft.form_name        AS FormTypeName,
+                    r.destination       AS Destination,
+                    s.status_name       AS StatusName,
+                    s.status_group      AS StatusGroup,
+                    r.created_at        AS DateFiled,
+                    r.expected_out_at   AS ExpectedOut,
+                    r.completed_at      AS CompletedAt,
+                    r.will_return       AS WillReturn
+                FROM tbl_gate_pass_requests r
+                JOIN tbl_gate_pass_statuses s
+                    ON s.gate_pass_status_code = r.gate_pass_status_code
+                JOIN tbl_form_types ft
+                    ON ft.form_type_code = r.form_type_code
+                WHERE s.is_terminal = TRUE
+                  AND (
+                      r.requester_employee_id = @EmployeeRecordId
+                      OR r.authorized_employee_id = @EmployeeRecordId
+                  )
+                ORDER BY r.completed_at DESC
+                LIMIT 20;
+                """,
+                new { EmployeeRecordId = employeeRecordId },
+                cancellationToken: cancellationToken));
+
+        return new EmployeePassesResult(
+            employeeName,
+            active.AsList(),
+            recent.AsList());
+    }
+
     private static Task<int> InsertScanAsync(
         System.Data.Common.DbConnection connection,
         System.Data.Common.DbTransaction transaction,
@@ -412,6 +499,41 @@ public sealed class SecurityRepository(
             transaction,
             cancellationToken: cancellationToken));
 
+    public async Task<long?> GetEmployeeRecordIdByEmployeeIdAsync(
+        string employeeId,
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection = await connectionFactory.OpenConnectionAsync(cancellationToken);
+        return await connection.QuerySingleOrDefaultAsync<long?>(
+            new CommandDefinition(
+                """
+                SELECT employee_record_id
+                FROM tbl_employees
+                WHERE employee_id = @EmployeeId
+                  AND employment_status_code = 'Active';
+                """,
+                new { EmployeeId = employeeId },
+                cancellationToken: cancellationToken));
+    }
+
+    public async Task<long?> LookupGatePassIdAsync(
+        string identifier,
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection = await connectionFactory.OpenConnectionAsync(cancellationToken);
+        return await connection.QuerySingleOrDefaultAsync<long?>(
+            new CommandDefinition(
+                """
+                SELECT gate_pass_id
+                FROM tbl_gate_pass_requests
+                WHERE gate_pass_no = @Identifier
+                   OR control_no = @Identifier
+                LIMIT 1;
+                """,
+                new { Identifier = identifier },
+                cancellationToken: cancellationToken));
+    }
+
     private sealed class ScanTarget
     {
         public long GatePassId { get; init; }
@@ -422,3 +544,4 @@ public sealed class SecurityRepository(
         public int PendingApprovalCount { get; init; }
     }
 }
+

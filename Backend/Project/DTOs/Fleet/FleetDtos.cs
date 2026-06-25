@@ -23,3 +23,13 @@ public sealed record SignatureMetadataRequest(
     string ContentSha256,
     int? WidthPercent,
     int? YOffset);
+
+public sealed record SaveFixedScheduleRequest(
+    long VehicleId,
+    long? DriverId,
+    byte DayOfWeek,
+    string StartTime,
+    string EndTime,
+    string Title,
+    string? Description,
+    string ScheduleType);
