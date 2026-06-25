@@ -1,5 +1,6 @@
 using System.Net.Http.Headers;
 using GatePassSystem.Api.Infrastructure;
+using GatePassSystem.Project.DTOs.Common;
 using GatePassSystem.Project.Models;
 using GatePassSystem.Project.Services;
 using Microsoft.AspNetCore.Authorization;

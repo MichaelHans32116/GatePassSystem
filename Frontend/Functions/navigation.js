@@ -17,6 +17,11 @@ function setupRoleAccess(user) {
             document.getElementById('navGroupHR').style.display = 'none';
             document.getElementById('navItemDashboard').style.display = 'flex';
 
+            const guestLogin = document.getElementById('navItemGuestLogin');
+            if (guestLogin) guestLogin.style.display = 'none';
+            const logoutBtn = document.getElementById('logoutButton');
+            if (logoutBtn) logoutBtn.style.display = 'block';
+
             // Un-hide all admin tabs by default
             document.getElementById('tab-users').style.display = 'inline-block';
             document.getElementById('tab-fleet').style.display = 'inline-block';

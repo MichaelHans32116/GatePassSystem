@@ -728,6 +728,85 @@ function buildTruckSheet(wb, monday, saturday, weekData, weekNum) {
     });
 }
 
+// ─── Guest Public Access ─────────────────────────────────────────────
+async function showPublicDriverCalendar() {
+    try {
+        currentUser = null;
+
+        // Load references (vehicles and drivers)
+        if (typeof loadFleetReferences === 'function') {
+            await loadFleetReferences();
+        }
+
+        // Configure guest/read-only UI
+        document.getElementById('navItemDashboard').style.display = 'none';
+        document.getElementById('navItemApply').style.display = 'none';
+        document.getElementById('navItemSchedule').style.display = 'none';
+        document.getElementById('navGroupApprovals').style.display = 'none';
+        document.getElementById('navGroupSecurity').style.display = 'none';
+        document.getElementById('navGroupAdmin').style.display = 'none';
+        document.getElementById('navGroupHR').style.display = 'none';
+
+        // Add guest navigation back to login if it doesn't exist
+        let backToLoginBtn = document.getElementById('navItemGuestLogin');
+        if (!backToLoginBtn) {
+            const sideNav = document.getElementById('sideNav');
+            if (sideNav) {
+                backToLoginBtn = document.createElement('a');
+                backToLoginBtn.id = 'navItemGuestLogin';
+                backToLoginBtn.href = '#';
+                backToLoginBtn.className = 'nav-item px-6 py-3 transition text-white flex items-center';
+                backToLoginBtn.innerHTML = '<i class="fas fa-arrow-left w-6 text-left"></i> <span class="text-sm">Back to Login</span>';
+                backToLoginBtn.onclick = function(e) {
+                    e.preventDefault();
+                    if (typeof logout === 'function') {
+                        logout();
+                    }
+                };
+                sideNav.appendChild(backToLoginBtn);
+            }
+        }
+        if (backToLoginBtn) {
+            backToLoginBtn.style.display = 'flex';
+        }
+
+        // Hide logout button
+        const logoutButton = document.getElementById('logoutButton');
+        if (logoutButton) {
+            logoutButton.style.display = 'none';
+        }
+
+        // Hide login view and show main app
+        const loginView = document.getElementById('loginView');
+        if (loginView) {
+            loginView.style.opacity = '0';
+            setTimeout(() => {
+                loginView.classList.add('hidden');
+                document.getElementById('appView')?.classList.remove('hidden');
+                loginView.style.opacity = '1';
+            }, 300);
+        } else {
+            document.getElementById('appView')?.classList.remove('hidden');
+        }
+
+        // Update Topbar for guest user
+        const uName = document.getElementById('navUserName');
+        const uRole = document.getElementById('navUserRole');
+        if (uName) uName.innerText = 'Guest Driver/Truck Viewer';
+        if (uRole) uRole.innerText = 'Read-Only Calendar View';
+
+        // Switch to the schedule calendar section
+        if (typeof switchSection === 'function') {
+            switchSection('scheduleCalendar');
+        }
+    } catch (e) {
+        console.error(e);
+        if (typeof showToast === 'function') {
+            showToast('Unable to open schedule calendar.', 'error');
+        }
+    }
+}
+
 // ─── Window exports ──────────────────────────────────────────────────
 window.initializeScheduleCalendar = initializeScheduleCalendar;
 window.loadScheduleData = loadScheduleData;
@@ -739,3 +818,4 @@ window.openScheduleDayModal = openScheduleDayModal;
 window.closeScheduleDayModal = closeScheduleDayModal;
 window.exportScheduleExcel = exportScheduleExcel;
 window.populateScheduleFilterDropdowns = populateScheduleFilterDropdowns;
+window.showPublicDriverCalendar = showPublicDriverCalendar;

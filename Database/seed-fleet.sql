@@ -42,7 +42,7 @@ INSERT INTO tbl_drivers (
 )
 SELECT
     employee.employee_record_id,
-    'GERONIMO LEYSA',
+    'GERONIMO M. LAMBINO II',
     'EXTERNAL',
     TRUE
 FROM tbl_employees employee
@@ -50,7 +50,8 @@ WHERE employee.employee_id = 'GA108'
   AND NOT EXISTS (
     SELECT 1
     FROM tbl_drivers
-    WHERE full_name = 'GERONIMO LEYSA'
+    WHERE employee_record_id = employee.employee_record_id
+       OR full_name = 'GERONIMO M. LAMBINO II'
 );
 
 INSERT INTO tbl_drivers (
@@ -109,7 +110,7 @@ SET is_active = TRUE
 WHERE full_name IN (
     'JONATHAN TURRECHA',
     'FRANCIS REFE',
-    'GERONIMO LEYSA',
+    'GERONIMO M. LAMBINO II',
     'JOHN NEIL VALENCIA',
     'ALEX',
     'ALVIN'
@@ -146,7 +147,7 @@ INSERT INTO tbl_vehicles (
     (
         SELECT driver_id
         FROM tbl_drivers
-        WHERE full_name = 'GERONIMO LEYSA'
+        WHERE full_name = 'GERONIMO M. LAMBINO II'
           AND is_active = TRUE
         LIMIT 1
     ),
@@ -191,7 +192,7 @@ INSERT INTO tbl_vehicles (
     (
         SELECT driver_id
         FROM tbl_drivers
-        WHERE full_name = 'GERONIMO LEYSA'
+        WHERE full_name = 'GERONIMO M. LAMBINO II'
           AND is_active = TRUE
         LIMIT 1
     ),

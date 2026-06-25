@@ -218,6 +218,11 @@ async function logout() {
     document.getElementById('loginView').classList.remove('hidden');
     document.getElementById('loginForm').reset();
 
+    const guestLogin = document.getElementById('navItemGuestLogin');
+    if (guestLogin) guestLogin.style.display = 'none';
+    const logoutBtn = document.getElementById('logoutButton');
+    if (logoutBtn) logoutBtn.style.display = 'block';
+
     if (
         window.innerWidth < 768 &&
         !document.getElementById('sidebar').classList.contains('-translate-x-full')
