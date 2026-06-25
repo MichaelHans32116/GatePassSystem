@@ -88,7 +88,8 @@ public sealed record ApprovalDecisionResult(
 
 public sealed record SecurityScanRequest(
     string? QrToken,
-    string? ManualGatePassNo);
+    string? ManualGatePassNo,
+    long? SignatureFileId);
 
 public sealed record SecurityScanResult(
     long? GatePassId,

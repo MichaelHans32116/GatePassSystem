@@ -7,7 +7,7 @@ var qrCameraLastDetectionAt = 0;
 var qrCameraScanning = false;
 var qrClientCooldowns = new Map();
 
-async function executeSecurityScan(identifier) {
+async function executeSecurityScan(identifier, signatureFileId = null) {
     if (!isDatabaseSession()) {
         simulateMockQrScan(identifier);
         return;
@@ -17,7 +17,8 @@ async function executeSecurityScan(identifier) {
         const isQrToken = identifier.startsWith('GP1.') || identifier.startsWith('EMP1.') || identifier.startsWith('FRS|');
         const result = await ApiClient.post('/security/scans', {
             qrToken: isQrToken ? identifier : null,
-            manualGatePassNo: isQrToken ? null : identifier
+            manualGatePassNo: isQrToken ? null : identifier,
+            signatureFileId: signatureFileId
         });
         const recorded = result.resultCode.includes('RECORDED');
         const ignored = result.resultCode === 'NO_ACTIVE_GATE_PASS_IGNORED';
@@ -83,15 +84,31 @@ async function simulateQrScan(identifierOverride = null, fromCamera = false) {
             }
         } else {
             const queue = await ApiClient.get('/security/queue');
+            const searchId = String(identifier).toLowerCase();
             const match = queue.find(item => {
                 const gpId = String(item.gatePassNo).toLowerCase();
-                const searchId = String(identifier).toLowerCase();
-                return gpId === searchId || gpId.endsWith('-' + searchId) || gpId.endsWith(searchId);
+                const ctrlId = String(item.controlNo || '').toLowerCase();
+                return gpId === searchId || ctrlId === searchId;
             });
             if (match) {
                 viewPass(match.gatePassId, true);
             } else {
-                showToast('ID not found in active queue.', 'error');
+                try {
+                    const lookup = await ApiClient.request(
+                        `/form-requests?page=1&pageSize=20&search=${encodeURIComponent(identifier)}`
+                    );
+                    const dbMatch = lookup.items.find(item => 
+                        String(item.gatePassNo).toLowerCase() === searchId || 
+                        String(item.controlNo || '').toLowerCase() === searchId
+                    );
+                    if (dbMatch) {
+                        viewPass(dbMatch.gatePassId, false);
+                    } else {
+                        showToast('ID/Control No. not found in active queue or history.', 'error');
+                    }
+                } catch (err) {
+                    showToast('ID/Control No. not found in active queue.', 'error');
+                }
             }
         }
 
@@ -330,6 +347,7 @@ async function renderGuardDashboard() {
             queueItems = queue.map(item => ({
                 id: item.gatePassNo,
                 dbId: item.gatePassId,
+                controlNo: item.controlNo,
                 userName: item.fullName,
                 willReturn: item.willReturn,
                 status: gatePassStatusLabels[item.gatePassStatusCode] || item.statusName,
@@ -350,10 +368,13 @@ async function renderGuardDashboard() {
     }
 
     document.getElementById('guardQueueList').innerHTML = queueItems.map(pass => {
-        const waitingOut = pass.status === 'Approved';
+        const waitingOut = pass.status === 'Approved' || pass.status === 'Waiting OUT';
         return `
             <tr class="border-b hover:bg-gray-50">
-                <td class="px-4 py-2 text-xs font-mono font-bold text-mpiBlue">${pass.id}</td>
+                <td class="px-4 py-2 text-xs font-mono font-bold text-mpiBlue">
+                    <div>${pass.id}</div>
+                    ${pass.controlNo ? `<div class="text-[10px] text-gray-500 font-normal mt-0.5">Control: ${pass.controlNo}</div>` : ''}
+                </td>
                 <td class="px-4 py-2 text-sm font-semibold">${pass.userName}</td>
                 <td class="px-4 py-2 text-xs">${pass.willReturn ? '<span class="text-green-600 font-bold">Yes</span>' : '<span class="text-red-500 font-bold">No (1-Way)</span>'}</td>
                 <td class="px-4 py-2"><span class="px-2 py-1 rounded text-[10px] font-bold ${waitingOut ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800'}">${waitingOut ? 'Waiting OUT' : 'Waiting IN'}</span></td>

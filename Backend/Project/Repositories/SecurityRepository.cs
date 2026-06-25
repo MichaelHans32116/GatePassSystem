@@ -34,6 +34,7 @@ public sealed class SecurityRepository(
         string? manualGatePassNo,
         string providedIdentifierHash,
         string traceId,
+        long? signatureFileId,
         CancellationToken cancellationToken = default)
     {
         await using var connection =
@@ -114,13 +115,6 @@ public sealed class SecurityRepository(
                             AND (
                                 request_row.gate_pass_no = @ManualGatePassNo
                                 OR request_row.control_no = @ManualGatePassNo
-                                OR (
-                                    LENGTH(@ManualGatePassNo) <= 6
-                                    AND (
-                                        request_row.gate_pass_no LIKE CONCAT('%-', LPAD(@ManualGatePassNo, 6, '0'))
-                                        OR request_row.control_no LIKE CONCAT('%-', LPAD(@ManualGatePassNo, 3, '0'))
-                                    )
-                                )
                             )
                         )
                     )
@@ -276,9 +270,17 @@ public sealed class SecurityRepository(
                         WHEN @Action = 'TIME_OUT' THEN @RecordedAt
                         ELSE actual_out_at
                     END,
+                    actual_out_signature_file_id = CASE
+                        WHEN @Action = 'TIME_OUT' THEN @SignatureFileId
+                        ELSE actual_out_signature_file_id
+                    END,
                     actual_in_at = CASE
                         WHEN @Action = 'TIME_IN' THEN @RecordedAt
                         ELSE actual_in_at
+                    END,
+                    actual_in_signature_file_id = CASE
+                        WHEN @Action = 'TIME_IN' THEN @SignatureFileId
+                        ELSE actual_in_signature_file_id
                     END,
                     completed_at = CASE
                         WHEN @NewStatus IN ('RETURNED', 'CLOSED')
@@ -328,7 +330,8 @@ public sealed class SecurityRepository(
                     PreviousStatus = gatePass.StatusCode,
                     GuardUserId = guardUserId,
                     Message = message,
-                    TraceId = traceId
+                    TraceId = traceId,
+                    SignatureFileId = signatureFileId
                 },
                 transaction,
                 cancellationToken: cancellationToken));

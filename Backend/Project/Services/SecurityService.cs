@@ -58,6 +58,7 @@ public sealed class SecurityService(
             hasManual ? normalized : null,
             identifierHash,
             traceId,
+            request.SignatureFileId,
             cancellationToken);
 
         await operationsRepository.WriteAuditAsync(

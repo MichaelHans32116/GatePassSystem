@@ -29,6 +29,7 @@ public sealed class SecurityQueueItem
 {
     public long GatePassId { get; init; }
     public string GatePassNo { get; init; } = string.Empty;
+    public string ControlNo { get; init; } = string.Empty;
     public string GatePassStatusCode { get; init; } = string.Empty;
     public string StatusName { get; init; } = string.Empty;
     public bool WillReturn { get; init; }

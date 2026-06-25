@@ -48,7 +48,9 @@ public class GatePassRecord
     public DateTime ExpectedOutAt { get; init; }
     public DateTime? ExpectedInAt { get; init; }
     public DateTime? ActualOutAt { get; init; }
+    public long? ActualOutSignatureFileId { get; init; }
     public DateTime? ActualInAt { get; init; }
+    public long? ActualInSignatureFileId { get; init; }
     public DateTime? CompletedAt { get; init; }
     public string? ApplicationOutcomeCode { get; init; }
     public DateTime CreatedAt { get; init; }

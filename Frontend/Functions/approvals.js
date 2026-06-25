@@ -213,3 +213,4 @@ function updateApprovalQueueDisplay(toApprove) {
 window.approveCurrentPass = approveCurrentPass;
 window.rejectCurrentPass = rejectCurrentPass;
 window.renderApprovalQueue = renderApprovalQueue;
+window.uploadCurrentSignature = uploadCurrentSignature;

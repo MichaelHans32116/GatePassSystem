@@ -428,7 +428,9 @@ CREATE TABLE IF NOT EXISTS tbl_gate_pass_requests (
     cancelled_at DATETIME NULL,
     expired_at DATETIME NULL,
     actual_out_at DATETIME NULL,
+    actual_out_signature_file_id BIGINT UNSIGNED NULL,
     actual_in_at DATETIME NULL,
+    actual_in_signature_file_id BIGINT UNSIGNED NULL,
     completed_at DATETIME NULL,
     version_no INT UNSIGNED NOT NULL DEFAULT 1,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -565,6 +567,12 @@ CREATE TABLE IF NOT EXISTS tbl_signature_files (
 ALTER TABLE tbl_gate_pass_requests
     ADD CONSTRAINT fk_gate_pass_prepared_signature
         FOREIGN KEY (prepared_by_signature_file_id)
+        REFERENCES tbl_signature_files(signature_file_id),
+    ADD CONSTRAINT fk_gate_pass_actual_out_signature
+        FOREIGN KEY (actual_out_signature_file_id)
+        REFERENCES tbl_signature_files(signature_file_id),
+    ADD CONSTRAINT fk_gate_pass_actual_in_signature
+        FOREIGN KEY (actual_in_signature_file_id)
         REFERENCES tbl_signature_files(signature_file_id);
 
 CREATE TABLE IF NOT EXISTS tbl_approval_signatures (
@@ -817,6 +825,8 @@ SELECT
     gpr.expected_in_at,
     gpr.actual_out_at,
     gpr.actual_in_at,
+    gpr.actual_out_signature_file_id,
+    gpr.actual_in_signature_file_id,
     gpr.completed_at,
     CASE
         WHEN gpr.approved_at IS NOT NULL THEN 'APPROVED'

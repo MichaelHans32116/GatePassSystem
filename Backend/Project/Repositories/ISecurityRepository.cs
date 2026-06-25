@@ -15,6 +15,7 @@ public interface ISecurityRepository
         string? manualGatePassNo,
         string providedIdentifierHash,
         string traceId,
+        long? signatureFileId,
         CancellationToken cancellationToken = default);
 }
 

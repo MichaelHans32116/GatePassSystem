@@ -24,8 +24,10 @@ function isDatabaseSession() {
 
 function findGatePassRecord(idOrDbId = currentViewedPassId) {
     const numericId = Number(idOrDbId);
+    const searchStr = String(idOrDbId || '').trim().toLowerCase();
     return gatePasses.find(pass =>
-        pass.id === String(idOrDbId) ||
+        String(pass.id).toLowerCase() === searchStr ||
+        String(pass.controlNo || '').toLowerCase() === searchStr ||
         (Number.isFinite(numericId) && pass.dbId === numericId)
     );
 }

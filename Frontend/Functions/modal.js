@@ -507,6 +507,7 @@ async function renderMaterialBundle(pass) {
                                 <span class="font-bold text-gray-500 uppercase whitespace-nowrap">ACTUAL OUT</span>
                                 <div class="guard-scan-stack">
                                     <div class="guard-scan-time">${pass.actualOut || ''}</div>
+                                    <div class="guard-scan-sig" data-material-guard-sig-out="${pageIndex}"></div>
                                     <div class="guard-scan-name">${materialEscape(getGuardScanName(pass, 'TIME_OUT'))}</div>
                                 </div>
                             </div>
@@ -514,6 +515,7 @@ async function renderMaterialBundle(pass) {
                                 <span class="font-bold text-gray-500 uppercase whitespace-nowrap">ACTUAL IN</span>
                                 <div class="guard-scan-stack">
                                     <div class="guard-scan-time">${pass.actualIn || ''}</div>
+                                    <div class="guard-scan-sig" data-material-guard-sig-in="${pageIndex}"></div>
                                     <div class="guard-scan-name">${materialEscape(getGuardScanName(pass, 'TIME_IN'))}</div>
                                 </div>
                             </div>
@@ -552,6 +554,36 @@ async function renderMaterialBundle(pass) {
                     qc.innerHTML = '<span class="text-[6px] text-gray-400">Not Approved</span>';
                 });
             }
+
+            // Load and render Guard signatures for Material Gate Pass
+            const renderMaterialGuardSigs = async () => {
+                const sigOutContainers = container.querySelectorAll('[data-material-guard-sig-out]');
+                const sigInContainers = container.querySelectorAll('[data-material-guard-sig-in]');
+                
+                const loadAndSet = async (fileId, containers) => {
+                    if (!fileId || containers.length === 0) return;
+                    try {
+                        const blob = await ApiClient.blob(`/signatures/${fileId}`);
+                        const imgUrl = await new Promise((resolve) => {
+                            const reader = new FileReader();
+                            reader.onload = () => resolve(reader.result);
+                            reader.readAsDataURL(blob);
+                        });
+                        containers.forEach(c => {
+                            c.innerHTML = `<img src="${imgUrl}" class="max-h-full w-auto object-contain">`;
+                        });
+                    } catch {
+                        containers.forEach(c => {
+                            c.innerHTML = `<span style="font-family: serif; font-style: italic; font-size: 8px; color: blue;">Signed</span>`;
+                        });
+                    }
+                };
+
+                await loadAndSet(pass.actualOutSignatureFileId, sigOutContainers);
+                await loadAndSet(pass.actualInSignatureFileId, sigInContainers);
+            };
+
+            await renderMaterialGuardSigs();
         }
 
 function syncMaterialSignatureCopies(idPrefix) {
@@ -1099,6 +1131,28 @@ async function renderPersonGatePassClone(p) {
         if (vIn) vIn.innerText = safeFormatTime(p.actualIn);
         if (vOutGuardName) vOutGuardName.innerText = getGuardScanName(p, 'TIME_OUT');
         if (vInGuardName) vInGuardName.innerText = getGuardScanName(p, 'TIME_IN');
+
+        const vOutSig = clone.querySelector('.vActOutSignature');
+        const vInSig = clone.querySelector('.vActInSignature');
+        const renderGuardSig = async (fileId, containerEl) => {
+            if (!containerEl) return;
+            containerEl.innerHTML = '';
+            if (!fileId) return;
+            try {
+                const blob = await ApiClient.blob(`/signatures/${fileId}`);
+                const imgUrl = await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.readAsDataURL(blob);
+                });
+                containerEl.innerHTML = `<img src="${imgUrl}" class="max-h-full w-auto object-contain">`;
+            } catch {
+                containerEl.innerHTML = `<span style="font-family: serif; font-style: italic; font-size: 8px; color: blue;">Signed</span>`;
+            }
+        };
+        if (vOutSig) await renderGuardSig(p.actualOutSignatureFileId, vOutSig);
+        if (vInSig) await renderGuardSig(p.actualInSignatureFileId, vInSig);
+
         if (vRem) {
             vRem.innerText = getGuardRemarksText(p);
             vRem.className = ['Returned', 'Closed', 'Approved'].includes(p.status) ? 'bg-green-100 text-green-800 px-2 py-0.5 rounded font-bold text-[8px]' : (['Outside', 'Overdue'].includes(p.status) ? 'bg-blue-100 text-mpiBlue px-2 py-0.5 rounded font-bold text-[8px]' : 'bg-gray-200 text-gray-600 px-2 py-0.5 rounded font-bold text-[8px]');
