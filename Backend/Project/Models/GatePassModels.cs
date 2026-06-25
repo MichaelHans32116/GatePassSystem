@@ -68,6 +68,12 @@ public sealed class GatePassDetail : GatePassRecord
     public string? DriverName { get; init; }
     public DateTime? QrExpiresAt { get; init; }
     public int VersionNo { get; init; }
+    public int? PreparedBySignatureWidth { get; init; }
+    public int? PreparedBySignatureYOffset { get; init; }
+    public int? ActualOutSignatureWidth { get; init; }
+    public int? ActualOutSignatureYOffset { get; init; }
+    public int? ActualInSignatureWidth { get; init; }
+    public int? ActualInSignatureYOffset { get; init; }
     public IReadOnlyList<ApprovalStepRecord> ApprovalSteps { get; init; } = [];
     public IReadOnlyList<GatePassScanRecord> Scans { get; init; } = [];
     public IReadOnlyList<MaterialGatePassItemRecord> MaterialItems { get; init; } = [];

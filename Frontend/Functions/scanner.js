@@ -59,53 +59,72 @@ async function simulateQrScan(identifierOverride = null, fromCamera = false) {
         return;
     }
 
+    let success = false;
     try {
         const inputButton = document.querySelector('#manualQrInput + button');
         if (inputButton) inputButton.disabled = true;
 
         const isQrToken = identifier.startsWith('GP1.') || identifier.startsWith('EMP1.');
+        console.log(`[simulateQrScan] Scanned identifier: "${identifier}", isQrToken: ${isQrToken}`);
         
         if (isQrToken) {
             try {
                 const parts = identifier.split('.');
+                console.log(`[simulateQrScan] QR parts:`, parts);
                 if (parts.length >= 2) {
                     const idVal = parseInt(parts[1], 10);
+                    console.log(`[simulateQrScan] Parsed ID value: ${idVal}`);
                     if (identifier.startsWith('GP1.')) {
                         // Per-pass QR — direct to that specific pass (unchanged)
                         viewPass(idVal, true);
+                        success = true;
                     } else if (identifier.startsWith('EMP1.')) {
                         // === GLOBAL QR LOGIC ===
-                        await handleGlobalQrScan(idVal);
+                        success = await handleGlobalQrScan(idVal);
                     }
                 } else {
                     showToast('Invalid QR payload', 'error');
                 }
             } catch (e) {
+                console.error(`[simulateQrScan] Error decoding QR:`, e);
                 showToast('Failed to decode QR', 'error');
             }
         } else if (identifier.startsWith('FRS|')) {
             const parts = identifier.split('|');
+            console.log(`[simulateQrScan] FRS parts:`, parts);
             if (parts.length >= 3) {
                 viewPass(parts[2], true);
+                success = true;
             }
         } else {
             // === MANUAL ENTRY / RAW EMPLOYEE ID PATH ===
             try {
+                console.log(`[simulateQrScan] Attempting manual lookup for employee ID: "${identifier}"`);
                 // First, check if the identifier is an Employee ID
                 const empData = await ApiClient.get(`/security/employee/by-id/${encodeURIComponent(identifier)}/passes`);
-                await processGlobalQrData(empData);
+                console.log(`[simulateQrScan] Employee lookup data:`, empData);
+                success = await processGlobalQrData(empData);
             } catch (err) {
+                console.warn(`[simulateQrScan] Employee ID lookup failed, trying Control/GP No:`, err);
                 // Not an Employee ID (or API failed), fallback to Control No lookup
-                await handleManualEntryLookup(identifier);
+                success = await handleManualEntryLookup(identifier);
             }
         }
 
         input.value = '';
         if (fromCamera) {
-            stopQrCamera();
+            if (success) {
+                stopQrCamera();
+            } else {
+                resumeQrScanning();
+            }
         }
     } catch (error) {
+        console.error(`[simulateQrScan] Lookup failed with error:`, error);
         showToast(error instanceof ApiError ? error.message : 'Lookup failed.', 'error');
+        if (fromCamera) {
+            resumeQrScanning();
+        }
     } finally {
         const inputButton = document.querySelector('#manualQrInput + button');
         if (inputButton) inputButton.disabled = false;
@@ -117,20 +136,26 @@ async function simulateQrScan(identifierOverride = null, fromCamera = false) {
 // ============================================================
 async function handleGlobalQrScan(employeeRecordId) {
     try {
+        console.log(`[handleGlobalQrScan] Querying passes for record ID: ${employeeRecordId}`);
         const data = await ApiClient.get(`/security/employee/${employeeRecordId}/passes`);
-        await processGlobalQrData(data);
+        console.log(`[handleGlobalQrScan] Passes data returned:`, data);
+        return await processGlobalQrData(data);
     } catch (error) {
+        console.warn(`[handleGlobalQrScan] API query failed for record ID ${employeeRecordId}, falling back to queue match:`, error);
         // Fallback: try the old queue-based lookup if new endpoint unavailable
         try {
             const queue = await ApiClient.get('/security/queue');
             const match = queue.find(item => item.employeeRecordId === employeeRecordId);
             if (match) {
                 viewPass(match.gatePassId, true);
+                return true;
             } else {
                 showToast('No active gate pass queue for this employee.', 'info');
+                return false;
             }
         } catch {
             showToast('Unable to look up employee passes.', 'error');
+            return false;
         }
     }
 }
@@ -143,15 +168,19 @@ async function processGlobalQrData(data) {
     if (active.length === 1) {
         // Single active pass — go directly to scan mode
         viewPass(active[0].gatePassId, true);
+        return true;
     } else if (active.length > 1) {
         // Multiple active passes — show selection modal
         showPassSelectionModal(active, employeeName);
+        return true;
     } else if (recent.length > 0) {
         // No active passes but has history — show history modal
         showEmployeeHistoryModal(recent, employeeName);
+        return true;
     } else {
         // No passes at all
         showToast('No gate pass records found for this employee.', 'info');
+        return false;
     }
 }
 
@@ -170,6 +199,7 @@ async function handleManualEntryLookup(identifier) {
     if (match) {
         // Found in active queue — open in scan/review mode
         viewPass(match.gatePassId, true);
+        return true;
     } else {
         // Not in active queue — search in history using the new security lookup endpoint
         try {
@@ -177,11 +207,14 @@ async function handleManualEntryLookup(identifier) {
             if (lookupId) {
                 showToast('This gate pass is completed. Opening in view-only mode.', 'info');
                 viewPass(lookupId, false);
+                return true;
             } else {
                 showToast('Not found in queue or history.', 'info');
+                return false;
             }
         } catch (err) {
             showToast('ID/Control No. not found.', 'error');
+            return false;
         }
     }
 }
@@ -508,6 +541,14 @@ function stopQrCamera() {
     if (stopButton) stopButton.disabled = true;
 }
 
+function resumeQrScanning() {
+    if (qrCameraStream && !qrCameraScanning) {
+        qrCameraScanning = true;
+        setQrCameraStatus('Camera active. Hold QR in frame.', 'success');
+        scanQrCameraFrame();
+    }
+}
+
 function simulateMockQrScan(gatePassNo) {
     const pass = gatePasses.find(item => item.id === gatePassNo);
     if (!pass) {
@@ -595,6 +636,7 @@ window.renderGuardDashboard = renderGuardDashboard;
 window.initializeQrCameras = initializeQrCameras;
 window.startQrCamera = startQrCamera;
 window.stopQrCamera = stopQrCamera;
+window.resumeQrScanning = resumeQrScanning;
 window.selectGlobalQrPass = selectGlobalQrPass;
 window.closeGlobalQrSelectionModal = closeGlobalQrSelectionModal;
 window.viewHistoryPass = viewHistoryPass;

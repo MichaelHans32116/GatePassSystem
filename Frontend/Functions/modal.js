@@ -716,7 +716,8 @@ async function viewPass(id, isReviewing = false) {
                     if(sigData.img) {
                         const w = sigData.w || 100;
                         const y = sigData.y || 0;
-                        sigDiv.innerHTML = `<img src="${sigData.img}" class="signature-img" style="width: ${w}%; margin-bottom: ${y}px;">`;
+                        const wStyle = sigData.w && sigData.w !== 100 ? `width: ${w}%;` : 'width: auto; max-width: 100%;';
+                        sigDiv.innerHTML = `<img src="${sigData.img}" class="signature-img" style="${wStyle} margin-bottom: ${y}px; max-height: 100%; object-fit: contain;">`;
                     }
                     else {
                         sigDiv.innerHTML = `<span style="font-family: serif; font-style: italic; font-size: 14px; color: blue;">Digitally Signed</span>`;
@@ -738,8 +739,8 @@ async function viewPass(id, isReviewing = false) {
                     ? {
                         name: p.userName,
                         fileId: p.preparedBySignatureFileId,
-                        w: 100,
-                        y: 0
+                        w: p.preparedBySignatureWidth || 100,
+                        y: p.preparedBySignatureYOffset || 0
                     }
                     : null;
                 if (preparedSignature) {
@@ -760,16 +761,16 @@ async function viewPass(id, isReviewing = false) {
                     ? {
                         name: getGuardScanName(p, 'TIME_OUT'),
                         fileId: p.actualOutSignatureFileId,
-                        w: 100,
-                        y: 0
+                        w: p.actualOutSignatureWidth || 100,
+                        y: p.actualOutSignatureYOffset || 0
                     }
                     : null;
                 const inGuardSignature = p.actualInSignatureFileId
                     ? {
                         name: getGuardScanName(p, 'TIME_IN'),
                         fileId: p.actualInSignatureFileId,
-                        w: 100,
-                        y: 0
+                        w: p.actualInSignatureWidth || 100,
+                        y: p.actualInSignatureYOffset || 0
                     }
                     : null;
 
@@ -954,13 +955,16 @@ async function viewPass(id, isReviewing = false) {
                             containerEl.innerHTML = '';
                             if (!fileId) return;
                             try {
+                                const metadataResponse = await ApiClient.get(`/signatures/${fileId}/metadata`);
                                 const blob = await ApiClient.blob(`/signatures/${fileId}`);
                                 const imgUrl = await new Promise((resolve) => {
                                     const reader = new FileReader();
                                     reader.onload = () => resolve(reader.result);
                                     reader.readAsDataURL(blob);
                                 });
-                                containerEl.innerHTML = `<img src="${imgUrl}" class="max-h-full h-full w-auto object-contain" style="max-height: 100%; height: 100%;">`;
+                                const w = metadataResponse.widthPercent || 100;
+                                const y = metadataResponse.yOffset || 0;
+                                containerEl.innerHTML = `<img src="${imgUrl}" style="height: ${w}%; transform: translateY(${y}%);" class="w-auto object-contain transition-all duration-300">`;
                             } catch {
                                 containerEl.innerHTML = `<span style="font-family: serif; font-style: italic; font-size: 8px; color: blue;">Signed</span>`;
                             }
@@ -1193,7 +1197,8 @@ async function renderPersonGatePassClone(p) {
             if (sigData.img) {
                 const w = sigData.w || 100;
                 const y = sigData.y || 0;
-                el.innerHTML = `<img src="${sigData.img}" class="signature-img" style="width: ${w}%; max-height: 100%; margin-bottom: ${y}px; object-fit: contain;">`;
+                const wStyle = sigData.w && sigData.w !== 100 ? `width: ${w}%;` : 'width: auto; max-width: 100%;';
+                el.innerHTML = `<img src="${sigData.img}" class="signature-img" style="${wStyle} max-height: 100%; margin-bottom: ${y}px; object-fit: contain;">`;
             } else {
                 el.innerHTML = `<span style="font-family: serif; font-style: italic; font-size: 14px; color: blue;">Digitally Signed</span>`;
             }
@@ -1233,13 +1238,16 @@ async function renderPersonGatePassClone(p) {
             containerEl.innerHTML = '';
             if (!fileId) return;
             try {
+                const metadataResponse = await ApiClient.get(`/signatures/${fileId}/metadata`);
                 const blob = await ApiClient.blob(`/signatures/${fileId}`);
                 const imgUrl = await new Promise((resolve) => {
                     const reader = new FileReader();
                     reader.onload = () => resolve(reader.result);
                     reader.readAsDataURL(blob);
                 });
-                containerEl.innerHTML = `<img src="${imgUrl}" class="max-h-full w-auto object-contain">`;
+                const w = metadataResponse.widthPercent || 100;
+                const y = metadataResponse.yOffset || 0;
+                containerEl.innerHTML = `<img src="${imgUrl}" style="height: ${w}%; transform: translateY(${y}%);" class="w-auto object-contain transition-all duration-300">`;
             } catch {
                 containerEl.innerHTML = `<span style="font-family: serif; font-style: italic; font-size: 8px; color: blue;">Signed</span>`;
             }
@@ -1500,16 +1508,16 @@ async function renderMaterialGatePassClone(p) {
             ? {
                 name: getGuardScanName(p, 'TIME_OUT'),
                 fileId: p.actualOutSignatureFileId,
-                w: 100,
-                y: 0
+                w: p.actualOutSignatureWidth || 100,
+                y: p.actualOutSignatureYOffset || 0
             }
             : null;
         const inGuardSignature = p.actualInSignatureFileId
             ? {
                 name: getGuardScanName(p, 'TIME_IN'),
                 fileId: p.actualInSignatureFileId,
-                w: 100,
-                y: 0
+                w: p.actualInSignatureWidth || 100,
+                y: p.actualInSignatureYOffset || 0
             }
             : null;
 
@@ -1557,7 +1565,8 @@ async function renderMaterialGatePassClone(p) {
                     if (sigData.img) {
                         const w = sigData.w || 100;
                         const y = sigData.y || 0;
-                        el.innerHTML = `<img src="${sigData.img}" class="signature-img" style="width: ${w}%; max-height: 100%; margin-bottom: ${y}px; object-fit: contain;">`;
+                        const wStyle = sigData.w && sigData.w !== 100 ? `width: ${w}%;` : 'width: auto; max-width: 100%;';
+                        el.innerHTML = `<img src="${sigData.img}" class="signature-img" style="${wStyle} max-height: 100%; margin-bottom: ${y}px; object-fit: contain;">`;
                     } else {
                         el.innerHTML = `<span style="font-family: serif; font-style: italic; font-size: 11px; color: blue;">Digitally Signed</span>`;
                     }
@@ -1572,8 +1581,8 @@ async function renderMaterialGatePassClone(p) {
             ? {
                 name: p.userName,
                 fileId: p.preparedBySignatureFileId,
-                w: 100,
-                y: 0
+                w: p.preparedBySignatureWidth || 100,
+                y: p.preparedBySignatureYOffset || 0
             }
             : null;
         if (preparedSignature) {

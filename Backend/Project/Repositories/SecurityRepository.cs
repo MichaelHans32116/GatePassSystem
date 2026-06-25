@@ -405,8 +405,7 @@ public sealed class SecurityRepository(
                     ON s.gate_pass_status_code = r.gate_pass_status_code
                 JOIN tbl_form_types ft
                     ON ft.form_type_code = r.form_type_code
-                WHERE s.allows_qr_scan = TRUE
-                  AND s.is_terminal = FALSE
+                WHERE s.is_terminal = FALSE
                   AND (
                       r.requester_employee_id = @EmployeeRecordId
                       OR r.authorized_employee_id = @EmployeeRecordId

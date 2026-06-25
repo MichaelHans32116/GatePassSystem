@@ -73,6 +73,34 @@ public sealed class SignaturesController(
             : File(stream, signature.ContentType, signature.FileName);
     }
 
+    [HttpGet("{id:long}/metadata")]
+    public async Task<ActionResult<ApiResponse<SignatureFileRecord>>> GetMetadata(
+        long id,
+        CancellationToken cancellationToken)
+    {
+        var signature = await signatureService.GetAsync(id, cancellationToken);
+        if (signature is null)
+        {
+            return ServiceFailure(ServiceResult<SignatureFileRecord>.Failure(
+                "SIGNATURE_NOT_FOUND",
+                "Signature was not found."));
+        }
+
+        var canRead =
+            User.HasClaim("permission", "gatepass.read.all") ||
+            User.HasClaim("permission", "gatepass.scan") ||
+            await signatureService.CanReadAsync(
+                id,
+                CurrentUserId,
+                cancellationToken);
+        if (!canRead)
+        {
+            return Forbid();
+        }
+
+        return Success(signature);
+    }
+
     [HttpPost("process-background")]
     [RequestSizeLimit(5 * 1024 * 1024)]
     public async Task<IActionResult> ProcessBackground(
