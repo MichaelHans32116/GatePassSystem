@@ -76,6 +76,29 @@ function mapApprovalSignatures(steps = []) {
     return signatures;
 }
 
+function mapGatePassScans(scans = []) {
+    return scans.map(scan => ({
+        scanId: scan.scanId,
+        gatePassId: scan.gatePassId,
+        scannedByUserId: scan.scannedByUserId,
+        guardName: scan.guardName || '',
+        scanMethodCode: scan.scanMethodCode || '',
+        scanActionCode: scan.scanActionCode || '',
+        resultCode: scan.resultCode || '',
+        message: scan.message || '',
+        scannedAt: scan.scannedAt || null
+    }));
+}
+
+function getLatestScanByAction(scans = [], actionCode) {
+    return scans
+        .filter(scan =>
+            scan.scanActionCode === actionCode ||
+            scan.resultCode === `${actionCode}_RECORDED`
+        )
+        .sort((a, b) => new Date(b.scannedAt || 0) - new Date(a.scannedAt || 0))[0] || null;
+}
+
 function mapApiGatePass(record) {
     const status = gatePassStatusLabels[record.gatePassStatusCode] || record.statusName || record.gatePassStatusCode;
     const vehicle = record.vehicleId || record.vehicleName
@@ -88,6 +111,9 @@ function mapApiGatePass(record) {
         }
         : null;
     const steps = record.approvalSteps || [];
+    const scans = mapGatePassScans(record.scans || []);
+    const timeOutScan = getLatestScanByAction(scans, 'TIME_OUT');
+    const timeInScan = getLatestScanByAction(scans, 'TIME_IN');
 
     return {
         id: record.gatePassNo,
@@ -115,6 +141,25 @@ function mapApiGatePass(record) {
         expectedIn: record.expectedInAt ? formatDateTime(record.expectedInAt, false) : 'N/A',
         purpose: record.purpose,
         vehicle,
+        status,
+        statusCode: record.gatePassStatusCode,
+        requiresSuperiorApproval: steps.some(step => step.approvalStepCode === 'SUPERIOR'),
+        requiresPresidentApproval: steps.some(step => step.approvalStepCode === 'PRESIDENT'),
+        signatures: mapApprovalSignatures(steps),
+        approvalSteps: steps,
+        scans,
+        scanCount: (record.scans || []).filter(scan =>
+            scan.resultCode === 'TIME_OUT_RECORDED' || scan.resultCode === 'TIME_IN_RECORDED'
+        ).length,
+        actualOut: record.actualOutAt ? formatDateTime(record.actualOutAt, false) : null,
+        actualIn: record.actualInAt ? formatDateTime(record.actualInAt, false) : null,
+        actualOutGuardName: timeOutScan?.guardName || '',
+        actualInGuardName: timeInScan?.guardName || '',
+        willReturn: record.willReturn !== false,
+        qrToken: record.qrToken || null
+    };
+}
+
 function setNowTime(inputId) {
     const now = new Date();
     document.getElementById(inputId).value =

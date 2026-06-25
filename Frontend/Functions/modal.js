@@ -15,12 +15,22 @@ var pendingModalBox = null;
 var QR_BACK_CODE_SIZE = 136;
 
 function getGuardRemarksText(p) {
-    let remarkText = ['Returned', 'Closed'].includes(p.status) ? 'RETURNED' : (['Outside', 'Overdue'].includes(p.status) ? 'OUTSIDE' : 'APPROVED');
-    if (p.scans && p.scans.length > 0) {
-        const sortedScans = [...p.scans].sort((a,b) => new Date(b.scannedAt || 0) - new Date(a.scannedAt || 0));
-        if (sortedScans[0].message) remarkText = sortedScans[0].message;
-    }
-    return remarkText;
+    return String(p?.status || 'Pending').toUpperCase();
+}
+
+function getGuardScanName(p, actionCode) {
+    const fallback = actionCode === 'TIME_IN'
+        ? p?.actualInGuardName
+        : p?.actualOutGuardName;
+    if (fallback) return fallback;
+
+    const scan = [...(p?.scans || [])]
+        .filter(item =>
+            item.scanActionCode === actionCode ||
+            item.resultCode === `${actionCode}_RECORDED`
+        )
+        .sort((a, b) => new Date(b.scannedAt || 0) - new Date(a.scannedAt || 0))[0];
+    return scan?.guardName || '';
 }
 
 function escapeDocumentText(value) {
@@ -360,38 +370,82 @@ async function renderMaterialBundle(pass) {
                     : '<tr><td>&nbsp;</td><td></td><td></td><td></td></tr>')
                     .join('');
 
-                return `
+                 return `
                     <section class="material-print-page" data-material-page="${pageIndex + 1}">
-                        <div class="material-form-header">
-                            <div class="material-form-brand">
-                                <img src="Frontend/Design/images/logo.png" alt="MPI Logo">
-                                <div>
-                                    <h1>MORIROKU PHILIPPINES, INC.</h1>
-                                    <p>115 North Science Avenue, Laguna Technopark 4024, Biñan, Laguna Philippines</p>
+                        <!-- Brand Header (Centered relative to the entire page, shifted slightly left of the QR code) -->
+                        <div class="material-form-header" style="display: flex; align-items: center; justify-content: center; text-align: center; gap: 2.5mm; min-height: 0; width: 100%; margin-bottom: 0.5mm; padding-right: 22mm;">
+                            <div class="material-form-brand" style="display: flex; align-items: center; justify-content: center; gap: 2.5mm; min-width: 0;">
+                                <img src="Frontend/Design/images/logo.png" alt="MPI Logo" style="width: 18mm; height: 8.5mm; object-fit: contain;">
+                                <div class="text-left">
+                                    <h1 style="margin: 0; font-size: 9px; font-weight: 800; line-height: 1.05; letter-spacing: 0.1px; white-space: nowrap;">MORIROKU PHILIPPINES, INC.</h1>
+                                    <p style="margin: 0.5px 0 0; font-size: 4.6px; line-height: 1.05; color: #4b5563; white-space: nowrap;">115 North Science Avenue, Laguna Technopark 4024, Biñan, Laguna Philippines</p>
                                 </div>
                             </div>
-                            <div class="material-header-control">
-                                <span>CONTROL NO.</span>
-                                <strong>${materialEscape(controlNo)}</strong>
+                        </div>
+
+                        <!-- Centered Title -->
+                        <h2 class="font-extrabold text-[9.5px] uppercase tracking-[0.5px] text-center w-full" style="margin: 0 0 1.2mm 0; padding: 0; font-size: 9.5px; line-height: 1; letter-spacing: 0.5px; text-align: center; padding-right: 22mm;">MATERIAL GATE PASS</h2>
+
+                        <!-- Underlined Metadata Fields (Restricted width to avoid QR code) -->
+                        <div class="grid grid-cols-12 gap-x-2 gap-y-1.5 text-[7px] leading-none mb-1.5 w-[74%]">
+                            <div class="col-span-7 flex items-end">
+                                <span class="font-semibold text-gray-500 w-[14%]">TO:</span>
+                                <span class="border-b border-black flex-grow pl-1 font-bold">GUARD ON DUTY</span>
+                            </div>
+                            <div class="col-span-5 flex items-end">
+                                <span class="font-semibold text-gray-500 w-[20%]">DATE:</span>
+                                <span class="border-b border-black flex-grow pl-1 font-bold">${materialEscape(formDate)}</span>
+                            </div>
+                            <div class="col-span-7 flex items-end">
+                                <span class="font-semibold text-gray-500 w-[14%]">FROM:</span>
+                                <span class="border-b border-black flex-grow pl-1 font-bold">PERSONNEL &amp; ADMIN. SECTION</span>
+                            </div>
+                            <div class="col-span-5 flex items-end">
+                                <span class="font-semibold text-gray-500 w-[20%]">PAGE:</span>
+                                <span class="border-b border-black flex-grow pl-1 font-mono">${pageIndex + 1} OF ${pageCount}</span>
                             </div>
                         </div>
-                        <h2 class="material-form-title">MATERIAL GATE PASS</h2>
-                        <div class="material-form-meta">
-                            <div><strong>TO</strong><span>GUARD ON DUTY</span></div>
-                            <div><strong>DATE</strong><span>${materialEscape(formDate)}</span></div>
-                            <div><strong>FROM</strong><span>PERSONNEL &amp; ADMIN. SECTION</span></div>
-                            <div><strong>PAGE</strong><span>${pageIndex + 1} OF ${pageCount}</span></div>
+
+                        <!-- Absolutely Positioned QR Code + Control Details -->
+                        <div class="absolute material-front-qr-panel flex flex-col items-center justify-start text-center" style="top: 2mm; right: 3mm; width: 31mm; z-index: 10;">
+                            <div class="materialQrCodeDisplay mb-0.5 flex items-center justify-center" style="width: 24mm; height: 24mm;"></div>
+                            <div class="material-front-qr-control">Control No.: ${materialEscape(controlNo)}</div>
+                            <div class="material-front-qr-scan">To Scan: ${formatManualScanId(getPrintableGatePassNo(pass))}</div>
                         </div>
-                        <div class="material-form-authorization">
-                            <p>This is to allow Mr. / Ms. <strong>${materialEscape(pass.authorizedEmployeeName || 'N/A')}</strong></p>
-                            <p>of <strong>${materialEscape(pass.authorizedDepartmentName || pass.userDept || 'N/A')}</strong> to bring out the following items.</p>
-                        </div>
-                        <table class="material-items-table">
-                            <thead><tr><th>ITEM NO.</th><th>DESCRIPTION</th><th>QUANTITY</th><th>UNIT</th></tr></thead>
+
+                                <!-- Underlined Authorization Statement (Canva Layout) -->
+                                <div class="flex flex-col text-[7px]" style="margin-top: 1mm; gap: 0.8mm; line-height: 1; width: calc(100% - 35mm);">
+                                    <div class="flex items-end w-full">
+                                        <span class="whitespace-nowrap text-gray-500 font-semibold mr-1">This is to allow Mr. / Ms.</span>
+                                        <span class="border-b border-black font-bold flex-grow text-center pb-0.5">${materialEscape(pass.authorizedEmployeeName || 'N/A')}</span>
+                                    </div>
+                                    <div class="flex items-end w-full">
+                                        <span class="whitespace-nowrap text-gray-500 font-semibold mr-1">of</span>
+                                        <span class="border-b border-black font-bold flex-grow text-center pb-0.5">${materialEscape(pass.authorizedDepartmentName || pass.userDept || 'N/A')}</span>
+                                        <span class="whitespace-nowrap text-gray-500 font-semibold ml-1">to bring out the following items.</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                        <table class="material-items-table material-front-table">
+                            <thead>
+                                <tr class="bg-gray-100 font-bold border-b border-gray-900" style="background-color: #f3f4f6; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+                                    <th class="border border-gray-900 p-0.5 w-[15%] text-center">ITEM NO.</th>
+                                    <th class="border border-gray-900 p-0.5 w-[55%]">DESCRIPTION</th>
+                                    <th class="border border-gray-900 p-0.5 w-[15%] text-center">QUANTITY</th>
+                                    <th class="border border-gray-900 p-0.5 w-[15%] text-center">UNIT</th>
+                                </tr>
+                            </thead>
                             <tbody>${rowsHtml}</tbody>
                         </table>
-                        <div class="material-form-remarks"><strong>REMARKS:</strong><span>${materialEscape(pass.materialRemarks || '—')}</span></div>
-                        <div class="material-form-signatures">
+
+                        <!-- Underlined Remarks -->
+                        <div class="flex items-end text-[7px] leading-tight" style="margin-top: 1.5mm; margin-bottom: 1.5mm;">
+                            <span class="font-bold text-gray-800 mr-2">REMARKS:</span>
+                            <span class="border-b border-gray-400 flex-grow pl-1 font-bold pb-0.5">${materialEscape(pass.materialRemarks || '—')}</span>
+                        </div>
+
+                        <div class="material-form-signatures" style="margin-top: 2mm;">
                             <div>
                                 <strong>Prepared By:</strong>
                                 <div ${prepared.imageAttribute} class="material-signature-image"></div>
@@ -412,32 +466,40 @@ async function renderMaterialBundle(pass) {
                         </div>
 
                         <!-- GUARD TRACKING ROW FOR MATERIAL (Document View) -->
-                        <div class="guard-status-row ${['Approved', 'Outside', 'Overdue', 'Returned', 'Closed'].includes(pass.status) ? 'flex' : 'hidden'} flex-row justify-around items-center w-full mt-2 pt-1 border-t border-black bg-gray-50" style="-webkit-print-color-adjust: exact; print-color-adjust: exact;">
-                            <div class="flex items-center space-x-2">
-                                <span class="text-[8px] font-bold text-gray-500">ACTUAL OUT</span>
-                                <div class="w-16 h-4 flex items-center justify-center font-bold text-[8px] border-b border-gray-400">${pass.actualOut || ''}</div>
-                            </div>
-                            <div class="flex items-center space-x-2">
-                                <span class="text-[8px] font-bold text-gray-500">ACTUAL IN</span>
-                                <div class="w-16 h-4 flex items-center justify-center font-bold text-[8px] border-b border-gray-400">${pass.actualIn || ''}</div>
-                            </div>
-                            <div class="flex items-center space-x-2">
-                                <span class="text-[8px] font-bold text-gray-500">REMARKS</span>
-                                <div class="${['Returned', 'Closed', 'Approved'].includes(pass.status) ? 'bg-green-100 text-green-800' : (['Outside', 'Overdue'].includes(pass.status) ? 'bg-blue-100 text-mpiBlue' : 'bg-gray-200 text-gray-600')} px-2 py-0.5 rounded font-bold text-[8px]">
-                                    ${materialEscape(getGuardRemarksText(pass))}
+                        <div class="guard-status-row ${['Approved', 'Outside', 'Overdue', 'Returned', 'Closed'].includes(pass.status) ? 'flex' : 'hidden'} flex-row justify-between items-end w-full mt-1 pt-0" style="-webkit-print-color-adjust: exact; print-color-adjust: exact;">
+                            <div class="flex items-end space-x-1 w-[26%] text-[7.5px]">
+                                <span class="font-bold text-gray-500 uppercase whitespace-nowrap">ACTUAL OUT</span>
+                                <div class="guard-scan-stack">
+                                    <div class="guard-scan-time">${pass.actualOut || ''}</div>
+                                    <div class="guard-scan-name">${materialEscape(getGuardScanName(pass, 'TIME_OUT'))}</div>
                                 </div>
+                            </div>
+                            <div class="flex items-end space-x-1 w-[26%] text-[7.5px]">
+                                <span class="font-bold text-gray-500 uppercase whitespace-nowrap">ACTUAL IN</span>
+                                <div class="guard-scan-stack">
+                                    <div class="guard-scan-time">${pass.actualIn || ''}</div>
+                                    <div class="guard-scan-name">${materialEscape(getGuardScanName(pass, 'TIME_IN'))}</div>
+                                </div>
+                            </div>
+                            <div class="flex items-end space-x-1 w-[28%] text-[7.5px]">
+                                <span class="font-bold text-gray-500 uppercase whitespace-nowrap">REMARKS</span>
+                                <div class="border-b border-gray-400 flex-grow text-center font-bold text-[7.5px] pb-0.5">${materialEscape(getGuardRemarksText(pass))}</div>
+                            </div>
+                            <div class="flex flex-col items-center justify-center w-[16%]">
+                                <div class="px-2 py-0.5 rounded-full font-extrabold text-[7.5px] text-center select-none uppercase tracking-wide ${['Returned', 'Closed', 'Approved'].includes(pass.status) ? 'bg-green-100 text-green-800' : (['Outside', 'Overdue'].includes(pass.status) ? 'bg-blue-100 text-mpiBlue' : 'bg-gray-200 text-gray-600')}">
+                                    ${pass.status.toUpperCase()}
+                                </div>
+                                <div class="text-[6.5px] font-semibold text-gray-700 mt-1 border-t border-black w-full text-center pt-0.5">Guard Name</div>
                             </div>
                         </div>
 
                         <div class="material-page-number">Page ${pageIndex + 1} of ${pageCount}</div>
                     </section>`;
-            }).join('') + `
-                <div class="qr-back-page">
-                    ${getQrBackPageHtml(pass, 'materialQrCodeBackDisplay')}
-                </div>`;
+            }).join('');
 
             let qrText = '';
-            if (['Approved', 'Outside', 'Overdue', 'Returned', 'Closed'].includes(pass.status)) {
+            const isApprovedOrPast = ['Approved', 'Outside', 'Overdue', 'Returned', 'Closed'].includes(pass.status);
+            if (isApprovedOrPast) {
                 try {
                     qrText = await loadQrToken(pass);
                 } catch {
@@ -445,32 +507,20 @@ async function renderMaterialBundle(pass) {
                 }
             }
 
-            const qrBackContainer = container.querySelector('.materialQrCodeBackDisplay');
-            const qrBackPage = container.querySelector('.qr-back-page');
-            const isApprovedOrPast = ['Approved', 'Outside', 'Overdue', 'Returned', 'Closed'].includes(pass.status);
-            
-            if (qrBackPage) {
-                if (isApprovedOrPast) {
-                    qrBackPage.classList.remove('hidden');
-                    qrBackPage.style.display = 'flex';
-                } else {
-                    qrBackPage.classList.add('hidden');
-                    qrBackPage.style.display = 'none';
-                }
-            }
-
-            if (qrBackContainer) {
-                if (qrText) {
-                    if (typeof QRCode === 'function') {
-                        new QRCode(qrBackContainer, {
-                            text: qrText,
-                            width: QR_BACK_CODE_SIZE,
-                            height: QR_BACK_CODE_SIZE
-                        });
-                    }
-                } else {
-                    qrBackContainer.innerHTML = '<span class="text-gray-400">QR unavailable (Not Approved)</span>';
-                }
+            const qrContainers = container.querySelectorAll('.materialQrCodeDisplay');
+            if (qrContainers.length > 0 && isApprovedOrPast && qrText && typeof QRCode === 'function') {
+                qrContainers.forEach(qc => {
+                    qc.innerHTML = '';
+                    new QRCode(qc, {
+                        text: qrText,
+                        width: 150,
+                        height: 150
+                    });
+                });
+            } else if (qrContainers.length > 0) {
+                qrContainers.forEach(qc => {
+                    qc.innerHTML = '<span class="text-[6px] text-gray-400">Not Approved</span>';
+                });
             }
         }
 
@@ -645,6 +695,11 @@ async function viewPass(id, isReviewing = false) {
             const qrBackContainer = document.querySelector('.qrCodeBackDisplay');
             const qrBackPage = document.querySelector('.qr-back-page');
             const gpIdTextDisplay = document.querySelector('.gp-id-text-display');
+            const controlNoQR = document.getElementById('vControlNoQR');
+            const scanTextQR = document.getElementById('vScanTextQR');
+
+            if (controlNoQR) controlNoQR.innerText = '';
+            if (scanTextQR) scanTextQR.innerText = '';
 
             if (gpIdTextDisplay) {
                 const printableGatePassNo = getPrintableGatePassNo(p);
@@ -662,11 +717,11 @@ async function viewPass(id, isReviewing = false) {
                         ? `Control No.: <strong>${escapeDocumentText(p.controlNo)}</strong>`
                         : '';
                 }
-                
+
                 const isApprovedOrPast = ['Approved', 'Outside', 'Overdue', 'Returned', 'Closed'].includes(p.status);
 
                 if (qrBackPage) {
-                    if (isApprovedOrPast) {
+                    if (isApprovedOrPast && isMaterial) {
                         qrBackPage.classList.remove('hidden');
                         qrBackPage.style.display = 'flex';
                     } else {
@@ -676,21 +731,29 @@ async function viewPass(id, isReviewing = false) {
                 }
 
                 if (!isMaterial && isApprovedOrPast) {
+                    if (controlNoQR) {
+                        controlNoQR.innerHTML = p.controlNo
+                            ? `Control No.: <strong>${escapeDocumentText(printableControlNo(p.controlNo))}</strong>`
+                            : '';
+                    }
+                    if (scanTextQR) {
+                        const printableGatePassNo = getPrintableGatePassNo(p);
+                        scanTextQR.innerHTML = printableGatePassNo
+                            ? `To Scan: <strong>${formatManualScanId(printableGatePassNo)}</strong>`
+                            : '';
+                    }
+
                     try {
                         const qrValue = await loadQrToken(p);
                         if (qrValue && typeof QRCode === 'function') {
-                            if (qrBackContainer) {
-                                new QRCode(qrBackContainer, {
-                                    text: String(qrValue),
-                                    width: QR_BACK_CODE_SIZE,
-                                    height: QR_BACK_CODE_SIZE
-                                });
-                            }
+                            new QRCode(qrContainer, {
+                                text: String(qrValue),
+                                width: 80,
+                                height: 80
+                            });
                         }
                     } catch {
-                        if (qrBackContainer) {
-                            qrBackContainer.innerHTML = '<span class="text-xs text-gray-400">QR unavailable</span>';
-                        }
+                        qrContainer.innerHTML = '<span class="text-[8px] text-gray-400">QR unavailable</span>';
                     }
                 }
             }
@@ -756,9 +819,11 @@ async function viewPass(id, isReviewing = false) {
 
                 const vActOut = document.getElementById('vActOut');
                 const vActIn = document.getElementById('vActIn');
+                const vActOutGuardName = document.getElementById('vActOutGuardName');
+                const vActInGuardName = document.getElementById('vActInGuardName');
                 const vGuardRemarks = document.getElementById('vGuardRemarks');
                 const guardStatusRow = document.getElementById('guardStatusRow');
-                
+
                 if (vActOut && vActIn && vGuardRemarks && guardStatusRow) {
                     if (p.actualOut || p.actualIn || ['Approved', 'Outside', 'Returned', 'Overdue', 'Closed'].includes(p.status)) {
                         const safeFormatTime = (ts) => {
@@ -771,7 +836,9 @@ async function viewPass(id, isReviewing = false) {
                         guardStatusRow.classList.remove('hidden');
                         vActOut.innerText = safeFormatTime(p.actualOut);
                         vActIn.innerText = safeFormatTime(p.actualIn);
-                        
+                        if (vActOutGuardName) vActOutGuardName.innerText = getGuardScanName(p, 'TIME_OUT');
+                        if (vActInGuardName) vActInGuardName.innerText = getGuardScanName(p, 'TIME_IN');
+
                         vGuardRemarks.innerText = getGuardRemarksText(p);
                         if (['Returned', 'Closed', 'Approved'].includes(p.status)) {
                             vGuardRemarks.classList.remove('bg-gray-200', 'text-gray-600', 'bg-blue-100', 'text-mpiBlue');
@@ -791,7 +858,7 @@ async function viewPass(id, isReviewing = false) {
                 if(isReviewing) {
                     document.getElementById('printModalContent')?.classList.add('is-reviewing');
                     actionArea.style.display = 'flex';
-                    
+
                     if (currentUser.role === 'Security') {
                         approvalSignatureEditor?.classList.add('hidden');
                         if (btnApprove) {
@@ -898,12 +965,12 @@ async function renderPersonGatePassClone(p) {
     clone.id = '';
     clone.classList.remove('hidden');
     clone.classList.add('multi-print-item');
-    
+
     const setVal = (selector, val) => {
         const el = clone.querySelector(selector);
         if (el) el.innerText = val;
     };
-    
+
     const compactPersonDateFiled = (value) => {
         if (!value) return 'N/A';
         const textValue = String(value).trim();
@@ -927,7 +994,7 @@ async function renderPersonGatePassClone(p) {
         if (/^(GP-ID|TEMP|TMP|ID)-/i.test(raw)) return '';
         return raw.length > 20 ? raw.slice(0, 20) : raw;
     };
-    
+
     setVal('#vDateF', p.formTypeCode === 'MATERIAL_GATE_PASS' ? p.dateFiled : compactPersonDateFiled(p.dateFiled));
     setVal('#vControlNo', printableControlNo(p.controlNo));
     setVal('#vName', p.userName);
@@ -936,7 +1003,7 @@ async function renderPersonGatePassClone(p) {
     setVal('#vExpOut', p.expectedOut);
     setVal('#vExpInLabel', p.expectedIn);
     setVal('#vReturn', p.willReturn ? 'Yes' : 'No');
-    
+
     let vehicleString = 'N/A';
     if (p.vehicle) {
         if (p.vehicle.id === 'MANUAL') vehicleString = p.vehicle.name;
@@ -944,14 +1011,14 @@ async function renderPersonGatePassClone(p) {
     }
     setVal('#vDriver', p.vehicle ? p.vehicle.driver : 'N/A');
     setVal('#vPlate', vehicleString);
-    
+
     const handleSig = async (sigData, selector) => {
         const el = clone.querySelector(selector);
         const nameSpan = clone.querySelector(selector + 'Name');
         if (el) el.innerHTML = '';
         if (nameSpan) { nameSpan.innerText = ''; nameSpan.classList.add('hidden'); }
         if (!sigData) return;
-        
+
         if (nameSpan) {
             nameSpan.innerText = sigData.name;
             nameSpan.classList.remove('hidden');
@@ -976,19 +1043,21 @@ async function renderPersonGatePassClone(p) {
             }
         }
     };
-    
+
     await handleSig(p.signatures.imm, '#sigImm');
     await handleSig(p.signatures.pres, '#sigPres');
     await handleSig(p.signatures.pas, '#sigPAS');
-    
+
     const guardRow = clone.querySelector('.guard-status-row');
     if (guardRow && ['Approved', 'Outside', 'Overdue', 'Returned', 'Closed'].includes(p.status)) {
         guardRow.classList.remove('hidden');
         // print:table-row is already applied in css via classes
         const vOut = clone.querySelector('.vActOut');
         const vIn = clone.querySelector('.vActIn');
+        const vOutGuardName = clone.querySelector('.vActOutGuardName');
+        const vInGuardName = clone.querySelector('.vActInGuardName');
         const vRem = clone.querySelector('.vGuardRemarks');
-        
+
         const safeFormatTime = (ts) => {
             if (!ts) return '';
             if (typeof ts === 'string' && ts.includes(':') && !ts.includes('-')) return ts;
@@ -998,45 +1067,52 @@ async function renderPersonGatePassClone(p) {
         };
         if (vOut) vOut.innerText = safeFormatTime(p.actualOut);
         if (vIn) vIn.innerText = safeFormatTime(p.actualIn);
+        if (vOutGuardName) vOutGuardName.innerText = getGuardScanName(p, 'TIME_OUT');
+        if (vInGuardName) vInGuardName.innerText = getGuardScanName(p, 'TIME_IN');
         if (vRem) {
             vRem.innerText = getGuardRemarksText(p);
             vRem.className = ['Returned', 'Closed', 'Approved'].includes(p.status) ? 'bg-green-100 text-green-800 px-2 py-0.5 rounded font-bold text-[8px]' : (['Outside', 'Overdue'].includes(p.status) ? 'bg-blue-100 text-mpiBlue px-2 py-0.5 rounded font-bold text-[8px]' : 'bg-gray-200 text-gray-600 px-2 py-0.5 rounded font-bold text-[8px]');
         }
     }
-    
-    const qrBackContainer = clone.querySelector('.qrCodeBackDisplay');
-    const controlNoDisplay = clone.querySelector('.control-no-display');
-    if (controlNoDisplay) {
-        controlNoDisplay.innerHTML = p.controlNo
-            ? `Control No.: <strong>${escapeDocumentText(p.controlNo)}</strong>`
-            : '';
+
+    const qrContainer = clone.querySelector('#qrCodeDisplay');
+    const controlNoQR = clone.querySelector('#vControlNoQR');
+    const scanTextQR = clone.querySelector('#vScanTextQR');
+    const qrBackPage = clone.querySelector('.qr-back-page');
+
+    if (qrBackPage) {
+        qrBackPage.remove();
     }
 
-    const gpIdTextDisplay = clone.querySelector('.gp-id-text-display');
-    if (gpIdTextDisplay) {
-        const printableGatePassNo = getPrintableGatePassNo(p);
-        gpIdTextDisplay.innerHTML = printableGatePassNo
-            ? `To Scan: <strong>${formatManualScanId(printableGatePassNo)}</strong>`
-            : '';
-    }
+    if (qrContainer) {
+        qrContainer.innerHTML = '';
 
-    if (qrBackContainer) {
-        qrBackContainer.innerHTML = '';
-        
         if (['Approved', 'Outside', 'Overdue', 'Returned', 'Closed'].includes(p.status)) {
+            if (controlNoQR) {
+                controlNoQR.innerHTML = p.controlNo
+                    ? `Control No.: <strong>${escapeDocumentText(printableControlNo(p.controlNo))}</strong>`
+                    : '';
+            }
+            if (scanTextQR) {
+                const printableGatePassNo = getPrintableGatePassNo(p);
+                scanTextQR.innerHTML = printableGatePassNo
+                    ? `To Scan: <strong>${formatManualScanId(printableGatePassNo)}</strong>`
+                    : '';
+            }
+
             try {
                 const qrValue = await loadQrToken(p);
                 if (qrValue && typeof QRCode === 'function') {
-                    new QRCode(qrBackContainer, {
+                    new QRCode(qrContainer, {
                         text: String(qrValue),
-                        width: QR_BACK_CODE_SIZE,
-                        height: QR_BACK_CODE_SIZE
+                        width: 80,
+                        height: 80
                     });
                 }
             } catch {}
         }
     }
-    
+
     return clone;
 }
 
@@ -1077,45 +1153,61 @@ async function renderMaterialGatePassClone(p) {
             .join('');
 
         div.innerHTML = `
-            <div class="material-form-header">
-                <div class="material-form-brand">
-                    <img src="Frontend/Design/images/logo.png" alt="MPI Logo">
-                    <div>
-                        <h1>MORIROKU PHILIPPINES, INC.</h1>
-                        <p class="text-[7px]">115 North Science Avenue, Laguna Technopark 4024, Biñan, Laguna Philippines</p>
+            <!-- Brand Header (Centered relative to the entire page, shifted slightly left of the QR code) -->
+            <div class="material-form-header" style="display: flex; align-items: center; justify-content: center; text-align: center; gap: 3.5mm; min-height: 0; width: 100%; margin-bottom: 0.5mm; padding-right: 22mm;">
+                <div class="material-form-brand" style="display: flex; align-items: center; justify-content: center; gap: 3.5mm; min-width: 0;">
+                    <img src="Frontend/Design/images/logo.png" alt="MPI Logo" style="width: 28mm; height: 13mm; object-fit: contain;">
+                    <div class="text-left">
+                        <h1 style="margin: 0; font-size: 11px; font-weight: 800; line-height: 1.05; letter-spacing: 0.2px; white-space: nowrap;">MORIROKU PHILIPPINES, INC.</h1>
+                        <p style="margin: 1px 0 0; font-size: 5.5px; line-height: 1.05; color: #4b5563; white-space: nowrap;">115 North Science Avenue, Laguna Technopark 4024, Biñan, Laguna Philippines</p>
                     </div>
                 </div>
-                <div class="material-header-control">
-                    <span>CONTROL NO.</span>
-                    <strong>${materialEscape(controlNo)}</strong>
+            </div>
+
+            <!-- Centered Title -->
+            <h2 class="font-extrabold text-[10.5px] uppercase tracking-[1px] text-center w-full" style="margin: 0 0 1.5mm 0; padding: 0; font-size: 10.5px; line-height: 1; letter-spacing: 1px; text-align: center; padding-right: 22mm;">MATERIAL GATE PASS</h2>
+
+            <!-- Underlined Metadata Fields (Restricted width to avoid QR code) -->
+            <div class="grid grid-cols-12 gap-x-2 gap-y-1.5 text-[7px] leading-none mb-1.5 w-[74%]">
+                <div class="col-span-7 flex items-end">
+                    <span class="font-semibold text-gray-500 w-[14%]">TO:</span>
+                    <span class="border-b border-black flex-grow pl-1 font-bold">GUARD ON DUTY</span>
+                </div>
+                <div class="col-span-5 flex items-end">
+                    <span class="font-semibold text-gray-500 w-[20%]">DATE:</span>
+                    <span class="border-b border-black flex-grow pl-1 font-bold">${materialEscape(formDate)}</span>
+                </div>
+                <div class="col-span-7 flex items-end">
+                    <span class="font-semibold text-gray-500 w-[14%]">FROM:</span>
+                    <span class="border-b border-black flex-grow pl-1 font-bold">PERSONNEL &amp; ADMIN. SECTION</span>
+                </div>
+                <div class="col-span-5 flex items-end">
+                    <span class="font-semibold text-gray-500 w-[20%]">PAGE:</span>
+                    <span class="border-b border-black flex-grow pl-1 font-mono">${pageIndex + 1} OF ${pageCount}</span>
                 </div>
             </div>
-            
-            <h2 class="material-form-title">MATERIAL GATE PASS</h2>
-            
-            <table class="w-full text-left border-collapse border border-gray-900 mt-1.5 text-[9px] leading-tight">
-                <tbody>
-                    <tr>
-                        <td class="w-[8%] border border-gray-900 p-1 font-bold text-gray-500">TO:</td>
-                        <td class="w-[42%] border border-gray-900 p-1">GUARD ON DUTY</td>
-                        <td class="w-[12%] border border-gray-900 p-1 font-bold text-gray-500">DATE:</td>
-                        <td class="w-[38%] border border-gray-900 p-1">${formDate}</td>
-                    </tr>
-                    <tr>
-                        <td class="border border-gray-900 p-1 font-bold text-gray-500">FROM:</td>
-                        <td class="border border-gray-900 p-1">PERSONNEL &amp; ADMIN. SECTION</td>
-                        <td class="border border-gray-900 p-1 font-bold text-gray-500">PAGE:</td>
-                        <td class="border border-gray-900 p-1 font-mono">${pageIndex + 1} OF ${pageCount}</td>
-                    </tr>
-                    <tr>
-                        <td colspan="4" class="p-1 leading-normal">
-                            This is to allow Mr. / Ms. <strong class="underline material-line-value">${materialEscape(p.authorizedEmployeeName || 'N/A')}</strong> of <strong class="underline material-line-value">${materialEscape(p.authorizedDepartmentName || p.userDept || 'N/A')}</strong> to bring out the following items:
-                        </td>
-                    </tr>
-                </tbody>
-            </table>
 
-            <table class="w-full text-[9px] border-collapse border border-gray-900 mt-1 text-left material-items-table">
+            <!-- Absolutely Positioned QR Code + Control Details -->
+            <div class="absolute material-front-qr-panel flex flex-col items-center justify-start text-center" style="top: 2mm; right: 3mm; width: 31mm; z-index: 10;">
+                <div class="materialQrCodeDisplay mb-0.5 flex items-center justify-center" style="width: 24mm; height: 24mm;"></div>
+                <div class="material-front-qr-control">Control No.: ${materialEscape(controlNo)}</div>
+                <div class="material-front-qr-scan">To Scan: ${formatManualScanId(getPrintableGatePassNo(p))}</div>
+            </div>
+
+            <!-- Underlined Authorization Statement (Canva Layout) -->
+            <div class="flex flex-col text-[7px]" style="margin-top: 1mm; gap: 0.8mm; line-height: 1; width: calc(100% - 35mm);">
+                <div class="flex items-end w-full">
+                    <span class="whitespace-nowrap text-gray-500 font-semibold mr-1">This is to allow Mr. / Ms.</span>
+                    <span class="border-b border-black font-bold flex-grow text-center pb-0.5">${materialEscape(p.authorizedEmployeeName || 'N/A')}</span>
+                </div>
+                <div class="flex items-end w-full">
+                    <span class="whitespace-nowrap text-gray-500 font-semibold mr-1">of</span>
+                    <span class="border-b border-black font-bold flex-grow text-center pb-0.5">${materialEscape(p.authorizedDepartmentName || p.userDept || 'N/A')}</span>
+                    <span class="whitespace-nowrap text-gray-500 font-semibold ml-1">to bring out the following items:</span>
+                </div>
+            </div>
+
+            <table class="w-full text-[9px] border-collapse border border-gray-900 mt-1 text-left material-items-table material-front-table">
                 <thead>
                     <tr class="bg-gray-100 font-bold border-b border-gray-900" style="background-color: #f3f4f6; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
                         <th class="border border-gray-900 p-1 w-[12%]">ITEM NO.</th>
@@ -1129,59 +1221,88 @@ async function renderMaterialGatePassClone(p) {
                 </tbody>
             </table>
 
-            <div class="mt-1 text-[8.5px] leading-tight">
-                <strong>REMARKS:</strong> <span class="ml-1">${materialEscape(p.materialRemarks || p.purpose || '')}</span>
+            <!-- Underlined Remarks -->
+            <div class="flex items-end text-[7.5px] leading-tight" style="margin-top: 1.5mm; margin-bottom: 1.5mm;">
+                <span class="font-bold text-gray-800 mr-2">REMARKS:</span>
+                <span class="border-b border-gray-400 flex-grow pl-1 font-bold pb-0.5">${materialEscape(p.materialRemarks || p.purpose || '—')}</span>
             </div>
 
-            <div class="material-form-signatures border-t border-gray-900 pt-1">
-                <div>
-                    <strong>Prepared By:</strong>
-                    <div class="sig-wrapper sig-mat-prepared material-signature-image"></div>
-                    <span class="name sig-mat-prepared-name"></span>
-                    <small>Employee</small>
+            <div class="material-form-signatures pt-1" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 4mm; margin-top: 2.2mm; text-align: left; font-size: 6.6px; line-height: 1.12; border-top: 1px solid #111827;">
+                <div style="position: relative; min-height: 15mm;">
+                    <strong style="display: block; text-align: left; font-size: 7.5px;">Prepared By:</strong>
+                    <div class="sig-wrapper sig-mat-prepared material-signature-image" style="height: 9mm; display: flex; align-items: end; justify-content: center; margin-bottom: 0.5mm;"></div>
+                    <span class="name sig-mat-prepared-name" style="display: block; border-top: 1px solid #111827; border-bottom: none; padding-top: 0.5mm; text-align: center; font-size: 8px; font-weight: 700; text-transform: uppercase;"></span>
                 </div>
-                <div>
-                    <strong>Noted By:</strong>
-                    <div class="sig-wrapper sig-mat-superior material-signature-image"></div>
-                    <span class="name sig-mat-superior-name"></span>
-                    <small>Immediate Superior</small>
+                <div style="position: relative; min-height: 15mm;">
+                    <strong style="display: block; text-align: left; font-size: 7.5px;">Noted By:</strong>
+                    <div class="sig-wrapper sig-mat-superior material-signature-image" style="height: 9mm; display: flex; align-items: end; justify-content: center; margin-bottom: 0.5mm;"></div>
+                    <span class="name sig-mat-superior-name" style="display: block; border-top: 1px solid #111827; border-bottom: none; padding-top: 0.5mm; text-align: center; font-size: 8px; font-weight: 700; text-transform: uppercase;"></span>
+                    <small style="display: block; text-align: center; font-size: 5.8px; margin-top: 0.5mm;">Immediate Superior</small>
                 </div>
-                <div>
-                    <strong>Approved By:</strong>
-                    <div class="sig-wrapper sig-mat-pas material-signature-image"></div>
-                    <span class="name sig-mat-pas-name"></span>
-                    <small>Personnel &amp; Admin Section</small>
+                <div style="position: relative; min-height: 15mm;">
+                    <strong style="display: block; text-align: left; font-size: 7.5px;">Approved By:</strong>
+                    <div class="sig-wrapper sig-mat-pas material-signature-image" style="height: 9mm; display: flex; align-items: end; justify-content: center; margin-bottom: 0.5mm;"></div>
+                    <span class="name sig-mat-pas-name" style="display: block; border-top: 1px solid #111827; border-bottom: none; padding-top: 0.5mm; text-align: center; font-size: 8px; font-weight: 700; text-transform: uppercase;"></span>
+                    <small style="display: block; text-align: center; font-size: 5.8px; margin-top: 0.5mm;">Personnel &amp; Admin Section</small>
                 </div>
             </div>
 
             <!-- GUARD TRACKING ROW FOR MATERIAL -->
-            <div class="guard-status-row hidden flex-row justify-around items-center w-full mt-2 pt-1 border-t border-black bg-gray-50" style="-webkit-print-color-adjust: exact; print-color-adjust: exact;">
-                <div class="flex items-center space-x-2">
-                    <span class="text-[8px] font-bold text-gray-500">ACTUAL OUT</span>
-                    <div class="vActOut w-16 h-4 flex items-center justify-center font-bold text-[8px] border-b border-gray-400"></div>
+            <div class="guard-status-row hidden flex-row justify-between items-end w-full mt-1 pt-0" style="-webkit-print-color-adjust: exact; print-color-adjust: exact;">
+                <div class="flex items-end space-x-1 w-[26%] text-[7.5px]">
+                    <span class="font-bold text-gray-500 uppercase whitespace-nowrap">ACTUAL OUT</span>
+                    <div class="guard-scan-stack">
+                        <div class="vActOut guard-scan-time"></div>
+                        <div class="vActOutGuardName guard-scan-name"></div>
+                    </div>
                 </div>
-                <div class="flex items-center space-x-2">
-                    <span class="text-[8px] font-bold text-gray-500">ACTUAL IN</span>
-                    <div class="vActIn w-16 h-4 flex items-center justify-center font-bold text-[8px] border-b border-gray-400"></div>
+                <div class="flex items-end space-x-1 w-[26%] text-[7.5px]">
+                    <span class="font-bold text-gray-500 uppercase whitespace-nowrap">ACTUAL IN</span>
+                    <div class="guard-scan-stack">
+                        <div class="vActIn guard-scan-time"></div>
+                        <div class="vActInGuardName guard-scan-name"></div>
+                    </div>
                 </div>
-                <div class="flex items-center space-x-2">
-                    <span class="text-[8px] font-bold text-gray-500">REMARKS</span>
-                    <div class="vGuardRemarks bg-gray-200 text-gray-600 px-2 py-0.5 rounded font-bold text-[8px]">PENDING</div>
+                <div class="flex items-end space-x-1 w-[28%] text-[7.5px]">
+                    <span class="font-bold text-gray-500 uppercase whitespace-nowrap">REMARKS</span>
+                    <div class="vGuardRemarks border-b border-gray-400 flex-grow text-center font-bold text-[7.5px] pb-0.5"></div>
+                </div>
+                <div class="flex flex-col items-center justify-center w-[16%]">
+                    <div class="vGuardBadge px-2 py-0.5 rounded-full font-extrabold text-[7.5px] text-center select-none uppercase tracking-wide bg-gray-200 text-gray-600">PENDING</div>
+                    <div class="text-[6.5px] font-semibold text-gray-700 mt-1 border-t border-black w-full text-center pt-0.5">Guard Name</div>
                 </div>
             </div>
-            
+
             <div class="text-[7.5px] text-right text-gray-500 absolute bottom-1.5 right-3 leading-none select-none">Page ${pageIndex + 1} of ${pageCount}</div>
         `;
+
+        const qrContainer = div.querySelector('.materialQrCodeDisplay');
+        if (qrContainer && qrValue) {
+            try {
+                if (typeof QRCode === 'function') {
+                    new QRCode(qrContainer, {
+                        text: String(qrValue),
+                        width: 150,
+                        height: 150
+                    });
+                }
+            } catch {}
+        } else if (qrContainer) {
+            qrContainer.innerHTML = '<span class="text-[6px] text-gray-400">Not Approved</span>';
+        }
 
         const matGuardRow = div.querySelector('.guard-status-row');
         if (matGuardRow && ['Approved', 'Outside', 'Overdue', 'Returned', 'Closed'].includes(p.status)) {
             matGuardRow.classList.remove('hidden');
             matGuardRow.classList.add('flex');
-            
+
             const vOut = div.querySelector('.vActOut');
             const vIn = div.querySelector('.vActIn');
+            const vOutGuardName = div.querySelector('.vActOutGuardName');
+            const vInGuardName = div.querySelector('.vActInGuardName');
             const vRem = div.querySelector('.vGuardRemarks');
-            
+            const vBadge = div.querySelector('.vGuardBadge');
+
             const safeFormatTime = (ts) => {
                 if (!ts) return '';
                 if (typeof ts === 'string' && ts.includes(':') && !ts.includes('-')) return ts;
@@ -1191,23 +1312,27 @@ async function renderMaterialGatePassClone(p) {
             };
             if (vOut) vOut.innerText = safeFormatTime(p.actualOut);
             if (vIn) vIn.innerText = safeFormatTime(p.actualIn);
-            if (vRem) {
-                vRem.innerText = getGuardRemarksText(p);
-                vRem.className = ['Returned', 'Closed', 'Approved'].includes(p.status) ? 'bg-green-100 text-green-800 px-2 py-0.5 rounded font-bold text-[8px]' : (['Outside', 'Overdue'].includes(p.status) ? 'bg-blue-100 text-mpiBlue px-2 py-0.5 rounded font-bold text-[8px]' : 'bg-gray-200 text-gray-600 px-2 py-0.5 rounded font-bold text-[8px]');
+            if (vOutGuardName) vOutGuardName.innerText = getGuardScanName(p, 'TIME_OUT');
+            if (vInGuardName) vInGuardName.innerText = getGuardScanName(p, 'TIME_IN');
+            if (vRem) vRem.innerText = getGuardRemarksText(p);
+            if (vBadge) {
+                vBadge.innerText = p.status.toUpperCase();
+                vBadge.className = 'vGuardBadge px-2 py-0.5 rounded-full font-extrabold text-[7.5px] text-center select-none uppercase tracking-wide ' +
+                    (['Returned', 'Closed', 'Approved'].includes(p.status) ? 'bg-green-100 text-green-800' : (['Outside', 'Overdue'].includes(p.status) ? 'bg-blue-100 text-mpiBlue' : 'bg-gray-200 text-gray-600'));
             }
         }
 
         const handleSig = async (sigData, wrapperSelector, nameSelector) => {
             const wrapperEls = div.querySelectorAll(wrapperSelector);
             const nameEls = div.querySelectorAll(nameSelector);
-            
+
             nameEls.forEach(el => {
                 if (sigData) {
                     el.innerText = sigData.name;
                     el.classList.remove('hidden');
                 }
             });
-            
+
             if (sigData && sigData.fileId && !sigData.img && isDatabaseSession()) {
                 try {
                     const blob = await ApiClient.blob(`/signatures/${sigData.fileId}`);
@@ -1218,7 +1343,7 @@ async function renderMaterialGatePassClone(p) {
                     });
                 } catch {}
             }
-            
+
             wrapperEls.forEach(el => {
                 if (sigData) {
                     if (sigData.img) {
@@ -1252,19 +1377,6 @@ async function renderMaterialGatePassClone(p) {
 
         pages.push(div);
     }
-    
-    const backDiv = document.createElement('div');
-    backDiv.className = 'qr-back-page material-print-page multi-print-item';
-    backDiv.innerHTML = getQrBackPageHtml(p, 'material-document-qr-back');
-
-    if (qrValue && typeof QRCode === 'function') {
-        new QRCode(backDiv.querySelector('.material-document-qr-back'), {
-            text: String(qrValue),
-            width: QR_BACK_CODE_SIZE,
-            height: QR_BACK_CODE_SIZE
-        });
-    }
-    pages.push(backDiv);
 
     return pages;
 }
@@ -1294,22 +1406,14 @@ async function printSelectedLogs() {
             const isMaterial = p.formTypeCode === 'MATERIAL_GATE_PASS';
             if (isMaterial) {
                 const pages = await renderMaterialGatePassClone(p);
-                const back = pages.pop(); 
                 for (let i = 0; i < pages.length; i++) {
-                    if (i === pages.length - 1) {
-                        pagesPairs.push({ front: pages[i], back: back });
-                    } else {
-                        const emptyBack = document.createElement('div');
-                        emptyBack.style.cssText = 'height: 105mm; width: 148mm; display: flex; align-items: center; justify-content: center; color: #ccc; font-size: 10px;';
-                        emptyBack.innerText = '(Intentionally Blank)';
-                        pagesPairs.push({ front: pages[i], back: emptyBack });
-                    }
+                    pagesPairs.push({ front: pages[i], back: null });
                 }
             } else {
                 const front = await renderPersonGatePassClone(p);
                 const back = front.querySelector('.qr-back-page');
                 if (back) front.removeChild(back);
-                
+
                 // Enforce A6 bounds on Person Pass so it stacks nicely
                 front.style.width = '148mm';
                 front.style.height = '105mm';
@@ -1319,7 +1423,7 @@ async function printSelectedLogs() {
                     back.style.height = '105mm';
                     back.style.border = '1px dashed #ccc';
                 }
-                
+
                 pagesPairs.push({ front, back });
             }
         }
@@ -1331,40 +1435,43 @@ async function printSelectedLogs() {
             const a4Front = document.createElement('div');
             a4Front.className = 'a4-wrapper';
             a4Front.style.cssText = 'display: flex; flex-direction: column; gap: 0; page-break-after: always; width: 210mm; height: 297mm; max-height: 297mm; overflow: hidden; align-items: center; justify-content: flex-start; padding-top: 10mm; box-sizing: border-box;';
-            
+
             pair1.front.style.cssText += 'page-break-after: avoid !important; break-after: avoid !important; margin-bottom: 10mm !important; box-shadow: none !important; margin-top: 0 !important;';
             a4Front.appendChild(pair1.front);
-            
+
             if (pair2) {
                 pair2.front.style.cssText += 'page-break-after: avoid !important; break-after: avoid !important; margin-bottom: 0 !important; box-shadow: none !important; margin-top: 0 !important;';
                 a4Front.appendChild(pair2.front);
             }
             multiContainer.appendChild(a4Front);
 
-            const a4Back = document.createElement('div');
-            a4Back.className = 'a4-wrapper';
-            a4Back.style.cssText = 'display: flex; flex-direction: column; gap: 0; page-break-after: always; width: 210mm; height: 297mm; max-height: 297mm; overflow: hidden; align-items: center; justify-content: flex-start; padding-top: 10mm; box-sizing: border-box;';
-            
-            if (pair1.back) {
-                pair1.back.style.cssText += 'page-break-before: avoid !important; break-before: avoid !important; page-break-after: avoid !important; break-after: avoid !important; margin-bottom: 10mm !important; margin-top: 0 !important;';
-                a4Back.appendChild(pair1.back);
-            } else {
-                const empty = document.createElement('div');
-                empty.style.cssText = 'height: 105mm; width: 148mm; margin-bottom: 10mm;';
-                a4Back.appendChild(empty);
-            }
-            
-            if (pair2) {
-                if (pair2.back) {
-                    pair2.back.style.cssText += 'page-break-before: avoid !important; break-before: avoid !important; page-break-after: avoid !important; break-after: avoid !important; margin-bottom: 0 !important; margin-top: 0 !important;';
-                    a4Back.appendChild(pair2.back);
+            const hasBack = !!(pair1.back || (pair2 && pair2.back));
+            if (hasBack) {
+                const a4Back = document.createElement('div');
+                a4Back.className = 'a4-wrapper';
+                a4Back.style.cssText = 'display: flex; flex-direction: column; gap: 0; page-break-after: always; width: 210mm; height: 297mm; max-height: 297mm; overflow: hidden; align-items: center; justify-content: flex-start; padding-top: 10mm; box-sizing: border-box;';
+
+                if (pair1.back) {
+                    pair1.back.style.cssText += 'page-break-before: avoid !important; break-before: avoid !important; page-break-after: avoid !important; break-after: avoid !important; margin-bottom: 10mm !important; margin-top: 0 !important;';
+                    a4Back.appendChild(pair1.back);
                 } else {
                     const empty = document.createElement('div');
-                    empty.style.cssText = 'height: 105mm; width: 148mm; margin-bottom: 0;';
+                    empty.style.cssText = 'height: 105mm; width: 148mm; margin-bottom: 10mm;';
                     a4Back.appendChild(empty);
                 }
+
+                if (pair2) {
+                    if (pair2.back) {
+                        pair2.back.style.cssText += 'page-break-before: avoid !important; break-before: avoid !important; page-break-after: avoid !important; break-after: avoid !important; margin-bottom: 0 !important; margin-top: 0 !important;';
+                        a4Back.appendChild(pair2.back);
+                    } else {
+                        const empty = document.createElement('div');
+                        empty.style.cssText = 'height: 105mm; width: 148mm; margin-bottom: 0;';
+                        a4Back.appendChild(empty);
+                    }
+                }
+                multiContainer.appendChild(a4Back);
             }
-            multiContainer.appendChild(a4Back);
         }
 
         const modal = document.getElementById('printModal');

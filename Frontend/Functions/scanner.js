@@ -26,7 +26,11 @@ async function executeSecurityScan(identifier) {
             result.message,
             recorded ? 'success' : ignored || cooldown ? 'info' : 'error'
         );
-        await renderGuardDashboard();
+        if (typeof refreshApplicationState === 'function') {
+            await refreshApplicationState('security-scan');
+        } else {
+            await renderGuardDashboard();
+        }
     } catch (error) {
         showToast(error instanceof ApiError ? error.message : 'Scan failed.', 'error');
     }
