@@ -19,5 +19,13 @@ public interface ISecurityService
     Task<EmployeePassesResult> GetEmployeePassesAsync(
         long employeeRecordId,
         CancellationToken cancellationToken = default);
+
+    Task<long?> GetEmployeeRecordIdByEmployeeIdAsync(
+        string employeeId,
+        CancellationToken cancellationToken = default);
+
+    Task<long?> LookupGatePassIdAsync(
+        string identifier,
+        CancellationToken cancellationToken = default);
 }
 

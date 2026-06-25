@@ -500,6 +500,41 @@ public sealed class SecurityRepository(
             transaction,
             cancellationToken: cancellationToken));
 
+    public async Task<long?> GetEmployeeRecordIdByEmployeeIdAsync(
+        string employeeId,
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection = await connectionFactory.OpenConnectionAsync(cancellationToken);
+        return await connection.QuerySingleOrDefaultAsync<long?>(
+            new CommandDefinition(
+                """
+                SELECT employee_record_id
+                FROM tbl_employee_records
+                WHERE employee_id = @EmployeeId
+                  AND status = 'Active';
+                """,
+                new { EmployeeId = employeeId },
+                cancellationToken: cancellationToken));
+    }
+
+    public async Task<long?> LookupGatePassIdAsync(
+        string identifier,
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection = await connectionFactory.OpenConnectionAsync(cancellationToken);
+        return await connection.QuerySingleOrDefaultAsync<long?>(
+            new CommandDefinition(
+                """
+                SELECT gate_pass_id
+                FROM tbl_gate_pass_requests
+                WHERE gate_pass_no = @Identifier
+                   OR control_no = @Identifier
+                LIMIT 1;
+                """,
+                new { Identifier = identifier },
+                cancellationToken: cancellationToken));
+    }
+
     private sealed class ScanTarget
     {
         public long GatePassId { get; init; }

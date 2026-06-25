@@ -89,8 +89,15 @@ async function simulateQrScan(identifierOverride = null, fromCamera = false) {
                 viewPass(parts[2], true);
             }
         } else {
-            // === MANUAL ENTRY / CONTROL NO PATH (Bug fix included) ===
-            await handleManualEntryLookup(identifier);
+            // === MANUAL ENTRY / RAW EMPLOYEE ID PATH ===
+            try {
+                // First, check if the identifier is an Employee ID
+                const empData = await ApiClient.get(`/security/employee/by-id/${encodeURIComponent(identifier)}/passes`);
+                await processGlobalQrData(empData);
+            } catch (err) {
+                // Not an Employee ID (or API failed), fallback to Control No lookup
+                await handleManualEntryLookup(identifier);
+            }
         }
 
         input.value = '';
@@ -111,23 +118,7 @@ async function simulateQrScan(identifierOverride = null, fromCamera = false) {
 async function handleGlobalQrScan(employeeRecordId) {
     try {
         const data = await ApiClient.get(`/security/employee/${employeeRecordId}/passes`);
-        const active = data.active || [];
-        const recent = data.recent || [];
-        const employeeName = data.employeeName || 'Employee';
-
-        if (active.length === 1) {
-            // Single active pass — go directly to scan mode
-            viewPass(active[0].gatePassId, true);
-        } else if (active.length > 1) {
-            // Multiple active passes — show selection modal
-            showPassSelectionModal(active, employeeName);
-        } else if (recent.length > 0) {
-            // No active passes but has history — show history modal
-            showEmployeeHistoryModal(recent, employeeName);
-        } else {
-            // No passes at all
-            showToast('No gate pass records found for this employee.', 'info');
-        }
+        await processGlobalQrData(data);
     } catch (error) {
         // Fallback: try the old queue-based lookup if new endpoint unavailable
         try {
@@ -144,6 +135,26 @@ async function handleGlobalQrScan(employeeRecordId) {
     }
 }
 
+async function processGlobalQrData(data) {
+    const active = data.active || [];
+    const recent = data.recent || [];
+    const employeeName = data.employeeName || 'Employee';
+
+    if (active.length === 1) {
+        // Single active pass — go directly to scan mode
+        viewPass(active[0].gatePassId, true);
+    } else if (active.length > 1) {
+        // Multiple active passes — show selection modal
+        showPassSelectionModal(active, employeeName);
+    } else if (recent.length > 0) {
+        // No active passes but has history — show history modal
+        showEmployeeHistoryModal(recent, employeeName);
+    } else {
+        // No passes at all
+        showToast('No gate pass records found for this employee.', 'info');
+    }
+}
+
 // ============================================================
 // MANUAL ENTRY: Control No / GP No lookup (Bug fix)
 // ============================================================
@@ -155,34 +166,22 @@ async function handleManualEntryLookup(identifier) {
         const ctrlId = String(item.controlNo || '').toLowerCase();
         return gpId === searchId || ctrlId === searchId;
     });
+
     if (match) {
         // Found in active queue — open in scan/review mode
         viewPass(match.gatePassId, true);
     } else {
-        // Not in active queue — search in history (BUG FIX)
+        // Not in active queue — search in history using the new security lookup endpoint
         try {
-            const lookup = await ApiClient.request(
-                `/form-requests?page=1&pageSize=20&search=${encodeURIComponent(identifier)}`
-            );
-            const dbMatch = lookup.items.find(item =>
-                String(item.gatePassNo).toLowerCase() === searchId ||
-                String(item.controlNo || '').toLowerCase() === searchId
-            );
-            if (dbMatch) {
-                // Found in history — open in view-only mode
+            const lookupId = await ApiClient.get(`/security/passes/lookup/${encodeURIComponent(identifier)}`);
+            if (lookupId) {
                 showToast('This gate pass is completed. Opening in view-only mode.', 'info');
-                viewPass(dbMatch.gatePassId, false);
+                viewPass(lookupId, false);
             } else {
-                showToast('ID/Control No. not found in active queue or history.', 'error');
+                showToast('Not found in queue or history.', 'info');
             }
         } catch (err) {
-            // If /form-requests is not accessible to Security role,
-            // try using the gate pass ID directly as a view-only fallback
-            try {
-                viewPass(identifier, false);
-            } catch {
-                showToast('ID/Control No. not found.', 'error');
-            }
+            showToast('ID/Control No. not found.', 'error');
         }
     }
 }

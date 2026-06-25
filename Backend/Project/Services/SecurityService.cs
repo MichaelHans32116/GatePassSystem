@@ -84,4 +84,14 @@ public sealed class SecurityService(
         long employeeRecordId,
         CancellationToken cancellationToken = default) =>
         securityRepository.GetEmployeePassesAsync(employeeRecordId, cancellationToken);
+
+    public Task<long?> GetEmployeeRecordIdByEmployeeIdAsync(
+        string employeeId,
+        CancellationToken cancellationToken = default) =>
+        securityRepository.GetEmployeeRecordIdByEmployeeIdAsync(employeeId, cancellationToken);
+
+    public Task<long?> LookupGatePassIdAsync(
+        string identifier,
+        CancellationToken cancellationToken = default) =>
+        securityRepository.LookupGatePassIdAsync(identifier, cancellationToken);
 }
