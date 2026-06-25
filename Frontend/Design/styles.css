@@ -164,7 +164,12 @@
                 position: relative !important;
             }
             .a4-wrapper.has-multiple-passes {
-                justify-content: space-evenly !important;
+                display: grid !important;
+                grid-template-rows: 148.5mm 148.5mm !important;
+                align-items: center !important;
+                justify-items: center !important;
+                align-content: start !important;
+                justify-content: center !important;
                 padding-top: 0 !important;
                 padding-bottom: 0 !important;
             }
@@ -1051,7 +1056,12 @@
             margin-bottom: 0 !important;
         }
         .a4-wrapper.has-multiple-passes {
-            justify-content: space-evenly;
+            display: grid;
+            grid-template-rows: 148.5mm 148.5mm;
+            align-items: center;
+            justify-items: center;
+            align-content: start;
+            justify-content: center;
             padding-top: 0;
             padding-bottom: 0;
         }
@@ -1183,9 +1193,24 @@
             font-size: 7.2px;
         }
         .a4-wrapper.is-batch-print .person-print-form .guard-scan-name {
-            min-height: 2.4mm;
+            min-height: 2.8mm;
+            line-height: 1;
             margin-top: 0.2mm;
-            font-size: 5.8px;
+            font-size: 5.7px;
+        }
+        .a4-wrapper.has-multiple-passes .person-print-form .guard-status-row td {
+            padding-top: 0.35mm !important;
+            padding-bottom: 0.35mm !important;
+        }
+        .a4-wrapper.has-multiple-passes .person-print-form .guard-scan-sig {
+            height: 5.6mm !important;
+            min-height: 5.6mm !important;
+            max-height: 5.6mm !important;
+            margin-top: 0 !important;
+            margin-bottom: 0 !important;
+        }
+        .a4-wrapper.has-multiple-passes .person-print-form .guard-scan-sig img {
+            max-height: 5.5mm !important;
         }
 
         /* Signature Object Fit */

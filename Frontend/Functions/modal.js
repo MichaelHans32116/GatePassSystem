@@ -1641,12 +1641,18 @@ async function printSelectedLogs() {
         for (let i = 0; i < pagesPairs.length; i += 2) {
             const pair1 = pagesPairs[i];
             const pair2 = pagesPairs[i + 1];
+            const a4LayoutStyle = pair2
+                ? 'display: grid; grid-template-rows: 148.5mm 148.5mm; align-items: center; justify-items: center; align-content: start; justify-content: center;'
+                : 'display: flex; flex-direction: column; gap: 0; align-items: center; justify-content: flex-start;';
+            const a4PaddingStyle = pair2
+                ? 'padding-top: 0; padding-bottom: 0;'
+                : 'padding-top: 4mm; padding-bottom: 0;';
 
             const a4Front = document.createElement('div');
             a4Front.className = `a4-wrapper is-batch-print${pair2 ? ' has-multiple-passes' : ''}`;
-            a4Front.style.cssText = 'display: flex; flex-direction: column; gap: 0; page-break-after: always; width: 210mm; height: 297mm; max-height: 297mm; overflow: hidden; align-items: center; justify-content: flex-start; padding-top: 4mm; box-sizing: border-box;';
+            a4Front.style.cssText = `${a4LayoutStyle} page-break-after: always; width: 210mm; height: 297mm; max-height: 297mm; overflow: hidden; ${a4PaddingStyle} box-sizing: border-box;`;
 
-            pair1.front.style.cssText += 'page-break-after: avoid !important; break-after: avoid !important; margin-bottom: 4mm !important; box-shadow: none !important; margin-top: 0 !important;';
+            pair1.front.style.cssText += `page-break-after: avoid !important; break-after: avoid !important; margin-bottom: ${pair2 ? '0' : '4mm'} !important; box-shadow: none !important; margin-top: 0 !important;`;
             a4Front.appendChild(pair1.front);
 
             if (pair2) {
@@ -1659,14 +1665,14 @@ async function printSelectedLogs() {
             if (hasBack) {
                 const a4Back = document.createElement('div');
                 a4Back.className = `a4-wrapper is-batch-print${pair2 ? ' has-multiple-passes' : ''}`;
-                a4Back.style.cssText = 'display: flex; flex-direction: column; gap: 0; page-break-after: always; width: 210mm; height: 297mm; max-height: 297mm; overflow: hidden; align-items: center; justify-content: flex-start; padding-top: 4mm; box-sizing: border-box;';
+                a4Back.style.cssText = `${a4LayoutStyle} page-break-after: always; width: 210mm; height: 297mm; max-height: 297mm; overflow: hidden; ${a4PaddingStyle} box-sizing: border-box;`;
 
                 if (pair1.back) {
-                    pair1.back.style.cssText += 'page-break-before: avoid !important; break-before: avoid !important; page-break-after: avoid !important; break-after: avoid !important; margin-bottom: 4mm !important; margin-top: 0 !important;';
+                    pair1.back.style.cssText += `page-break-before: avoid !important; break-before: avoid !important; page-break-after: avoid !important; break-after: avoid !important; margin-bottom: ${pair2 ? '0' : '4mm'} !important; margin-top: 0 !important;`;
                     a4Back.appendChild(pair1.back);
                 } else {
                     const empty = document.createElement('div');
-                    empty.style.cssText = 'height: 105mm; width: 148mm; margin-bottom: 4mm;';
+                    empty.style.cssText = `height: 105mm; width: 148mm; margin-bottom: ${pair2 ? '0' : '4mm'};`;
                     a4Back.appendChild(empty);
                 }
 
