@@ -8,6 +8,7 @@ CREATE PROCEDURE SP_CreateGatePass(
     IN p_requester_employee_id BIGINT UNSIGNED,
     IN p_requester_department_id BIGINT UNSIGNED,
     IN p_requester_position_id BIGINT UNSIGNED,
+    IN p_prepared_by_signature_file_id BIGINT UNSIGNED,
     IN p_destination VARCHAR(255),
     IN p_purpose TEXT,
     IN p_expected_out_at DATETIME,
@@ -25,6 +26,9 @@ BEGIN
     DECLARE v_gate_pass_id BIGINT UNSIGNED;
     DECLARE v_gate_pass_no VARCHAR(50);
     DECLARE v_temporary_no VARCHAR(50);
+    DECLARE v_control_no VARCHAR(20);
+    DECLARE v_control_sequence INT UNSIGNED;
+    DECLARE v_form_date DATE;
 
     DECLARE EXIT HANDLER FOR SQLEXCEPTION
     BEGIN
@@ -49,14 +53,42 @@ BEGIN
 
     START TRANSACTION;
 
+    SET v_form_date = DATE(p_expected_out_at);
+
+    INSERT INTO tbl_form_control_sequences (
+        control_date,
+        last_sequence
+    ) VALUES (
+        v_form_date,
+        1
+    )
+    ON DUPLICATE KEY UPDATE
+        last_sequence = last_sequence + 1;
+
+    SELECT last_sequence
+    INTO v_control_sequence
+    FROM tbl_form_control_sequences
+    WHERE control_date = v_form_date
+    FOR UPDATE;
+
+    SET v_control_no = CONCAT(
+        DATE_FORMAT(v_form_date, '%m%d%y'),
+        '-',
+        LPAD(v_control_sequence, 3, '0')
+    );
+
     SET v_temporary_no = CONCAT('TMP-', UUID());
 
     INSERT INTO tbl_gate_pass_requests (
         gate_pass_no,
+        form_type_code,
+        control_no,
+        form_date,
         requester_user_id,
         requester_employee_id,
         requester_department_id,
         requester_position_id,
+        prepared_by_signature_file_id,
         destination,
         purpose,
         expected_out_at,
@@ -71,10 +103,14 @@ BEGIN
         requires_president_approval
     ) VALUES (
         v_temporary_no,
+        'PERSON_GATE_PASS',
+        v_control_no,
+        v_form_date,
         p_requester_user_id,
         p_requester_employee_id,
         p_requester_department_id,
         p_requester_position_id,
+        p_prepared_by_signature_file_id,
         TRIM(p_destination),
         TRIM(p_purpose),
         p_expected_out_at,
@@ -92,9 +128,9 @@ BEGIN
     SET v_gate_pass_id = LAST_INSERT_ID();
     SET v_gate_pass_no = CONCAT(
         'GP-',
-        DATE_FORMAT(UTC_TIMESTAMP(), '%Y%m%d'),
+        DATE_FORMAT(v_form_date, '%Y%m%d'),
         '-',
-        LPAD(v_gate_pass_id, 6, '0')
+        LPAD(v_control_sequence, 6, '0')
     );
 
     UPDATE tbl_gate_pass_requests
@@ -125,6 +161,211 @@ BEGIN
         gate_pass_status_code,
         created_at
     FROM tbl_gate_pass_requests
+    WHERE gate_pass_id = v_gate_pass_id;
+END$$
+
+DROP PROCEDURE IF EXISTS SP_CreateMaterialGatePass$$
+CREATE PROCEDURE SP_CreateMaterialGatePass(
+    IN p_requester_user_id BIGINT UNSIGNED,
+    IN p_requester_employee_id BIGINT UNSIGNED,
+    IN p_requester_department_id BIGINT UNSIGNED,
+    IN p_requester_position_id BIGINT UNSIGNED,
+    IN p_prepared_by_signature_file_id BIGINT UNSIGNED,
+    IN p_authorized_employee_id BIGINT UNSIGNED,
+    IN p_authorized_department_id BIGINT UNSIGNED,
+    IN p_form_date DATE,
+    IN p_material_remarks VARCHAR(1000),
+    IN p_items_json LONGTEXT,
+    IN p_trace_id VARCHAR(100)
+)
+BEGIN
+    DECLARE v_gate_pass_id BIGINT UNSIGNED;
+    DECLARE v_gate_pass_no VARCHAR(50);
+    DECLARE v_temporary_no VARCHAR(50);
+    DECLARE v_control_no VARCHAR(20);
+    DECLARE v_control_sequence INT UNSIGNED;
+    DECLARE v_item_count INT DEFAULT 0;
+    DECLARE v_item_index INT DEFAULT 0;
+    DECLARE v_item_no VARCHAR(80);
+    DECLARE v_description VARCHAR(500);
+    DECLARE v_quantity DECIMAL(12, 3);
+    DECLARE v_unit VARCHAR(50);
+
+    DECLARE EXIT HANDLER FOR SQLEXCEPTION
+    BEGIN
+        ROLLBACK;
+        RESIGNAL;
+    END;
+
+    IF p_form_date IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Material gate pass date is required.';
+    END IF;
+
+    IF p_authorized_employee_id IS NULL
+       OR p_authorized_department_id IS NULL THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'The authorized employee is required.';
+    END IF;
+
+    IF p_items_json IS NULL OR JSON_VALID(p_items_json) = 0 THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'A valid material item list is required.';
+    END IF;
+
+    SET v_item_count = JSON_LENGTH(p_items_json);
+    IF v_item_count < 1 OR v_item_count > 20 THEN
+        SIGNAL SQLSTATE '45000'
+            SET MESSAGE_TEXT = 'Material gate pass must contain 1 to 20 items.';
+    END IF;
+
+    START TRANSACTION;
+
+    INSERT INTO tbl_form_control_sequences (
+        control_date,
+        last_sequence
+    ) VALUES (
+        p_form_date,
+        1
+    )
+    ON DUPLICATE KEY UPDATE
+        last_sequence = last_sequence + 1;
+
+    SELECT last_sequence
+    INTO v_control_sequence
+    FROM tbl_form_control_sequences
+    WHERE control_date = p_form_date
+    FOR UPDATE;
+
+    SET v_control_no = CONCAT(
+        DATE_FORMAT(p_form_date, '%m%d%y'),
+        '-',
+        LPAD(v_control_sequence, 3, '0')
+    );
+    SET v_temporary_no = CONCAT('TMP-', UUID());
+
+    INSERT INTO tbl_gate_pass_requests (
+        gate_pass_no,
+        form_type_code,
+        control_no,
+        form_date,
+        requester_user_id,
+        requester_employee_id,
+        requester_department_id,
+        requester_position_id,
+        prepared_by_signature_file_id,
+        authorized_employee_id,
+        authorized_department_id,
+        destination,
+        purpose,
+        material_remarks,
+        expected_out_at,
+        expected_in_at,
+        will_return,
+        vehicle_usage_code,
+        gate_pass_status_code,
+        requires_superior_approval,
+        requires_president_approval
+    ) VALUES (
+        v_temporary_no,
+        'MATERIAL_GATE_PASS',
+        v_control_no,
+        p_form_date,
+        p_requester_user_id,
+        p_requester_employee_id,
+        p_requester_department_id,
+        p_requester_position_id,
+        p_prepared_by_signature_file_id,
+        p_authorized_employee_id,
+        p_authorized_department_id,
+        'MATERIAL RELEASE',
+        'Material gate pass request',
+        NULLIF(TRIM(p_material_remarks), ''),
+        TIMESTAMP(p_form_date, '00:00:00'),
+        NULL,
+        FALSE,
+        'NONE',
+        'DRAFT',
+        TRUE,
+        FALSE
+    );
+
+    SET v_gate_pass_id = LAST_INSERT_ID();
+    SET v_gate_pass_no = CONCAT(
+        'GP-',
+        DATE_FORMAT(p_form_date, '%Y%m%d'),
+        '-',
+        LPAD(v_control_sequence, 6, '0')
+    );
+
+    UPDATE tbl_gate_pass_requests
+    SET gate_pass_no = v_gate_pass_no
+    WHERE gate_pass_id = v_gate_pass_id;
+
+    WHILE v_item_index < v_item_count DO
+        SET v_item_no = NULLIF(TRIM(JSON_UNQUOTE(JSON_EXTRACT(
+            p_items_json,
+            CONCAT('$[', v_item_index, '].itemNo')
+        ))), '');
+        SET v_description = TRIM(JSON_UNQUOTE(JSON_EXTRACT(
+            p_items_json,
+            CONCAT('$[', v_item_index, '].description')
+        )));
+        SET v_quantity = CAST(JSON_UNQUOTE(JSON_EXTRACT(
+            p_items_json,
+            CONCAT('$[', v_item_index, '].quantity')
+        )) AS DECIMAL(12, 3));
+        SET v_unit = TRIM(JSON_UNQUOTE(JSON_EXTRACT(
+            p_items_json,
+            CONCAT('$[', v_item_index, '].unit')
+        )));
+
+        IF v_description IS NULL OR v_description = ''
+           OR v_quantity IS NULL OR v_quantity <= 0
+           OR v_unit IS NULL OR v_unit = '' THEN
+            SIGNAL SQLSTATE '45000'
+                SET MESSAGE_TEXT = 'Every material item needs a description, positive quantity, and unit.';
+        END IF;
+
+        INSERT INTO tbl_material_gate_pass_items (
+            gate_pass_id,
+            line_no,
+            item_no,
+            description,
+            quantity,
+            unit
+        ) VALUES (
+            v_gate_pass_id,
+            v_item_index + 1,
+            v_item_no,
+            v_description,
+            v_quantity,
+            v_unit
+        );
+
+        SET v_item_index = v_item_index + 1;
+    END WHILE;
+
+    INSERT INTO tbl_gate_pass_status_history (
+        gate_pass_id,
+        from_status_code,
+        to_status_code,
+        changed_by_user_id,
+        remarks,
+        trace_id
+    ) VALUES (
+        v_gate_pass_id,
+        NULL,
+        'DRAFT',
+        p_requester_user_id,
+        'Material gate pass draft created.',
+        p_trace_id
+    );
+
+    COMMIT;
+
+    SELECT *
+    FROM view_gate_pass_records
     WHERE gate_pass_id = v_gate_pass_id;
 END$$
 
@@ -189,7 +430,7 @@ BEGIN
         v_current_status,
         p_next_status_code,
         p_actor_user_id,
-        'Gate pass application submitted.',
+        'Form request submitted.',
         p_trace_id
     );
 

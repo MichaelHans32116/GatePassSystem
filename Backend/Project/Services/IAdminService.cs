@@ -1,0 +1,36 @@
+using GatePassSystem.Project.DTOs.Admin;
+using GatePassSystem.Project.DTOs.Common;
+using GatePassSystem.Project.Models;
+
+namespace GatePassSystem.Project.Services;
+
+public interface IAdminService
+{
+    Task<PagedResult<AdminUserRecord>> GetUsersAsync(
+        AdminUserQuery query,
+        CancellationToken cancellationToken = default);
+    Task<long> SaveUserAsync(
+        long? userId,
+        SaveAdminUserRequest request,
+        long changedByUserId,
+        CancellationToken cancellationToken = default);
+    Task ArchiveUserAsync(long userId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<DepartmentAdminRecord>> GetDepartmentsAsync(
+        bool includeInactive,
+        CancellationToken cancellationToken = default);
+    Task<long> SaveDepartmentAsync(
+        long? departmentId,
+        SaveDepartmentRequest request,
+        CancellationToken cancellationToken = default);
+    Task ArchiveDepartmentAsync(long departmentId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<RoleAdminRecord>> GetRolesAsync(
+        bool includeInactive,
+        CancellationToken cancellationToken = default);
+    Task<long> SaveRoleAsync(
+        long? roleId,
+        SaveRoleRequest request,
+        CancellationToken cancellationToken = default);
+    Task ArchiveRoleAsync(long roleId, CancellationToken cancellationToken = default);
+    Task<IReadOnlyList<PermissionAdminRecord>> GetPermissionsAsync(
+        CancellationToken cancellationToken = default);
+}

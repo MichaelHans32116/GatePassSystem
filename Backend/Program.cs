@@ -1,10 +1,16 @@
 using System.Text;
 using System.Threading.RateLimiting;
+using GatePassSystem.Api.Infrastructure;
+using GatePassSystem.Api.Infrastructure.Authorization;
 using GatePassSystem.Project;
 using GatePassSystem.Project.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.AspNetCore.Authorization;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
+using MySqlConnector;
 
 const string FrontendCorsPolicy = "FrontendCors";
 const string GeneralRateLimitPolicy = "General";
@@ -40,10 +46,49 @@ builder.Services
     .ValidateOnStart();
 
 builder.Services.AddGatePassProject(connectionString);
-builder.Services.AddControllers();
+builder.Services
+    .AddControllers()
+    .ConfigureApiBehaviorOptions(options =>
+    {
+        options.InvalidModelStateResponseFactory = context =>
+            new BadRequestObjectResult(new ApiErrorResponse(
+                "INVALID_REQUEST",
+                "One or more request fields are invalid.",
+                context.ModelState
+                    .Where(entry => entry.Value?.Errors.Count > 0)
+                    .ToDictionary(
+                        entry => entry.Key,
+                        entry => entry.Value!.Errors
+                            .Select(error => error.ErrorMessage)
+                            .ToArray()),
+                context.HttpContext.TraceIdentifier));
+    });
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.AddSecurityDefinition(
+        "Bearer",
+        new OpenApiSecurityScheme
+        {
+            Type = SecuritySchemeType.Http,
+            Scheme = "bearer",
+            BearerFormat = "JWT",
+            Description = "Enter the JWT access token."
+        });
+    options.AddSecurityRequirement(document =>
+        new OpenApiSecurityRequirement
+        {
+            [new OpenApiSecuritySchemeReference("Bearer", document)] = []
+        });
+});
 builder.Services.AddResponseCompression();
+builder.Services.Configure<SignatureStorageOptions>(
+    builder.Configuration.GetSection("SignatureStorage"));
+builder.Services.AddSingleton<ISignatureStorage, SignatureStorage>();
+builder.Services.AddHttpClient("SignatureBackgroundRemoval", client =>
+{
+    client.Timeout = TimeSpan.FromSeconds(45);
+});
 
 var defaultOrigins = new[]
 {
@@ -59,6 +104,10 @@ var configuredOrigins = builder.Configuration
     .GetSection("Cors:AllowedOrigins")
     .Get<string[]>() ?? [];
 
+var allowAnyFrontendOrigin =
+    builder.Environment.IsDevelopment() &&
+    builder.Configuration.GetValue<bool>("Cors:AllowAnyOrigin");
+
 var allowedOrigins = defaultOrigins
     .Concat(configuredOrigins)
     .Distinct(StringComparer.OrdinalIgnoreCase)
@@ -67,10 +116,20 @@ var allowedOrigins = defaultOrigins
 builder.Services.AddCors(options =>
 {
     options.AddPolicy(FrontendCorsPolicy, policy =>
+    {
+        if (allowAnyFrontendOrigin)
+        {
+            policy.AllowAnyOrigin();
+        }
+        else
+        {
+            policy.WithOrigins(allowedOrigins);
+        }
+
         policy
-            .WithOrigins(allowedOrigins)
             .WithMethods("GET", "POST", "PUT", "PATCH", "DELETE", "OPTIONS")
-            .WithHeaders("Authorization", "Content-Type", "Accept"));
+            .WithHeaders("Authorization", "Content-Type", "Accept");
+    });
 });
 
 var jwtOptions = builder.Configuration
@@ -103,7 +162,17 @@ builder.Services
         };
     });
 
-builder.Services.AddAuthorization();
+builder.Services.AddSingleton<IAuthorizationHandler, PermissionAuthorizationHandler>();
+builder.Services.AddAuthorization(options =>
+{
+    foreach (var permission in GatePassPermissions.All)
+    {
+        options.AddPolicy(
+            permission,
+            policy => policy.Requirements.Add(
+                new PermissionRequirement(permission)));
+    }
+});
 builder.Services.AddRateLimiter(options =>
 {
     options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
@@ -144,17 +213,62 @@ app.UseExceptionHandler(errorApp =>
             .GetRequiredService<ILoggerFactory>()
             .CreateLogger("GlobalExceptionHandler");
 
-        logger.LogError(
-            feature?.Error,
-            "Unhandled API exception. traceId={TraceId}",
-            context.TraceIdentifier);
+        var error = feature?.Error;
+        var isExpectedConflict = error is InvalidOperationException ||
+            error is MySqlException
+            {
+                Number: 1062 or 1452
+            } ||
+            error is MySqlException
+            {
+                SqlState: "45000"
+            };
 
-        context.Response.StatusCode = StatusCodes.Status500InternalServerError;
-        await context.Response.WriteAsJsonAsync(new
+        if (isExpectedConflict)
         {
-            error = "Internal server error.",
-            traceId = context.TraceIdentifier
-        });
+            logger.LogWarning(
+                "API request conflict. message={Message} traceId={TraceId}",
+                error?.Message,
+                context.TraceIdentifier);
+        }
+        else
+        {
+            logger.LogError(
+                error,
+                "Unhandled API exception. traceId={TraceId}",
+                context.TraceIdentifier);
+        }
+
+        var (status, code, message) = error switch
+        {
+            InvalidOperationException invalid =>
+                (StatusCodes.Status409Conflict,
+                 "WORKFLOW_CONFLICT",
+                 invalid.Message),
+            MySqlException { SqlState: "45000" } database =>
+                (StatusCodes.Status409Conflict,
+                 "DATABASE_WORKFLOW_CONFLICT",
+                 database.Message),
+            MySqlException { Number: 1062 } =>
+                (StatusCodes.Status409Conflict,
+                 "DUPLICATE_RECORD",
+                 "A record with the same unique value already exists."),
+            MySqlException { Number: 1452 } =>
+                (StatusCodes.Status409Conflict,
+                 "REFERENCE_NOT_FOUND",
+                 "A selected related record does not exist or is no longer active."),
+            _ =>
+                (StatusCodes.Status500InternalServerError,
+                 "INTERNAL_SERVER_ERROR",
+                 "Internal server error.")
+        };
+
+        context.Response.StatusCode = status;
+        await context.Response.WriteAsJsonAsync(new ApiErrorResponse(
+            code,
+            message,
+            null,
+            context.TraceIdentifier));
     });
 });
 

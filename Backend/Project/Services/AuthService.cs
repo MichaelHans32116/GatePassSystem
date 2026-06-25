@@ -1,4 +1,5 @@
 using GatePassSystem.Project.DTOs.Auth;
+using GatePassSystem.Project.Models;
 using GatePassSystem.Project.Repositories;
 
 namespace GatePassSystem.Project.Services;
@@ -7,6 +8,7 @@ public sealed class AuthService(
     IUserRepository userRepository,
     IPasswordHasher passwordHasher,
     IJwtTokenService jwtTokenService,
+    IQrTokenService qrTokenService,
     TimeProvider timeProvider) : IAuthService
 {
     public async Task<LoginResult> LoginAsync(
@@ -36,7 +38,7 @@ public sealed class AuthService(
         {
             AccessToken = token.AccessToken,
             ExpiresAt = token.ExpiresAt,
-            User = AuthUserResponse.FromModel(user)
+            User = ToResponse(user)
         });
     }
 
@@ -45,6 +47,13 @@ public sealed class AuthService(
         CancellationToken cancellationToken = default)
     {
         var user = await userRepository.GetCurrentUserAsync(accountId, cancellationToken);
-        return user is null ? null : AuthUserResponse.FromModel(user);
+        return user is null ? null : ToResponse(user);
     }
+
+    private AuthUserResponse ToResponse(AuthUser user) =>
+        AuthUserResponse.FromModel(
+            user,
+            user.EmployeeRecordId.HasValue
+                ? qrTokenService.CreateEmployeeToken(user.EmployeeRecordId.Value)
+                : null);
 }

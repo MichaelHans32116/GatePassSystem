@@ -1,6 +1,7 @@
 # Database
 
-This folder contains the MariaDB/MySQL migration target for the Gate Pass System.
+This folder contains the MariaDB/MySQL migration target for the Form Request
+System.
 
 Files:
 
@@ -13,6 +14,16 @@ Files:
   indexes, C# types, and DTOs.
 - `Migrations/`: ordered scripts for changes after the first deployed database.
 
+Current migrations:
+
+- `001` to `005`: person gate pass, authentication, employee, vehicle,
+  signature, QR, and audit foundations.
+- `006_form_request_material_gate_pass.sql`: shared form types and daily control
+  numbers, material item rows, Material Gate Pass approval routing, and
+  form-aware reporting views and indexes.
+- `007_department_access_shared_pas.sql`: separate Finance, HR, and IT
+  departments, manager department access, and shared PAS approval.
+
 Gate pass lifecycle timestamps:
 
 - `applied_at`: request submission time.
@@ -22,16 +33,21 @@ Gate pass lifecycle timestamps:
   one-way Time Out.
 - `tbl_gate_pass_status_history`: immutable status transition history.
 
+Material Gate Pass records use the same request and approval foundation, with
+their item rows stored in `tbl_material_gate_pass_items`. They never receive a
+QR token and are excluded from the security scan queue.
+
+PAS steps are shared. Any active account with `gatepass.note.pas` may act on a
+pending PAS request, except the requester. The user who acts is recorded as the
+actual approver.
+
 Local setup order:
 
-1. `schema.sql`
+1. `schema.sql` for a clean database, or ordered migrations for an existing one
 2. `seed-reference.sql`
 3. `procedures.sql`
-4. Employee importer with the external workbook
-
-Planned next file:
-
-- `views.sql`: reporting and queue views if the schema file becomes too large.
+4. `seed-fleet.sql`
+5. Employee importer with the external workbook
 
 The raw employee workbook is intentionally excluded from Git. The importer reads
 only Employee ID, Full Name, Department, Position, Date Hired, and Employment

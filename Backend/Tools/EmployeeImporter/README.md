@@ -37,3 +37,9 @@ hash, and the account is marked to require a password change.
 Inactive workbook rows are not inserted into a fresh database. If a later
 workbook marks an employee who already exists in the system as inactive, the
 existing account is archived so the user can no longer sign in.
+
+The apply operation also synchronizes workflow assignments from active roles:
+
+- Immediate Superior approvers are scoped to their employee department.
+- President approvers are global.
+- PAS noters are global, load-balanced at the primary priority, and use a fallback priority.

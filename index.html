@@ -1,15 +1,18 @@
+
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>MPI - Gate Pass System</title>
+    <title>MPI - Form Request System</title>
+    <link rel="icon" type="image/png" href="Frontend/Design/images/logo.png">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- QR Code Generator -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script src="Frontend/SRC/vendor/jsQR.js?v=20260624-phase7.4.0"></script>
 
     <script>
         tailwind.config = {
@@ -28,7 +31,7 @@
             }
         }
     </script>
-        <link rel="stylesheet" href="Frontend/Design/styles.css">
+    <link rel="stylesheet" href="Frontend/Design/styles.css?v=20260625-status-badges">
 </head>
 <body class="h-screen overflow-hidden flex flex-col font-sans text-sm md:text-base">
 
@@ -41,7 +44,7 @@
             <div class="absolute inset-0 bg-black/40"></div>
             <!-- Text Overlay -->
             <div class="absolute bottom-1/3 left-12 lg:left-24 text-white fade-in z-10 pointer-events-none">
-                <h1 class="text-5xl lg:text-6xl font-extrabold tracking-tight mb-3 drop-shadow-xl">Gate Pass System</h1>
+                <h1 class="text-5xl lg:text-6xl font-extrabold tracking-tight mb-3 drop-shadow-xl">Form Request System</h1>
                 <h2 class="text-lg lg:text-xl tracking-widest uppercase font-semibold text-blue-100 drop-shadow-md">Moriroku Philippines, Inc.</h2>
                 <div class="w-40 h-1.5 bg-white mt-6 rounded-full drop-shadow-lg opacity-90"></div>
             </div>
@@ -78,20 +81,7 @@
                 </button>
             </form>
 
-            <!-- Dev Quick Login Helpers -->
-            <div class="mt-8 pt-6 border-t border-gray-100 w-full">
-                <p class="text-[10px] text-center text-gray-400 mb-3 font-bold uppercase tracking-wider">Quick Login (Testing)</p>
-                <div class="grid grid-cols-2 lg:grid-cols-3 gap-2">
-                    <button type="button" onclick="quickLogin('ADMIN', '01012020')" class="text-[10px] font-semibold bg-gray-100 hover:bg-gray-200 py-2 rounded transition">IT Admin</button>
-                    <button type="button" onclick="quickLogin('PRES', '01012020')" class="text-[10px] font-semibold bg-gray-100 hover:bg-gray-200 py-2 rounded transition">President</button>
-                    <button type="button" onclick="quickLogin('SUP-01', '01012020')" class="text-[10px] font-semibold bg-gray-100 hover:bg-gray-200 py-2 rounded transition">Manager</button>
-                    <button type="button" onclick="quickLogin('HR', '01012020')" class="text-[10px] font-semibold bg-gray-100 hover:bg-gray-200 py-2 rounded transition">Head HR</button>
-                    <button type="button" onclick="quickLogin('MPI-001', '06172026')" class="text-[10px] font-semibold bg-gray-100 hover:bg-gray-200 py-2 rounded transition">Employee</button>
-                    <button type="button" onclick="quickLogin('GUARD-1', '01012020')" class="text-[10px] font-semibold bg-gray-100 hover:bg-gray-200 py-2 rounded transition">Guard</button>
-                </div>
-            </div>
-
-            </div>
+        </div>
         </div>
     </div>
 
@@ -109,7 +99,7 @@
      style="width: 52px; height: 40px; padding: 0px;">
     <img src="Frontend/Design/images/logo.png" alt="MPI Logo" class="w-full h-full object-contain">
 </div>
-                    <h2 class="font-bold text-sm leading-tight tracking-wide">Gate Pass System</h2>
+                    <h2 class="font-bold text-sm leading-tight tracking-wide">Form Request System</h2>
                 </div>
                 <button class="md:hidden text-white/70 hover:text-white" onclick="toggleSidebar()"><i class="fas fa-times text-lg"></i></button>
             </div>
@@ -122,7 +112,7 @@
                 </a>
 
                 <a href="#" class="nav-item px-6 py-3 transition text-white" data-target="applyPass" onclick="switchSection('applyPass')" id="navItemApply">
-                    <i class="fas fa-file-signature w-6 text-left"></i> <span class="text-sm">Apply Gate Pass</span>
+                    <i class="fas fa-file-signature w-6 text-left"></i> <span class="text-sm">New Form Request</span>
                 </a>
 
                 <div id="navGroupApprovals" class="mt-4 block">
@@ -137,7 +127,7 @@
 
                 <div id="navGroupHR" class="mt-4 hidden">
                     <div class="px-6 py-2 text-[10px] font-bold text-blue-300 uppercase tracking-widest">Operations</div>
-                    <a href="#" class="nav-item px-6 py-3 transition text-white" data-target="fleetManagement" onclick="switchSection('adminPanel'); switchAdminTab('fleet');">
+                    <a href="#" class="nav-item px-6 py-3 transition text-white" data-target="fleetManagement" onclick="switchSection('fleetManagement')">
                         <i class="fas fa-truck w-6 text-left"></i> <span class="text-sm">Vehicles & Drivers</span>
                     </a>
                 </div>
@@ -202,7 +192,7 @@
                                 <table class="w-full text-left border-collapse min-w-max">
                                     <thead>
                                         <tr class="bg-gray-50 text-gray-500 text-[11px] uppercase tracking-wider border-b border-t">
-                                            <th class="px-4 py-3 font-semibold">GP-ID</th>
+                                            <th class="px-4 py-3 font-semibold">GP-ID / Control No.</th>
                                             <th class="px-4 py-3 font-semibold">Associate Name</th>
                                             <th class="px-4 py-3 font-semibold">Will Return?</th>
                                             <th class="px-4 py-3 font-semibold">Current Queue Status</th>
@@ -218,16 +208,41 @@
 
                     <!-- STANDARD Dashboard Wrapper -->
                     <div id="standardDashWrapper">
-                        <!-- HR Vehicle Fleet Tracking Widget -->
-                        <div id="hrFleetWidget" class="hidden mb-8 bg-white p-4 md:p-5 rounded-lg shadow-sm border border-gray-200">
-                            <h2 class="text-base font-bold text-gray-800 mb-4 border-b pb-2"><i class="fas fa-truck mr-2 text-mpiBlue"></i>Live Fleet Status</h2>
-                            <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4" id="fleetGridContainer">
-                                <!-- Populated via JS -->
+                        <div id="myEmployeeQrCard" class="hidden mb-6 cursor-pointer rounded-xl border border-blue-200 bg-white p-4 shadow-sm transition hover:-translate-y-0.5 hover:shadow-md" role="button" tabindex="0" aria-label="Expand employee QR" onclick="toggleEmployeeQrDialog(true)" onkeydown="if(event.key==='Enter'||event.key===' '){event.preventDefault();toggleEmployeeQrDialog(true);}">
+                            <div class="flex flex-col items-center gap-4 sm:flex-row sm:items-center">
+                                <div id="myEmployeeQrCode" class="shrink-0 rounded-lg border bg-white p-2"></div>
+                                <div class="text-center sm:text-left">
+                                    <div class="mb-1 flex items-center justify-center gap-2 text-mpiBlue sm:justify-start">
+                                        <i class="fas fa-id-card"></i>
+                                        <h2 class="text-base font-extrabold">My Employee QR</h2>
+                                    </div>
+                                    <p class="text-sm font-bold text-gray-800" id="myEmployeeQrId"></p>
+                                    <p class="mt-1 max-w-lg text-xs leading-relaxed text-gray-500">Permanent employee QR. Security scans this only when you have an active pass.</p>
+                                    <p class="mt-2 text-[10px] font-semibold uppercase tracking-wide text-blue-600"><i class="fas fa-expand mr-1"></i>Tap to expand</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div id="employeeQrDialog" class="pointer-events-none fixed inset-0 z-[90] hidden items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+                            <div id="employeeQrDialogPanel" class="w-full rounded-2xl bg-white p-4 shadow-2xl sm:p-5" style="max-width:min(92vw,32rem);max-height:calc(100vh - 2rem);overflow:auto;">
+                                <div class="mb-4 flex items-start justify-between gap-4">
+                                    <div>
+                                        <h3 class="text-lg font-extrabold text-gray-900">My Employee QR</h3>
+                                        <p id="employeeQrDialogId" class="mt-1 text-sm font-semibold text-mpiBlue"></p>
+                                    </div>
+                                    <button type="button" onclick="closeEmployeeQrDialog()" class="rounded-full bg-gray-100 px-3 py-2 text-xs font-bold text-gray-600 transition hover:bg-gray-200">
+                                        <i class="fas fa-times"></i>
+                                    </button>
+                                </div>
+                                <div class="flex flex-col items-center">
+                                    <div id="employeeQrDialogCode" class="rounded-2xl border border-slate-200 bg-white p-3 shadow-sm sm:p-4"></div>
+                                    <p class="mt-4 text-center text-xs text-gray-500">Show this to Security when your gate pass is active.</p>
+                                </div>
                             </div>
                         </div>
 
                         <!-- Stat Cards -->
-                        <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Overview of your passes</h2>
+                        <h2 class="text-sm font-semibold text-gray-500 uppercase tracking-wider mb-3">Overview of your form requests</h2>
                         <div class="grid grid-cols-1 sm:grid-cols-3 gap-4 md:gap-6 mb-8">
                             <div class="bg-white p-5 rounded-lg shadow-sm border-t-4 border-yellow-400 flex items-center justify-between">
                                 <div><p class="text-3xl font-bold text-gray-800" id="cntPending">0</p><h3 class="text-[10px] md:text-xs font-semibold text-gray-500 mt-1 uppercase">Pending Requests</h3></div>
@@ -246,16 +261,19 @@
                         <!-- My Passes Table -->
                         <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
                             <div class="px-4 md:px-5 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50/50">
-                                <h2 class="font-bold text-gray-800">Recent Gate Passes</h2>
+                                <div class="min-w-0">
+                                    <h2 class="font-bold text-gray-800">Recent Form Requests</h2>
+                                    <input id="myPassSearch" oninput="renderStandardDashboard()" type="text" placeholder="Search control no., type, status..." class="mt-2 w-full max-w-xs border border-gray-300 px-3 py-2 text-xs rounded focus:outline-none focus:border-mpiBlue">
+                                </div>
                                 <button onclick="switchSection('applyPass')" id="btnNewRequest" class="text-xs bg-mpiBlue text-white px-3 py-2 rounded hover:bg-mpiDark transition"><i class="fas fa-plus mr-1"></i> New Request</button>
                             </div>
                             <div class="overflow-x-auto">
                                 <table class="w-full text-left border-collapse min-w-max">
                                     <thead>
                                         <tr class="bg-white text-gray-500 text-[11px] uppercase tracking-wider border-b">
-                                            <th class="px-5 py-3 font-semibold">GP ID</th>
+                                            <th class="px-5 py-3 font-semibold">Control No.</th>
                                             <th class="px-5 py-3 font-semibold">Date Filed</th>
-                                            <th class="px-5 py-3 font-semibold">Destination</th>
+                                            <th class="px-5 py-3 font-semibold">Form / Details</th>
                                             <th class="px-5 py-3 font-semibold">Status</th>
                                             <th class="px-5 py-3 font-semibold text-right">Action</th>
                                         </tr>
@@ -269,15 +287,39 @@
                     </div>
                 </section>
 
-                <!-- SECTION: APPLY GATE PASS -->
-                <section id="sec-applyPass" class="view-section hidden fade-in max-w-3xl mx-auto">
+                <!-- SECTION: NEW FORM REQUEST -->
+                <section id="sec-applyPass" class="view-section hidden fade-in max-w-5xl mx-auto">
                     <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
                         <div class="px-4 md:px-6 py-5 border-b border-gray-200">
-                            <h2 class="text-lg font-bold text-gray-800">Gate Pass Application Form</h2>
-                            <p class="text-gray-500 text-xs mt-1">Fill out the required information to request exit clearance.</p>
+                            <h2 class="text-lg font-bold text-gray-800">New Form Request</h2>
+                        </div>
+
+                        <div class="grid grid-cols-1 gap-3 border-b bg-slate-50 p-4 sm:grid-cols-2 md:p-6">
+                            <button id="formTypePersonButton" type="button" onclick="selectRequestFormType('PERSON_GATE_PASS')" class="form-type-card active rounded-xl border-2 border-mpiBlue bg-white p-4 text-left shadow-sm transition">
+                                <div class="flex items-start gap-3">
+                                    <span class="rounded-lg bg-blue-50 p-3 text-mpiBlue"><i class="fas fa-person-walking-arrow-right text-xl"></i></span>
+                                    <span>
+                                        <strong class="block text-sm text-gray-900">Person Gate Pass</strong>
+                                        <small class="mt-1 block text-xs leading-relaxed text-gray-500">For associates leaving the company premises.</small>
+                                    </span>
+                                </div>
+                            </button>
+                            <button id="formTypeMaterialButton" type="button" onclick="selectRequestFormType('MATERIAL_GATE_PASS')" class="form-type-card rounded-xl border-2 border-transparent bg-white p-4 text-left shadow-sm transition hover:border-blue-200">
+                                <div class="flex items-start gap-3">
+                                    <span class="rounded-lg bg-amber-50 p-3 text-amber-600"><i class="fas fa-box-open text-xl"></i></span>
+                                    <span>
+                                        <strong class="block text-sm text-gray-900">Material Gate Pass</strong>
+                                        <small class="mt-1 block text-xs leading-relaxed text-gray-500">For listed items being taken out of the premises.</small>
+                                    </span>
+                                </div>
+                            </button>
                         </div>
 
                         <form id="applyForm" onsubmit="submitGatePass(event)" class="p-4 md:p-6 space-y-5">
+                            <div id="personRequesterDepartmentGroup" class="hidden">
+                                <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Requesting Department <span class="text-red-500">*</span></label>
+                                <select id="personRequesterDepartment" class="w-full border border-gray-300 bg-white p-2.5 rounded focus:ring-1 focus:ring-mpiBlue focus:border-mpiBlue transition text-sm"></select>
+                            </div>
                             <div>
                                 <label class="block text-xs font-semibold text-gray-600 uppercase tracking-wider mb-2">Destination <span class="text-red-500">*</span></label>
                                 <input type="text" id="gpDestination" class="w-full border border-gray-300 p-2.5 rounded focus:ring-1 focus:ring-mpiBlue focus:border-mpiBlue transition text-sm" required>
@@ -335,8 +377,10 @@
                                             </select>
                                         </div>
                                         <div>
-                                            <label class="block text-[11px] font-semibold text-gray-500 uppercase mb-1">Assigned Driver</label>
-                                            <input type="text" id="gpDriver" class="w-full bg-gray-100 border border-gray-300 p-2 rounded text-sm text-gray-500" readonly placeholder="Auto-filled">
+                                            <label class="block text-[11px] font-semibold text-gray-500 uppercase mb-1">Driver (change if needed)</label>
+                                            <select id="gpDriver" class="w-full bg-white border border-gray-300 p-2 rounded text-sm text-gray-700" disabled>
+                                                <option value="">Unassigned</option>
+                                            </select>
                                         </div>
                                     </div>
 
@@ -356,12 +400,115 @@
 
                             <div class="text-[10px] md:text-xs text-gray-500 bg-blue-50 p-3 rounded flex items-center">
                                 <i class="fas fa-route text-mpiBlue mr-2 text-lg"></i>
-                                <span><strong>Approval Flow:</strong> <span id="routeApprovalText">Immediate Superior → PAS / HR</span></span>
+                                <span><strong>Approval Flow:</strong> <span id="routeApprovalText">Immediate Superior → PAS</span></span>
+                            </div>
+
+                            <div class="prepared-signature-panel hidden" aria-hidden="true">
+                                <div>
+                                    <h3 class="text-xs font-bold uppercase tracking-wide text-gray-700">Prepared By Signature <span class="font-normal normal-case text-gray-400">(optional)</span></h3>
+                                    <p class="mt-1 text-[11px] text-gray-500">Upload a signature image. White or blue backgrounds are cleaned automatically.</p>
+                                </div>
+                                <label class="prepared-signature-upload">
+                                    <i class="fas fa-upload"></i>
+                                    <span>Choose signature</span>
+                                    <input id="personPreparedSignatureUpload" type="file" accept="image/png,image/jpeg" class="sr-only" onchange="handlePreparedSignatureUpload(event, 'PERSON_GATE_PASS')">
+                                </label>
+                                <div id="personPreparedSignaturePreview" class="prepared-signature-preview hidden"></div>
+                                <button id="personPreparedSignatureClear" type="button" onclick="clearPreparedSignature('PERSON_GATE_PASS')" class="hidden text-xs font-bold text-red-600">Remove</button>
                             </div>
 
                             <div class="pt-2 flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2">
                                 <button type="button" onclick="switchSection('dashBoard')" class="px-5 py-2 text-sm text-gray-600 font-medium hover:bg-gray-100 rounded transition">Cancel</button>
                                 <button type="submit" class="bg-mpiBlue text-white text-sm font-bold py-2 px-6 rounded shadow hover:bg-mpiDark transition">Submit Request</button>
+                            </div>
+                        </form>
+
+                        <form id="materialApplyForm" onsubmit="submitMaterialGatePass(event)" class="hidden p-4 md:p-6 space-y-5">
+                            <div id="materialRequesterDepartmentGroup" class="hidden">
+                                <label class="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-2">Requesting Department <span class="text-red-500">*</span></label>
+                                <select id="materialRequesterDepartment" class="w-full rounded border border-gray-300 bg-white p-2.5 text-sm focus:border-mpiBlue focus:ring-1 focus:ring-mpiBlue"></select>
+                            </div>
+                            <div class="grid grid-cols-1 gap-5 md:grid-cols-2">
+                                <div>
+                                    <label class="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-2">Date <span class="text-red-500">*</span></label>
+                                    <input type="date" id="materialFormDate" class="w-full rounded border border-gray-300 p-2.5 text-sm focus:border-mpiBlue focus:ring-1 focus:ring-mpiBlue" required>
+                                </div>
+                                <div>
+                                    <label class="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-2">Employee Bringing Out Items <span class="text-red-500">*</span></label>
+                                    <div class="relative">
+                                        <input id="materialAuthorizedEmployeeSearch" type="text" autocomplete="off" class="w-full rounded border border-gray-300 bg-white p-2.5 text-sm focus:border-mpiBlue focus:ring-1 focus:ring-mpiBlue" placeholder="Type employee ID or name..." required oninput="handleMaterialEmployeeSearchInput(event)" onfocus="showMaterialEmployeeSuggestions()" onkeydown="handleMaterialEmployeeSearchKeydown(event)">
+                                        <input id="materialAuthorizedEmployee" type="hidden" required>
+                                        <div id="materialEmployeeSuggestions" class="absolute z-30 mt-1 hidden max-h-56 w-full overflow-y-auto rounded border border-gray-200 bg-white shadow-lg"></div>
+                                    </div>
+                                    <p id="materialAuthorizedDepartment" class="mt-1 text-[11px] text-gray-500">Department appears after selecting an employee.</p>
+                                </div>
+                            </div>
+
+                            <div class="overflow-hidden rounded-lg border border-gray-200">
+                                <div class="flex items-center justify-between border-b bg-gray-50 px-4 py-3">
+                                    <div>
+                                        <h3 class="text-sm font-bold text-gray-800">Items to Bring Out</h3>
+                                        <p class="text-[10px] text-gray-500">Add up to 20 item lines.</p>
+                                    </div>
+                                    <button type="button" onclick="addMaterialItemRow()" class="rounded bg-mpiBlue px-3 py-2 text-xs font-bold text-white hover:bg-mpiDark"><i class="fas fa-plus mr-1"></i>Add Item</button>
+                                </div>
+                                <div class="overflow-x-auto">
+                                    <table class="w-full min-w-[720px] text-left">
+                                        <thead class="border-b bg-white text-[10px] uppercase tracking-wide text-gray-500">
+                                            <tr><th class="px-3 py-2 w-10">#</th><th class="px-3 py-2 w-32">Item No.</th><th class="px-3 py-2">Description</th><th class="px-3 py-2 w-28">Quantity</th><th class="px-3 py-2 w-28">Unit</th><th class="px-3 py-2 w-12"></th></tr>
+                                        </thead>
+                                        <tbody id="materialItemsBody"></tbody>
+                                    </table>
+                                </div>
+                            </div>
+
+                            <div>
+                                <label class="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-2">Remarks</label>
+                                <textarea id="materialRemarks" maxlength="1000" class="h-20 w-full resize-none rounded border border-gray-300 p-2.5 text-sm focus:border-mpiBlue focus:ring-1 focus:ring-mpiBlue" placeholder="Optional control or release remarks"></textarea>
+                            </div>
+
+                            <div class="prepared-signature-panel">
+                                <div>
+                                    <h3 class="text-xs font-bold uppercase tracking-wide text-gray-700">Prepared By Signature <span class="font-normal normal-case text-gray-400">(optional)</span></h3>
+                                    <p class="mt-1 text-[11px] text-gray-500">The logged-in requester is the Prepared By employee.</p>
+                                </div>
+                                <div class="w-full space-y-3 rounded-lg border border-blue-100 bg-white p-3">
+                                    <div class="signature-source-toggle">
+                                        <label for="materialPreparedSignatureUpload" onclick="showMaterialPreparedSignatureSource('upload')" id="btnMaterialSignatureUploadPanel" class="cursor-pointer text-xs font-bold bg-mpiBlue text-white px-3 py-2 rounded"><i class="fas fa-upload mr-1"></i> Upload Image</label>
+                                        <input id="materialPreparedSignatureUpload" type="file" accept="image/png,image/jpeg" class="sr-only" onchange="handlePreparedSignatureUpload(event, 'MATERIAL_GATE_PASS')">
+                                        <button type="button" onclick="showMaterialPreparedSignatureSource('draw')" id="btnMaterialSignatureDrawPanel" class="text-xs font-bold bg-white border border-blue-200 text-mpiBlue px-3 py-2 rounded hover:bg-blue-50"><i class="fas fa-pen mr-1"></i> Draw Signature</button>
+                                    </div>
+
+                                    <div id="materialSignatureUploadPanel" class="space-y-3">
+                                        <div id="materialPreparedSignatureFileRow" class="hidden signature-upload-zone">
+                                            <i class="fas fa-image text-mpiBlue"></i>
+                                            <span id="materialPreparedSignatureFileName" class="min-w-0 flex-1 truncate text-xs font-semibold text-gray-600"></span>
+                                        </div>
+                                        <div id="materialPreparedSignatureBgOptions" class="hidden rounded border bg-gray-50 p-3 space-y-3">
+                                            <label class="block text-[10px] font-bold uppercase text-gray-500">Background Removal<select id="materialPreparedSignatureBgMode" class="mt-1 w-full rounded border border-gray-300 p-2 text-xs"><option value="none" selected>Keep background</option><option value="aiServer">AI local remover</option></select></label>
+                                            <label class="hidden flex-col text-[10px] font-bold uppercase text-gray-500"><span>Removal Strength: <span id="materialPreparedSignatureBgThresholdValue" class="text-mpiBlue">20</span></span><input type="range" id="materialPreparedSignatureBgThreshold" min="10" max="140" value="20"></label>
+                                        </div>
+                                    </div>
+
+                                    <div id="materialSignatureDrawPanel" class="hidden space-y-3">
+                                        <div class="signature-pad-bg p-2 rounded"><canvas id="materialSignaturePad" class="signature-pad-canvas"></canvas></div>
+                                        <div class="flex justify-end gap-2"><button type="button" onclick="clearMaterialPreparedSignaturePad()" class="text-xs px-3 py-1.5 rounded border">Clear</button><button type="button" onclick="useMaterialPreparedDrawnSignature()" class="text-xs px-3 py-1.5 rounded bg-mpiBlue text-white font-extrabold">Use Drawn Signature</button></div>
+                                    </div>
+
+                                    <div id="materialPreparedSignaturePreview" class="prepared-signature-preview hidden"></div>
+                                    <button id="materialPreparedSignatureClear" type="button" onclick="clearPreparedSignature('MATERIAL_GATE_PASS')" class="hidden text-xs font-bold text-red-600">Remove</button>
+                                    <p id="materialPreparedSignatureStatus" class="mt-2 text-[10px] text-gray-500 leading-relaxed">Choose an image or draw your signature.</p>
+                                </div>
+                            </div>
+
+                            <div class="flex items-center rounded bg-blue-50 p-3 text-[10px] text-gray-600 md:text-xs">
+                                <i class="fas fa-route mr-2 text-lg text-mpiBlue"></i>
+                                <span><strong>Approval Flow:</strong> <span id="materialApprovalRouteText">Immediate Superior → PAS</span></span>
+                            </div>
+
+                            <div class="pt-2 flex flex-col justify-end gap-2 sm:flex-row">
+                                <button type="button" onclick="switchSection('dashBoard')" class="rounded px-5 py-2 text-sm font-medium text-gray-600 hover:bg-gray-100">Cancel</button>
+                                <button type="submit" class="rounded bg-mpiBlue px-6 py-2 text-sm font-bold text-white shadow hover:bg-mpiDark">Submit Material Request</button>
                             </div>
                         </form>
                     </div>
@@ -379,19 +526,40 @@
                 <section id="sec-guardScan" class="view-section hidden fade-in py-6 max-w-md mx-auto">
                     <div class="bg-white p-6 md:p-8 rounded-lg shadow border border-gray-200 w-full text-center">
                         <i class="fas fa-shield-alt text-4xl text-mpiBlue mb-3"></i>
-                        <h2 class="text-xl font-bold text-gray-800 mb-1">Security QR Scanner</h2>
-                        <p class="text-xs text-gray-500 mb-6">Scan Gate Pass to Log Time Out / In</p>
+                        <h2 class="text-xl font-bold text-gray-800 mb-1">Security Scanner</h2>
+                        <p class="text-xs text-gray-500 mb-2">Scan employee QR for Time Out / Time In.</p>
+                        <p class="text-[10px] font-semibold text-blue-600 mb-6"><i class="fas fa-clock mr-1"></i>30s scan cooldown</p>
 
-                        <div class="w-full h-48 bg-gray-100 rounded flex items-center justify-center border-2 border-dashed border-gray-300 mb-4 relative overflow-hidden">
-                            <div class="absolute top-0 left-0 w-full h-1 bg-green-500 animate-[pulse_1s_ease-in-out_infinite] shadow-[0_0_10px_#22c55e]"></div>
-                            <i class="fas fa-qrcode text-5xl text-gray-300"></i>
-                            <p class="absolute bottom-2 text-[10px] text-gray-400">Camera Feed Simulated</p>
+                        <div id="qrCameraFrame" class="w-full aspect-video bg-gray-950 rounded flex items-center justify-center border-2 border-dashed border-gray-300 mb-4 relative overflow-hidden">
+                            <video id="qrCameraVideo" class="hidden w-full h-full object-cover" playsinline muted></video>
+                            <canvas id="qrCameraCanvas" class="hidden"></canvas>
+                            <div id="qrCameraPlaceholder" class="text-center text-gray-400">
+                                <i class="fas fa-qrcode text-5xl"></i>
+                                <p class="mt-2 text-[10px]">Scan QR</p>
+                            </div>
+                            <div id="qrScanLine" class="hidden absolute top-0 left-0 w-full h-1 bg-green-500 animate-[pulse_1s_ease-in-out_infinite] shadow-[0_0_10px_#22c55e]"></div>
+                        </div>
+
+                        <div class="text-left bg-blue-50 p-3 rounded border border-blue-100 mb-3 space-y-2">
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase">Camera</label>
+                            <select id="qrCameraSelect" class="w-full border border-gray-300 p-2 rounded text-sm bg-white">
+                                <option value="">Detect cameras...</option>
+                            </select>
+                            <div class="grid grid-cols-2 gap-2">
+                                <button id="startQrCameraButton" type="button" onclick="startQrCamera()" class="bg-mpiBlue text-white px-3 py-2 rounded text-xs font-bold hover:bg-mpiDark">
+                                    <i class="fas fa-camera mr-1"></i> Start Camera
+                                </button>
+                                <button id="stopQrCameraButton" type="button" onclick="stopQrCamera()" class="bg-gray-700 text-white px-3 py-2 rounded text-xs font-bold hover:bg-black" disabled>
+                                    <i class="fas fa-stop mr-1"></i> Stop
+                                </button>
+                            </div>
+                            <p id="qrCameraStatus" class="text-[10px] text-gray-500">Use localhost or HTTPS for camera.</p>
                         </div>
 
                         <div class="text-left bg-gray-50 p-3 rounded border">
-                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Manual Scan Override</label>
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Manual Entry</label>
                             <div class="flex space-x-2">
-                                <input type="text" id="manualQrInput" placeholder="Enter GP-ID..." class="w-full flex-grow border border-gray-300 p-2 rounded text-sm focus:outline-none focus:border-mpiBlue min-w-0">
+                                <input type="text" id="manualQrInput" placeholder="Scan QR or enter GP-ID" class="w-full flex-grow border border-gray-300 p-2 rounded text-sm focus:outline-none focus:border-mpiBlue min-w-0">
                                 <button onclick="simulateQrScan()" class="w-auto flex-shrink-0 whitespace-nowrap bg-gray-800 text-white px-4 py-2 rounded text-sm font-bold hover:bg-black transition">Scan</button>
                             </div>
                         </div>
@@ -402,7 +570,7 @@
                 <section id="sec-adminPanel" class="view-section hidden fade-in max-w-7xl mx-auto">
                     <!-- Admin Tabs Navigation (Scrollable on mobile) -->
                     <div class="flex overflow-x-auto whitespace-nowrap space-x-1 border-b border-gray-200 mb-6 pb-1" id="adminTabsContainer">
-                        <button onclick="switchAdminTab('logs')" id="tab-logs" class="admin-tab px-4 py-2 text-sm font-bold text-mpiBlue border-b-2 border-mpiBlue flex-shrink-0">Gate Pass Logs</button>
+                        <button onclick="switchAdminTab('logs')" id="tab-logs" class="admin-tab px-4 py-2 text-sm font-bold text-mpiBlue border-b-2 border-mpiBlue flex-shrink-0">Form Request Logs</button>
                         <button onclick="switchAdminTab('users')" id="tab-users" class="admin-tab px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 flex-shrink-0">Manage Users</button>
                         <button onclick="switchAdminTab('fleet')" id="tab-fleet" class="admin-tab px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 flex-shrink-0">Vehicles & Drivers</button>
                         <button onclick="switchAdminTab('depts')" id="tab-depts" class="admin-tab px-4 py-2 text-sm font-medium text-gray-500 hover:text-gray-700 flex-shrink-0">Departments & Roles</button>
@@ -413,14 +581,18 @@
                         <div class="p-4 md:p-5 border-b bg-gray-50 flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-end gap-4">
                             <div class="w-full sm:w-auto"><label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Search ID/Name</label><input type="text" id="logFilterName" placeholder="Enter keyword..." class="w-full border border-gray-300 p-2 rounded text-sm sm:w-48 md:w-56 focus:outline-none focus:border-mpiBlue"></div>
                             <div class="w-full sm:w-auto"><label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Filter by Date</label><input type="date" id="logFilterDate" class="w-full border border-gray-300 p-2 rounded text-sm text-gray-700 focus:outline-none focus:border-mpiBlue"></div>
-                            <div class="w-full sm:w-auto" id="filterDeptContainer"><label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Department</label><select id="logFilterDept" class="w-full border border-gray-300 p-2 rounded text-sm text-gray-700 focus:outline-none focus:border-mpiBlue"><option value="">All</option><option value="Production">Production</option><option value="HRAD">HRAD</option><option value="Finance & IT">Finance & IT</option><option value="Executive">Executive</option></select></div>
+                            <div class="w-full sm:w-auto" id="filterDeptContainer"><label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Department</label><select id="logFilterDept" class="w-full border border-gray-300 p-2 rounded text-sm text-gray-700 focus:outline-none focus:border-mpiBlue"><option value="">All Departments</option></select></div>
+                            <div class="w-full sm:w-auto"><label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Form Type</label><select id="logFilterFormType" class="w-full border border-gray-300 p-2 rounded text-sm"><option value="">All Forms</option><option value="PERSON_GATE_PASS">Person Gate Pass</option><option value="MATERIAL_GATE_PASS">Material Gate Pass</option></select></div>
+                            <div class="w-full sm:w-auto"><label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Status</label><select id="logFilterStatus" class="w-full border border-gray-300 p-2 rounded text-sm"><option value="">All Statuses</option><option value="PENDING_SUPERIOR">Pending Superior</option><option value="PENDING_PRESIDENT">Pending President</option><option value="PENDING_PAS">Pending PAS</option><option value="APPROVED">Approved</option><option value="OUTSIDE">Outside</option><option value="RETURNED">Returned</option><option value="REJECTED">Rejected</option><option value="CANCELLED">Cancelled</option></select></div>
                             <div class="w-full sm:w-auto"><button onclick="renderAdminLogs(1)" class="w-full bg-mpiBlue text-white px-5 py-2 rounded shadow text-sm font-bold hover:bg-mpiDark transition"><i class="fas fa-filter mr-2"></i>Apply Filters</button></div>
+                            <div class="w-full sm:w-auto"><button id="btnPrintSelected" onclick="printSelectedLogs()" class="w-full hidden bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded shadow text-sm font-bold transition"><i class="fas fa-print mr-2"></i>Print Selected (<span id="selectedLogsCount">0</span>)</button></div>
                         </div>
                         <div class="overflow-x-auto min-h-[300px]">
                             <table class="w-full text-left border-collapse min-w-max">
                                 <thead>
                                     <tr class="bg-white text-gray-500 text-[11px] uppercase tracking-wider border-b">
-                                        <th class="px-5 py-3 font-semibold">GP-ID</th><th class="px-5 py-3 font-semibold">Associate</th><th class="px-5 py-3 font-semibold">Dept</th><th class="px-5 py-3 font-semibold">1-Way?</th><th class="px-5 py-3 font-semibold">Actual Out</th><th class="px-5 py-3 font-semibold">Actual In</th><th class="px-5 py-3 font-semibold">Status</th>
+                                        <th class="px-5 py-3 font-semibold w-10 text-center"><input type="checkbox" id="selectAllLogs" onclick="toggleSelectAllLogs(this)" class="rounded border-gray-300 text-mpiBlue focus:ring-mpiBlue"></th>
+                                        <th class="px-5 py-3 font-semibold">Control No.</th><th class="px-5 py-3 font-semibold">Type</th><th class="px-5 py-3 font-semibold">Requester</th><th class="px-5 py-3 font-semibold">Dept</th><th class="px-5 py-3 font-semibold">Subject</th><th class="px-5 py-3 font-semibold">Actual Out</th><th class="px-5 py-3 font-semibold">Actual In</th><th class="px-5 py-3 font-semibold">Status</th><th class="px-5 py-3 font-semibold text-right">Action</th>
                                     </tr>
                                 </thead>
                                 <tbody id="adminLogsTable" class="text-sm divide-y divide-gray-100"></tbody>
@@ -439,20 +611,26 @@
                     <!-- TAB CONTENT: USERS (Active/Archive) -->
                     <div id="admin-users" class="admin-tab-content hidden bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
                         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
-                            <div><h3 class="font-bold text-gray-800 text-lg">User Management</h3><p class="text-xs md:text-sm text-gray-500">System accounts with login access.</p></div>
-                            <button onclick="showToast('Open Add User Form', 'info')" class="w-full sm:w-auto bg-mpiBlue text-white px-4 py-2 text-sm font-bold rounded shadow hover:bg-mpiDark transition"><i class="fas fa-user-plus mr-1"></i> Add User</button>
+                            <div><h3 class="font-bold text-gray-800 text-lg">User Management</h3><p class="text-xs md:text-sm text-gray-500">All employee and system accounts from MariaDB. <span id="adminUsersCount" class="font-bold text-mpiBlue"></span></p></div>
+                            <button onclick="openUserEditor()" class="w-full sm:w-auto bg-mpiBlue text-white px-4 py-2 text-sm font-bold rounded shadow hover:bg-mpiDark transition"><i class="fas fa-user-plus mr-1"></i> Add User</button>
                         </div>
 
-                        <div class="flex space-x-4 mb-4 border-b border-gray-200 pb-2">
-                            <button class="text-mpiBlue font-bold text-sm border-b-2 border-mpiBlue pb-1">Active Users</button>
-                            <button class="text-gray-500 hover:text-gray-700 text-sm pb-1">Archived Records</button>
+                        <div class="grid grid-cols-1 md:grid-cols-3 xl:grid-cols-6 gap-3 mb-4 p-3 bg-gray-50 border rounded-lg">
+                            <input id="userFilterSearch" oninput="renderAdminUsers(1)" placeholder="Search ID, name, username..." class="border p-2 rounded text-sm md:col-span-2">
+                            <select id="userFilterRole" onchange="renderAdminUsers(1)" class="border p-2 rounded text-sm"><option value="">All Roles</option></select>
+                            <select id="userFilterDepartment" onchange="renderAdminUsers(1)" class="border p-2 rounded text-sm"><option value="">All Departments</option></select>
+                            <select id="userFilterStatus" onchange="renderAdminUsers(1)" class="border p-2 rounded text-sm"><option value="ACTIVE">Active Users</option><option value="LOCKED">Locked Users</option><option value="ARCHIVED">Archived Records</option><option value="">All Statuses</option></select>
+                            <button onclick="renderAdminUsers(1)" class="bg-mpiBlue text-white rounded px-3 py-2 text-sm font-bold"><i class="fas fa-search mr-1"></i> Search</button>
+                            <label class="text-[10px] font-bold text-gray-500">Hired From<input id="userFilterHiredFrom" onchange="renderAdminUsers(1)" type="date" class="block w-full border p-2 rounded text-sm font-normal mt-1"></label>
+                            <label class="text-[10px] font-bold text-gray-500">Hired To<input id="userFilterHiredTo" onchange="renderAdminUsers(1)" type="date" class="block w-full border p-2 rounded text-sm font-normal mt-1"></label>
                         </div>
                         <div class="overflow-x-auto">
                             <table class="w-full text-left border-collapse text-sm min-w-max">
-                                <thead><tr class="bg-gray-50 border-y"><th class="p-3 font-semibold text-gray-600">ID</th><th class="p-3 font-semibold text-gray-600">Name</th><th class="p-3 font-semibold text-gray-600">Role</th><th class="p-3 font-semibold text-gray-600">Department</th><th class="p-3 font-semibold text-gray-600 text-right">Actions</th></tr></thead>
+                                <thead><tr class="bg-gray-50 border-y"><th class="p-3 font-semibold text-gray-600">ID</th><th class="p-3 font-semibold text-gray-600">Name / Position</th><th class="p-3 font-semibold text-gray-600">Roles</th><th class="p-3 font-semibold text-gray-600">Department</th><th class="p-3 font-semibold text-gray-600">Status</th><th class="p-3 font-semibold text-gray-600 text-right">Actions</th></tr></thead>
                                 <tbody id="adminUsersList" class="divide-y divide-gray-100"><!-- JS --></tbody>
                             </table>
                         </div>
+                        <div class="flex justify-end items-center gap-2 mt-4"><button id="userPrevPage" onclick="changeUserPage(-1)" class="border rounded px-3 py-1 disabled:opacity-40">Prev</button><span id="userPageIndicator" class="bg-mpiBlue text-white rounded px-3 py-1 font-bold">1</span><button id="userNextPage" onclick="changeUserPage(1)" class="border rounded px-3 py-1 disabled:opacity-40">Next</button></div>
                     </div>
 
                     <!-- TAB CONTENT: DEPARTMENTS & POSITIONS (Split View) -->
@@ -462,29 +640,20 @@
                             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-5">
                                 <div class="flex justify-between items-center mb-4">
                                     <h3 class="font-bold text-gray-800"><i class="far fa-building mr-2 text-mpiBlue"></i>Departments</h3>
-                                    <button class="bg-blue-50 text-mpiBlue px-3 py-1.5 rounded text-xs font-bold hover:bg-blue-100"><i class="fas fa-plus mr-1"></i> Add Dept</button>
+                                    <button onclick="openDepartmentEditor()" class="bg-blue-50 text-mpiBlue px-3 py-1.5 rounded text-xs font-bold hover:bg-blue-100"><i class="fas fa-plus mr-1"></i> Add Dept</button>
                                 </div>
-                                <div class="relative mb-3"><input type="text" placeholder="Search departments..." class="w-full border p-2 pl-8 rounded text-sm"><i class="fas fa-search absolute left-3 top-2.5 text-gray-400"></i></div>
-                                <ul class="divide-y divide-gray-100 text-sm">
-                                    <li class="py-3 flex justify-between items-center group"><span>ADMIN DEPARTMENT</span><div class="flex space-x-2 text-gray-400"><i class="fas fa-edit hover:text-mpiBlue cursor-pointer"></i><i class="fas fa-trash hover:text-red-500 cursor-pointer"></i></div></li>
-                                    <li class="py-3 flex justify-between items-center group"><span>FINANCE & IT DEPARTMENT</span><div class="flex space-x-2 text-gray-400"><i class="fas fa-edit hover:text-mpiBlue cursor-pointer"></i><i class="fas fa-trash hover:text-red-500 cursor-pointer"></i></div></li>
-                                    <li class="py-3 flex justify-between items-center group"><span>HRAD DEPARTMENT</span><div class="flex space-x-2 text-gray-400"><i class="fas fa-edit hover:text-mpiBlue cursor-pointer"></i><i class="fas fa-trash hover:text-red-500 cursor-pointer"></i></div></li>
-                                    <li class="py-3 flex justify-between items-center group"><span>PRODUCTION DEPARTMENT</span><div class="flex space-x-2 text-gray-400"><i class="fas fa-edit hover:text-mpiBlue cursor-pointer"></i><i class="fas fa-trash hover:text-red-500 cursor-pointer"></i></div></li>
-                                </ul>
+                                <div class="relative mb-3"><input id="departmentSearch" oninput="renderDepartmentsAndRoles()" type="text" placeholder="Search departments..." class="w-full border p-2 pl-8 rounded text-sm"><i class="fas fa-search absolute left-3 top-2.5 text-gray-400"></i></div>
+                                <ul id="adminDepartmentList" class="divide-y divide-gray-100 text-sm"></ul>
                             </div>
 
                             <!-- Positions -->
                             <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-5">
                                 <div class="flex justify-between items-center mb-4">
-                                    <h3 class="font-bold text-gray-800"><i class="fas fa-briefcase mr-2 text-mpiBlue"></i>Positions / Roles</h3>
-                                    <button class="bg-blue-50 text-mpiBlue px-3 py-1.5 rounded text-xs font-bold hover:bg-blue-100"><i class="fas fa-plus mr-1"></i> Add Role</button>
+                                    <h3 class="font-bold text-gray-800"><i class="fas fa-user-shield mr-2 text-mpiBlue"></i>Roles & Permissions</h3>
+                                    <button onclick="openRoleEditor()" class="bg-blue-50 text-mpiBlue px-3 py-1.5 rounded text-xs font-bold hover:bg-blue-100"><i class="fas fa-plus mr-1"></i> Add Role</button>
                                 </div>
-                                <div class="relative mb-3"><input type="text" placeholder="Search roles..." class="w-full border p-2 pl-8 rounded text-sm"><i class="fas fa-search absolute left-3 top-2.5 text-gray-400"></i></div>
-                                <ul class="divide-y divide-gray-100 text-sm">
-                                    <li class="py-3 flex justify-between items-center group"><div class="flex flex-col"><span class="font-semibold">Immediate Superior</span><span class="text-[10px] text-gray-400">All Departments</span></div><div class="flex space-x-2 text-gray-400"><i class="fas fa-edit hover:text-mpiBlue cursor-pointer"></i><i class="fas fa-trash hover:text-red-500 cursor-pointer"></i></div></li>
-                                    <li class="py-3 flex justify-between items-center group"><div class="flex flex-col"><span class="font-semibold">Associate</span><span class="text-[10px] text-gray-400">All Departments</span></div><div class="flex space-x-2 text-gray-400"><i class="fas fa-edit hover:text-mpiBlue cursor-pointer"></i><i class="fas fa-trash hover:text-red-500 cursor-pointer"></i></div></li>
-                                    <li class="py-3 flex justify-between items-center group"><div class="flex flex-col"><span class="font-semibold">Security Guard</span><span class="text-[10px] text-gray-400">Agency</span></div><div class="flex space-x-2 text-gray-400"><i class="fas fa-edit hover:text-mpiBlue cursor-pointer"></i><i class="fas fa-trash hover:text-red-500 cursor-pointer"></i></div></li>
-                                </ul>
+                                <div class="relative mb-3"><input id="roleSearch" oninput="renderDepartmentsAndRoles()" type="text" placeholder="Search roles..." class="w-full border p-2 pl-8 rounded text-sm"><i class="fas fa-search absolute left-3 top-2.5 text-gray-400"></i></div>
+                                <ul id="adminRoleList" class="divide-y divide-gray-100 text-sm"></ul>
                             </div>
                         </div>
                     </div>
@@ -493,7 +662,7 @@
                     <div id="admin-fleet" class="admin-tab-content hidden bg-white rounded-lg shadow-sm border border-gray-200 p-4 md:p-6">
                         <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center mb-4 gap-4">
                             <div><h3 class="font-bold text-gray-800 text-lg">Vehicles & Drivers Database</h3><p class="text-xs md:text-sm text-gray-500">Manage company fleet and assigned drivers (No system login required for drivers).</p></div>
-                            <button onclick="showToast('Add Fleet Record', 'info')" class="w-full sm:w-auto bg-mpiBlue text-white px-4 py-2 text-sm font-bold rounded shadow hover:bg-mpiDark transition"><i class="fas fa-plus mr-1"></i> Add Record</button>
+                            <div class="flex gap-2 w-full sm:w-auto"><button onclick="openDriverEditor()" class="flex-1 sm:flex-none border border-mpiBlue text-mpiBlue px-4 py-2 text-sm font-bold rounded"><i class="fas fa-id-card mr-1"></i> Add Driver</button><button onclick="openVehicleEditor()" class="flex-1 sm:flex-none bg-mpiBlue text-white px-4 py-2 text-sm font-bold rounded shadow hover:bg-mpiDark transition"><i class="fas fa-car mr-1"></i> Add Vehicle</button></div>
                         </div>
                         <div class="overflow-x-auto">
                             <table class="w-full text-left border-collapse text-sm min-w-max">
@@ -501,6 +670,8 @@
                                 <tbody id="adminFleetList" class="divide-y divide-gray-100"><!-- JS --></tbody>
                             </table>
                         </div>
+                        <h4 class="font-bold text-gray-700 mt-7 mb-2">Drivers</h4>
+                        <div class="overflow-x-auto"><table class="w-full text-left border-collapse text-sm min-w-max"><thead><tr class="bg-gray-50 border-y"><th class="p-3">Driver</th><th class="p-3">Type</th><th class="p-3">License</th><th class="p-3">Expiry</th><th class="p-3 text-right">Actions</th></tr></thead><tbody id="adminDriverList"></tbody></table></div>
                     </div>
                 </section>
 
@@ -520,7 +691,7 @@
             <div class="w-full bg-white rounded-t-lg border-b border-gray-200 p-4 flex justify-between items-center z-10 print-hide cursor-move" id="modalDragHandle">
                 <h2 class="font-bold text-lg text-gray-800"><i class="fas fa-arrows-alt mr-2 text-gray-400"></i>Document Review</h2>
                 <div class="flex items-center space-x-2">
-                    <button onclick="toggleMaximizeModal()" class="text-sm font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded transition" title="Maximize/Restore"><i class="fas fa-window-maximize mr-1"></i> Expand</button>
+                    <button id="modalExpandButton" onclick="toggleMaximizeModal()" class="text-sm font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded transition" title="Expand document workspace"><i id="modalExpandIcon" class="fas fa-window-maximize mr-1"></i> <span id="modalExpandText">Expand</span></button>
                     <button onclick="window.print()" class="text-sm font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded transition"><i class="fas fa-print mr-1"></i> Print</button>
                     <button onclick="closeModal()" class="w-8 h-8 rounded hover:bg-red-50 hover:text-red-600 text-gray-500 flex items-center justify-center transition"><i class="fas fa-times text-xl"></i></button>
                 </div>
@@ -538,58 +709,77 @@
             <div class="modal-scroll-area w-full bg-gray-100 p-4 md:p-6 print:p-0 print:overflow-visible" id="modalScrollArea">
 
                 <!-- THE ACTUAL PRINT FORM (A6 Layout precisely matched to image_b33085.jpg) -->
-                <div id="printableArea" class="print-form shadow-lg">
+                <div id="printableArea" class="print-form person-print-form shadow-lg">
                     <table class="w-full border-collapse">
                         <!-- Header -->
                         <tr>
-                            <td colspan="4" class="text-center p-2" style="border-bottom: 2px solid black; border-top: none; border-left: none; border-right: none;">
-                                <div class="flex items-center justify-center space-x-2">
-                                    <img src="Frontend/Design/images/logo.png" alt="MPI Logo" style="height: 50px; object-fit: contain;">
+                            <td colspan="4" class="person-header-cell" style="padding: 4px !important; border-bottom: 1.5px solid black !important;">
+                                <div class="flex items-center justify-center gap-3 h-full">
+                                    <img src="Frontend/Design/images/logo.png" alt="MPI Logo" style="height: 10mm; width: auto; object-fit: contain;">
                                     <div class="text-left">
-                                        <h1 class="font-bold text-sm m-0" style="letter-spacing: 0.5px;">MORIROKU PHILIPPINES, INC.</h1>
-                                        <p class="text-[7px] m-0">115 North Science Avenue, Laguna Technopark 4024, Biñan, Laguna Philippines</p>
+                                        <h1 class="font-extrabold text-[10.5px] m-0 p-0 leading-tight tracking-wider" style="font-family: Arial, sans-serif; font-weight: 900; color: #000;">MORIROKU PHILIPPINES, INC.</h1>
+                                        <p class="text-[5.5px] text-gray-500 m-0 p-0 leading-none mt-0.5" style="color: #6b7280;">115 North Science Avenue, Laguna Technopark 4024, Biñan, Laguna Philippines</p>
                                     </div>
                                 </div>
                             </td>
                         </tr>
                         <!-- Title -->
                         <tr>
-                            <td colspan="4" class="text-center font-bold text-xs py-1" style="background-color: #e5e7eb; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+                            <td colspan="4" class="text-center font-bold text-xs py-1" style="background-color: #e5e7eb; -webkit-print-color-adjust: exact; print-color-adjust: exact; border-bottom: 1.5px solid black !important;">
                                 GATE PASS FOR ASSOCIATES
                             </td>
                         </tr>
-                        <!-- Name & Date -->
+                        <!-- Name, Date, Purpose, Driver, Vehicle & QR Block -->
                         <tr>
-                            <td colspan="3" class="w-[70%] h-10 align-top">
-                                <div class="text-[7px] uppercase">NAME OF ASSOCIATES</div>
-                                <div id="vName" class="font-bold text-xs uppercase pl-2 pt-1"></div>
+                            <!-- Left Info Cell (Nested Table) -->
+                            <td colspan="3" class="p-0 align-top h-[32mm]" style="width: 72%; border-right: 1.5px solid black !important; padding: 0 !important; border-bottom: 1.5px solid black !important;">
+                                <table class="nested-print-table w-full h-full" style="margin: 0 !important; width: 100% !important; height: 100% !important; table-layout: fixed;">
+                                    <!-- Row 1: Name & Date -->
+                                    <tr class="border-b-nested">
+                                        <td class="align-top border-r-nested" style="width: 65%; height: 10mm;">
+                                            <div class="text-[7px] uppercase text-gray-500 font-semibold">NAME OF ASSOCIATES</div>
+                                            <div id="vName" class="font-bold text-xs uppercase pl-1 pt-0.5"></div>
+                                        </td>
+                                        <td class="align-top" style="width: 35%; height: 10mm;">
+                                            <div class="text-[7px] uppercase text-gray-500 font-semibold">DATE FILED</div>
+                                            <div id="vDateF" class="person-date-filed font-bold pl-1 pt-0.5"></div>
+                                        </td>
+                                    </tr>
+                                    <!-- Row 2: Purpose & Driver -->
+                                    <tr class="border-b-nested">
+                                        <td rowspan="2" class="align-top border-r-nested" style="width: 65%; height: 22mm;">
+                                            <div class="text-[7px] uppercase text-gray-500 font-semibold">PURPOSE</div>
+                                            <div id="vPurp" class="font-bold text-xs pl-1 pt-0.5 leading-tight"></div>
+                                        </td>
+                                        <td class="align-top border-b-nested" style="width: 35%; height: 11mm;">
+                                            <div class="text-[7px] uppercase text-gray-500 font-semibold">DRIVER:</div>
+                                            <div id="vDriver" class="font-bold text-[9px] pl-1 pt-0.5"></div>
+                                        </td>
+                                    </tr>
+                                    <!-- Row 3: Vehicle -->
+                                    <tr>
+                                        <td class="align-top" style="width: 35%; height: 11mm;">
+                                            <div class="text-[7px] uppercase text-gray-500 font-semibold">VEHICLE & PLATE</div>
+                                            <div id="vPlate" class="font-bold text-[8px] pl-1 pt-0.5"></div>
+                                        </td>
+                                    </tr>
+                                </table>
                             </td>
-                            <td class="w-[30%] h-10 align-top">
-                                <div class="text-[7px] uppercase">DATE FILED</div>
-                                <div id="vDateF" class="font-bold text-[10px] pl-2"></div>
-                            </td>
-                        </tr>
-                        <!-- Purpose & Driver -->
-                        <tr>
-                            <td colspan="3" rowspan="2" class="align-top h-12">
-                                <div class="text-[7px] uppercase">PURPOSE</div>
-                                <div id="vPurp" class="font-bold text-xs pl-2 pt-1 leading-tight"></div>
-                            </td>
-                            <td class="align-top h-5">
-                                <div class="text-[7px] uppercase">DRIVER:</div>
-                                <div id="vDriver" class="font-bold text-[9px] pl-2"></div>
-                            </td>
-                        </tr>
-                        <tr>
-                            <td class="align-top h-5">
-                                <div class="text-[7px] uppercase">VEHICLE & PLATE</div>
-                                <div id="vPlate" class="font-bold text-[8px] pl-2"></div>
+                            <!-- Right QR Cell (Spans 1 column to make up 4 columns total) -->
+                            <td class="align-middle text-center p-2" style="width: 28%; height: 32mm; padding: 6px !important; border-left: none !important; border-bottom: 1.5px solid black !important;">
+                                <div class="flex flex-col justify-center items-center h-full w-full">
+                                    <!-- QR Display container -->
+                                    <div id="qrCodeDisplay" class="flex justify-center items-center mb-1"></div>
+                                    <!-- Control No and Scan Info -->
+                                    <div id="vControlNoQR" class="text-[7.5px] leading-tight text-center font-bold mt-1 text-gray-800"></div>
+                                    <div id="vScanTextQR" class="text-[6.5px] leading-tight text-center mt-0.5 text-gray-600 font-mono"></div>
+                                </div>
                             </td>
                         </tr>
                         <!-- Destination -->
                         <tr>
-                            <td colspan="4" class="align-top h-10">
-                                <div class="text-[7px] uppercase">DESTINATION</div>
+                            <td colspan="4" class="align-top h-10" style="border-bottom: 1.5px solid black !important;">
+                                <div class="text-[7px] uppercase text-gray-500 font-semibold">DESTINATION</div>
                                 <div id="vDest" class="font-bold text-xs pl-2 pt-1"></div>
                             </td>
                         </tr>
@@ -614,9 +804,9 @@
                         </tr>
                         <!-- Signatures Layout Modified to give more space for image -->
                         <tr>
-                            <td colspan="2" class="align-top h-14 relative w-1/2">
+                            <td colspan="2" class="person-approval-cell align-top h-14 relative w-1/2">
                                 <div class="text-[7px] uppercase absolute top-1 left-1">APPROVED BY</div>
-                                <div class="absolute bottom-[16px] w-full flex justify-center items-end" style="height: 35px;">
+                                <div class="person-signature-stage">
                                     <div id="sigImm" class="w-full flex justify-center items-end"></div>
                                 </div>
                                 <div class="absolute bottom-1 w-full text-center leading-none">
@@ -624,18 +814,18 @@
                                     <span class="text-[7px]">IMMEDIATE SUPERIOR</span>
                                 </div>
                             </td>
-                            <td class="align-top h-14 relative w-1/4 border-l-0">
-                                <div class="absolute bottom-[16px] w-full flex justify-center items-end" style="height: 35px;">
+                            <td class="person-approval-cell align-top h-14 relative w-1/4 border-l-0">
+                                <div class="person-signature-stage">
                                     <div id="sigPres" class="w-full flex justify-center items-end"></div>
                                 </div>
                                 <div class="absolute bottom-1 w-full text-center leading-none">
                                     <span id="sigPresName" class="font-bold text-[8px] uppercase underline hidden block mb-[1px]"></span>
-                                    <span class="text-[7px]">PRESIDENT/V-PRES</span>
+                                    <span class="text-[7px]">PRESIDENT</span>
                                 </div>
                             </td>
-                            <td class="align-top h-14 relative w-1/4">
+                            <td class="person-approval-cell align-top h-14 relative w-1/4">
                                 <div class="text-[7px] uppercase absolute top-1 left-1">NOTED BY</div>
-                                <div class="absolute bottom-[16px] w-full flex justify-center items-end" style="height: 35px;">
+                                <div class="person-signature-stage">
                                     <div id="sigPAS" class="w-full flex justify-center items-end"></div>
                                 </div>
                                 <div class="absolute bottom-1 w-full text-center leading-none">
@@ -644,114 +834,100 @@
                                 </div>
                             </td>
                         </tr>
+                        <tr id="guardStatusRow" class="guard-status-row hidden">
+                            <td colspan="4" class="align-middle py-1 bg-gray-50 border-t border-black" style="-webkit-print-color-adjust: exact; print-color-adjust: exact;">
+                                <div class="flex justify-around items-center w-full">
+                                    <div class="flex items-center space-x-2">
+                                        <span class="text-[8px] font-bold text-gray-500">ACTUAL OUT</span>
+                                        <div class="guard-scan-stack">
+                                            <div id="vActOut" class="vActOut guard-scan-time"></div>
+                                            <div id="vActOutSignature" class="vActOutSignature guard-scan-sig"></div>
+                                            <div id="vActOutGuardName" class="vActOutGuardName guard-scan-name"></div>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center space-x-2">
+                                        <span class="text-[8px] font-bold text-gray-500">ACTUAL IN</span>
+                                        <div class="guard-scan-stack">
+                                            <div id="vActIn" class="vActIn guard-scan-time"></div>
+                                            <div id="vActInSignature" class="vActInSignature guard-scan-sig"></div>
+                                            <div id="vActInGuardName" class="vActInGuardName guard-scan-name"></div>
+                                        </div>
+                                    </div>
+                                    <div class="flex items-center space-x-2">
+                                        <span class="text-[8px] font-bold text-gray-500">REMARKS</span>
+                                        <div id="vGuardRemarks" class="vGuardRemarks bg-gray-200 text-gray-600 px-2 py-0.5 rounded font-bold text-[8px]">PENDING</div>
+                                    </div>
+                                </div>
+                            </td>
+                        </tr>
                     </table>
-
-                    <!-- QR Code Overlay for Printing -->
-                    <div class="absolute top-2 left-2 opacity-90 scale-[0.65] transform origin-top-left z-20">
-                        <div id="qrCodeDisplay"></div>
-                    </div>
+                    
                 </div>
+
+                <div id="materialPrintableArea" class="material-print-bundle hidden"></div>
+                <div id="multiPrintableArea" class="hidden"></div>
             </div>
 
             <!-- Approval Action Area (E-Signature Input) -->
             <div id="approvalActionArea" class="w-full bg-white border-t border-gray-200 p-4 md:p-5 print-hide hidden rounded-b-lg flex-col space-y-4">
-                <div class="bg-blue-50 border border-blue-200 p-3 rounded">
-                    <h3 class="font-bold text-mpiBlue text-sm mb-1"><i class="fas fa-pen-nib mr-1"></i> Digital Signature Attachment</h3>
-                    <p class="text-xs text-gray-600 mb-3">Attach a signature image, remove simple blue/white backgrounds locally, use the optional Python AI remover, or draw a signature directly using mouse/touch.</p>
+                <div id="approvalSignatureEditor" class="bg-blue-50 border border-blue-200 p-3 rounded hidden">
+                    <h3 class="font-extrabold text-mpiBlue text-base mb-1"><i class="fas fa-pen-nib mr-1"></i> Use Digital Signature</h3>
+                    <p class="text-xs text-gray-600 mb-3">Choose or draw a signature here. The actual document on the right updates live.</p>
 
-                    <div class="signature-source-toggle">
-                        <button type="button" onclick="showSignatureSource('upload')" id="btnSigUploadPanel" class="text-xs font-bold bg-mpiBlue text-white px-3 py-2 rounded"><i class="fas fa-upload mr-1"></i> Upload Image</button>
-                        <button type="button" onclick="showSignatureSource('draw')" id="btnSigDrawPanel" class="text-xs font-bold bg-white border border-blue-200 text-mpiBlue px-3 py-2 rounded hover:bg-blue-50"><i class="fas fa-pen mr-1"></i> Draw Signature</button>
-                    </div>
-
-                    <div id="sigUploadPanel" class="space-y-3">
-                        <div class="signature-upload-zone">
-                            <label for="sigUpload" class="text-xs font-bold bg-white border border-blue-200 text-mpiBlue px-3 py-2 rounded hover:bg-blue-50 cursor-pointer">
-                                <i class="fas fa-image mr-1"></i> Choose Signature Image
-                            </label>
-                            <input type="file" id="sigUpload" accept="image/png, image/jpeg" class="text-xs">
-                            <span id="sigFileName" class="text-xs text-gray-500">No image selected.</span>
+                    <div class="bg-white border border-blue-100 rounded-lg p-3">
+                        <h4 class="font-bold text-xs text-gray-700 mb-2">Signature Editor</h4>
+                        <div class="signature-source-toggle">
+                            <label for="sigUpload" onclick="showSignatureSource('upload')" id="btnSigUploadPanel" class="cursor-pointer text-xs font-bold bg-mpiBlue text-white px-3 py-2 rounded"><i class="fas fa-upload mr-1"></i> Upload Image</label>
+                            <input type="file" id="sigUpload" accept="image/png, image/jpeg" class="sr-only">
+                            <button type="button" onclick="showSignatureSource('draw')" id="btnSigDrawPanel" class="text-xs font-bold bg-white border border-blue-200 text-mpiBlue px-3 py-2 rounded hover:bg-blue-50"><i class="fas fa-pen mr-1"></i> Draw Signature</button>
                         </div>
-                        <p id="sigStatus" class="text-[10px] text-gray-500 leading-relaxed">Upload a PNG/JPG signature, or switch to Draw Signature.</p>
 
-                        <!-- Background Removal Options -->
-                        <div id="sigBgOptions" class="hidden p-3 bg-white border border-blue-100 rounded space-y-3">
-                            <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
-                                <div>
-                                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Optional Background Removal</label>
-                                    <select id="sigBgMode" class="w-full border border-gray-300 p-2 rounded text-xs focus:outline-none focus:border-mpiBlue">
-                                        <option value="none">Do not remove background</option>
-                                        <option value="autoSmart" selected>Auto detect blue or white background</option>
-                                        <option value="blue">Blue ID background / chroma key</option>
-                                        <option value="white">White paper background</option>
-                                        <option value="aiServer">AI remove bg via local Python server</option>
-                                    </select>
-                                </div>
-                                <div>
-                                    <label class="flex justify-between text-[10px] font-bold text-gray-500 uppercase mb-1">
-                                        <span>Removal Strength</span>
-                                        <span id="sigBgThresholdValue" class="text-mpiBlue">20</span>
-                                    </label>
-                                    <input type="range" id="sigBgThreshold" min="10" max="140" value="20" class="w-full">
-                                </div>
+                        <div id="sigUploadPanel" class="space-y-3">
+                            <div id="sigSelectedFileRow" class="hidden signature-upload-zone">
+                                <i class="fas fa-image text-mpiBlue"></i>
+                                <span id="sigFileName" class="min-w-0 flex-1 truncate text-xs font-semibold text-gray-600"></span>
                             </div>
-                            <p class="text-[10px] text-gray-500 leading-relaxed">
-                                <strong>Auto</strong> checks the image corners and chooses blue or white mode. Use strength around <strong>20</strong> for clean blue ID or white paper backgrounds. AI mode uses your local Python server at <strong>127.0.0.1:8000</strong>, not an external API.
-                            </p>
-                        </div>
-                    </div>
-
-                    <div id="sigDrawPanel" class="hidden p-3 bg-white border border-blue-100 rounded space-y-3">
-                        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                            <p class="text-xs text-gray-600">Draw your signature below. The canvas is transparent when placed on the form.</p>
-                            <div class="flex gap-2">
-                                <button type="button" onclick="clearSignaturePad()" class="text-xs px-3 py-1.5 rounded border border-gray-300 hover:bg-gray-100">Clear</button>
-                                <button type="button" onclick="useDrawnSignature()" class="text-xs px-3 py-1.5 rounded bg-mpiBlue text-white font-bold hover:bg-mpiDark">Use Drawn Signature</button>
+                            <div id="sigBgOptions" class="hidden p-3 bg-gray-50 border rounded space-y-3">
+                                <label class="block text-[10px] font-bold text-gray-500 uppercase">Background Removal<select id="sigBgMode" class="mt-1 w-full border border-gray-300 p-2 rounded text-xs"><option value="none" selected>Keep background</option><option value="aiServer">AI local remover</option></select></label>
+                                <label class="hidden flex-col text-[10px] font-bold text-gray-500 uppercase"><span>Removal Strength: <span id="sigBgThresholdValue" class="text-mpiBlue">20</span></span><input type="range" id="sigBgThreshold" min="10" max="140" value="20"></label>
                             </div>
                         </div>
-                        <div class="signature-pad-bg p-2 rounded">
-                            <canvas id="signaturePad" class="signature-pad-canvas"></canvas>
-                        </div>
-                    </div>
 
-                    <!-- Signature Editing Controls -->
-                    <div id="sigControls" class="hidden mt-3 p-3 bg-white border border-blue-100 rounded grid grid-cols-1 md:grid-cols-2 gap-4">
-                        <div>
-                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Scale / Size (10% to 300%)</label>
-                            <input type="range" id="sigSize" min="10" max="300" value="100" class="w-full">
+                        <div id="sigDrawPanel" class="hidden space-y-3">
+                            <div class="signature-pad-bg p-2 rounded"><canvas id="signaturePad" class="signature-pad-canvas"></canvas></div>
+                            <div class="flex justify-end gap-2"><button type="button" onclick="clearSignaturePad()" class="text-xs px-3 py-1.5 rounded border">Clear</button><button type="button" onclick="useDrawnSignature()" class="text-xs px-3 py-1.5 rounded bg-mpiBlue text-white font-extrabold">Use Drawn Signature</button></div>
                         </div>
-                        <div>
-                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Vertical Offset</label>
-                            <input type="range" id="sigY" min="-40" max="40" value="0" class="w-full">
+
+                        <div id="sigControls" class="hidden mt-3 grid grid-cols-1 gap-3 border-t pt-3">
+                            <label class="text-[10px] font-bold text-gray-500 uppercase">Signature Size<input type="range" id="sigSize" min="12" max="70" step="1" value="34" class="w-full" oninput="applySignaturePlacementFromControls()" onchange="applySignaturePlacementFromControls()"></label>
+                            <label class="text-[10px] font-bold text-gray-500 uppercase">Up / Down<input type="range" id="sigY" min="-100" max="100" step="1" value="0" class="w-full" oninput="applySignaturePlacementFromControls()" onchange="applySignaturePlacementFromControls()"></label>
+                            <label class="flex items-center gap-2 text-xs font-bold text-mpiBlue"><input type="checkbox" id="saveDefaultSig" class="rounded text-mpiBlue"> Save as my default signature</label>
                         </div>
-                        <!-- SAVE DEFAULT CHECKBOX -->
-                        <div class="col-span-1 md:col-span-2 flex items-center justify-end pt-2 border-t border-gray-100 mt-2">
-                            <label class="flex items-center space-x-2 text-sm font-bold text-mpiBlue cursor-pointer bg-white px-3 py-2 border border-blue-200 rounded shadow-sm hover:bg-blue-50 transition">
-                                <input type="checkbox" id="saveDefaultSig" class="rounded text-mpiBlue focus:ring-mpiBlue w-4 h-4">
-                                <span>Save Signature, Size & Placement as Default</span>
-                            </label>
-                        </div>
+                        <p id="sigStatus" class="mt-2 text-[10px] text-gray-500 leading-relaxed">Choose an image or draw your signature.</p>
                     </div>
                 </div>
 
                 <div class="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2">
                     <button onclick="closeModal()" class="px-4 py-2 rounded border border-gray-300 text-sm font-medium hover:bg-gray-200 transition">Cancel</button>
-                    <button onclick="approveCurrentPass()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded shadow text-sm font-bold transition"><i class="fas fa-check-circle mr-1"></i> Approve Request</button>
+                    <button onclick="rejectCurrentPass()" class="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded shadow text-sm font-bold transition"><i class="fas fa-times-circle mr-1"></i> Reject</button>
+                    <button id="approveRequestButton" onclick="approveCurrentPass()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded shadow text-sm font-bold transition"><i class="fas fa-check-circle mr-1"></i> Approve Request</button>
                 </div>
             </div>
         </div>
     </div>
 
-    <script src="Frontend/Functions/mock-data.js?v=20260619-auth-api-3"></script>
-    <script src="Frontend/Connectors/api-client.js?v=20260619-auth-api-2"></script>
-    <script src="Frontend/Functions/signature.js"></script>
-    <script src="Frontend/Functions/modal.js"></script>
-    <script src="Frontend/Functions/gatepass.js"></script>
-    <script src="Frontend/Functions/approvals.js"></script>
-    <script src="Frontend/Functions/scanner.js"></script>
-    <script src="Frontend/Functions/admin.js?v=20260619-auth-api-3"></script>
-    <script src="Frontend/Functions/navigation.js"></script>
-    <script src="Frontend/Functions/auth.js?v=20260619-auth-api-4"></script>
-    <script src="Frontend/Functions/app.js"></script>
+    <script src="Frontend/runtime-config.js?v=20260624-7.2"></script>
+    <script src="Frontend/Functions/mock-data.js?v=20260624-7.2"></script>
+    <script src="Frontend/Connectors/api-client.js?v=20260624-7.2"></script>
+    <script src="Frontend/Functions/signature.js?v=20260624-7.4"></script>
+    <script src="Frontend/Functions/material-gatepass.js?v=20260624-7.2"></script>
+    <script src="Frontend/Functions/modal.js?v=20260625-status-badges"></script>
+    <script src="Frontend/Functions/gatepass.js?v=20260625-guard-scan"></script>
+    <script src="Frontend/Functions/approvals.js?v=20260624-7.4"></script>
+    <script src="Frontend/Functions/scanner.js?v=20260625-guard-scan"></script>
+    <script src="Frontend/Functions/admin.js?v=20260624-7.2"></script>
+    <script src="Frontend/Functions/navigation.js?v=20260624-7.2"></script>
+    <script src="Frontend/Functions/auth.js?v=20260624-7.2"></script>
+    <script src="Frontend/Functions/app.js?v=20260624-7.2"></script>
 </body>
 </html>

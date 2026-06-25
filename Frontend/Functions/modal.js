@@ -12,6 +12,116 @@ var modalStartHeight = 0;
 var modalRestoreLayout = null;
 var modalFrameRequest = null;
 var pendingModalBox = null;
+var QR_BACK_CODE_SIZE = 136;
+
+function getGuardRemarksText(p) {
+    return String(p?.status || 'Pending').toUpperCase();
+}
+
+function normalizeDocumentStatus(status) {
+    return String(status || 'Pending')
+        .trim()
+        .replace(/[_-]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .toUpperCase();
+}
+
+function shouldShowGuardStatusRow(pass) {
+    const status = normalizeDocumentStatus(pass?.status);
+    return status !== '' && status !== 'DRAFT';
+}
+
+function getDocumentStatusBadgeClass(status) {
+    const normalized = normalizeDocumentStatus(status);
+    if (normalized.includes('REJECTED') ||
+        normalized.includes('CANCELLED') ||
+        normalized.includes('CANCELED') ||
+        normalized.includes('EXPIRED') ||
+        normalized.includes('OVERDUE')) {
+        return 'document-status-badge status-badge-danger';
+    }
+    if (normalized.startsWith('PENDING') || normalized === 'DRAFT') {
+        return 'document-status-badge status-badge-pending';
+    }
+    if (normalized === 'OUTSIDE') {
+        return 'document-status-badge status-badge-info';
+    }
+    if (normalized.includes('APPROVED') ||
+        normalized.includes('RETURNED') ||
+        normalized.includes('CLOSED')) {
+        return 'document-status-badge status-badge-success';
+    }
+    return 'document-status-badge status-badge-neutral';
+}
+
+function getGuardScanName(p, actionCode) {
+    const fallback = actionCode === 'TIME_IN'
+        ? p?.actualInGuardName
+        : p?.actualOutGuardName;
+    if (fallback) return fallback;
+
+    const scan = [...(p?.scans || [])]
+        .filter(item =>
+            item.scanActionCode === actionCode ||
+            item.resultCode === `${actionCode}_RECORDED`
+        )
+        .sort((a, b) => new Date(b.scannedAt || 0) - new Date(a.scannedAt || 0))[0];
+    return scan?.guardName || '';
+}
+
+function escapeDocumentText(value) {
+    if (value === null || value === undefined) return '';
+    return String(value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
+
+function formatManualScanId(gpId) {
+            const raw = String(gpId || '').trim();
+            if (!raw) return '';
+            const suffixMatch = raw.match(/(\d{3})$/);
+            if (!suffixMatch) return escapeDocumentText(raw);
+            const suffix = suffixMatch[1];
+            const prefix = raw.slice(0, -suffix.length);
+            return `${escapeDocumentText(prefix)}<span class="qr-manual-suffix">${escapeDocumentText(suffix)}</span>`;
+        }
+
+function deriveGatePassNoFromControlNo(controlNo) {
+            const match = String(controlNo || '').trim().match(/^(\d{2})(\d{2})(\d{2})-(\d{1,6})$/);
+            if (!match) return '';
+            const [, month, day, year, sequence] = match;
+            return `GP-20${year}${month}${day}-${sequence.padStart(6, '0')}`;
+        }
+
+function getPrintableGatePassNo(pass) {
+            const direct = String(pass?.gatePassNo || pass?.id || '').trim();
+            if (direct && /^GP-/i.test(direct)) return direct;
+            return deriveGatePassNoFromControlNo(pass?.controlNo) || direct;
+        }
+
+function getQrBackMetaHtml(pass) {
+            const controlNo = escapeDocumentText(pass?.controlNo || '');
+            const scanId = formatManualScanId(getPrintableGatePassNo(pass));
+            return `
+                <div class="qr-back-meta">
+                    ${controlNo ? `<div>Control No.: <strong>${controlNo}</strong></div>` : ''}
+                    ${scanId ? `<div>To Scan: <strong>${scanId}</strong></div>` : ''}
+                </div>
+            `;
+        }
+
+function getQrBackPageHtml(pass, codeClassName = 'qrCodeBackDisplay') {
+            return `
+                <div class="qr-back-card">
+                    <h3 class="qr-back-title">Gate Pass QR Code</h3>
+                    <div class="${codeClassName} qr-back-code"></div>
+                    ${getQrBackMetaHtml(pass)}
+                </div>
+            `;
+        }
 function clamp(value, min, max) {
             return Math.min(Math.max(value, min), max);
         }
@@ -72,7 +182,7 @@ function resetDocumentModalLayout() {
             setModalInteractionState('drag', false);
             setModalInteractionState('resize', false);
 
-            modal.classList.remove('is-floating', 'w-screen', 'h-screen', 'm-0', 'scale-100');
+            modal.classList.remove('is-floating', 'is-reviewing', 'w-screen', 'h-screen', 'm-0', 'scale-100');
             modal.classList.add('scale-95');
 
             modal.style.left = '';
@@ -87,6 +197,13 @@ function resetDocumentModalLayout() {
 
             printModal.classList.remove('p-0');
             printModal.classList.add('p-4');
+            updateModalExpandButton(false);
+
+            const multiPrint = document.getElementById('multiPrintableArea');
+            if (multiPrint) {
+                multiPrint.innerHTML = '';
+                multiPrint.classList.add('hidden');
+            }
         }
 
 function initializeModalDragResize() {
@@ -205,6 +322,7 @@ function toggleMaximizeModal() {
                     modal.style.width = modalRestoreLayout.width;
                     modal.style.height = modalRestoreLayout.height;
                 }
+                updateModalExpandButton(false);
             } else {
                 const rect = modal.getBoundingClientRect();
                 modalRestoreLayout = {
@@ -225,18 +343,300 @@ function toggleMaximizeModal() {
                 modal.style.borderRadius = '0';
                 printModal.classList.remove('p-4');
                 printModal.classList.add('p-0');
+                updateModalExpandButton(true);
             }
         }
 
-function viewPass(id, isReviewing = false) {
-            const p = gatePasses.find(x => x.id === id); if(!p) return; currentViewedPassId = id;
+function updateModalExpandButton(expanded) {
+            const text = document.getElementById('modalExpandText');
+            const icon = document.getElementById('modalExpandIcon');
+            const button = document.getElementById('modalExpandButton');
+            if (text) text.innerText = expanded ? 'Minimize' : 'Expand';
+            if (icon) {
+                icon.classList.toggle('fa-window-maximize', !expanded);
+                icon.classList.toggle('fa-window-minimize', expanded);
+            }
+            if (button) {
+                button.title = expanded
+                    ? 'Minimize document workspace'
+                    : 'Expand document workspace';
+            }
+        }
+
+function materialSignatureSlot(idPrefix, pageIndex) {
+            const isPrimary = pageIndex === 0;
+            return {
+                imageAttribute: isPrimary
+                    ? `id="${idPrefix}"`
+                    : `data-material-signature-copy="${idPrefix}"`,
+                nameAttribute: isPrimary
+                    ? `id="${idPrefix}Name"`
+                    : `data-material-signature-name-copy="${idPrefix}"`
+            };
+        }
+
+async function renderMaterialBundle(pass) {
+            const container = document.getElementById('materialPrintableArea');
+            if (!container) return;
+
+            const itemRows = [...(pass.materialItems || [])];
+            const pageCount = Math.max(1, Math.ceil(itemRows.length / 8));
+            const formDate = pass.formDate
+                ? new Date(`${String(pass.formDate).slice(0, 10)}T00:00:00`)
+                    .toLocaleDateString()
+                : pass.dateFiled;
+            const controlNo = String(pass.controlNo || pass.id || '')
+                .trim()
+                .slice(0, 20);
+
+            container.innerHTML = Array.from({ length: pageCount }, (_, pageIndex) => {
+                const pageItems = itemRows.slice(pageIndex * 8, pageIndex * 8 + 8);
+                while (pageItems.length < 8) pageItems.push(null);
+
+                const prepared = materialSignatureSlot('sigMatPrepared', pageIndex);
+                const superior = materialSignatureSlot('sigMatSuperior', pageIndex);
+                const pas = materialSignatureSlot('sigMatPas', pageIndex);
+                const guardOutSlot = materialSignatureSlot('sigMatGuardOut', pageIndex);
+                const guardInSlot = materialSignatureSlot('sigMatGuardIn', pageIndex);
+                const rowsHtml = pageItems.map(item => item
+                    ? `<tr>
+                        <td>${materialEscape(item.itemNo || '')}</td>
+                        <td>${materialEscape(item.description)}</td>
+                        <td class="text-center">${materialEscape(Number(item.quantity).toLocaleString(undefined, { maximumFractionDigits: 3 }))}</td>
+                        <td class="text-center">${materialEscape(item.unit)}</td>
+                    </tr>`
+                    : '<tr><td>&nbsp;</td><td></td><td></td><td></td></tr>')
+                    .join('');
+
+                 return `
+                    <section class="material-print-page" data-material-page="${pageIndex + 1}">
+                        <!-- Brand Header (Centered relative to the entire page, shifted slightly left of the QR code) -->
+                        <div class="material-form-header" style="display: flex; align-items: center; justify-content: center; text-align: center; gap: 2.5mm; min-height: 0; width: 100%; margin-bottom: 0.5mm; padding-right: 22mm;">
+                            <div class="material-form-brand" style="display: flex; align-items: center; justify-content: center; gap: 2.5mm; min-width: 0;">
+                                <img src="Frontend/Design/images/logo.png" alt="MPI Logo" style="width: 18mm; height: 8.5mm; object-fit: contain;">
+                                <div class="text-left">
+                                    <h1 style="margin: 0; font-size: 9px; font-weight: 800; line-height: 1.05; letter-spacing: 0.1px; white-space: nowrap;">MORIROKU PHILIPPINES, INC.</h1>
+                                    <p style="margin: 0.5px 0 0; font-size: 4.6px; line-height: 1.05; color: #4b5563; white-space: nowrap;">115 North Science Avenue, Laguna Technopark 4024, Biñan, Laguna Philippines</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Centered Title -->
+                        <h2 class="font-extrabold text-[9.5px] uppercase tracking-[0.5px] text-center w-full" style="margin: 0 0 1.2mm 0; padding: 0; font-size: 9.5px; line-height: 1; letter-spacing: 0.5px; text-align: center; padding-right: 22mm;">MATERIAL GATE PASS</h2>
+
+                        <!-- Underlined Metadata Fields (Restricted width to avoid QR code) -->
+                        <div class="grid grid-cols-12 gap-x-2 gap-y-1.5 text-[7px] leading-none mb-1.5 w-[74%]">
+                            <div class="col-span-7 flex items-end">
+                                <span class="font-semibold text-gray-500 w-[14%]">TO:</span>
+                                <span class="border-b border-black flex-grow pl-1 font-bold">GUARD ON DUTY</span>
+                            </div>
+                            <div class="col-span-5 flex items-end">
+                                <span class="font-semibold text-gray-500 w-[20%]">DATE:</span>
+                                <span class="border-b border-black flex-grow pl-1 font-bold">${materialEscape(formDate)}</span>
+                            </div>
+                            <div class="col-span-7 flex items-end">
+                                <span class="font-semibold text-gray-500 w-[14%]">FROM:</span>
+                                <span class="border-b border-black flex-grow pl-1 font-bold">PERSONNEL &amp; ADMIN. SECTION</span>
+                            </div>
+                            <div class="col-span-5 flex items-end">
+                                <span class="font-semibold text-gray-500 w-[20%]">PAGE:</span>
+                                <span class="border-b border-black flex-grow pl-1 font-mono">${pageIndex + 1} OF ${pageCount}</span>
+                            </div>
+                        </div>
+
+                        <!-- Absolutely Positioned QR Code + Control Details -->
+                        <div class="absolute material-front-qr-panel flex flex-col items-center justify-start text-center" style="top: 2mm; right: 3mm; width: 31mm; z-index: 10;">
+                            <div class="materialQrCodeDisplay mb-0.5 flex items-center justify-center" style="width: 24mm; height: 24mm;"></div>
+                            <div class="material-front-qr-control">Control No.: ${materialEscape(controlNo)}</div>
+                            <div class="material-front-qr-scan">To Scan: ${formatManualScanId(getPrintableGatePassNo(pass))}</div>
+                        </div>
+
+                                <!-- Underlined Authorization Statement (Canva Layout) -->
+                                <div class="flex flex-col text-[7px]" style="margin-top: 1mm; gap: 0.8mm; line-height: 1; width: calc(100% - 35mm);">
+                                    <div class="flex items-end w-full">
+                                        <span class="whitespace-nowrap text-gray-500 font-semibold mr-1">This is to allow Mr. / Ms.</span>
+                                        <span class="border-b border-black font-bold flex-grow text-center pb-0.5">${materialEscape(pass.authorizedEmployeeName || 'N/A')}</span>
+                                    </div>
+                                    <div class="flex items-end w-full">
+                                        <span class="whitespace-nowrap text-gray-500 font-semibold mr-1">of</span>
+                                        <span class="border-b border-black font-bold flex-grow text-center pb-0.5">${materialEscape(pass.authorizedDepartmentName || pass.userDept || 'N/A')}</span>
+                                        <span class="whitespace-nowrap text-gray-500 font-semibold ml-1">to bring out the following items.</span>
+                                    </div>
+                                </div>
+                            </div>
+
+                        <table class="material-items-table material-front-table">
+                            <thead>
+                                <tr class="bg-gray-100 font-bold border-b border-gray-900" style="background-color: #f3f4f6; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+                                    <th class="border border-gray-900 p-0.5 w-[15%] text-center">ITEM NO.</th>
+                                    <th class="border border-gray-900 p-0.5 w-[55%]">DESCRIPTION</th>
+                                    <th class="border border-gray-900 p-0.5 w-[15%] text-center">QUANTITY</th>
+                                    <th class="border border-gray-900 p-0.5 w-[15%] text-center">UNIT</th>
+                                </tr>
+                            </thead>
+                            <tbody>${rowsHtml}</tbody>
+                        </table>
+
+                        <!-- Underlined Remarks -->
+                        <div class="flex items-end text-[7px] leading-tight" style="margin-top: 1.5mm; margin-bottom: 1.5mm;">
+                            <span class="font-bold text-gray-800 mr-2">REMARKS:</span>
+                            <span class="border-b border-gray-400 flex-grow pl-1 font-bold pb-0.5">${materialEscape(pass.materialRemarks || '—')}</span>
+                        </div>
+
+                        <div class="material-form-signatures" style="margin-top: 2mm;">
+                            <div>
+                                <strong>Prepared By:</strong>
+                                <div ${prepared.imageAttribute} class="material-signature-image"></div>
+                                <span ${prepared.nameAttribute}></span>
+                            </div>
+                            <div>
+                                <strong>Noted By:</strong>
+                                <div ${superior.imageAttribute} class="material-signature-image"></div>
+                                <span ${superior.nameAttribute}></span>
+                                <small>Immediate Superior</small>
+                            </div>
+                            <div>
+                                <strong>Approved By:</strong>
+                                <div ${pas.imageAttribute} class="material-signature-image"></div>
+                                <span ${pas.nameAttribute}></span>
+                                <small>Personnel &amp; Admin Section</small>
+                            </div>
+                        </div>
+
+                        <!-- GUARD TRACKING ROW FOR MATERIAL -->
+                        <div class="guard-status-row ${shouldShowGuardStatusRow(pass) ? 'grid' : 'hidden'}" style="display: grid; grid-template-columns: 1.15fr 1.15fr 0.7fr; gap: 4mm; margin-top: 2.2mm; align-items: center; width: 100%;">
+                            <div style="display: flex; align-items: center; gap: 1.5mm; min-width: 0; width: 100%;">
+                                <strong style="font-size: 7px; color: #4b5563; font-weight: 700; white-space: nowrap; text-transform: uppercase;">ACTUAL OUT</strong>
+                                <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; position: relative; min-width: 0;">
+                                    <div class="sig-wrapper sig-mat-guard-out guard-scan-sig" ${guardOutSlot.imageAttribute} style="height: 6mm; display: flex; align-items: end; justify-content: center; width: 100%;"></div>
+                                    <span class="guard-scan-time vActOut" style="display: block; text-align: center; font-size: 7px; font-weight: 700; min-height: 3.5mm; line-height: 1;">${pass.actualOut ? new Date(pass.actualOut).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '—'}</span>
+                                    <div style="width: 100%; border-top: 1px solid #111827; margin-top: 0.2mm; margin-bottom: 0.2mm;"></div>
+                                    <small class="name sig-mat-guard-out-name guard-scan-name" ${guardOutSlot.nameAttribute} style="display: block; text-align: center; font-size: 5.4px; color: #4b5563; font-weight: bold; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${materialEscape(getGuardScanName(pass, 'TIME_OUT')) || 'Guard'}</small>
+                                </div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 1.5mm; min-width: 0; width: 100%;">
+                                <strong style="font-size: 7px; color: #4b5563; font-weight: 700; white-space: nowrap; text-transform: uppercase;">ACTUAL IN</strong>
+                                <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; position: relative; min-width: 0;">
+                                    <div class="sig-wrapper sig-mat-guard-in guard-scan-sig" ${guardInSlot.imageAttribute} style="height: 6mm; display: flex; align-items: end; justify-content: center; width: 100%;"></div>
+                                    <span class="guard-scan-time vActIn" style="display: block; text-align: center; font-size: 7px; font-weight: 700; min-height: 3.5mm; line-height: 1;">${pass.actualIn ? new Date(pass.actualIn).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '—'}</span>
+                                    <div style="width: 100%; border-top: 1px solid #111827; margin-top: 0.2mm; margin-bottom: 0.2mm;"></div>
+                                    <small class="name sig-mat-guard-in-name guard-scan-name" ${guardInSlot.nameAttribute} style="display: block; text-align: center; font-size: 5.4px; color: #4b5563; font-weight: bold; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${materialEscape(getGuardScanName(pass, 'TIME_IN')) || 'Guard'}</small>
+                                </div>
+                            </div>
+                            <div style="display: flex; align-items: center; gap: 1.5mm; min-width: 0; justify-content: flex-start;">
+                                <strong style="font-size: 7px; color: #4b5563; font-weight: 700; white-space: nowrap; text-transform: uppercase;">REMARKS</strong>
+                                <div class="${getDocumentStatusBadgeClass(pass.status)} vGuardRemarks" style="font-size: 7.5px; font-weight: 800; padding: 1px 4.5px;">${materialEscape(getGuardRemarksText(pass))}</div>
+                            </div>
+                        </div>
+
+                        <div class="material-page-number">Page ${pageIndex + 1} of ${pageCount}</div>
+                    </section>`;
+            }).join('');
+
+            let qrText = '';
+            const isApprovedOrPast = ['Approved', 'Outside', 'Overdue', 'Returned', 'Closed'].includes(pass.status);
+            if (isApprovedOrPast) {
+                try {
+                    qrText = await loadQrToken(pass);
+                } catch {
+                    qrText = '';
+                }
+            }
+
+            const qrContainers = container.querySelectorAll('.materialQrCodeDisplay');
+            if (qrContainers.length > 0 && isApprovedOrPast && qrText && typeof QRCode === 'function') {
+                qrContainers.forEach(qc => {
+                    qc.innerHTML = '';
+                    new QRCode(qc, {
+                        text: qrText,
+                        width: 150,
+                        height: 150
+                    });
+                });
+            } else if (qrContainers.length > 0) {
+                qrContainers.forEach(qc => {
+                    qc.innerHTML = '<span class="text-[6px] text-gray-400">Not Approved</span>';
+                });
+            }
+        }
+
+function syncMaterialSignatureCopies(idPrefix) {
+            const sourceImage = document.getElementById(idPrefix);
+            const sourceName = document.getElementById(idPrefix + 'Name');
+            document.querySelectorAll(
+                `[data-material-signature-copy="${idPrefix}"]`
+            ).forEach(target => {
+                target.innerHTML = sourceImage?.innerHTML || '';
+            });
+            document.querySelectorAll(
+                `[data-material-signature-name-copy="${idPrefix}"]`
+            ).forEach(target => {
+                target.innerText = sourceName?.innerText || '';
+                target.classList.toggle(
+                    'hidden',
+                    sourceName?.classList.contains('hidden') !== false
+                );
+            });
+        }
+
+async function viewPass(id, isReviewing = false) {
+            let p;
+            try {
+                p = await getGatePassDetail(id);
+            } catch (error) {
+                showToast(error instanceof ApiError ? error.message : 'Unable to load document.', 'error');
+                return;
+            }
+            if(!p) return;
+            if (['Closed', 'Returned', 'Rejected', 'Cancelled'].includes(p.status)) {
+                isReviewing = false;
+            }
+            currentViewedPassId = getGatePassViewKey(p);
 
             const setVal = (elemId, val) => {
                 const el = document.getElementById(elemId);
                 if (el) el.innerText = val;
             };
 
-            setVal('vDateF', p.dateFiled);
+            const isMaterial =
+                p.formTypeCode === 'MATERIAL_GATE_PASS';
+            const printableArea = document.getElementById('printableArea');
+            document.getElementById('printableArea')?.classList.toggle(
+                'hidden',
+                isMaterial
+            );
+            document.getElementById('materialPrintableArea')?.classList.toggle(
+                'hidden',
+                !isMaterial
+            );
+            printableArea?.classList.toggle('person-print-form', !isMaterial);
+
+            const compactPersonDateFiled = (value) => {
+                if (!value) return 'N/A';
+                const textValue = String(value).trim();
+                const textualDateMatch = textValue.match(/^([A-Za-z]{3}\s+\d{1,2},\s+\d{4})/);
+                if (textualDateMatch) return textualDateMatch[1];
+                const parsed = new Date(value.endsWith?.('Z') ? value : `${value}Z`);
+                if (Number.isNaN(parsed.getTime())) {
+                    const isoDateMatch = textValue.match(/^(\d{4}-\d{2}-\d{2})/);
+                    return isoDateMatch ? isoDateMatch[1] : textValue;
+                }
+                return parsed.toLocaleDateString([], {
+                    year: 'numeric',
+                    month: 'short',
+                    day: 'numeric'
+                });
+            };
+
+            const printableControlNo = (value) => {
+                const raw = String(value || '').trim();
+                if (!raw) return '';
+                if (/^(GP-ID|TEMP|TMP|ID)-/i.test(raw)) return '';
+                return raw.length > 20 ? raw.slice(0, 20) : raw;
+            };
+
+            setVal('vDateF', isMaterial ? p.dateFiled : compactPersonDateFiled(p.dateFiled));
+            setVal('vControlNo', printableControlNo(p.controlNo));
             setVal('vName', p.userName);
             setVal('vDest', p.destination);
             setVal('vPurp', p.purpose);
@@ -253,15 +653,19 @@ function viewPass(id, isReviewing = false) {
             setVal('vDriver', p.vehicle ? p.vehicle.driver : 'N/A');
             setVal('vPlate', vehicleString);
 
+            if (isMaterial) {
+                await renderMaterialBundle(p);
+            }
+
             // Signatures handling
-            ['sigImm', 'sigPres', 'sigPAS'].forEach(idPrefix => {
+            ['sigImm', 'sigPres', 'sigPAS', 'sigMatPrepared', 'sigMatSuperior', 'sigMatPas', 'sigMatGuardOut', 'sigMatGuardIn'].forEach(idPrefix => {
                 const sigDiv = document.getElementById(idPrefix);
                 const nameSpan = document.getElementById(idPrefix + 'Name');
                 if(sigDiv) sigDiv.innerHTML = '';
                 if(nameSpan) { nameSpan.innerText = ''; nameSpan.classList.add('hidden'); }
             });
 
-            const handleSig = (sigData, idPrefix) => {
+            const handleSig = async (sigData, idPrefix) => {
                 if(!sigData) return;
                 const nameSpan = document.getElementById(idPrefix + 'Name');
                 const sigDiv = document.getElementById(idPrefix);
@@ -269,6 +673,18 @@ function viewPass(id, isReviewing = false) {
                 if(nameSpan) {
                     nameSpan.innerText = sigData.name;
                     nameSpan.classList.remove('hidden');
+                }
+                if (sigData.fileId && !sigData.img && isDatabaseSession()) {
+                    try {
+                        const blob = await ApiClient.blob(`/signatures/${sigData.fileId}`);
+                        sigData.img = await new Promise((resolve) => {
+                            const reader = new FileReader();
+                            reader.onload = () => resolve(reader.result);
+                            reader.readAsDataURL(blob);
+                        });
+                    } catch {
+                        // Keep the digitally-signed fallback if the file is unavailable.
+                    }
                 }
                 if(sigDiv) {
                     if(sigData.img) {
@@ -280,28 +696,160 @@ function viewPass(id, isReviewing = false) {
                         sigDiv.innerHTML = `<span style="font-family: serif; font-style: italic; font-size: 14px; color: blue;">Digitally Signed</span>`;
                     }
                 }
+                if (idPrefix.startsWith('sigMat')) {
+                    syncMaterialSignatureCopies(idPrefix);
+                }
             };
 
-            handleSig(p.signatures.imm, 'sigImm');
-            handleSig(p.signatures.pres, 'sigPres');
-            handleSig(p.signatures.pas, 'sigPAS');
+            await handleSig(p.signatures.imm, 'sigImm');
+            await handleSig(p.signatures.pres, 'sigPres');
+            await handleSig(p.signatures.pas, 'sigPAS');
+            if (isMaterial) {
+                await handleSig(p.signatures.imm, 'sigMatSuperior');
+                await handleSig(p.signatures.pas, 'sigMatPas');
+
+                const preparedSignature = p.preparedBySignatureFileId
+                    ? {
+                        name: p.userName,
+                        fileId: p.preparedBySignatureFileId,
+                        w: 100,
+                        y: 0
+                    }
+                    : null;
+                if (preparedSignature) {
+                    await handleSig(preparedSignature, 'sigMatPrepared');
+                } else {
+                    setVal('sigMatPreparedName', p.userName);
+                    document.getElementById('sigMatPreparedName')?.classList.remove('hidden');
+                    const preparedContainer = document.getElementById('sigMatPrepared');
+                    if (preparedContainer) {
+                        preparedContainer.innerHTML =
+                            '<span style="font-family:serif;font-style:italic;font-size:11px;color:#155CA2;">Digitally Prepared</span>';
+                    }
+                    syncMaterialSignatureCopies('sigMatPrepared');
+                }
+
+                // LOAD GUARD SIGNATURES FOR MATERIAL
+                const outGuardSignature = p.actualOutSignatureFileId
+                    ? {
+                        name: getGuardScanName(p, 'TIME_OUT'),
+                        fileId: p.actualOutSignatureFileId,
+                        w: 100,
+                        y: 0
+                    }
+                    : null;
+                const inGuardSignature = p.actualInSignatureFileId
+                    ? {
+                        name: getGuardScanName(p, 'TIME_IN'),
+                        fileId: p.actualInSignatureFileId,
+                        w: 100,
+                        y: 0
+                    }
+                    : null;
+
+                if (outGuardSignature) {
+                    await handleSig(outGuardSignature, 'sigMatGuardOut');
+                } else {
+                    const outContainer = document.getElementById('sigMatGuardOut');
+                    if (outContainer) outContainer.innerHTML = '';
+                    const outName = document.getElementById('sigMatGuardOutName');
+                    if (outName) {
+                        outName.innerText = 'Guard';
+                        outName.classList.remove('hidden');
+                    }
+                    syncMaterialSignatureCopies('sigMatGuardOut');
+                }
+                if (inGuardSignature) {
+                    await handleSig(inGuardSignature, 'sigMatGuardIn');
+                } else {
+                    const inContainer = document.getElementById('sigMatGuardIn');
+                    if (inContainer) inContainer.innerHTML = '';
+                    const inName = document.getElementById('sigMatGuardInName');
+                    if (inName) {
+                        inName.innerText = 'Guard';
+                        inName.classList.remove('hidden');
+                    }
+                    syncMaterialSignatureCopies('sigMatGuardIn');
+                }
+            }
 
             const qrContainer = document.getElementById('qrCodeDisplay');
+            const qrBackContainer = document.querySelector('.qrCodeBackDisplay');
+            const qrBackPage = document.querySelector('.qr-back-page');
+            const gpIdTextDisplay = document.querySelector('.gp-id-text-display');
+            const controlNoQR = document.getElementById('vControlNoQR');
+            const scanTextQR = document.getElementById('vScanTextQR');
+
+            if (controlNoQR) controlNoQR.innerText = '';
+            if (scanTextQR) scanTextQR.innerText = '';
+
+            if (gpIdTextDisplay) {
+                const printableGatePassNo = getPrintableGatePassNo(p);
+                gpIdTextDisplay.innerHTML = printableGatePassNo
+                    ? `To Scan: <strong>${formatManualScanId(printableGatePassNo)}</strong>`
+                    : '';
+            }
+
             if(qrContainer) {
                 qrContainer.innerHTML = '';
-                if (p.status === 'Approved' || p.status === 'Outside') new QRCode(qrContainer, { text: p.id, width: 60, height: 60 });
+                if (qrBackContainer) qrBackContainer.innerHTML = '';
+                const controlNoDisplay = document.querySelector('.control-no-display');
+                if (controlNoDisplay) {
+                    controlNoDisplay.innerHTML = p.controlNo
+                        ? `Control No.: <strong>${escapeDocumentText(p.controlNo)}</strong>`
+                        : '';
+                }
+
+                const isApprovedOrPast = ['Approved', 'Outside', 'Overdue', 'Returned', 'Closed'].includes(p.status);
+
+                if (qrBackPage) {
+                    if (isApprovedOrPast && isMaterial) {
+                        qrBackPage.classList.remove('hidden');
+                        qrBackPage.style.display = 'flex';
+                    } else {
+                        qrBackPage.classList.add('hidden');
+                        qrBackPage.style.display = 'none';
+                    }
+                }
+
+                if (!isMaterial && isApprovedOrPast) {
+                    if (controlNoQR) {
+                        controlNoQR.innerHTML = p.controlNo
+                            ? `Control No.: <strong>${escapeDocumentText(printableControlNo(p.controlNo))}</strong>`
+                            : '';
+                    }
+                    if (scanTextQR) {
+                        const printableGatePassNo = getPrintableGatePassNo(p);
+                        scanTextQR.innerHTML = printableGatePassNo
+                            ? `To Scan: <strong>${formatManualScanId(printableGatePassNo)}</strong>`
+                            : '';
+                    }
+
+                    try {
+                        const qrValue = await loadQrToken(p);
+                        if (qrValue && typeof QRCode === 'function') {
+                            new QRCode(qrContainer, {
+                                text: String(qrValue),
+                                width: 80,
+                                height: 80
+                            });
+                        }
+                    } catch {
+                        qrContainer.innerHTML = '<span class="text-[8px] text-gray-400">QR unavailable</span>';
+                    }
+                }
             }
 
             // System Admin Progress Tracker
             const wf = document.getElementById('workflowTracker');
-            if (currentUser.role === 'System Admin' || ['President','Immediate Superior','PAS / HR Admin'].includes(currentUser.role)) {
+            if (currentUser.role === 'System Admin' || ['President','Immediate Superior','PAS Noter','PAS / HR Admin'].includes(currentUser.role)) {
                 wf.classList.remove('hidden');
                 let stepsHTML = '';
 
                 const hasImm = p.signatures.imm ? 'text-green-600 font-bold' : 'text-gray-400';
                 const hasPres = p.signatures.pres ? 'text-green-600 font-bold' : 'text-gray-400';
                 const hasPAS = p.signatures.pas ? 'text-green-600 font-bold' : 'text-gray-400';
-                const reqPres = p.requiresPresidentApproval === true;
+                const reqPres = !isMaterial && p.requiresPresidentApproval === true;
 
                 const reqSuperior = p.requiresSuperiorApproval !== false;
                 let stepNo = 1;
@@ -312,10 +860,10 @@ function viewPass(id, isReviewing = false) {
                 }
 
                 if (reqPres) {
-                    stepsHTML += `<span class="${hasPres}"><i class="fas ${p.signatures.pres ? 'fa-check-circle' : 'fa-circle'}"></i> ${stepNo++}. President / VP</span>`;
+                    stepsHTML += `<span class="${hasPres}"><i class="fas ${p.signatures.pres ? 'fa-check-circle' : 'fa-circle'}"></i> ${stepNo++}. President</span>`;
                     stepsHTML += ` <i class="fas fa-chevron-right text-gray-300 mx-2"></i> `;
                 }
-                stepsHTML += `<span class="${hasPAS}"><i class="fas ${p.signatures.pas ? 'fa-check-circle' : 'fa-circle'}"></i> ${stepNo}. PAS / HR</span>`;
+                stepsHTML += `<span class="${hasPAS}"><i class="fas ${p.signatures.pas ? 'fa-check-circle' : 'fa-circle'}"></i> ${stepNo}. ${isMaterial ? 'PAS Approval' : 'PAS'}</span>`;
 
                 document.getElementById('workflowSteps').innerHTML = stepsHTML;
             } else {
@@ -340,64 +888,177 @@ function viewPass(id, isReviewing = false) {
 
             // ACTION AREA & DEFAULT SIGNATURE LOADING
             const actionArea = document.getElementById('approvalActionArea');
+            const approvalSignatureEditor = document.getElementById('approvalSignatureEditor');
+            const btnApprove = document.getElementById('approveRequestButton');
+            const btnReject = document.querySelector('button[onclick="rejectCurrentPass()"]');
+
             if(actionArea) {
+                const btnPrintForm = document.getElementById('btnPrintForm');
+                if(btnPrintForm) {
+                    if(currentUser.role === 'Security') btnPrintForm.classList.add('hidden');
+                    else btnPrintForm.classList.remove('hidden');
+                }
+
+                const vActOut = document.getElementById('vActOut');
+                const vActIn = document.getElementById('vActIn');
+                const vActOutGuardName = document.getElementById('vActOutGuardName');
+                const vActInGuardName = document.getElementById('vActInGuardName');
+                const vGuardRemarks = document.getElementById('vGuardRemarks');
+                const guardStatusRow = document.getElementById('guardStatusRow');
+
+                if (vActOut && vActIn && vGuardRemarks && guardStatusRow) {
+                    if (p.actualOut || p.actualIn || ['Approved', 'Outside', 'Returned', 'Overdue', 'Closed'].includes(p.status)) {
+                        const safeFormatTime = (ts) => {
+                            if (!ts) return '';
+                            if (typeof ts === 'string' && ts.includes(':') && !ts.includes('-')) return ts;
+                            const d = new Date(ts);
+                            if (isNaN(d.getTime()) || d.getFullYear() < 2000) return '';
+                            return d.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+                        };
+                        guardStatusRow.classList.remove('hidden');
+                        vActOut.innerText = safeFormatTime(p.actualOut);
+                        vActIn.innerText = safeFormatTime(p.actualIn);
+                        if (vActOutGuardName) vActOutGuardName.innerText = getGuardScanName(p, 'TIME_OUT');
+                        if (vActInGuardName) vActInGuardName.innerText = getGuardScanName(p, 'TIME_IN');
+
+                        const vOutSig = document.getElementById('vActOutSignature');
+                        const vInSig = document.getElementById('vActInSignature');
+                        const renderGuardSig = async (fileId, containerEl) => {
+                            if (!containerEl) return;
+                            containerEl.innerHTML = '';
+                            if (!fileId) return;
+                            try {
+                                const blob = await ApiClient.blob(`/signatures/${fileId}`);
+                                const imgUrl = await new Promise((resolve) => {
+                                    const reader = new FileReader();
+                                    reader.onload = () => resolve(reader.result);
+                                    reader.readAsDataURL(blob);
+                                });
+                                containerEl.innerHTML = `<img src="${imgUrl}" class="max-h-full w-auto object-contain">`;
+                            } catch {
+                                containerEl.innerHTML = `<span style="font-family: serif; font-style: italic; font-size: 8px; color: blue;">Signed</span>`;
+                            }
+                        };
+                        if (vOutSig) await renderGuardSig(p.actualOutSignatureFileId, vOutSig);
+                        if (vInSig) await renderGuardSig(p.actualInSignatureFileId, vInSig);
+
+                        vGuardRemarks.innerText = getGuardRemarksText(p);
+                        if (['Returned', 'Closed', 'Approved'].includes(p.status)) {
+                            vGuardRemarks.classList.remove('bg-gray-200', 'text-gray-600', 'bg-blue-100', 'text-mpiBlue');
+                            vGuardRemarks.classList.add('bg-green-100', 'text-green-800');
+                        } else if (['Outside', 'Overdue'].includes(p.status)) {
+                            vGuardRemarks.classList.remove('bg-gray-200', 'text-gray-600', 'bg-green-100', 'text-green-800');
+                            vGuardRemarks.classList.add('bg-blue-100', 'text-mpiBlue');
+                        } else {
+                            vGuardRemarks.classList.add('bg-gray-200', 'text-gray-600');
+                            vGuardRemarks.classList.remove('bg-green-100', 'text-green-800', 'bg-blue-100', 'text-mpiBlue');
+                        }
+                    } else {
+                        guardStatusRow.classList.add('hidden');
+                    }
+                }
+
                 if(isReviewing) {
+                    document.getElementById('printModalContent')?.classList.add('is-reviewing');
                     actionArea.style.display = 'flex';
-                    document.getElementById('sigUpload').value = '';
-                    document.getElementById('sigFileName').innerText = 'No image selected.';
-                    showSignatureSource('upload');
+
+                    if (currentUser.role === 'Security') {
+                        approvalSignatureEditor?.classList.remove('hidden');
+                        if (btnApprove) {
+                            if (p.status === 'Approved' || p.status === 'Overdue') {
+                                btnApprove.innerHTML = '<i class="fas fa-sign-out-alt mr-1"></i> Confirm Time Out';
+                            } else if (p.status === 'Outside') {
+                                btnApprove.innerHTML = '<i class="fas fa-sign-in-alt mr-1"></i> Confirm Time In';
+                            }
+                            btnApprove.onclick = async () => {
+                                btnApprove.disabled = true;
+                                try {
+                                    let sigId = null;
+                                    if (currentUploadedSig) {
+                                        const signature = await window.uploadCurrentSignature();
+                                        sigId = signature?.signatureFileId || null;
+                                    }
+                                    await window.executeSecurityScan(p.controlNo, sigId);
+                                    forceCloseModal();
+                                } catch (err) {
+                                    showToast('Error uploading signature: ' + err.message, 'error');
+                                } finally {
+                                    btnApprove.disabled = false;
+                                }
+                            };
+                        }
+                        if (btnReject) btnReject.classList.add('hidden');
+                        resetApprovalSignatureComposer();
+                        showSignatureSource('upload');
+                    } else {
+                        approvalSignatureEditor?.classList.remove('hidden');
+                        if (btnApprove) {
+                            btnApprove.innerHTML = '<i class="fas fa-check-circle mr-1"></i> Approve Request';
+                            btnApprove.onclick = approveCurrentPass;
+                        }
+                        if (btnReject) btnReject.classList.remove('hidden');
+                        resetApprovalSignatureComposer();
+                        showSignatureSource('upload');
+                    }
 
                     // PRE-FILL USERNAME FOR TRUE LIVE PREVIEW ALIGNMENT
                     let targetContainerId = null;
-                    if (p.status === 'Pending Superior') targetContainerId = 'sigImm';
-                    else if (p.status === 'Pending President') targetContainerId = 'sigPres';
-                    else if (p.status === 'Pending PAS') targetContainerId = 'sigPAS';
+                    if (currentUser.role === 'Security') {
+                        if (p.status === 'Approved' || p.status === 'Overdue') {
+                            targetContainerId = isMaterial ? 'sigMatGuardOut' : 'vActOutSignature';
+                        } else if (p.status === 'Outside') {
+                            targetContainerId = isMaterial ? 'sigMatGuardIn' : 'vActInSignature';
+                        }
+                    } else {
+                        if (p.status === 'Pending Superior') {
+                            targetContainerId = isMaterial ? 'sigMatSuperior' : 'sigImm';
+                        } else if (p.status === 'Pending President') {
+                            targetContainerId = 'sigPres';
+                        } else if (p.status === 'Pending PAS') {
+                            targetContainerId = isMaterial ? 'sigMatPas' : 'sigPAS';
+                        }
+                    }
 
                     if (targetContainerId) {
-                        const nameSpan = document.getElementById(targetContainerId + 'Name');
+                        let nameSpanId = targetContainerId + 'Name';
+                        if (targetContainerId === 'vActOutSignature') nameSpanId = 'vActOutGuardName';
+                        if (targetContainerId === 'vActInSignature') nameSpanId = 'vActInGuardName';
+                        const nameSpan = document.getElementById(nameSpanId);
                         if (nameSpan) {
                             nameSpan.innerText = currentUser.name;
                             nameSpan.classList.remove('hidden');
                         }
+                        if (targetContainerId.startsWith('sigMat')) {
+                            syncMaterialSignatureCopies(targetContainerId);
+                        }
                     }
 
-                    // Load saved default signature if it exists
-                    if (currentUser.savedSignature) {
-                        currentUploadedSig = currentUser.savedSignature.img;
+                    const savedSignature = getSavedApprovalSignature(
+                        currentUser,
+                        p.formTypeCode
+                    );
+                    if (savedSignature) {
+                        currentUploadedSig = savedSignature.img;
+                        currentOriginalSignatureData = null;
 
-                        // Determine which container to update based on user role
-                        let targetContainerId = null;
-                        if (currentUser.role === 'President') targetContainerId = 'sigPres';
-                        else if (currentUser.canNoteGatePass) targetContainerId = 'sigPAS';
-                        else targetContainerId = 'sigImm';
+                        renderSignatureImage(
+                            currentUploadedSig,
+                            clampSignatureWidth(savedSignature.w),
+                            clampSignatureYOffset(savedSignature.y)
+                        );
 
-                        const targetDiv = document.getElementById(targetContainerId);
-                        if (targetDiv) {
-                             targetDiv.innerHTML = `<img src="${currentUploadedSig}" id="liveDocumentSig" class="signature-img" style="width: ${currentUser.savedSignature.w || 100}%; margin-bottom: ${currentUser.savedSignature.y || 0}px;">`;
-                        }
-
-                        document.getElementById('sigSize').value = currentUser.savedSignature.w || 100;
-                        document.getElementById('sigY').value = currentUser.savedSignature.y || 0;
+                        document.getElementById('sigSize').value = clampSignatureWidth(savedSignature.w);
+                        document.getElementById('sigY').value = clampSignatureYOffset(savedSignature.y);
 
                         document.getElementById('sigBgOptions').classList.add('hidden');
                         document.getElementById('sigControls').classList.remove('hidden');
                         document.getElementById('saveDefaultSig').checked = true;
                         setSignatureStatus('Saved default signature loaded. Adjust size or upload/draw a replacement if needed.', 'success');
-                    } else {
-                        currentUploadedSig = null;
-                        currentOriginalSignatureData = null;
-                        document.getElementById('sigSize').value = 100;
-                        document.getElementById('sigY').value = 0;
-                        document.getElementById('sigBgMode').value = 'none';
-                        document.getElementById('sigBgThreshold').value = 20;
-                        document.getElementById('sigBgThresholdValue').innerText = '20';
-                        document.getElementById('sigBgOptions').classList.add('hidden');
-                        document.getElementById('sigControls').classList.add('hidden');
-                        document.getElementById('saveDefaultSig').checked = false;
-                        setSignatureStatus('Upload a PNG/JPG signature, or switch to Draw Signature.', 'muted');
                     }
                 } else {
+                    document.getElementById('printModalContent')?.classList.remove('is-reviewing');
                     actionArea.style.display = 'none';
+                    approvalSignatureEditor?.classList.add('hidden');
                 }
             }
         }
@@ -411,10 +1072,618 @@ function closeModal() {
                 modal.classList.add('hidden');
                 modal.classList.remove('flex');
                 currentViewedPassId = null;
+                resetApprovalSignatureComposer?.();
                 resetDocumentModalLayout();
             }, 300);
         }
 
+function forceCloseModal() {
+            const modal = document.getElementById('printModal');
+            const content = document.getElementById('printModalContent');
+            if (!modal || !content) return;
+            modal.classList.add('hidden');
+            modal.classList.remove('flex', 'opacity-0');
+            content.classList.remove('scale-100');
+            content.classList.add('scale-95');
+            currentViewedPassId = null;
+            resetApprovalSignatureComposer?.();
+            resetDocumentModalLayout();
+        }
+
+async function renderPersonGatePassClone(p) {
+    const clone = document.getElementById('printableArea').cloneNode(true);
+    clone.id = '';
+    clone.classList.remove('hidden');
+    clone.classList.add('multi-print-item');
+
+    const setVal = (selector, val) => {
+        const el = clone.querySelector(selector);
+        if (el) el.innerText = val;
+    };
+
+    const compactPersonDateFiled = (value) => {
+        if (!value) return 'N/A';
+        const textValue = String(value).trim();
+        const textualDateMatch = textValue.match(/^([A-Za-z]{3}\s+\d{1,2},\s+\d{4})/);
+        if (textualDateMatch) return textualDateMatch[1];
+        const parsed = new Date(value.endsWith?.('Z') ? value : `${value}Z`);
+        if (Number.isNaN(parsed.getTime())) {
+            const isoDateMatch = textValue.match(/^(\d{4}-\d{2}-\d{2})/);
+            return isoDateMatch ? isoDateMatch[1] : textValue;
+        }
+        return parsed.toLocaleDateString([], {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+        });
+    };
+
+    const printableControlNo = (value) => {
+        const raw = String(value || '').trim();
+        if (!raw) return '';
+        if (/^(GP-ID|TEMP|TMP|ID)-/i.test(raw)) return '';
+        return raw.length > 20 ? raw.slice(0, 20) : raw;
+    };
+
+    setVal('#vDateF', p.formTypeCode === 'MATERIAL_GATE_PASS' ? p.dateFiled : compactPersonDateFiled(p.dateFiled));
+    setVal('#vControlNo', printableControlNo(p.controlNo));
+    setVal('#vName', p.userName);
+    setVal('#vDest', p.destination);
+    setVal('#vPurp', p.purpose);
+    setVal('#vExpOut', p.expectedOut);
+    setVal('#vExpInLabel', p.expectedIn);
+    setVal('#vReturn', p.willReturn ? 'Yes' : 'No');
+
+    let vehicleString = 'N/A';
+    if (p.vehicle) {
+        if (p.vehicle.id === 'MANUAL') vehicleString = p.vehicle.name;
+        else vehicleString = `${p.vehicle.name} [${p.vehicle.plate}]`;
+    }
+    setVal('#vDriver', p.vehicle ? p.vehicle.driver : 'N/A');
+    setVal('#vPlate', vehicleString);
+
+    const handleSig = async (sigData, selector) => {
+        const el = clone.querySelector(selector);
+        const nameSpan = clone.querySelector(selector + 'Name');
+        if (el) el.innerHTML = '';
+        if (nameSpan) { nameSpan.innerText = ''; nameSpan.classList.add('hidden'); }
+        if (!sigData) return;
+
+        if (nameSpan) {
+            nameSpan.innerText = sigData.name;
+            nameSpan.classList.remove('hidden');
+        }
+        if (sigData.fileId && !sigData.img && isDatabaseSession()) {
+            try {
+                const blob = await ApiClient.blob(`/signatures/${sigData.fileId}`);
+                sigData.img = await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.readAsDataURL(blob);
+                });
+            } catch {}
+        }
+        if (el) {
+            if (sigData.img) {
+                const w = sigData.w || 100;
+                const y = sigData.y || 0;
+                el.innerHTML = `<img src="${sigData.img}" class="signature-img" style="width: ${w}%; margin-bottom: ${y}px;">`;
+            } else {
+                el.innerHTML = `<span style="font-family: serif; font-style: italic; font-size: 14px; color: blue;">Digitally Signed</span>`;
+            }
+        }
+    };
+
+    await handleSig(p.signatures.imm, '#sigImm');
+    await handleSig(p.signatures.pres, '#sigPres');
+    await handleSig(p.signatures.pas, '#sigPAS');
+
+    const guardRow = clone.querySelector('.guard-status-row');
+    if (guardRow && ['Approved', 'Outside', 'Overdue', 'Returned', 'Closed'].includes(p.status)) {
+        guardRow.classList.remove('hidden');
+        // print:table-row is already applied in css via classes
+        const vOut = clone.querySelector('.vActOut');
+        const vIn = clone.querySelector('.vActIn');
+        const vOutGuardName = clone.querySelector('.vActOutGuardName');
+        const vInGuardName = clone.querySelector('.vActInGuardName');
+        const vRem = clone.querySelector('.vGuardRemarks');
+
+        const safeFormatTime = (ts) => {
+            if (!ts) return '';
+            if (typeof ts === 'string' && ts.includes(':') && !ts.includes('-')) return ts;
+            const d = new Date(ts);
+            if (isNaN(d.getTime()) || d.getFullYear() < 2000) return '';
+            return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+        };
+        if (vOut) vOut.innerText = safeFormatTime(p.actualOut);
+        if (vIn) vIn.innerText = safeFormatTime(p.actualIn);
+        if (vOutGuardName) vOutGuardName.innerText = getGuardScanName(p, 'TIME_OUT');
+        if (vInGuardName) vInGuardName.innerText = getGuardScanName(p, 'TIME_IN');
+
+        const vOutSig = clone.querySelector('.vActOutSignature');
+        const vInSig = clone.querySelector('.vActInSignature');
+        const renderGuardSig = async (fileId, containerEl) => {
+            if (!containerEl) return;
+            containerEl.innerHTML = '';
+            if (!fileId) return;
+            try {
+                const blob = await ApiClient.blob(`/signatures/${fileId}`);
+                const imgUrl = await new Promise((resolve) => {
+                    const reader = new FileReader();
+                    reader.onload = () => resolve(reader.result);
+                    reader.readAsDataURL(blob);
+                });
+                containerEl.innerHTML = `<img src="${imgUrl}" class="max-h-full w-auto object-contain">`;
+            } catch {
+                containerEl.innerHTML = `<span style="font-family: serif; font-style: italic; font-size: 8px; color: blue;">Signed</span>`;
+            }
+        };
+        if (vOutSig) await renderGuardSig(p.actualOutSignatureFileId, vOutSig);
+        if (vInSig) await renderGuardSig(p.actualInSignatureFileId, vInSig);
+
+        if (vRem) {
+            vRem.innerText = getGuardRemarksText(p);
+            vRem.className = ['Returned', 'Closed', 'Approved'].includes(p.status) ? 'bg-green-100 text-green-800 px-2 py-0.5 rounded font-bold text-[8px]' : (['Outside', 'Overdue'].includes(p.status) ? 'bg-blue-100 text-mpiBlue px-2 py-0.5 rounded font-bold text-[8px]' : 'bg-gray-200 text-gray-600 px-2 py-0.5 rounded font-bold text-[8px]');
+        }
+    }
+
+    const qrContainer = clone.querySelector('#qrCodeDisplay');
+    const controlNoQR = clone.querySelector('#vControlNoQR');
+    const scanTextQR = clone.querySelector('#vScanTextQR');
+    const qrBackPage = clone.querySelector('.qr-back-page');
+
+    if (qrBackPage) {
+        qrBackPage.remove();
+    }
+
+    if (qrContainer) {
+        qrContainer.innerHTML = '';
+
+        if (['Approved', 'Outside', 'Overdue', 'Returned', 'Closed'].includes(p.status)) {
+            if (controlNoQR) {
+                controlNoQR.innerHTML = p.controlNo
+                    ? `Control No.: <strong>${escapeDocumentText(printableControlNo(p.controlNo))}</strong>`
+                    : '';
+            }
+            if (scanTextQR) {
+                const printableGatePassNo = getPrintableGatePassNo(p);
+                scanTextQR.innerHTML = printableGatePassNo
+                    ? `To Scan: <strong>${formatManualScanId(printableGatePassNo)}</strong>`
+                    : '';
+            }
+
+            try {
+                const qrValue = await loadQrToken(p);
+                if (qrValue && typeof QRCode === 'function') {
+                    new QRCode(qrContainer, {
+                        text: String(qrValue),
+                        width: 80,
+                        height: 80
+                    });
+                }
+            } catch {}
+        }
+    }
+
+    return clone;
+}
+
+async function renderMaterialGatePassClone(p) {
+    const pages = [];
+    const itemRows = [...(p.materialItems || [])];
+    const pageCount = Math.max(1, Math.ceil(itemRows.length / 8));
+    const formDate = p.formDate
+        ? new Date(`${String(p.formDate).slice(0, 10)}T00:00:00`).toLocaleDateString()
+        : p.dateFiled;
+    const controlNo = String(p.controlNo || p.id || '').trim().slice(0, 20);
+    const isApprovedOrPast = ['Approved', 'Outside', 'Overdue', 'Returned', 'Closed'].includes(p.status);
+    let qrValue = '';
+    if (isApprovedOrPast) {
+        try {
+            qrValue = await loadQrToken(p);
+        } catch {
+            qrValue = '';
+        }
+    }
+
+    for (let pageIndex = 0; pageIndex < pageCount; pageIndex++) {
+        const pageItems = itemRows.slice(pageIndex * 8, pageIndex * 8 + 8);
+        while (pageItems.length < 8) pageItems.push(null);
+
+        const div = document.createElement('div');
+        div.className = 'material-print-page multi-print-item';
+        div.setAttribute('data-material-page', pageIndex + 1);
+
+        const guardOutSlot = materialSignatureSlot('sigMatGuardOut', pageIndex);
+        const guardInSlot = materialSignatureSlot('sigMatGuardIn', pageIndex);
+
+        const rowsHtml = pageItems.map(item => item
+            ? `<tr>
+                <td>${materialEscape(item.itemNo || '')}</td>
+                <td>${materialEscape(item.description)}</td>
+                <td class="text-center">${materialEscape(Number(item.quantity).toLocaleString(undefined, { maximumFractionDigits: 3 }))}</td>
+                <td class="text-center">${materialEscape(item.unit)}</td>
+            </tr>`
+            : '<tr><td>&nbsp;</td><td></td><td></td><td></td></tr>')
+            .join('');
+
+        div.innerHTML = `
+            <!-- Brand Header (Centered relative to the entire page, shifted slightly left of the QR code) -->
+            <div class="material-form-header" style="display: flex; align-items: center; justify-content: center; text-align: center; gap: 2.5mm; min-height: 0; width: 100%; margin-bottom: 0.5mm; padding-right: 22mm;">
+                <div class="material-form-brand" style="display: flex; align-items: center; justify-content: center; gap: 2.5mm; min-width: 0;">
+                    <img src="Frontend/Design/images/logo.png" alt="MPI Logo" style="width: 18mm; height: 8.5mm; object-fit: contain;">
+                    <div class="text-left">
+                        <h1 style="margin: 0; font-size: 9px; font-weight: 800; line-height: 1.05; letter-spacing: 0.1px; white-space: nowrap;">MORIROKU PHILIPPINES, INC.</h1>
+                        <p style="margin: 0.5px 0 0; font-size: 4.6px; line-height: 1.05; color: #4b5563; white-space: nowrap;">115 North Science Avenue, Laguna Technopark 4024, Biñan, Laguna Philippines</p>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Centered Title -->
+            <h2 class="font-extrabold text-[9.5px] uppercase tracking-[0.5px] text-center w-full" style="margin: 0 0 1.2mm 0; padding: 0; font-size: 9.5px; line-height: 1; letter-spacing: 0.5px; text-align: center; padding-right: 22mm;">MATERIAL GATE PASS</h2>
+
+            <!-- Underlined Metadata Fields (Restricted width to avoid QR code) -->
+            <div class="grid grid-cols-12 gap-x-2 gap-y-1.5 text-[7px] leading-none mb-1.5 w-[74%]">
+                <div class="col-span-7 flex items-end">
+                    <span class="font-semibold text-gray-500 w-[14%]">TO:</span>
+                    <span class="border-b border-black flex-grow pl-1 font-bold">GUARD ON DUTY</span>
+                </div>
+                <div class="col-span-5 flex items-end">
+                    <span class="font-semibold text-gray-500 w-[20%]">DATE:</span>
+                    <span class="border-b border-black flex-grow pl-1 font-bold">${materialEscape(formDate)}</span>
+                </div>
+                <div class="col-span-7 flex items-end">
+                    <span class="font-semibold text-gray-500 w-[14%]">FROM:</span>
+                    <span class="border-b border-black flex-grow pl-1 font-bold">PERSONNEL &amp; ADMIN. SECTION</span>
+                </div>
+                <div class="col-span-5 flex items-end">
+                    <span class="font-semibold text-gray-500 w-[20%]">PAGE:</span>
+                    <span class="border-b border-black flex-grow pl-1 font-mono">${pageIndex + 1} OF ${pageCount}</span>
+                </div>
+            </div>
+
+            <!-- Absolutely Positioned QR Code + Control Details -->
+            <div class="absolute material-front-qr-panel flex flex-col items-center justify-start text-center" style="top: 2mm; right: 3mm; width: 31mm; z-index: 10;">
+                <div class="materialQrCodeDisplay mb-0.5 flex items-center justify-center" style="width: 24mm; height: 24mm;"></div>
+                <div class="material-front-qr-control">Control No.: ${materialEscape(controlNo)}</div>
+                <div class="material-front-qr-scan">To Scan: ${formatManualScanId(getPrintableGatePassNo(p))}</div>
+            </div>
+
+            <!-- Underlined Authorization Statement (Canva Layout) -->
+            <div class="flex flex-col text-[7px]" style="margin-top: 1mm; gap: 0.8mm; line-height: 1; width: calc(100% - 35mm);">
+                <div class="flex items-end w-full">
+                    <span class="whitespace-nowrap text-gray-500 font-semibold mr-1">This is to allow Mr. / Ms.</span>
+                    <span class="border-b border-black font-bold flex-grow text-center pb-0.5">${materialEscape(p.authorizedEmployeeName || 'N/A')}</span>
+                </div>
+                <div class="flex items-end w-full">
+                    <span class="whitespace-nowrap text-gray-500 font-semibold mr-1">of</span>
+                    <span class="border-b border-black font-bold flex-grow text-center pb-0.5">${materialEscape(p.authorizedDepartmentName || p.userDept || 'N/A')}</span>
+                    <span class="whitespace-nowrap text-gray-500 font-semibold ml-1">to bring out the following items:</span>
+                </div>
+            </div>
+
+            <table class="w-full text-[9px] border-collapse border border-gray-900 mt-1 text-left material-items-table material-front-table">
+                <thead>
+                    <tr class="bg-gray-100 font-bold border-b border-gray-900" style="background-color: #f3f4f6; -webkit-print-color-adjust: exact; print-color-adjust: exact;">
+                        <th class="border border-gray-900 p-1 w-[12%]">ITEM NO.</th>
+                        <th class="border border-gray-900 p-1 w-[53%]">DESCRIPTION</th>
+                        <th class="border border-gray-900 p-1 w-[18%] text-center">QUANTITY</th>
+                        <th class="border border-gray-900 p-1 w-[17%] text-center">UNIT</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    ${rowsHtml}
+                </tbody>
+            </table>
+
+            <!-- Underlined Remarks -->
+            <div class="flex items-end text-[7px] leading-tight" style="margin-top: 1.2mm; margin-bottom: 1.1mm;">
+                <span class="font-bold text-gray-800 mr-2">REMARKS:</span>
+                <span class="border-b border-gray-400 flex-grow pl-1 font-bold pb-0.5">${materialEscape(p.materialRemarks || p.purpose || '—')}</span>
+            </div>
+
+            <div class="material-form-signatures pt-1" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 4mm; margin-top: 1.4mm; text-align: left; font-size: 6.4px; line-height: 1.05; border-top: 1px solid #111827;">
+                <div style="position: relative; min-height: 13.2mm;">
+                    <strong style="display: block; text-align: left; font-size: 7px;">Prepared By:</strong>
+                    <div class="sig-wrapper sig-mat-prepared material-signature-image" style="height: 6.2mm; display: flex; align-items: end; justify-content: center; margin-bottom: 0.25mm;"></div>
+                    <span class="name sig-mat-prepared-name" style="display: block; border-top: 1px solid #111827; border-bottom: none; padding-top: 0.25mm; text-align: center; font-size: 7.5px; font-weight: 700; text-transform: uppercase;"></span>
+                </div>
+                <div style="position: relative; min-height: 13.2mm;">
+                    <strong style="display: block; text-align: left; font-size: 7px;">Noted By:</strong>
+                    <div class="sig-wrapper sig-mat-superior material-signature-image" style="height: 6.2mm; display: flex; align-items: end; justify-content: center; margin-bottom: 0.25mm;"></div>
+                    <span class="name sig-mat-superior-name" style="display: block; border-top: 1px solid #111827; border-bottom: none; padding-top: 0.25mm; text-align: center; font-size: 7.5px; font-weight: 700; text-transform: uppercase;"></span>
+                    <small style="display: block; text-align: center; font-size: 5.4px; margin-top: 0.35mm;">Immediate Superior</small>
+                </div>
+                <div style="position: relative; min-height: 13.2mm;">
+                    <strong style="display: block; text-align: left; font-size: 7px;">Approved By:</strong>
+                    <div class="sig-wrapper sig-mat-pas material-signature-image" style="height: 6.2mm; display: flex; align-items: end; justify-content: center; margin-bottom: 0.25mm;"></div>
+                    <span class="name sig-mat-pas-name" style="display: block; border-top: 1px solid #111827; border-bottom: none; padding-top: 0.25mm; text-align: center; font-size: 7.5px; font-weight: 700; text-transform: uppercase;"></span>
+                    <small style="display: block; text-align: center; font-size: 5.4px; margin-top: 0.35mm;">Personnel &amp; Admin Section</small>
+                </div>
+            </div>
+
+            <!-- GUARD TRACKING ROW FOR MATERIAL -->
+            <div class="guard-status-row hidden" style="display: none; grid-template-columns: 1.15fr 1.15fr 0.7fr; gap: 4mm; margin-top: 2.2mm; align-items: center; width: 100%;">
+                <div style="display: flex; align-items: center; gap: 1.5mm; min-width: 0; width: 100%;">
+                    <strong style="font-size: 7px; color: #4b5563; font-weight: 700; white-space: nowrap; text-transform: uppercase;">ACTUAL OUT</strong>
+                    <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; position: relative; min-width: 0;">
+                        <div class="sig-wrapper sig-mat-guard-out guard-scan-sig" ${guardOutSlot.imageAttribute} style="height: 6mm; display: flex; align-items: end; justify-content: center; width: 100%;"></div>
+                        <span class="guard-scan-time vActOut" style="display: block; text-align: center; font-size: 7px; font-weight: 700; min-height: 3.5mm; line-height: 1;"></span>
+                        <div style="width: 100%; border-top: 1px solid #111827; margin-top: 0.2mm; margin-bottom: 0.2mm;"></div>
+                        <small class="name sig-mat-guard-out-name guard-scan-name" ${guardOutSlot.nameAttribute} style="display: block; text-align: center; font-size: 5.4px; color: #4b5563; font-weight: bold; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></small>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 1.5mm; min-width: 0; width: 100%;">
+                    <strong style="font-size: 7px; color: #4b5563; font-weight: 700; white-space: nowrap; text-transform: uppercase;">ACTUAL IN</strong>
+                    <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; position: relative; min-width: 0;">
+                        <div class="sig-wrapper sig-mat-guard-in guard-scan-sig" ${guardInSlot.imageAttribute} style="height: 6mm; display: flex; align-items: end; justify-content: center; width: 100%;"></div>
+                        <span class="guard-scan-time vActIn" style="display: block; text-align: center; font-size: 7px; font-weight: 700; min-height: 3.5mm; line-height: 1;"></span>
+                        <div style="width: 100%; border-top: 1px solid #111827; margin-top: 0.2mm; margin-bottom: 0.2mm;"></div>
+                        <small class="name sig-mat-guard-in-name guard-scan-name" ${guardInSlot.nameAttribute} style="display: block; text-align: center; font-size: 5.4px; color: #4b5563; font-weight: bold; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></small>
+                    </div>
+                </div>
+                <div style="display: flex; align-items: center; gap: 1.5mm; min-width: 0; justify-content: flex-start;">
+                    <strong style="font-size: 7px; color: #4b5563; font-weight: 700; white-space: nowrap; text-transform: uppercase;">REMARKS</strong>
+                    <div class="vGuardRemarks document-status-badge status-badge-neutral" style="font-size: 7.5px; font-weight: 800; padding: 1px 4.5px;"></div>
+                </div>
+            </div>
+
+            <div class="text-[7.5px] text-right text-gray-500 absolute bottom-1.5 right-3 leading-none select-none">Page ${pageIndex + 1} of ${pageCount}</div>
+        `;
+
+        const qrContainer = div.querySelector('.materialQrCodeDisplay');
+        if (qrContainer && qrValue) {
+            try {
+                if (typeof QRCode === 'function') {
+                    new QRCode(qrContainer, {
+                        text: String(qrValue),
+                        width: 150,
+                        height: 150
+                    });
+                }
+            } catch {}
+        } else if (qrContainer) {
+            qrContainer.innerHTML = '<span class="text-[6px] text-gray-400">Not Approved</span>';
+        }
+
+        const matGuardRow = div.querySelector('.guard-status-row');
+        if (matGuardRow && shouldShowGuardStatusRow(p)) {
+            matGuardRow.classList.remove('hidden');
+            matGuardRow.style.display = 'grid';
+
+            const vOut = div.querySelector('.vActOut');
+            const vIn = div.querySelector('.vActIn');
+            const vRem = div.querySelector('.vGuardRemarks');
+
+            const safeFormatTime = (ts) => {
+                if (!ts) return '—';
+                if (typeof ts === 'string' && ts.includes(':') && !ts.includes('-')) return ts;
+                const d = new Date(ts);
+                if (isNaN(d.getTime()) || d.getFullYear() < 2000) return '—';
+                return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            };
+            if (vOut) vOut.innerText = safeFormatTime(p.actualOut);
+            if (vIn) vIn.innerText = safeFormatTime(p.actualIn);
+            if (vRem) {
+                vRem.innerText = getGuardRemarksText(p);
+                vRem.className = `vGuardRemarks ${getDocumentStatusBadgeClass(p.status)}`;
+            }
+        }
+
+        const outGuardSignature = p.actualOutSignatureFileId
+            ? {
+                name: getGuardScanName(p, 'TIME_OUT'),
+                fileId: p.actualOutSignatureFileId,
+                w: 100,
+                y: 0
+            }
+            : null;
+        const inGuardSignature = p.actualInSignatureFileId
+            ? {
+                name: getGuardScanName(p, 'TIME_IN'),
+                fileId: p.actualInSignatureFileId,
+                w: 100,
+                y: 0
+            }
+            : null;
+
+        if (outGuardSignature) {
+            await handleSig(outGuardSignature, '.sig-mat-guard-out', '.sig-mat-guard-out-name');
+        } else {
+            const outWrapper = div.querySelector('.sig-mat-guard-out');
+            if (outWrapper) outWrapper.innerHTML = '';
+            const outName = div.querySelector('.sig-mat-guard-out-name');
+            if (outName) outName.innerText = 'Guard';
+        }
+        if (inGuardSignature) {
+            await handleSig(inGuardSignature, '.sig-mat-guard-in', '.sig-mat-guard-in-name');
+        } else {
+            const inWrapper = div.querySelector('.sig-mat-guard-in');
+            if (inWrapper) inWrapper.innerHTML = '';
+            const inName = div.querySelector('.sig-mat-guard-in-name');
+            if (inName) inName.innerText = 'Guard';
+        }
+
+        const handleSig = async (sigData, wrapperSelector, nameSelector) => {
+            const wrapperEls = div.querySelectorAll(wrapperSelector);
+            const nameEls = div.querySelectorAll(nameSelector);
+
+            nameEls.forEach(el => {
+                if (sigData) {
+                    el.innerText = sigData.name;
+                    el.classList.remove('hidden');
+                }
+            });
+
+            if (sigData && sigData.fileId && !sigData.img && isDatabaseSession()) {
+                try {
+                    const blob = await ApiClient.blob(`/signatures/${sigData.fileId}`);
+                    sigData.img = await new Promise((resolve) => {
+                        const reader = new FileReader();
+                        reader.onload = () => resolve(reader.result);
+                        reader.readAsDataURL(blob);
+                    });
+                } catch {}
+            }
+
+            wrapperEls.forEach(el => {
+                if (sigData) {
+                    if (sigData.img) {
+                        el.innerHTML = `<img src="${sigData.img}" class="signature-img" style="width: 100%; max-height: 45px; object-fit: contain;">`;
+                    } else {
+                        el.innerHTML = `<span style="font-family: serif; font-style: italic; font-size: 11px; color: blue;">Digitally Signed</span>`;
+                    }
+                }
+            });
+        };
+
+        await handleSig(p.signatures.imm, '.sig-mat-superior', '.sig-mat-superior-name');
+        await handleSig(p.signatures.pas, '.sig-mat-pas', '.sig-mat-pas-name');
+
+        const preparedSignature = p.preparedBySignatureFileId
+            ? {
+                name: p.userName,
+                fileId: p.preparedBySignatureFileId,
+                w: 100,
+                y: 0
+            }
+            : null;
+        if (preparedSignature) {
+            await handleSig(preparedSignature, '.sig-mat-prepared', '.sig-mat-prepared-name');
+        } else {
+            const preparedWrapper = div.querySelector('.sig-mat-prepared');
+            if (preparedWrapper) {
+                preparedWrapper.innerHTML = '<span style="font-family:serif;font-style:italic;font-size:11px;color:#155CA2;">Digitally Prepared</span>';
+            }
+        }
+
+        pages.push(div);
+    }
+
+    return pages;
+}
+
+async function printSelectedLogs() {
+    const checked = document.querySelectorAll('#adminLogsTable .log-checkbox:checked');
+    const ids = Array.from(checked).map(cb => cb.getAttribute('data-id'));
+    if (ids.length === 0) return;
+
+    showToast(`Loading ${ids.length} document(s)...`, 'info');
+
+    try {
+        const multiContainer = document.getElementById('multiPrintableArea');
+        if (!multiContainer) return;
+        multiContainer.innerHTML = '';
+        multiContainer.classList.remove('hidden');
+
+        document.getElementById('printableArea')?.classList.add('hidden');
+        document.getElementById('materialPrintableArea')?.classList.add('hidden');
+
+        const pagesPairs = [];
+
+        for (const id of ids) {
+            const p = await getGatePassDetail(id);
+            if (!p) continue;
+
+            const isMaterial = p.formTypeCode === 'MATERIAL_GATE_PASS';
+            if (isMaterial) {
+                const pages = await renderMaterialGatePassClone(p);
+                for (let i = 0; i < pages.length; i++) {
+                    pagesPairs.push({ front: pages[i], back: null });
+                }
+            } else {
+                const front = await renderPersonGatePassClone(p);
+                const back = front.querySelector('.qr-back-page');
+                if (back) front.removeChild(back);
+
+                // Enforce A6 bounds on Person Pass so it stacks nicely
+                front.style.width = '148mm';
+                front.style.height = '105mm';
+                front.style.border = '1px dashed #ccc';
+                if(back) {
+                    back.style.width = '148mm';
+                    back.style.height = '105mm';
+                    back.style.border = '1px dashed #ccc';
+                }
+
+                pagesPairs.push({ front, back });
+            }
+        }
+
+        for (let i = 0; i < pagesPairs.length; i += 2) {
+            const pair1 = pagesPairs[i];
+            const pair2 = pagesPairs[i + 1];
+
+            const a4Front = document.createElement('div');
+            a4Front.className = 'a4-wrapper is-batch-print';
+            a4Front.style.cssText = 'display: flex; flex-direction: column; gap: 0; page-break-after: always; width: 210mm; height: 297mm; max-height: 297mm; overflow: hidden; align-items: center; justify-content: flex-start; padding-top: 4mm; box-sizing: border-box;';
+
+            pair1.front.style.cssText += 'page-break-after: avoid !important; break-after: avoid !important; margin-bottom: 4mm !important; box-shadow: none !important; margin-top: 0 !important;';
+            a4Front.appendChild(pair1.front);
+
+            if (pair2) {
+                pair2.front.style.cssText += 'page-break-after: avoid !important; break-after: avoid !important; margin-bottom: 0 !important; box-shadow: none !important; margin-top: 0 !important;';
+                a4Front.appendChild(pair2.front);
+            }
+            multiContainer.appendChild(a4Front);
+
+            const hasBack = !!(pair1.back || (pair2 && pair2.back));
+            if (hasBack) {
+                const a4Back = document.createElement('div');
+                a4Back.className = 'a4-wrapper is-batch-print';
+                a4Back.style.cssText = 'display: flex; flex-direction: column; gap: 0; page-break-after: always; width: 210mm; height: 297mm; max-height: 297mm; overflow: hidden; align-items: center; justify-content: flex-start; padding-top: 4mm; box-sizing: border-box;';
+
+                if (pair1.back) {
+                    pair1.back.style.cssText += 'page-break-before: avoid !important; break-before: avoid !important; page-break-after: avoid !important; break-after: avoid !important; margin-bottom: 4mm !important; margin-top: 0 !important;';
+                    a4Back.appendChild(pair1.back);
+                } else {
+                    const empty = document.createElement('div');
+                    empty.style.cssText = 'height: 105mm; width: 148mm; margin-bottom: 4mm;';
+                    a4Back.appendChild(empty);
+                }
+
+                if (pair2) {
+                    if (pair2.back) {
+                        pair2.back.style.cssText += 'page-break-before: avoid !important; break-before: avoid !important; page-break-after: avoid !important; break-after: avoid !important; margin-bottom: 0 !important; margin-top: 0 !important;';
+                        a4Back.appendChild(pair2.back);
+                    } else {
+                        const empty = document.createElement('div');
+                        empty.style.cssText = 'height: 105mm; width: 148mm; margin-bottom: 0;';
+                        a4Back.appendChild(empty);
+                    }
+                }
+                multiContainer.appendChild(a4Back);
+            }
+        }
+
+        const printSheets = Array.from(multiContainer.querySelectorAll('.a4-wrapper'));
+        printSheets.forEach((sheet, index) => {
+            const isLastSheet = index === printSheets.length - 1;
+            sheet.style.breakAfter = isLastSheet ? 'auto' : 'page';
+            sheet.style.pageBreakAfter = isLastSheet ? 'auto' : 'always';
+        });
+
+        const modal = document.getElementById('printModal');
+        const content = document.getElementById('printModalContent');
+        if (modal && content) {
+            modal.classList.remove('hidden');
+            modal.classList.add('flex');
+            setTimeout(() => {
+                modal.classList.remove('opacity-0');
+                content.classList.remove('scale-95');
+                content.classList.add('scale-100');
+            }, 50);
+        }
+
+        setTimeout(() => {
+            window.print();
+        }, 1000); // 1 sec delay to ensure QR & signatures load/paint
+
+    } catch (error) {
+        showToast('Error preparing batch print.', 'error');
+        console.error(error);
+    }
+}
 
 window.clamp = clamp;
 window.scheduleModalBoxUpdate = scheduleModalBoxUpdate;
@@ -423,5 +1692,10 @@ window.prepareModalForFloating = prepareModalForFloating;
 window.resetDocumentModalLayout = resetDocumentModalLayout;
 window.initializeModalDragResize = initializeModalDragResize;
 window.toggleMaximizeModal = toggleMaximizeModal;
+window.updateModalExpandButton = updateModalExpandButton;
+window.renderMaterialBundle = renderMaterialBundle;
+window.syncMaterialSignatureCopies = syncMaterialSignatureCopies;
 window.viewPass = viewPass;
 window.closeModal = closeModal;
+window.forceCloseModal = forceCloseModal;
+window.printSelectedLogs = printSelectedLogs;

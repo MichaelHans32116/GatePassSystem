@@ -196,7 +196,7 @@ static async Task ImportAsync(
             'IMMEDIATE_SUPERIOR',
             'PRESIDENT',
             'PAS_NOTER',
-            'HR_ADMIN',
+            'DRIVER',
             'SYSTEM_ADMIN'
         );
         """,
@@ -234,31 +234,34 @@ static async Task ImportAsync(
                 ImportBatchId = importBatchId
             },
             transaction);
+
+        await connection.ExecuteAsync(
+            """
+            UPDATE tbl_drivers driver_row
+            JOIN tbl_employees employee
+                ON employee.employee_record_id =
+                   driver_row.employee_record_id
+            SET driver_row.is_active = FALSE
+            WHERE employee.employee_id = @EmployeeId;
+            """,
+            new { inactiveEmployee.EmployeeId },
+            transaction);
     }
 
     foreach (var employee in employees.Where(
                  employee => employee.EmploymentStatus == "ACTIVE"))
     {
-        var departmentId = await connection.ExecuteScalarAsync<long>(
-            """
-            INSERT INTO tbl_departments (
-                department_code,
-                department_name,
-                is_active
-            )
-            VALUES (@Code, @Name, TRUE)
-            ON DUPLICATE KEY UPDATE
-                department_id = LAST_INSERT_ID(department_id),
-                department_name = VALUES(department_name),
-                is_active = TRUE;
-            SELECT LAST_INSERT_ID();
-            """,
-            new
-            {
-                Code = ToReferenceCode(employee.Department),
-                Name = employee.Department
-            },
-            transaction);
+        var organization = ResolveOrganization(employee);
+        var positionDepartmentId = await UpsertDepartmentAsync(
+            connection,
+            transaction,
+            organization.PositionDepartment);
+        long? homeDepartmentId = organization.HomeDepartment is null
+            ? null
+            : await UpsertDepartmentAsync(
+                connection,
+                transaction,
+                organization.HomeDepartment);
 
         var positionId = await connection.ExecuteScalarAsync<long>(
             """
@@ -275,7 +278,7 @@ static async Task ImportAsync(
             """,
             new
             {
-                DepartmentId = departmentId,
+                DepartmentId = positionDepartmentId,
                 Name = employee.Position
             },
             transaction);
@@ -314,7 +317,7 @@ static async Task ImportAsync(
             {
                 employee.EmployeeId,
                 employee.FullName,
-                DepartmentId = departmentId,
+                DepartmentId = homeDepartmentId,
                 PositionId = positionId,
                 DateHired = employee.DateHired.ToDateTime(TimeOnly.MinValue),
                 employee.EmploymentStatus,
@@ -365,6 +368,11 @@ static async Task ImportAsync(
 
         accountsCreatedOrUpdated++;
         await AssignRolesAsync(connection, transaction, accountId, employee, roleIds);
+        await SyncUserDepartmentAssignmentsAsync(
+            connection,
+            transaction,
+            accountId,
+            organization);
 
         if (employee.Position.Contains(
                 "COMPANY DRIVER",
@@ -400,6 +408,8 @@ static async Task ImportAsync(
         }
     }
 
+    await SyncApprovalAssignmentsAsync(connection, transaction);
+
     await connection.ExecuteAsync(
         """
         UPDATE tbl_employee_import_batches
@@ -416,6 +426,298 @@ static async Task ImportAsync(
     Console.WriteLine($"Active accounts created/updated: {accountsCreatedOrUpdated}");
     Console.WriteLine($"Existing accounts archived: {accountsArchived}");
     Console.WriteLine($"Company driver records updated: {driverRecordsUpdated}");
+    Console.WriteLine("Approval assignments synchronized from active role mappings.");
+}
+
+static async Task<long> UpsertDepartmentAsync(
+    MySqlConnection connection,
+    MySqlTransaction transaction,
+    string departmentName) =>
+    await connection.ExecuteScalarAsync<long>(
+        """
+        INSERT INTO tbl_departments (
+            department_code,
+            department_name,
+            is_active
+        )
+        VALUES (@Code, @Name, TRUE)
+        ON DUPLICATE KEY UPDATE
+            department_id = LAST_INSERT_ID(department_id),
+            department_name = VALUES(department_name),
+            is_active = TRUE;
+        SELECT LAST_INSERT_ID();
+        """,
+        new
+        {
+            Code = ToReferenceCode(departmentName),
+            Name = departmentName
+        },
+        transaction);
+
+static EmployeeOrganization ResolveOrganization(EmployeeImportRow employee)
+{
+    var sourceDepartment = employee.Department.Trim();
+    var isLegacyCombinedDepartment =
+        sourceDepartment.Equals(
+            "FINANCE & IT DEPARTMENT",
+            StringComparison.OrdinalIgnoreCase) ||
+        sourceDepartment.Equals(
+            "FINANCE, HR & IT DEPARTMENT",
+            StringComparison.OrdinalIgnoreCase);
+
+    if (!isLegacyCombinedDepartment)
+    {
+        return new EmployeeOrganization(
+            sourceDepartment,
+            sourceDepartment,
+            []);
+    }
+
+    if (employee.EmployeeId.Equals(
+            "GA150",
+            StringComparison.OrdinalIgnoreCase))
+    {
+        return new EmployeeOrganization(
+            null,
+            "FINANCE DEPARTMENT",
+            [
+                "FINANCE DEPARTMENT",
+                "HR DEPARTMENT",
+                "IT DEPARTMENT"
+            ]);
+    }
+
+    var position = employee.Position.ToUpperInvariant();
+    var department = position.Contains("I.T", StringComparison.Ordinal) ||
+                     position.Contains("SOFTWARE", StringComparison.Ordinal) ||
+                     Regex.IsMatch(position, @"(^|\W)IT(\W|$)")
+        ? "IT DEPARTMENT"
+        : position.Contains("HR", StringComparison.Ordinal) ||
+          position.Contains("NURSE", StringComparison.Ordinal)
+            ? "HR DEPARTMENT"
+            : "FINANCE DEPARTMENT";
+
+    return new EmployeeOrganization(department, department, []);
+}
+
+static async Task SyncUserDepartmentAssignmentsAsync(
+    MySqlConnection connection,
+    MySqlTransaction transaction,
+    long accountId,
+    EmployeeOrganization organization)
+{
+    if (organization.ManagedDepartments.Count == 0)
+    {
+        return;
+    }
+
+    await connection.ExecuteAsync(
+        """
+        UPDATE tbl_user_department_assignments
+        SET is_active = FALSE
+        WHERE user_id = @AccountId;
+        """,
+        new { AccountId = accountId },
+        transaction);
+
+    foreach (var departmentName in organization.ManagedDepartments)
+    {
+        var departmentId = await UpsertDepartmentAsync(
+            connection,
+            transaction,
+            departmentName);
+        await connection.ExecuteAsync(
+            """
+            INSERT INTO tbl_user_department_assignments (
+                user_id,
+                department_id,
+                can_manage,
+                can_request,
+                is_active
+            ) VALUES (
+                @AccountId,
+                @DepartmentId,
+                TRUE,
+                TRUE,
+                TRUE
+            )
+            ON DUPLICATE KEY UPDATE
+                can_manage = TRUE,
+                can_request = TRUE,
+                is_active = TRUE;
+            """,
+            new
+            {
+                AccountId = accountId,
+                DepartmentId = departmentId
+            },
+            transaction);
+    }
+}
+
+static async Task SyncApprovalAssignmentsAsync(
+    MySqlConnection connection,
+    MySqlTransaction transaction)
+{
+    await connection.ExecuteAsync(
+        """
+        DELETE FROM tbl_approval_assignments
+        WHERE approval_step_code IN ('SUPERIOR', 'PRESIDENT', 'PAS');
+        """,
+        transaction: transaction);
+
+    var superiorAssignments = new[]
+    {
+        new ApprovalAssignmentSpec("GA133", "ADMIN_DEPARTMENT", 1, false),
+        new ApprovalAssignmentSpec("GA150", "FINANCE_DEPARTMENT", 1, false),
+        new ApprovalAssignmentSpec("GA150", "HR_DEPARTMENT", 1, false),
+        new ApprovalAssignmentSpec("GA150", "IT_DEPARTMENT", 1, false),
+        new ApprovalAssignmentSpec("GA409", "HRAD_DEPARTMENT", 1, false),
+        new ApprovalAssignmentSpec("MP012", "INJECTION_ASSEMBLY_PRODUCTION_DEPARTMENT", 1, false),
+        new ApprovalAssignmentSpec("MP012", "PRODUCTION_ASSEMBLY_DEPARTMENT", 1, false),
+        new ApprovalAssignmentSpec("PP399", "PRODUCTION_ASSEMBLY_DEPARTMENT", 2, true),
+        new ApprovalAssignmentSpec("PP408", "PRODUCTION_ASSEMBLY_DEPARTMENT", 3, true),
+        new ApprovalAssignmentSpec("MP012", "PRODUCTION_INJECTION_DEPARTMENT", 1, false),
+        new ApprovalAssignmentSpec("MP012", "PRODUCTION_DEPARTMENT", 1, false),
+        new ApprovalAssignmentSpec("PP399", "PRODUCTION_DEPARTMENT", 2, true),
+        new ApprovalAssignmentSpec("PP408", "PRODUCTION_DEPARTMENT", 3, true),
+        new ApprovalAssignmentSpec("PP163", "PPC_DEPARTMENT", 1, false),
+        new ApprovalAssignmentSpec("PP052", "PRODUCTION_ENGINEERING_DEPARTMENT", 1, false),
+        new ApprovalAssignmentSpec("PP287", "PURCHASING_DEPARTMENT", 1, false),
+        new ApprovalAssignmentSpec("PP081", "QUALITY_ASSURANCE_DEPARTMENT", 1, false),
+        new ApprovalAssignmentSpec("PP201", "QUALITY_ASSURANCE_DEPARTMENT", 2, true)
+    };
+
+    foreach (var assignment in superiorAssignments)
+    {
+        await InsertApprovalAssignmentAsync(
+            connection,
+            transaction,
+            "SUPERIOR",
+            assignment.EmployeeId,
+            assignment.DepartmentCode,
+            assignment.Priority,
+            assignment.IsAlternate);
+    }
+
+    await InsertApprovalAssignmentAsync(
+        connection,
+        transaction,
+        "PRESIDENT",
+        "GA125",
+        null,
+        1,
+        false);
+
+    await InsertApprovalAssignmentAsync(
+        connection,
+        transaction,
+        "PAS",
+        "GA150",
+        null,
+        1,
+        false,
+        "PERSON_GATE_PASS");
+    await InsertApprovalAssignmentAsync(
+        connection,
+        transaction,
+        "PAS",
+        "GA133",
+        null,
+        1,
+        false,
+        "PERSON_GATE_PASS");
+    await InsertApprovalAssignmentAsync(
+        connection,
+        transaction,
+        "PAS",
+        "GA120",
+        null,
+        2,
+        true,
+        "PERSON_GATE_PASS");
+    await InsertApprovalAssignmentAsync(
+        connection,
+        transaction,
+        "PAS",
+        "GA409",
+        null,
+        4,
+        true,
+        "PERSON_GATE_PASS");
+    await InsertApprovalAssignmentAsync(
+        connection,
+        transaction,
+        "PAS",
+        "GA409",
+        null,
+        1,
+        false,
+        "MATERIAL_GATE_PASS");
+}
+
+static async Task InsertApprovalAssignmentAsync(
+    MySqlConnection connection,
+    MySqlTransaction transaction,
+    string approvalStepCode,
+    string employeeId,
+    string? departmentCode,
+    int priority,
+    bool isAlternate,
+    string? formTypeCode = null)
+{
+    var inserted = await connection.ExecuteAsync(
+        """
+        INSERT INTO tbl_approval_assignments (
+            approval_step_code,
+            form_type_code,
+            approver_user_id,
+            department_id,
+            position_id,
+            priority,
+            is_alternate,
+            is_active
+        )
+        SELECT
+            @ApprovalStepCode,
+            @FormTypeCode,
+            account_row.user_id,
+            department_row.department_id,
+            NULL,
+            @Priority,
+            @IsAlternate,
+            TRUE
+        FROM tbl_employees employee
+        JOIN tbl_user_accounts account_row
+            ON account_row.employee_record_id =
+               employee.employee_record_id
+        LEFT JOIN tbl_departments department_row
+            ON department_row.department_code = @DepartmentCode
+        WHERE employee.employee_id = @EmployeeId
+          AND employee.employment_status_code = 'ACTIVE'
+          AND account_row.account_status_code = 'ACTIVE'
+          AND (
+              @DepartmentCode IS NULL
+              OR department_row.department_id IS NOT NULL
+          );
+        """,
+        new
+        {
+            ApprovalStepCode = approvalStepCode,
+            FormTypeCode = formTypeCode,
+            EmployeeId = employeeId,
+            DepartmentCode = departmentCode,
+            Priority = priority,
+            IsAlternate = isAlternate
+        },
+        transaction);
+
+    if (inserted != 1)
+    {
+        throw new InvalidOperationException(
+            $"Could not configure {approvalStepCode} approver {employeeId} " +
+            $"for {departmentCode ?? "all departments"}.");
+    }
 }
 
 static async Task AssignRolesAsync(
@@ -445,9 +747,11 @@ static async Task AssignRolesAsync(
         desiredRoles.Add("PAS_NOTER");
     }
 
-    if (HrAdminEmployeeIds.Contains(employee.EmployeeId))
+    if (employee.Position.Contains(
+            "COMPANY DRIVER",
+            StringComparison.OrdinalIgnoreCase))
     {
-        desiredRoles.Add("HR_ADMIN");
+        desiredRoles.Add("DRIVER");
     }
 
     if (SystemAdminEmployeeIds.Contains(employee.EmployeeId))
@@ -455,21 +759,31 @@ static async Task AssignRolesAsync(
         desiredRoles.Add("SYSTEM_ADMIN");
     }
 
-    foreach (var roleCode in desiredRoles)
+    foreach (var role in roleIds)
     {
-        if (!roleIds.TryGetValue(roleCode, out var roleId))
+        if (desiredRoles.Contains(role.Key))
         {
-            continue;
+            await connection.ExecuteAsync(
+                """
+                INSERT INTO tbl_user_roles (user_id, role_id, is_active)
+                VALUES (@AccountId, @RoleId, TRUE)
+                ON DUPLICATE KEY UPDATE is_active = TRUE;
+                """,
+                new { AccountId = accountId, RoleId = role.Value },
+                transaction);
         }
-
-        await connection.ExecuteAsync(
-            """
-            INSERT INTO tbl_user_roles (user_id, role_id, is_active)
-            VALUES (@AccountId, @RoleId, TRUE)
-            ON DUPLICATE KEY UPDATE is_active = TRUE;
-            """,
-            new { AccountId = accountId, RoleId = roleId },
-            transaction);
+        else
+        {
+            await connection.ExecuteAsync(
+                """
+                UPDATE tbl_user_roles
+                SET is_active = FALSE
+                WHERE user_id = @AccountId
+                  AND role_id = @RoleId;
+                """,
+                new { AccountId = accountId, RoleId = role.Value },
+                transaction);
+        }
     }
 }
 
@@ -536,14 +850,8 @@ static readonly HashSet<string> PasNoterEmployeeIds =
 [
     "GA150",
     "GA133",
-    "GA120"
-];
-
-static readonly HashSet<string> HrAdminEmployeeIds =
-[
-    "GA150",
-    "GA409",
-    "GA120"
+    "GA120",
+    "GA409"
 ];
 
 static readonly HashSet<string> SystemAdminEmployeeIds =
@@ -560,6 +868,17 @@ internal sealed record EmployeeImportRow(
     string Position,
     DateOnly DateHired,
     string EmploymentStatus);
+
+internal sealed record EmployeeOrganization(
+    string? HomeDepartment,
+    string PositionDepartment,
+    IReadOnlyList<string> ManagedDepartments);
+
+internal sealed record ApprovalAssignmentSpec(
+    string EmployeeId,
+    string DepartmentCode,
+    int Priority,
+    bool IsAlternate);
 
 internal sealed class RoleRow
 {

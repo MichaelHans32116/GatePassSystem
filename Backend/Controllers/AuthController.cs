@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using GatePassSystem.Api.Infrastructure;
 using GatePassSystem.Project.DTOs.Auth;
 using GatePassSystem.Project.Services;
 using Microsoft.AspNetCore.Authorization;
@@ -11,12 +12,12 @@ namespace GatePassSystem.Api.Controllers;
 [Route("api/auth")]
 public sealed class AuthController(
     IAuthService authService,
-    ILogger<AuthController> logger) : ControllerBase
+    ILogger<AuthController> logger) : ApiControllerBase
 {
     [AllowAnonymous]
     [EnableRateLimiting("Auth")]
     [HttpPost("login")]
-    public async Task<ActionResult<LoginResponse>> Login(
+    public async Task<ActionResult<ApiResponse<LoginResponse>>> Login(
         [FromBody] LoginRequest request,
         CancellationToken cancellationToken)
     {
@@ -29,7 +30,7 @@ public sealed class AuthController(
                 request.Username.Trim(),
                 HttpContext.TraceIdentifier);
 
-            return Ok(result.Response);
+            return Success(result.Response!);
         }
 
         logger.LogWarning(
@@ -39,13 +40,24 @@ public sealed class AuthController(
             HttpContext.TraceIdentifier);
 
         return result.ErrorCode == "ACCOUNT_DISABLED"
-            ? StatusCode(StatusCodes.Status403Forbidden, new { message = "Account is disabled." })
-            : Unauthorized(new { message = "Invalid username or password." });
+            ? StatusCode(
+                StatusCodes.Status403Forbidden,
+                new ApiErrorResponse(
+                    "ACCOUNT_DISABLED",
+                    "Account is disabled.",
+                    null,
+                    HttpContext.TraceIdentifier))
+            : Unauthorized(new ApiErrorResponse(
+                "INVALID_CREDENTIALS",
+                "Invalid username or password.",
+                null,
+                HttpContext.TraceIdentifier));
     }
 
     [Authorize]
     [HttpGet("me")]
-    public async Task<ActionResult<AuthUserResponse>> Me(CancellationToken cancellationToken)
+    public async Task<ActionResult<ApiResponse<AuthUserResponse>>> Me(
+        CancellationToken cancellationToken)
     {
         var accountIdClaim = User.FindFirstValue(ClaimTypes.NameIdentifier);
         if (!long.TryParse(accountIdClaim, out var accountId))
@@ -54,6 +66,11 @@ public sealed class AuthController(
         }
 
         var user = await authService.GetCurrentUserAsync(accountId, cancellationToken);
-        return user is null ? Unauthorized() : Ok(user);
+        return user is null ? Unauthorized() : Success(user);
     }
+
+    [Authorize]
+    [HttpPost("logout")]
+    public IActionResult Logout() =>
+        NoContent();
 }

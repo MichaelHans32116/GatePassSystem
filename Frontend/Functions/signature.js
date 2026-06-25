@@ -1,7 +1,141 @@
 // Signature upload, draw, optional background removal, and placement.
 
 var signaturePadState = { drawing: false, lastX: 0, lastY: 0 };
-var PYTHON_BG_REMOVAL_ENDPOINT = 'http://127.0.0.1:8000/remove-background';
+var SAVED_SIGNATURE_STORAGE_PREFIX = 'gatepass:saved-signature:';
+var SIGNATURE_WIDTH_MIN = 12;
+var SIGNATURE_WIDTH_MAX = 70;
+var SIGNATURE_WIDTH_DEFAULT = 34;
+var SIGNATURE_VERTICAL_OFFSET_DEFAULT = 0;
+
+function clampSignatureWidth(width) {
+            const parsed = Number(width);
+            if (!Number.isFinite(parsed)) return SIGNATURE_WIDTH_DEFAULT;
+            return Math.max(SIGNATURE_WIDTH_MIN, Math.min(SIGNATURE_WIDTH_MAX, parsed));
+        }
+
+function clampSignatureYOffset(y) {
+            const parsed = Number(y);
+            return Number.isFinite(parsed) ? parsed : SIGNATURE_VERTICAL_OFFSET_DEFAULT;
+        }
+
+function getSavedSignatureStorageKey(
+            user = currentUser,
+            formTypeCode = 'MATERIAL_GATE_PASS',
+            requestKey = 'default') {
+            const accountKey = user?.accountId || user?.id;
+            return accountKey
+                ? `${SAVED_SIGNATURE_STORAGE_PREFIX}${accountKey}:${formTypeCode}:${requestKey}`
+                : null;
+        }
+
+function getSavedApprovalSignature(
+            user = currentUser,
+            formTypeCode = 'MATERIAL_GATE_PASS',
+            requestKey = 'default') {
+            const key = getSavedSignatureStorageKey(user, formTypeCode, requestKey);
+            if (!key) return null;
+
+            try {
+                let raw = localStorage.getItem(key);
+                if (!raw && requestKey === 'default' && currentViewedPassId) {
+                    raw = localStorage.getItem(
+                        getSavedSignatureStorageKey(user, formTypeCode, currentViewedPassId)
+                    );
+                }
+                if (!raw) return null;
+
+                const parsed = JSON.parse(raw);
+                if (
+                    !parsed ||
+                    typeof parsed.img !== 'string' ||
+                    !parsed.img.startsWith('data:image/')
+                ) {
+                    localStorage.removeItem(key);
+                    return null;
+                }
+
+                return {
+                    img: parsed.img,
+                    w: clampSignatureWidth(parsed.w),
+                    y: clampSignatureYOffset(parsed.y)
+                };
+            } catch {
+                return null;
+            }
+        }
+
+function saveApprovalSignaturePreference(
+            signature,
+            user = currentUser,
+            formTypeCode = 'MATERIAL_GATE_PASS',
+            requestKey = 'default') {
+            const key = getSavedSignatureStorageKey(user, formTypeCode, requestKey);
+            if (!key || !signature?.img) return;
+
+            localStorage.setItem(key, JSON.stringify({
+                img: signature.img,
+                w: clampSignatureWidth(signature.w),
+                y: clampSignatureYOffset(signature.y)
+            }));
+        }
+
+function clearSavedApprovalSignature(
+            user = currentUser,
+            formTypeCode = 'MATERIAL_GATE_PASS',
+            requestKey = 'default') {
+            const key = getSavedSignatureStorageKey(user, formTypeCode, requestKey);
+            if (!key) return;
+            localStorage.removeItem(key);
+        }
+
+function resetApprovalSignatureComposer() {
+            currentUploadedSig = null;
+            currentOriginalSignatureData = null;
+
+            const upload = document.getElementById('sigUpload');
+            const fileName = document.getElementById('sigFileName');
+            const selectedFileRow = document.getElementById('sigSelectedFileRow');
+            const size = document.getElementById('sigSize');
+            const offset = document.getElementById('sigY');
+            const mode = document.getElementById('sigBgMode');
+            const threshold = document.getElementById('sigBgThreshold');
+            const thresholdValue = document.getElementById('sigBgThresholdValue');
+            const bgOptions = document.getElementById('sigBgOptions');
+            const controls = document.getElementById('sigControls');
+            const saveDefault = document.getElementById('saveDefaultSig');
+            const canvas = document.getElementById('signaturePad');
+            const liveSignature = document.getElementById('liveDocumentSig');
+
+            if (upload) upload.value = '';
+            if (fileName) fileName.innerText = '';
+            selectedFileRow?.classList.add('hidden');
+            if (size) size.value = SIGNATURE_WIDTH_DEFAULT;
+            if (offset) offset.value = SIGNATURE_VERTICAL_OFFSET_DEFAULT;
+            if (mode) mode.value = 'none';
+            if (threshold) threshold.value = 20;
+            if (thresholdValue) thresholdValue.innerText = '20';
+            bgOptions?.classList.add('hidden');
+            controls?.classList.add('hidden');
+            if (saveDefault) saveDefault.checked = false;
+
+            if (canvas) {
+                const ctx = canvas.getContext('2d');
+                ctx?.clearRect(0, 0, canvas.width, canvas.height);
+            }
+            liveSignature?.remove();
+
+            setSignatureStatus('Choose an image or switch to Draw Signature.', 'muted');
+        }
+
+function resetAllSignatureState(options = {}) {
+            const clearStoredApproval = options.clearStoredApproval === true;
+            resetApprovalSignatureComposer();
+            if (clearStoredApproval) {
+                clearSavedApprovalSignature();
+            }
+            window.resetMaterialPreparedSignatureState?.();
+        }
+
 function removeSignatureBackground(img, options = {}) {
             let mode = options.mode || 'autoSmart';
             const threshold = Number(options.threshold || 20);
@@ -171,17 +305,47 @@ function featherAlphaEdges(data, width, height) {
         }
 
 function getSignatureTargetContainerId() {
+            const pass = findGatePassRecord();
+            if (pass?.formTypeCode === 'MATERIAL_GATE_PASS') {
+                if (currentUser?.role === 'Security') {
+                    if (pass.status === 'Approved' || pass.status === 'Overdue') return 'sigMatGuardOut';
+                    if (pass.status === 'Outside') return 'sigMatGuardIn';
+                }
+                if (pass.status === 'Pending Superior') return 'sigMatSuperior';
+                if (pass.status === 'Pending PAS') return 'sigMatPas';
+                return currentUser?.canNoteGatePass
+                    ? 'sigMatPas'
+                    : 'sigMatSuperior';
+            }
+            if (currentUser?.role === 'Security') {
+                if (pass?.status === 'Approved' || pass?.status === 'Overdue') return 'vActOutSignature';
+                if (pass?.status === 'Outside') return 'vActInSignature';
+            }
+            if (pass?.status === 'Pending Superior') return 'sigImm';
+            if (pass?.status === 'Pending President') return 'sigPres';
+            if (pass?.status === 'Pending PAS') return 'sigPAS';
             if (!currentUser) return 'sigImm';
             if (currentUser.role === 'President') return 'sigPres';
             if (currentUser.canNoteGatePass) return 'sigPAS';
             return 'sigImm';
         }
 
-function renderSignatureImage(dataUrl, width = 100, y = 0) {
-            const targetDiv = document.getElementById(getSignatureTargetContainerId());
-            if (!targetDiv) return;
+function renderSignatureImage(dataUrl, width = SIGNATURE_WIDTH_DEFAULT, y = SIGNATURE_VERTICAL_OFFSET_DEFAULT) {
+            const targetId = getSignatureTargetContainerId();
+            const targetDiv = document.getElementById(targetId);
+            if (targetDiv) {
+                const safeWidth = clampSignatureWidth(width);
+                const safeYOffset = clampSignatureYOffset(y);
 
-            targetDiv.innerHTML = `<img src="${dataUrl}" id="liveDocumentSig" class="signature-img" style="width: ${width}%; margin-bottom: ${y}px;">`;
+                // IMPORTANT:
+                // Use max-width so the slider can enlarge the signature, but it will not spill outside
+                // the approval cell. The drawn signature is also cropped before rendering, so blank
+                // canvas space will no longer make the signature look tiny.
+                targetDiv.innerHTML = `<img src="${dataUrl}" id="liveDocumentSig" class="signature-img" style="width: ${safeWidth}%; max-width: 96%; margin-bottom: ${safeYOffset}px;">`;
+            }
+            if (targetId?.startsWith('sigMat')) {
+                syncMaterialSignatureCopies?.(targetId);
+            }
         }
 
 function setSignatureStatus(message, type = 'muted') {
@@ -236,17 +400,10 @@ function dataUrlToBlob(dataUrl) {
 async function removeBackgroundWithPython(dataUrl) {
             const formData = new FormData();
             formData.append('file', dataUrlToBlob(dataUrl), 'signature.png');
-
-            const response = await fetch(PYTHON_BG_REMOVAL_ENDPOINT, {
+            const blob = await ApiClient.blob('/signatures/process-background', {
                 method: 'POST',
                 body: formData
             });
-
-            if (!response.ok) {
-                throw new Error('Python background remover failed: ' + response.status);
-            }
-
-            const blob = await response.blob();
             return await new Promise((resolve) => {
                 const reader = new FileReader();
                 reader.onload = () => resolve(reader.result);
@@ -269,22 +426,25 @@ async function processAndRenderSignature(showMessage = true) {
             let mode = document.getElementById('sigBgMode')?.value || 'none';
             const threshold = parseInt(document.getElementById('sigBgThreshold')?.value || '20', 10);
 
-            const currentWidth = document.getElementById('sigSize')?.value || 100;
-            const currentY = document.getElementById('sigY')?.value || 0;
+            const currentWidth = clampSignatureWidth(document.getElementById('sigSize')?.value);
+            const currentY = clampSignatureYOffset(document.getElementById('sigY')?.value);
 
             try {
                 setSignatureBusy(true);
-                setSignatureStatus(mode === 'aiServer' ? 'Processing with local Python remover...' : 'Processing signature preview...', 'info');
+                setSignatureStatus(mode === 'aiServer' ? 'Processing with local remover...' : 'Processing signature preview...', 'info');
 
                 if (mode === 'none') {
                     currentUploadedSig = currentOriginalSignatureData;
-                } else if (mode === 'aiServer') {
-                    showToast('Processing with local Python AI remover...', 'info');
+                } else if (mode === 'aiServer' && isDatabaseSession()) {
+                    showToast('Processing signature with local remover...', 'info');
                     currentUploadedSig = await removeBackgroundWithPython(currentOriginalSignatureData);
                 } else {
                     const img = await loadImageFromDataUrl(currentOriginalSignatureData);
                     let effectiveMode = mode;
-                    if (mode === 'autoSmart') {
+                    if (mode === 'aiServer') {
+                        effectiveMode = 'autoSmart';
+                    }
+                    if (effectiveMode === 'autoSmart') {
                         effectiveMode = detectSimpleBackgroundMode(img);
                     }
                     currentUploadedSig = removeSignatureBackground(img, { mode: effectiveMode, threshold });
@@ -297,28 +457,31 @@ async function processAndRenderSignature(showMessage = true) {
 
                 const statusMessage = mode === 'none'
                     ? 'Signature image attached. Background removal is off.'
-                    : mode === 'aiServer'
-                        ? 'Local Python background removal applied.'
+                    : mode === 'aiServer' && isDatabaseSession()
+                        ? 'Local remover applied.'
+                        : mode === 'aiServer'
+                            ? 'Local auto remover applied.'
                         : `Background removal preview applied: ${mode}, strength ${threshold}.`;
                 setSignatureStatus(statusMessage, 'success');
 
                 if (showMessage) {
                     const message = mode === 'none'
                         ? 'Image attached without background removal.'
-                        : mode === 'aiServer'
-                            ? 'AI background removal applied from local Python server.'
+                        : mode === 'aiServer' && isDatabaseSession()
+                            ? 'Local remover applied.'
+                            : mode === 'aiServer'
+                                ? 'Local auto remover applied.'
                             : `Background removal applied: ${mode} at strength ${threshold}.`;
                     showToast(message, 'success');
                 }
             } catch (error) {
-                console.error(error);
                 const img = await loadImageFromDataUrl(currentOriginalSignatureData);
                 currentUploadedSig = removeSignatureBackground(img, { mode: 'autoSmart', threshold });
                 renderSignatureImage(currentUploadedSig, currentWidth, currentY);
                 document.getElementById('sigBgOptions')?.classList.remove('hidden');
                 document.getElementById('sigControls')?.classList.remove('hidden');
-                setSignatureStatus('Python remover unavailable. Local auto remover was used instead.', 'error');
-                showToast('AI server unavailable. Used local auto remover instead.', 'error');
+                setSignatureStatus('Local auto remover used instead.', 'info');
+                showToast('Used local auto remover instead.', 'info');
             } finally {
                 setSignatureBusy(false);
             }
@@ -347,7 +510,7 @@ function showSignatureSource(source) {
                 drawBtn?.classList.remove('bg-mpiBlue', 'text-white');
                 drawBtn?.classList.add('bg-white', 'text-mpiBlue', 'border', 'border-blue-200');
                 if (!currentOriginalSignatureData && !currentUploadedSig) {
-                    setSignatureStatus('Upload a PNG/JPG signature, or switch to Draw Signature.', 'muted');
+                    setSignatureStatus('Choose an image, or switch to Draw Signature.', 'muted');
                 }
             }
         }
@@ -378,10 +541,10 @@ function setupSignaturePad() {
                 event.preventDefault();
                 const ctx = canvas.getContext('2d');
                 const p = getPoint(event);
-                ctx.lineWidth = 2.2;
+                ctx.lineWidth = 4;
                 ctx.lineCap = 'round';
                 ctx.lineJoin = 'round';
-                ctx.strokeStyle = '#111827';
+                ctx.strokeStyle = '#020617';
                 ctx.beginPath();
                 ctx.moveTo(signaturePadState.lastX, signaturePadState.lastY);
                 ctx.lineTo(p.x, p.y);
@@ -437,6 +600,55 @@ function clearSignaturePad() {
             setSignatureStatus('Signature pad cleared.', 'muted');
         }
 
+function cropTransparentCanvasToSignature(canvas, padding = 14) {
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            const imageData = ctx.getImageData(0, 0, canvas.width, canvas.height);
+            const data = imageData.data;
+
+            let minX = canvas.width;
+            let minY = canvas.height;
+            let maxX = -1;
+            let maxY = -1;
+
+            // Find only the real ink pixels. The rest of the signature pad is transparent blank space.
+            for (let y = 0; y < canvas.height; y++) {
+                for (let x = 0; x < canvas.width; x++) {
+                    const alpha = data[(y * canvas.width + x) * 4 + 3];
+                    if (alpha > 12) {
+                        if (x < minX) minX = x;
+                        if (y < minY) minY = y;
+                        if (x > maxX) maxX = x;
+                        if (y > maxY) maxY = y;
+                    }
+                }
+            }
+
+            if (maxX < 0 || maxY < 0) {
+                return canvas.toDataURL('image/png');
+            }
+
+            const dpr = window.devicePixelRatio || 1;
+            const pad = Math.max(8, Math.round(padding * dpr));
+            minX = Math.max(0, minX - pad);
+            minY = Math.max(0, minY - pad);
+            maxX = Math.min(canvas.width - 1, maxX + pad);
+            maxY = Math.min(canvas.height - 1, maxY + pad);
+
+            const trimmedWidth = maxX - minX + 1;
+            const trimmedHeight = maxY - minY + 1;
+            const output = document.createElement('canvas');
+            output.width = trimmedWidth;
+            output.height = trimmedHeight;
+
+            output.getContext('2d').drawImage(
+                canvas,
+                minX, minY, trimmedWidth, trimmedHeight,
+                0, 0, trimmedWidth, trimmedHeight
+            );
+
+            return output.toDataURL('image/png');
+        }
+
 function useDrawnSignature() {
             const canvas = document.getElementById('signaturePad');
             if (!canvas) return;
@@ -446,15 +658,32 @@ function useDrawnSignature() {
                 return;
             }
             currentOriginalSignatureData = null;
-            currentUploadedSig = canvas.toDataURL('image/png');
-            document.getElementById('sigSize').value = 100;
-            document.getElementById('sigY').value = 0;
-            renderSignatureImage(currentUploadedSig, 100, 0);
+            currentUploadedSig = cropTransparentCanvasToSignature(canvas);
+            document.getElementById('sigSize').value = SIGNATURE_WIDTH_DEFAULT;
+            document.getElementById('sigY').value = SIGNATURE_VERTICAL_OFFSET_DEFAULT;
+            renderSignatureImage(currentUploadedSig, SIGNATURE_WIDTH_DEFAULT, SIGNATURE_VERTICAL_OFFSET_DEFAULT);
             document.getElementById('sigBgOptions')?.classList.add('hidden');
             document.getElementById('sigControls')?.classList.remove('hidden');
             document.getElementById('saveDefaultSig').checked = true;
             setSignatureStatus('Drawn signature added. Adjust size or vertical offset if needed.', 'success');
             showToast('Drawn signature added to document.', 'success');
+        }
+
+function applySignaturePlacementFromControls() {
+            const liveSignature = document.getElementById('liveDocumentSig');
+            const size = document.getElementById('sigSize');
+            const offset = document.getElementById('sigY');
+
+            if (liveSignature && size && offset) {
+                liveSignature.style.width = clampSignatureWidth(size.value) + '%';
+                liveSignature.style.maxWidth = '96%';
+                liveSignature.style.marginBottom = clampSignatureYOffset(offset.value) + 'px';
+
+                const targetId = getSignatureTargetContainerId();
+                if (targetId?.startsWith('sigMat')) {
+                    syncMaterialSignatureCopies?.(targetId);
+                }
+            }
         }
 
 function initializeSignatureControls() {
@@ -471,13 +700,14 @@ function initializeSignatureControls() {
         const reader = new FileReader();
         reader.onload = function(event) {
             currentOriginalSignatureData = event.target.result;
-            size.value = 100;
-            offset.value = 0;
+            size.value = SIGNATURE_WIDTH_DEFAULT;
+            offset.value = SIGNATURE_VERTICAL_OFFSET_DEFAULT;
             mode.value = 'none';
             threshold.value = 20;
             document.getElementById('sigBgThresholdValue').innerText = '20';
             document.getElementById('sigBgOptions')?.classList.remove('hidden');
             document.getElementById('sigFileName').innerText = selectedFile.name;
+            document.getElementById('sigSelectedFileRow')?.classList.remove('hidden');
             processAndRenderSignature();
         };
         reader.readAsDataURL(selectedFile);
@@ -492,15 +722,8 @@ function initializeSignatureControls() {
         if (mode?.value !== 'none') processAndRenderSignature(false);
     });
 
-    const applySignaturePlacement = () => {
-        const liveSignature = document.getElementById('liveDocumentSig');
-        if (!liveSignature) return;
-        liveSignature.style.width = size.value + '%';
-        liveSignature.style.marginBottom = offset.value + 'px';
-    };
-
-    size?.addEventListener('input', applySignaturePlacement);
-    offset?.addEventListener('input', applySignaturePlacement);
+    size?.addEventListener('input', applySignaturePlacementFromControls);
+    offset?.addEventListener('input', applySignaturePlacementFromControls);
 }
 
 window.removeSignatureBackground = removeSignatureBackground;
@@ -511,4 +734,14 @@ window.processAndRenderSignature = processAndRenderSignature;
 window.initializeSignatureControls = initializeSignatureControls;
 window.setupSignaturePad = setupSignaturePad;
 window.resizeSignatureCanvas = resizeSignatureCanvas;
+window.cropTransparentCanvasToSignature = cropTransparentCanvasToSignature;
+window.applySignaturePlacementFromControls = applySignaturePlacementFromControls;
 window.setSignatureStatus = setSignatureStatus;
+window.getSavedApprovalSignature = getSavedApprovalSignature;
+window.saveApprovalSignaturePreference = saveApprovalSignaturePreference;
+window.clearSavedApprovalSignature = clearSavedApprovalSignature;
+window.resetApprovalSignatureComposer = resetApprovalSignatureComposer;
+window.resetAllSignatureState = resetAllSignatureState;
+window.dataUrlToBlob = dataUrlToBlob;
+window.loadImageFromDataUrl = loadImageFromDataUrl;
+window.removeBackgroundWithPython = removeBackgroundWithPython;

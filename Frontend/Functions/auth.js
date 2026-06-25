@@ -21,9 +21,24 @@ function resolveInterfaceRole(roles) {
     if (roleSet.has('SYSTEM_ADMIN')) return 'System Admin';
     if (roleSet.has('SECURITY')) return 'Security';
     if (roleSet.has('PRESIDENT')) return 'President';
-    if (roleSet.has('PAS_NOTER') || roleSet.has('HR_ADMIN')) return 'PAS / HR Admin';
+    if (roleSet.has('PAS_NOTER')) return 'PAS Noter';
     if (roleSet.has('IMMEDIATE_SUPERIOR')) return 'Immediate Superior';
+    if (roleSet.has('DRIVER')) return 'Driver';
     return 'Associate';
+}
+
+function resolveInterfaceRoleLabel(roles) {
+    const roleSet = new Set(roles || []);
+    const labels = [];
+
+    if (roleSet.has('SYSTEM_ADMIN')) labels.push('System Admin');
+    if (roleSet.has('SECURITY')) labels.push('Security');
+    if (roleSet.has('PRESIDENT')) labels.push('President');
+    if (roleSet.has('IMMEDIATE_SUPERIOR')) labels.push('Immediate Superior');
+    if (roleSet.has('PAS_NOTER')) labels.push('PAS');
+    if (roleSet.has('DRIVER')) labels.push('Driver');
+
+    return labels.length > 0 ? labels.join(' / ') : 'Associate';
 }
 
 function mapAuthenticatedUser(apiUser) {
@@ -34,17 +49,80 @@ function mapAuthenticatedUser(apiUser) {
         accountId: apiUser.id,
         name: apiUser.fullName,
         role: resolveInterfaceRole(roles),
+        roleLabel: resolveInterfaceRoleLabel(roles),
         roles,
         permissions: apiUser.permissions || [],
-        dept: apiUser.department || 'System',
+        departmentId: apiUser.departmentId || null,
+        dept: apiUser.department || (
+            (apiUser.requestableDepartments || []).length > 1
+                ? 'Multiple Departments'
+                : 'System'
+        ),
+        managedDepartments: apiUser.managedDepartments || [],
+        requestableDepartments: apiUser.requestableDepartments || [],
         position: apiUser.position || '',
+        employeeQrToken: apiUser.employeeQrToken || null,
         mustChangePassword: Boolean(apiUser.mustChangePassword),
         canNoteGatePass: roles.includes('PAS_NOTER')
     };
 }
 
+function updateAuthenticatedShell(user) {
+    document.getElementById('navUserName').innerText = user.name;
+    document.getElementById('navUserRole').innerText = user.roleLabel || user.role;
+}
+
+function renderRequesterDepartmentSelectors() {
+    const requestable = currentUser?.requestableDepartments || [];
+    const needsSelection = !currentUser?.departmentId && requestable.length > 0;
+    const options = [
+        '<option value="">-- Select department --</option>',
+        ...requestable.map(department =>
+            `<option value="${department.departmentId}">${department.departmentName}</option>`
+        )
+    ].join('');
+
+    [
+        ['personRequesterDepartmentGroup', 'personRequesterDepartment'],
+        ['materialRequesterDepartmentGroup', 'materialRequesterDepartment']
+    ].forEach(([groupId, selectId]) => {
+        const group = document.getElementById(groupId);
+        const select = document.getElementById(selectId);
+        group?.classList.toggle('hidden', !needsSelection);
+        if (!select) return;
+        select.required = needsSelection;
+        select.disabled = !needsSelection;
+        if (needsSelection) {
+            const previous = select.value;
+            select.innerHTML = options;
+            if (requestable.some(item =>
+                String(item.departmentId) === previous
+            )) {
+                select.value = previous;
+            }
+        } else {
+            select.innerHTML = '';
+        }
+    });
+}
+
+function getRequesterDepartmentId(formTypeCode) {
+    if (currentUser?.departmentId) {
+        return currentUser.departmentId;
+    }
+
+    const selectId = formTypeCode === 'MATERIAL_GATE_PASS'
+        ? 'materialRequesterDepartment'
+        : 'personRequesterDepartment';
+    const selected = Number(document.getElementById(selectId)?.value);
+    return Number.isFinite(selected) && selected > 0 ? selected : null;
+}
+
 function showAuthenticatedApp(user, showSignedInToast = true) {
+    clearTransientApplicationState?.();
+    resetRequestForms?.();
     currentUser = user;
+    renderRequesterDepartmentSelectors();
     document.getElementById('loginView').style.opacity = '0';
 
     setTimeout(() => {
@@ -53,23 +131,32 @@ function showAuthenticatedApp(user, showSignedInToast = true) {
         document.getElementById('loginView').style.opacity = '1';
     }, 300);
 
-    document.getElementById('navUserName').innerText = user.name;
-    document.getElementById('navUserRole').innerText = user.role;
+    updateAuthenticatedShell(user);
     setupRoleAccess(user);
+    window.dispatchEvent(new CustomEvent('gatepass:authenticated', {
+        detail: { database: ApiClient.isDatabaseSession(), user }
+    }));
 
     if (showSignedInToast) {
         showToast(`Signed in as ${user.name}`);
     }
 
-    if (user.mustChangePassword) {
-        showToast('Initial password detected. Password-change flow will be enabled next.', 'info');
-    }
 }
 
-function quickLogin(id, pass) {
-    document.getElementById('empId').value = id;
-    document.getElementById('empPass').value = pass;
-    document.getElementById('loginForm').dispatchEvent(new Event('submit'));
+async function refreshAuthenticatedProfile() {
+    if (!ApiClient.hasAccessToken()) return null;
+
+    try {
+        const apiUser = await ApiClient.data('/auth/me');
+        const user = mapAuthenticatedUser(apiUser);
+        currentUser = user;
+        updateAuthenticatedShell(user);
+        return user;
+    } catch {
+        ApiClient.clearAccessToken();
+        currentUser = null;
+        return null;
+    }
 }
 
 async function handleLogin(e) {
@@ -79,22 +166,12 @@ async function handleLogin(e) {
     const submitButton = form.querySelector('button[type="submit"]');
     const username = document.getElementById('empId').value.trim();
     const password = document.getElementById('empPass').value;
-    const mockUser = mockUsers.find(
-        user => user.id === username && user.password === password
-    );
 
     submitButton.disabled = true;
     submitButton.classList.add('opacity-60', 'cursor-wait');
 
     try {
-        if (mockUser) {
-            ApiClient.clearAccessToken();
-            form.reset();
-            showAuthenticatedApp({ ...mockUser, roles: [], permissions: [] });
-            return;
-        }
-
-        const result = await ApiClient.request('/auth/login', {
+        const result = await ApiClient.data('/auth/login', {
             method: 'POST',
             body: JSON.stringify({ username, password })
         });
@@ -105,7 +182,7 @@ async function handleLogin(e) {
     } catch (error) {
         ApiClient.clearAccessToken();
         showToast(
-            error instanceof ApiError ? error.message : 'Unable to connect to the Gate Pass API.',
+            error instanceof ApiError ? error.message : 'Unable to connect to the Form Request API.',
             'error'
         );
     } finally {
@@ -118,15 +195,24 @@ async function restoreAuthenticatedSession() {
     if (!ApiClient.hasAccessToken()) return;
 
     try {
-        const apiUser = await ApiClient.request('/auth/me');
+        const apiUser = await ApiClient.data('/auth/me');
         showAuthenticatedApp(mapAuthenticatedUser(apiUser), false);
     } catch {
         ApiClient.clearAccessToken();
     }
 }
 
-function logout() {
+async function logout() {
+    if (ApiClient.hasAccessToken()) {
+        try {
+            await ApiClient.request('/auth/logout', { method: 'POST' });
+        } catch {
+            // Local token cleanup remains authoritative for the browser session.
+        }
+    }
     ApiClient.clearAccessToken();
+    clearTransientApplicationState?.();
+    resetRequestForms?.();
     currentUser = null;
     document.getElementById('appView').classList.add('hidden');
     document.getElementById('loginView').classList.remove('hidden');
@@ -149,4 +235,6 @@ document.addEventListener('DOMContentLoaded', () => {
 window.togglePassword = togglePassword;
 window.handleLogin = handleLogin;
 window.logout = logout;
-window.quickLogin = quickLogin;
+window.refreshAuthenticatedProfile = refreshAuthenticatedProfile;
+window.renderRequesterDepartmentSelectors = renderRequesterDepartmentSelectors;
+window.getRequesterDepartmentId = getRequesterDepartmentId;

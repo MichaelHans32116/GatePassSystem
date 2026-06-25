@@ -46,9 +46,23 @@ INSERT INTO tbl_approval_step_types (
 ) VALUES
 ('SUPERIOR', 'Immediate Superior Approval', 10),
 ('PRESIDENT', 'President Approval', 20),
-('PAS', 'PAS / HR Noting', 30)
+('PAS', 'PAS Noting', 30)
 ON DUPLICATE KEY UPDATE
     step_name = VALUES(step_name),
+    sort_order = VALUES(sort_order),
+    is_active = TRUE;
+
+INSERT INTO tbl_form_types (
+    form_type_code,
+    form_name,
+    description,
+    sort_order
+) VALUES
+('PERSON_GATE_PASS', 'Person Gate Pass', 'Gate pass for associates leaving company premises.', 10),
+('MATERIAL_GATE_PASS', 'Material Gate Pass', 'Gate pass for materials leaving company premises.', 20)
+ON DUPLICATE KEY UPDATE
+    form_name = VALUES(form_name),
+    description = VALUES(description),
     sort_order = VALUES(sort_order),
     is_active = TRUE;
 
@@ -63,7 +77,7 @@ INSERT INTO tbl_gate_pass_statuses (
 ('DRAFT', 'Draft', 'DRAFT', FALSE, FALSE, 10),
 ('PENDING_SUPERIOR', 'Pending Superior Approval', 'PENDING', FALSE, FALSE, 20),
 ('PENDING_PRESIDENT', 'Pending President Approval', 'PENDING', FALSE, FALSE, 30),
-('PENDING_PAS', 'Pending PAS / HR Noting', 'PENDING', FALSE, FALSE, 40),
+('PENDING_PAS', 'Pending PAS Noting', 'PENDING', FALSE, FALSE, 40),
 ('APPROVED', 'Approved', 'ACTIVE', FALSE, TRUE, 50),
 ('OUTSIDE', 'Currently Outside', 'ACTIVE', FALSE, TRUE, 60),
 ('OVERDUE', 'Overdue Return', 'ACTIVE', FALSE, TRUE, 70),
@@ -195,14 +209,24 @@ INSERT INTO tbl_roles (
 ('ASSOCIATE', 'Associate', 'Can create gate pass requests for their own employee record.'),
 ('IMMEDIATE_SUPERIOR', 'Immediate Superior', 'Can act on assigned superior approval steps.'),
 ('PRESIDENT', 'President', 'Can act on required executive approval steps.'),
-('PAS_NOTER', 'PAS / HR Noter', 'Can perform the final PAS/HR noting step.'),
-('HR_ADMIN', 'HR Administrator', 'Can monitor requests, employees, and operational reports.'),
+('PAS_NOTER', 'PAS Noter', 'Can perform the final PAS noting step.'),
+('DRIVER', 'Driver', 'Can create personal gate passes and be assigned to company vehicles.'),
 ('SECURITY', 'Security', 'Can verify passes and record Time Out and Time In.'),
 ('SYSTEM_ADMIN', 'System Administrator', 'Can manage accounts, roles, configuration, and audit logs.')
 ON DUPLICATE KEY UPDATE
     role_name = VALUES(role_name),
     description = VALUES(description),
     is_active = TRUE;
+
+UPDATE tbl_user_roles user_role
+JOIN tbl_roles role_row
+    ON role_row.role_id = user_role.role_id
+SET user_role.is_active = FALSE
+WHERE role_row.role_code = 'HR_ADMIN';
+
+UPDATE tbl_roles
+SET is_active = FALSE
+WHERE role_code = 'HR_ADMIN';
 
 INSERT INTO tbl_permissions (
     permission_code, description
@@ -281,14 +305,9 @@ SELECT r.role_id, p.permission_id
 FROM tbl_roles r
 JOIN tbl_permissions p ON p.permission_code IN (
     'gatepass.create.own',
-    'gatepass.read.own',
-    'gatepass.read.all',
-    'gatepass.monitor.outside',
-    'employees.read',
-    'fleet.manage',
-    'reports.view'
+    'gatepass.read.own'
 )
-WHERE r.role_code = 'HR_ADMIN'
+WHERE r.role_code = 'DRIVER'
 ON DUPLICATE KEY UPDATE permission_id = VALUES(permission_id);
 
 INSERT INTO tbl_role_permissions (role_id, permission_id)
@@ -308,6 +327,7 @@ JOIN tbl_permissions p ON p.permission_code IN (
     'gatepass.create.own',
     'gatepass.read.own',
     'gatepass.read.all',
+    'gatepass.scan',
     'gatepass.monitor.outside',
     'employees.read',
     'users.manage',
@@ -320,6 +340,136 @@ JOIN tbl_permissions p ON p.permission_code IN (
 WHERE r.role_code = 'SYSTEM_ADMIN'
 ON DUPLICATE KEY UPDATE permission_id = VALUES(permission_id);
 
+INSERT INTO tbl_user_roles (
+    user_id,
+    role_id,
+    assigned_by_user_id,
+    is_active
+)
+SELECT
+    user_account.user_id,
+    role_row.role_id,
+    NULL,
+    TRUE
+FROM tbl_user_accounts user_account
+JOIN tbl_employees employee
+    ON employee.employee_record_id = user_account.employee_record_id
+JOIN tbl_roles role_row
+    ON role_row.role_code = 'PAS_NOTER'
+WHERE employee.employee_id = 'GA409'
+ON DUPLICATE KEY UPDATE
+    is_active = TRUE;
+
+INSERT INTO tbl_approval_assignments (
+    approval_step_code,
+    form_type_code,
+    approver_user_id,
+    department_id,
+    position_id,
+    priority,
+    is_alternate,
+    is_active
+)
+SELECT
+    'PAS',
+    'PERSON_GATE_PASS',
+    user_account.user_id,
+    NULL,
+    NULL,
+    4,
+    TRUE,
+    TRUE
+FROM tbl_user_accounts user_account
+JOIN tbl_employees employee
+    ON employee.employee_record_id = user_account.employee_record_id
+WHERE employee.employee_id = 'GA409'
+  AND NOT EXISTS (
+      SELECT 1
+      FROM tbl_approval_assignments existing
+      WHERE existing.approval_step_code = 'PAS'
+        AND existing.form_type_code = 'PERSON_GATE_PASS'
+        AND existing.approver_user_id = user_account.user_id
+  );
+
+INSERT INTO tbl_approval_assignments (
+    approval_step_code,
+    form_type_code,
+    approver_user_id,
+    department_id,
+    position_id,
+    priority,
+    is_alternate,
+    is_active
+)
+SELECT
+    'PAS',
+    'MATERIAL_GATE_PASS',
+    user_account.user_id,
+    NULL,
+    NULL,
+    1,
+    FALSE,
+    TRUE
+FROM tbl_user_accounts user_account
+JOIN tbl_employees employee
+    ON employee.employee_record_id = user_account.employee_record_id
+WHERE employee.employee_id = 'GA409'
+  AND NOT EXISTS (
+      SELECT 1
+      FROM tbl_approval_assignments existing
+      WHERE existing.approval_step_code = 'PAS'
+        AND existing.form_type_code = 'MATERIAL_GATE_PASS'
+        AND existing.approver_user_id = user_account.user_id
+  );
+
+DELETE role_permission
+FROM tbl_role_permissions role_permission
+JOIN tbl_roles role_row
+    ON role_row.role_id = role_permission.role_id
+JOIN tbl_permissions permission_row
+    ON permission_row.permission_id = role_permission.permission_id
+WHERE role_row.role_code = 'SYSTEM_ADMIN'
+  AND permission_row.permission_code = 'gatepass.scan';
+
+INSERT INTO tbl_schema_versions (
+    version_no,
+    description,
+    script_name
+) VALUES (
+    '004',
+    'Restrict scanning to Security and add employee QR cooldown workflow.',
+    'Database/Migrations/004_security_employee_qr.sql'
+)
+ON DUPLICATE KEY UPDATE
+    description = VALUES(description),
+    script_name = VALUES(script_name);
+
+INSERT INTO tbl_schema_versions (
+    version_no,
+    description,
+    script_name
+) VALUES (
+    '005',
+    'Add the employee and gate pass scan cooldown lookup index.',
+    'Database/Migrations/005_scan_cooldown_index.sql'
+)
+ON DUPLICATE KEY UPDATE
+    description = VALUES(description),
+    script_name = VALUES(script_name);
+
+INSERT INTO tbl_schema_versions (
+    version_no,
+    description,
+    script_name
+) VALUES (
+    '006',
+    'Generalize the app into a form request system and add material gate passes.',
+    'Database/Migrations/006_form_request_material_gate_pass.sql'
+)
+ON DUPLICATE KEY UPDATE
+    description = VALUES(description),
+    script_name = VALUES(script_name);
+
 -- =========================================================
 -- INITIAL ORGANIZATION REFERENCES
 -- =========================================================
@@ -328,6 +478,9 @@ INSERT INTO tbl_departments (
     department_code, department_name
 ) VALUES
 ('ADMIN_DEPARTMENT', 'ADMIN DEPARTMENT'),
+('FINANCE_DEPARTMENT', 'FINANCE DEPARTMENT'),
+('HR_DEPARTMENT', 'HR DEPARTMENT'),
+('IT_DEPARTMENT', 'IT DEPARTMENT'),
 ('FINANCE_IT_DEPARTMENT', 'FINANCE & IT DEPARTMENT'),
 ('FINANCE_HR_IT_DEPARTMENT', 'FINANCE, HR & IT DEPARTMENT'),
 ('HRAD_DEPARTMENT', 'HRAD DEPARTMENT'),
@@ -355,6 +508,10 @@ INSERT INTO tbl_schema_versions (
     '002',
     'Gate pass application, approval outcome, completion timestamps, and status history.',
     'Database/Migrations/002_gate_pass_lifecycle_timestamps.sql'
+), (
+    '003',
+    'Phase 5 role cleanup, PAS routing, employee QR, and fleet workflow.',
+    'Database/Migrations/003_phase5_workflow_defaults.sql'
 )
 ON DUPLICATE KEY UPDATE
     description = VALUES(description),

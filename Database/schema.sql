@@ -88,6 +88,14 @@ CREATE TABLE IF NOT EXISTS tbl_approval_step_types (
     is_active BOOLEAN NOT NULL DEFAULT TRUE
 ) ENGINE=InnoDB;
 
+CREATE TABLE IF NOT EXISTS tbl_form_types (
+    form_type_code VARCHAR(40) PRIMARY KEY,
+    form_name VARCHAR(120) NOT NULL,
+    description VARCHAR(255) NULL,
+    sort_order INT NOT NULL DEFAULT 0,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE
+) ENGINE=InnoDB;
+
 CREATE TABLE IF NOT EXISTS tbl_gate_pass_statuses (
     gate_pass_status_code VARCHAR(40) PRIMARY KEY,
     status_name VARCHAR(100) NOT NULL,
@@ -285,6 +293,7 @@ CREATE TABLE IF NOT EXISTS tbl_user_roles (
 CREATE TABLE IF NOT EXISTS tbl_approval_assignments (
     approval_assignment_id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
     approval_step_code VARCHAR(30) NOT NULL,
+    form_type_code VARCHAR(40) NULL,
     approver_user_id BIGINT UNSIGNED NOT NULL,
     department_id BIGINT UNSIGNED NULL,
     position_id BIGINT UNSIGNED NULL,
@@ -299,6 +308,9 @@ CREATE TABLE IF NOT EXISTS tbl_approval_assignments (
     CONSTRAINT fk_approval_assignments_step
         FOREIGN KEY (approval_step_code)
         REFERENCES tbl_approval_step_types(approval_step_code),
+    CONSTRAINT fk_approval_assignments_form_type
+        FOREIGN KEY (form_type_code)
+        REFERENCES tbl_form_types(form_type_code),
     CONSTRAINT fk_approval_assignments_user
         FOREIGN KEY (approver_user_id) REFERENCES tbl_user_accounts(user_id),
     CONSTRAINT fk_approval_assignments_department
@@ -306,7 +318,30 @@ CREATE TABLE IF NOT EXISTS tbl_approval_assignments (
     CONSTRAINT fk_approval_assignments_position
         FOREIGN KEY (position_id) REFERENCES tbl_positions(position_id),
     INDEX ix_approval_assignment_lookup
-        (approval_step_code, department_id, position_id, is_active, priority)
+        (approval_step_code, department_id, position_id, is_active, priority),
+    INDEX ix_approval_assignment_form_lookup
+        (approval_step_code, form_type_code, department_id, position_id,
+         is_active, priority)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS tbl_user_department_assignments (
+    user_id BIGINT UNSIGNED NOT NULL,
+    department_id BIGINT UNSIGNED NULL,
+    can_manage BOOLEAN NOT NULL DEFAULT FALSE,
+    can_request BOOLEAN NOT NULL DEFAULT TRUE,
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    assigned_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
+    PRIMARY KEY (user_id, department_id),
+    CONSTRAINT fk_user_department_assignment_user
+        FOREIGN KEY (user_id) REFERENCES tbl_user_accounts(user_id),
+    CONSTRAINT fk_user_department_assignment_department
+        FOREIGN KEY (department_id) REFERENCES tbl_departments(department_id),
+    INDEX ix_user_department_request
+        (user_id, can_request, is_active),
+    INDEX ix_user_department_manage
+        (department_id, can_manage, is_active)
 ) ENGINE=InnoDB;
 
 -- =========================================================
@@ -361,12 +396,19 @@ CREATE TABLE IF NOT EXISTS tbl_vehicles (
 CREATE TABLE IF NOT EXISTS tbl_gate_pass_requests (
     gate_pass_id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
     gate_pass_no VARCHAR(50) NOT NULL UNIQUE,
+    form_type_code VARCHAR(40) NOT NULL DEFAULT 'PERSON_GATE_PASS',
+    control_no VARCHAR(20) NOT NULL UNIQUE,
+    form_date DATE NOT NULL,
     requester_user_id BIGINT UNSIGNED NOT NULL,
     requester_employee_id BIGINT UNSIGNED NOT NULL,
     requester_department_id BIGINT UNSIGNED NOT NULL,
     requester_position_id BIGINT UNSIGNED NOT NULL,
+    prepared_by_signature_file_id BIGINT UNSIGNED NULL,
+    authorized_employee_id BIGINT UNSIGNED NULL,
+    authorized_department_id BIGINT UNSIGNED NULL,
     destination VARCHAR(255) NOT NULL,
     purpose TEXT NOT NULL,
+    material_remarks VARCHAR(1000) NULL,
     expected_out_at DATETIME NOT NULL,
     expected_in_at DATETIME NULL,
     will_return BOOLEAN NOT NULL DEFAULT TRUE,
@@ -386,7 +428,9 @@ CREATE TABLE IF NOT EXISTS tbl_gate_pass_requests (
     cancelled_at DATETIME NULL,
     expired_at DATETIME NULL,
     actual_out_at DATETIME NULL,
+    actual_out_signature_file_id BIGINT UNSIGNED NULL,
     actual_in_at DATETIME NULL,
+    actual_in_signature_file_id BIGINT UNSIGNED NULL,
     completed_at DATETIME NULL,
     version_no INT UNSIGNED NOT NULL DEFAULT 1,
     created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
@@ -394,6 +438,8 @@ CREATE TABLE IF NOT EXISTS tbl_gate_pass_requests (
         ON UPDATE CURRENT_TIMESTAMP,
     CONSTRAINT fk_gate_pass_requester_user
         FOREIGN KEY (requester_user_id) REFERENCES tbl_user_accounts(user_id),
+    CONSTRAINT fk_gate_pass_form_type
+        FOREIGN KEY (form_type_code) REFERENCES tbl_form_types(form_type_code),
     CONSTRAINT fk_gate_pass_requester_employee
         FOREIGN KEY (requester_employee_id)
         REFERENCES tbl_employees(employee_record_id),
@@ -402,6 +448,12 @@ CREATE TABLE IF NOT EXISTS tbl_gate_pass_requests (
         REFERENCES tbl_departments(department_id),
     CONSTRAINT fk_gate_pass_request_position
         FOREIGN KEY (requester_position_id) REFERENCES tbl_positions(position_id),
+    CONSTRAINT fk_gate_pass_authorized_employee
+        FOREIGN KEY (authorized_employee_id)
+        REFERENCES tbl_employees(employee_record_id),
+    CONSTRAINT fk_gate_pass_authorized_department
+        FOREIGN KEY (authorized_department_id)
+        REFERENCES tbl_departments(department_id),
     CONSTRAINT fk_gate_pass_vehicle_usage
         FOREIGN KEY (vehicle_usage_code)
         REFERENCES tbl_vehicle_usage_types(vehicle_usage_code),
@@ -425,7 +477,18 @@ CREATE TABLE IF NOT EXISTS tbl_gate_pass_requests (
     INDEX ix_gate_pass_approval_completed
         (approval_completed_at, gate_pass_status_code),
     INDEX ix_gate_pass_transaction_completed
-        (completed_at, gate_pass_status_code)
+        (completed_at, gate_pass_status_code),
+    INDEX ix_gate_pass_form_type_status
+        (form_type_code, gate_pass_status_code, created_at),
+    INDEX ix_gate_pass_authorized_employee
+        (authorized_employee_id, form_date)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS tbl_form_control_sequences (
+    control_date DATE PRIMARY KEY,
+    last_sequence INT UNSIGNED NOT NULL,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS tbl_gate_pass_status_history (
@@ -501,6 +564,17 @@ CREATE TABLE IF NOT EXISTS tbl_signature_files (
     INDEX ix_signature_owner_active (owner_user_id, is_active)
 ) ENGINE=InnoDB;
 
+ALTER TABLE tbl_gate_pass_requests
+    ADD CONSTRAINT fk_gate_pass_prepared_signature
+        FOREIGN KEY (prepared_by_signature_file_id)
+        REFERENCES tbl_signature_files(signature_file_id),
+    ADD CONSTRAINT fk_gate_pass_actual_out_signature
+        FOREIGN KEY (actual_out_signature_file_id)
+        REFERENCES tbl_signature_files(signature_file_id),
+    ADD CONSTRAINT fk_gate_pass_actual_in_signature
+        FOREIGN KEY (actual_in_signature_file_id)
+        REFERENCES tbl_signature_files(signature_file_id);
+
 CREATE TABLE IF NOT EXISTS tbl_approval_signatures (
     approval_step_id BIGINT UNSIGNED PRIMARY KEY,
     signature_file_id BIGINT UNSIGNED NOT NULL,
@@ -511,6 +585,24 @@ CREATE TABLE IF NOT EXISTS tbl_approval_signatures (
     CONSTRAINT fk_approval_signature_file
         FOREIGN KEY (signature_file_id)
         REFERENCES tbl_signature_files(signature_file_id)
+) ENGINE=InnoDB;
+
+CREATE TABLE IF NOT EXISTS tbl_material_gate_pass_items (
+    material_item_id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+    gate_pass_id BIGINT UNSIGNED NOT NULL,
+    line_no INT UNSIGNED NOT NULL,
+    item_no VARCHAR(80) NULL,
+    description VARCHAR(500) NOT NULL,
+    quantity DECIMAL(12, 3) NOT NULL,
+    unit VARCHAR(50) NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_material_item_gate_pass
+        FOREIGN KEY (gate_pass_id)
+        REFERENCES tbl_gate_pass_requests(gate_pass_id),
+    UNIQUE KEY ux_material_item_line (gate_pass_id, line_no),
+    INDEX ix_material_item_description (description(120))
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS tbl_vehicle_reservations (
@@ -563,7 +655,11 @@ CREATE TABLE IF NOT EXISTS tbl_gate_pass_scans (
         REFERENCES tbl_scan_actions(scan_action_code),
     INDEX ix_scans_request_time (gate_pass_id, scanned_at),
     INDEX ix_scans_guard_time (scanned_by_user_id, scanned_at),
-    INDEX ix_scans_result_time (result_code, scanned_at)
+    INDEX ix_scans_result_time (result_code, scanned_at),
+    INDEX ix_scans_identifier_time (
+        provided_identifier_hash,
+        scanned_at
+    )
 ) ENGINE=InnoDB;
 
 CREATE TABLE IF NOT EXISTS tbl_notifications (
@@ -608,6 +704,7 @@ CREATE OR REPLACE VIEW view_security_gate_queue AS
 SELECT
     gpr.gate_pass_id,
     gpr.gate_pass_no,
+    gpr.control_no,
     gpr.gate_pass_status_code,
     gps.status_name,
     gpr.will_return,
@@ -625,9 +722,9 @@ FROM tbl_gate_pass_requests gpr
 JOIN tbl_gate_pass_statuses gps
     ON gps.gate_pass_status_code = gpr.gate_pass_status_code
 JOIN tbl_employees e
-    ON e.employee_record_id = gpr.requester_employee_id
+    ON e.employee_record_id = COALESCE(gpr.authorized_employee_id, gpr.requester_employee_id)
 JOIN tbl_departments d
-    ON d.department_id = gpr.requester_department_id
+    ON d.department_id = COALESCE(gpr.authorized_department_id, gpr.requester_department_id)
 LEFT JOIN tbl_vehicles v
     ON v.vehicle_id = gpr.vehicle_id
 LEFT JOIN tbl_drivers dr
@@ -696,13 +793,25 @@ CREATE OR REPLACE VIEW view_gate_pass_records AS
 SELECT
     gpr.gate_pass_id,
     gpr.gate_pass_no,
+    gpr.control_no,
+    gpr.form_type_code,
+    form_type.form_name,
+    gpr.form_date,
     gpr.requester_user_id,
-    e.employee_id,
-    e.full_name,
-    d.department_name,
-    p.position_name,
+    gpr.requester_employee_id,
+    gpr.prepared_by_signature_file_id,
+    requester.employee_id,
+    requester.full_name,
+    requester_department.department_name,
+    requester_position.position_name,
+    gpr.authorized_employee_id,
+    authorized_employee.employee_id AS authorized_employee_no,
+    authorized_employee.full_name AS authorized_employee_name,
+    gpr.authorized_department_id,
+    authorized_department.department_name AS authorized_department_name,
     gpr.destination,
     gpr.purpose,
+    gpr.material_remarks,
     gpr.gate_pass_status_code,
     gps.status_name,
     gps.status_group,
@@ -716,6 +825,8 @@ SELECT
     gpr.expected_in_at,
     gpr.actual_out_at,
     gpr.actual_in_at,
+    gpr.actual_out_signature_file_id,
+    gpr.actual_in_signature_file_id,
     gpr.completed_at,
     CASE
         WHEN gpr.approved_at IS NOT NULL THEN 'APPROVED'
@@ -727,11 +838,17 @@ SELECT
     gpr.created_at,
     gpr.updated_at
 FROM tbl_gate_pass_requests gpr
+JOIN tbl_form_types form_type
+    ON form_type.form_type_code = gpr.form_type_code
 JOIN tbl_gate_pass_statuses gps
     ON gps.gate_pass_status_code = gpr.gate_pass_status_code
-JOIN tbl_employees e
-    ON e.employee_record_id = gpr.requester_employee_id
-JOIN tbl_departments d
-    ON d.department_id = gpr.requester_department_id
-JOIN tbl_positions p
-    ON p.position_id = gpr.requester_position_id;
+JOIN tbl_employees requester
+    ON requester.employee_record_id = gpr.requester_employee_id
+JOIN tbl_departments requester_department
+    ON requester_department.department_id = gpr.requester_department_id
+JOIN tbl_positions requester_position
+    ON requester_position.position_id = gpr.requester_position_id
+LEFT JOIN tbl_employees authorized_employee
+    ON authorized_employee.employee_record_id = gpr.authorized_employee_id
+LEFT JOIN tbl_departments authorized_department
+    ON authorized_department.department_id = gpr.authorized_department_id;

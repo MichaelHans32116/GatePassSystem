@@ -11,7 +11,7 @@ function setupRoleAccess(user) {
             // Reset visibility
             document.getElementById('navItemApply').style.display = 'flex';
             document.getElementById('navGroupApprovals').style.display = 'block';
-            document.getElementById('navGroupSecurity').style.display = 'block';
+            document.getElementById('navGroupSecurity').style.display = 'none';
             document.getElementById('navGroupAdmin').style.display = 'block';
             document.getElementById('navGroupHR').style.display = 'none';
             document.getElementById('navItemDashboard').style.display = 'flex';
@@ -22,6 +22,7 @@ function setupRoleAccess(user) {
             document.getElementById('tab-depts').style.display = 'inline-block';
 
             if (user.role === 'Security') {
+                document.getElementById('navGroupSecurity').style.display = 'block';
                 document.getElementById('navItemDashboard').style.display = 'flex';
                 document.getElementById('navItemApply').style.display = 'none';
                 document.getElementById('navGroupApprovals').style.display = 'none';
@@ -49,7 +50,7 @@ function setupRoleAccess(user) {
                 // Associates / Immediate Superiors / HR
                 document.getElementById('navGroupSecurity').style.display = 'none';
 
-                if (user.role === 'Associate') {
+                if (user.role === 'Associate' || user.role === 'Driver') {
                     document.getElementById('navGroupApprovals').style.display = 'none';
                     document.getElementById('navGroupAdmin').style.display = 'none';
                 } else {
@@ -69,7 +70,11 @@ function setupRoleAccess(user) {
             }
         }
 
-function switchSection(targetId) {
+async function switchSection(targetId) {
+            const sectionTargetId = targetId === 'fleetManagement'
+                ? 'adminPanel'
+                : targetId;
+            if (sectionTargetId !== 'guardScan') stopQrCamera?.();
             document.querySelectorAll('.nav-item').forEach(link => link.classList.remove('active'));
             const targetLink = document.querySelector(`.nav-item[data-target="${targetId}"]`);
             if(targetLink) targetLink.classList.add('active');
@@ -80,7 +85,7 @@ function switchSection(targetId) {
             }
 
             const titles = {
-                'dashBoard':'Overview Dashboard', 'applyPass':'New Gate Pass',
+                'dashBoard':'Overview Dashboard', 'applyPass':'New Form Request',
                 'approvals':'Workflow Approvals', 'guardScan':'Security QR Scanner',
                 'fleetManagement': 'Vehicles & Drivers',
                 'adminPanel': currentUser && currentUser.role === 'System Admin' ? 'System Configuration' : 'Department Logs'
@@ -88,16 +93,19 @@ function switchSection(targetId) {
             document.getElementById('pageTitle').innerText = titles[targetId] || 'System';
 
             document.querySelectorAll('.view-section').forEach(sec => sec.classList.add('hidden'));
-            const targetSec = document.getElementById('sec-' + targetId);
+            const targetSec = document.getElementById('sec-' + sectionTargetId);
             if(targetSec) {
                 targetSec.classList.remove('hidden');
                 targetSec.classList.remove('fade-in'); void targetSec.offsetWidth; targetSec.classList.add('fade-in');
             }
 
-            refreshDashboards();
-            if(targetId === 'applyPass') updateApprovalRoutePreview();
-            if(targetId === 'adminPanel') {
-                if(targetLink && targetLink.dataset.target === 'fleetManagement') {
+            if(sectionTargetId === 'applyPass') {
+                selectRequestFormType('PERSON_GATE_PASS');
+            }
+            await refreshApplicationState('switch-section');
+            if(sectionTargetId === 'guardScan') initializeQrCameras();
+            if(sectionTargetId === 'adminPanel') {
+                if(targetId === 'fleetManagement') {
                     switchAdminTab('fleet');
                 } else {
                     switchAdminTab('logs');
@@ -107,6 +115,20 @@ function switchSection(targetId) {
         }
 
 
+function setNavigationForAdminTab(tabId) {
+            const navTarget = tabId === 'fleet' ? 'fleetManagement' : 'adminPanel';
+            document.querySelectorAll('.nav-item').forEach(link => link.classList.remove('active'));
+            document.querySelector(`.nav-item[data-target="${navTarget}"]`)?.classList.add('active');
+
+            const title = tabId === 'fleet'
+                ? 'Vehicles & Drivers'
+                : (currentUser && currentUser.role === 'System Admin' ? 'System Configuration' : 'Department Logs');
+            const titleEl = document.getElementById('pageTitle');
+            if (titleEl) titleEl.innerText = title;
+        }
+
+
 window.toggleSidebar = toggleSidebar;
 window.setupRoleAccess = setupRoleAccess;
 window.switchSection = switchSection;
+window.setNavigationForAdminTab = setNavigationForAdminTab;

@@ -17,6 +17,12 @@ Every application/importer connection sets the MariaDB session timezone to UTC.
 Database tables use HowConnect-style `tbl_` names and explicit entity keys,
 while C# keeps standard PascalCase naming.
 
+Phase 3 controllers expose gate pass requests, approval queues and decisions,
+Security scans, fleet/driver data, dashboard snapshots, and protected
+signature upload/download. JWT `permission` claims are enforced through named
+authorization policies. API responses use consistent success, paged, business
+error, validation, and trace-ID contracts.
+
 ## Local setup
 
 1. Start XAMPP MariaDB.
