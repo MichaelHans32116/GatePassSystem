@@ -377,8 +377,8 @@ public sealed class SecurityRepository(
             await connection.QuerySingleOrDefaultAsync<string>(
                 new CommandDefinition(
                     """
-                    SELECT CONCAT(first_name, ' ', last_name)
-                    FROM tbl_employee_records
+                    SELECT full_name
+                    FROM tbl_employees
                     WHERE employee_record_id = @EmployeeRecordId;
                     """,
                     new { EmployeeRecordId = employeeRecordId },
@@ -389,7 +389,7 @@ public sealed class SecurityRepository(
             new CommandDefinition(
                 """
                 SELECT
-                    r.gate_pass_id      AS GatePassId,
+                    CAST(r.gate_pass_id AS SIGNED) AS GatePassId,
                     r.gate_pass_no      AS GatePassNo,
                     r.control_no        AS ControlNo,
                     ft.form_name        AS FormTypeName,
@@ -420,7 +420,7 @@ public sealed class SecurityRepository(
             new CommandDefinition(
                 """
                 SELECT
-                    r.gate_pass_id      AS GatePassId,
+                    CAST(r.gate_pass_id AS SIGNED) AS GatePassId,
                     r.gate_pass_no      AS GatePassNo,
                     r.control_no        AS ControlNo,
                     ft.form_name        AS FormTypeName,
@@ -509,9 +509,9 @@ public sealed class SecurityRepository(
             new CommandDefinition(
                 """
                 SELECT employee_record_id
-                FROM tbl_employee_records
+                FROM tbl_employees
                 WHERE employee_id = @EmployeeId
-                  AND status = 'Active';
+                  AND employment_status_code = 'Active';
                 """,
                 new { EmployeeId = employeeId },
                 cancellationToken: cancellationToken));

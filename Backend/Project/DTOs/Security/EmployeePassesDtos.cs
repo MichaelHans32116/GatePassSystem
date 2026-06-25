@@ -8,9 +8,9 @@ public sealed record EmployeePassItem(
     string? Destination,
     string StatusName,
     string StatusGroup,
-    string? DateFiled,
-    string? ExpectedOut,
-    string? CompletedAt,
+    DateTime? DateFiled,
+    DateTime? ExpectedOut,
+    DateTime? CompletedAt,
     bool WillReturn);
 
 public sealed record EmployeePassesResult(

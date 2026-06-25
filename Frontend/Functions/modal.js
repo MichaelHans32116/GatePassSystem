@@ -960,7 +960,7 @@ async function viewPass(id, isReviewing = false) {
                                     reader.onload = () => resolve(reader.result);
                                     reader.readAsDataURL(blob);
                                 });
-                                containerEl.innerHTML = `<img src="${imgUrl}" class="max-h-full w-auto object-contain">`;
+                                containerEl.innerHTML = `<img src="${imgUrl}" class="max-h-full h-full w-auto object-contain" style="max-height: 100%; height: 100%;">`;
                             } catch {
                                 containerEl.innerHTML = `<span style="font-family: serif; font-style: italic; font-size: 8px; color: blue;">Signed</span>`;
                             }
@@ -1193,7 +1193,7 @@ async function renderPersonGatePassClone(p) {
             if (sigData.img) {
                 const w = sigData.w || 100;
                 const y = sigData.y || 0;
-                el.innerHTML = `<img src="${sigData.img}" class="signature-img" style="width: ${w}%; margin-bottom: ${y}px;">`;
+                el.innerHTML = `<img src="${sigData.img}" class="signature-img" style="width: ${w}%; max-height: 100%; margin-bottom: ${y}px; object-fit: contain;">`;
             } else {
                 el.innerHTML = `<span style="font-family: serif; font-style: italic; font-size: 14px; color: blue;">Digitally Signed</span>`;
             }
