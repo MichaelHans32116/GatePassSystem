@@ -100,8 +100,10 @@ public sealed class SecurityRepository(
                     WHERE (
                         (
                             @EmployeeRecordId IS NOT NULL
-                            AND request_row.requester_employee_id =
-                                @EmployeeRecordId
+                            AND (
+                                request_row.requester_employee_id = @EmployeeRecordId
+                                OR request_row.authorized_employee_id = @EmployeeRecordId
+                            )
                             AND status_row.is_terminal = FALSE
                         ) OR (
                             @QrTokenHash IS NOT NULL
@@ -112,10 +114,10 @@ public sealed class SecurityRepository(
                                 request_row.gate_pass_no = @ManualGatePassNo
                                 OR request_row.control_no = @ManualGatePassNo
                                 OR (
-                                    LENGTH(@ManualGatePassNo) = 3
+                                    LENGTH(@ManualGatePassNo) <= 6
                                     AND (
-                                        request_row.gate_pass_no LIKE CONCAT('%-', @ManualGatePassNo)
-                                        OR request_row.control_no LIKE CONCAT('%-', @ManualGatePassNo)
+                                        request_row.gate_pass_no LIKE CONCAT('%-', LPAD(@ManualGatePassNo, 6, '0'))
+                                        OR request_row.control_no LIKE CONCAT('%-', LPAD(@ManualGatePassNo, 3, '0'))
                                     )
                                 )
                             )

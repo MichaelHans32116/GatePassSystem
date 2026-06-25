@@ -128,9 +128,9 @@ BEGIN
     SET v_gate_pass_id = LAST_INSERT_ID();
     SET v_gate_pass_no = CONCAT(
         'GP-',
-        DATE_FORMAT(UTC_TIMESTAMP(), '%Y%m%d'),
+        DATE_FORMAT(v_form_date, '%Y%m%d'),
         '-',
-        LPAD(v_gate_pass_id, 6, '0')
+        LPAD(v_control_sequence, 6, '0')
     );
 
     UPDATE tbl_gate_pass_requests
@@ -295,7 +295,7 @@ BEGIN
         'MGP-',
         DATE_FORMAT(p_form_date, '%Y%m%d'),
         '-',
-        LPAD(v_gate_pass_id, 6, '0')
+        LPAD(v_control_sequence, 6, '0')
     );
 
     UPDATE tbl_gate_pass_requests

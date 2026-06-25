@@ -153,6 +153,22 @@ if ($databaseExists -eq 0) {
             Write-Host 'Applying database migration 007...' -ForegroundColor Yellow
             Invoke-MySqlSource 'Database\Migrations\007_department_access_shared_pas.sql'
         }
+
+        $pasRestrictionApplied = Invoke-MySqlScalarInt `
+            "SELECT COUNT(*) FROM gate_pass_system.tbl_schema_versions WHERE version_no='008';"
+
+        if ($pasRestrictionApplied -eq 0) {
+            Write-Host 'Applying database migration 008...' -ForegroundColor Yellow
+            Invoke-MySqlSource 'Database\Migrations\008_material_gate_pass_pas_restriction.sql'
+        }
+
+        $queueViewUpdateApplied = Invoke-MySqlScalarInt `
+            "SELECT COUNT(*) FROM gate_pass_system.tbl_schema_versions WHERE version_no='009';"
+
+        if ($queueViewUpdateApplied -eq 0) {
+            Write-Host 'Applying database migration 009...' -ForegroundColor Yellow
+            Invoke-MySqlSource 'Database\Migrations\009_update_security_gate_queue_view.sql'
+        }
     }
 }
 

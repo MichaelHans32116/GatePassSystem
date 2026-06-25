@@ -467,29 +467,23 @@ async function renderMaterialBundle(pass) {
 
                         <!-- GUARD TRACKING ROW FOR MATERIAL (Document View) -->
                         <div class="guard-status-row ${['Approved', 'Outside', 'Overdue', 'Returned', 'Closed'].includes(pass.status) ? 'flex' : 'hidden'} flex-row justify-between items-end w-full mt-1 pt-0" style="-webkit-print-color-adjust: exact; print-color-adjust: exact;">
-                            <div class="flex items-end space-x-1 w-[26%] text-[7.5px]">
+                            <div class="flex items-end space-x-1 w-[33%] text-[7.5px]">
                                 <span class="font-bold text-gray-500 uppercase whitespace-nowrap">ACTUAL OUT</span>
                                 <div class="guard-scan-stack">
                                     <div class="guard-scan-time">${pass.actualOut || ''}</div>
                                     <div class="guard-scan-name">${materialEscape(getGuardScanName(pass, 'TIME_OUT'))}</div>
                                 </div>
                             </div>
-                            <div class="flex items-end space-x-1 w-[26%] text-[7.5px]">
+                            <div class="flex items-end space-x-1 w-[33%] text-[7.5px]">
                                 <span class="font-bold text-gray-500 uppercase whitespace-nowrap">ACTUAL IN</span>
                                 <div class="guard-scan-stack">
                                     <div class="guard-scan-time">${pass.actualIn || ''}</div>
                                     <div class="guard-scan-name">${materialEscape(getGuardScanName(pass, 'TIME_IN'))}</div>
                                 </div>
                             </div>
-                            <div class="flex items-end space-x-1 w-[28%] text-[7.5px]">
+                            <div class="flex items-end space-x-1 w-[34%] text-[7.5px]">
                                 <span class="font-bold text-gray-500 uppercase whitespace-nowrap">REMARKS</span>
                                 <div class="border-b border-gray-400 flex-grow text-center font-bold text-[7.5px] pb-0.5">${materialEscape(getGuardRemarksText(pass))}</div>
-                            </div>
-                            <div class="flex flex-col items-center justify-center w-[16%]">
-                                <div class="px-2 py-0.5 rounded-full font-extrabold text-[7.5px] text-center select-none uppercase tracking-wide ${['Returned', 'Closed', 'Approved'].includes(pass.status) ? 'bg-green-100 text-green-800' : (['Outside', 'Overdue'].includes(pass.status) ? 'bg-blue-100 text-mpiBlue' : 'bg-gray-200 text-gray-600')}">
-                                    ${pass.status.toUpperCase()}
-                                </div>
-                                <div class="text-[6.5px] font-semibold text-gray-700 mt-1 border-t border-black w-full text-center pt-0.5">Guard Name</div>
                             </div>
                         </div>
 
@@ -1249,27 +1243,23 @@ async function renderMaterialGatePassClone(p) {
 
             <!-- GUARD TRACKING ROW FOR MATERIAL -->
             <div class="guard-status-row hidden flex-row justify-between items-end w-full mt-1 pt-0" style="-webkit-print-color-adjust: exact; print-color-adjust: exact;">
-                <div class="flex items-end space-x-1 w-[26%] text-[7.5px]">
+                <div class="flex items-end space-x-1 w-[33%] text-[7.5px]">
                     <span class="font-bold text-gray-500 uppercase whitespace-nowrap">ACTUAL OUT</span>
                     <div class="guard-scan-stack">
                         <div class="vActOut guard-scan-time"></div>
                         <div class="vActOutGuardName guard-scan-name"></div>
                     </div>
                 </div>
-                <div class="flex items-end space-x-1 w-[26%] text-[7.5px]">
+                <div class="flex items-end space-x-1 w-[33%] text-[7.5px]">
                     <span class="font-bold text-gray-500 uppercase whitespace-nowrap">ACTUAL IN</span>
                     <div class="guard-scan-stack">
                         <div class="vActIn guard-scan-time"></div>
                         <div class="vActInGuardName guard-scan-name"></div>
                     </div>
                 </div>
-                <div class="flex items-end space-x-1 w-[28%] text-[7.5px]">
+                <div class="flex items-end space-x-1 w-[34%] text-[7.5px]">
                     <span class="font-bold text-gray-500 uppercase whitespace-nowrap">REMARKS</span>
                     <div class="vGuardRemarks border-b border-gray-400 flex-grow text-center font-bold text-[7.5px] pb-0.5"></div>
-                </div>
-                <div class="flex flex-col items-center justify-center w-[16%]">
-                    <div class="vGuardBadge px-2 py-0.5 rounded-full font-extrabold text-[7.5px] text-center select-none uppercase tracking-wide bg-gray-200 text-gray-600">PENDING</div>
-                    <div class="text-[6.5px] font-semibold text-gray-700 mt-1 border-t border-black w-full text-center pt-0.5">Guard Name</div>
                 </div>
             </div>
 

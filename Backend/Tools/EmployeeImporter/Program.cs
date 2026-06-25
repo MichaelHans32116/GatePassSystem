@@ -616,7 +616,8 @@ static async Task SyncApprovalAssignmentsAsync(
         "GA150",
         null,
         1,
-        false);
+        false,
+        "PERSON_GATE_PASS");
     await InsertApprovalAssignmentAsync(
         connection,
         transaction,
@@ -624,7 +625,8 @@ static async Task SyncApprovalAssignmentsAsync(
         "GA133",
         null,
         1,
-        false);
+        false,
+        "PERSON_GATE_PASS");
     await InsertApprovalAssignmentAsync(
         connection,
         transaction,
@@ -632,7 +634,8 @@ static async Task SyncApprovalAssignmentsAsync(
         "GA120",
         null,
         2,
-        true);
+        true,
+        "PERSON_GATE_PASS");
     await InsertApprovalAssignmentAsync(
         connection,
         transaction,

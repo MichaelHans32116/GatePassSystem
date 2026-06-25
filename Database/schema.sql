@@ -714,15 +714,14 @@ FROM tbl_gate_pass_requests gpr
 JOIN tbl_gate_pass_statuses gps
     ON gps.gate_pass_status_code = gpr.gate_pass_status_code
 JOIN tbl_employees e
-    ON e.employee_record_id = gpr.requester_employee_id
+    ON e.employee_record_id = COALESCE(gpr.authorized_employee_id, gpr.requester_employee_id)
 JOIN tbl_departments d
-    ON d.department_id = gpr.requester_department_id
+    ON d.department_id = COALESCE(gpr.authorized_department_id, gpr.requester_department_id)
 LEFT JOIN tbl_vehicles v
     ON v.vehicle_id = gpr.vehicle_id
 LEFT JOIN tbl_drivers dr
     ON dr.driver_id = gpr.driver_id
-WHERE gps.allows_qr_scan = TRUE
-  AND gpr.form_type_code = 'PERSON_GATE_PASS';
+WHERE gps.allows_qr_scan = TRUE;
 
 CREATE OR REPLACE VIEW view_vehicle_availability AS
 SELECT
