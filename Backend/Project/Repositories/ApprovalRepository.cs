@@ -75,6 +75,18 @@ public sealed class ApprovalRepository(
                                 AND permission_row.permission_code =
                                     'gatepass.note.pas'
                           )
+                          AND EXISTS (
+                              SELECT 1
+                              FROM tbl_approval_assignments aa
+                              JOIN tbl_user_accounts ua
+                                ON ua.user_id = @ApproverUserId
+                              WHERE aa.employee_record_id =
+                                    ua.employee_record_id
+                                AND aa.approval_step_code = 'PAS'
+                                AND aa.form_type_code =
+                                    request_row.form_type_code
+                                AND aa.is_active = TRUE
+                          )
                       )
                   )
                   AND request_row.gate_pass_status_code = CONCAT(
@@ -140,6 +152,18 @@ public sealed class ApprovalRepository(
                                       AND role_row.is_active = TRUE
                                       AND permission_row.permission_code =
                                           'gatepass.note.pas'
+                                )
+                                AND EXISTS (
+                                    SELECT 1
+                                    FROM tbl_approval_assignments aa
+                                    JOIN tbl_user_accounts ua
+                                      ON ua.user_id = @ActorUserId
+                                    WHERE aa.employee_record_id =
+                                          ua.employee_record_id
+                                      AND aa.approval_step_code = 'PAS'
+                                      AND aa.form_type_code =
+                                          request_row.form_type_code
+                                      AND aa.is_active = TRUE
                                 )
                             )
                         ) AS CanAct

@@ -97,7 +97,8 @@ public sealed class SecurityRepository(
                     JOIN tbl_gate_pass_statuses status_row
                         ON status_row.gate_pass_status_code =
                            request_row.gate_pass_status_code
-                    WHERE (
+                    WHERE status_row.allows_qr_scan = TRUE
+                      AND (
                         (
                             @EmployeeRecordId IS NOT NULL
                             AND (
