@@ -78,10 +78,7 @@ public sealed class ApprovalRepository(
                           AND EXISTS (
                               SELECT 1
                               FROM tbl_approval_assignments aa
-                              JOIN tbl_user_accounts ua
-                                ON ua.user_id = @ApproverUserId
-                              WHERE aa.employee_record_id =
-                                    ua.employee_record_id
+                              WHERE aa.approver_user_id = @ApproverUserId
                                 AND aa.approval_step_code = 'PAS'
                                 AND aa.form_type_code =
                                     request_row.form_type_code
@@ -156,10 +153,7 @@ public sealed class ApprovalRepository(
                                 AND EXISTS (
                                     SELECT 1
                                     FROM tbl_approval_assignments aa
-                                    JOIN tbl_user_accounts ua
-                                      ON ua.user_id = @ActorUserId
-                                    WHERE aa.employee_record_id =
-                                          ua.employee_record_id
+                                    WHERE aa.approver_user_id = @ActorUserId
                                       AND aa.approval_step_code = 'PAS'
                                       AND aa.form_type_code =
                                           request_row.form_type_code

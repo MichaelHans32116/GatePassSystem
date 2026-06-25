@@ -576,7 +576,19 @@ public sealed class GatePassRepository(
                 await connection.ExecuteAsync(new CommandDefinition(
                     """
                     DELETE FROM tbl_signature_files
-                    WHERE signature_file_id IN @SignatureFileIds;
+                    WHERE signature_file_id IN @SignatureFileIds
+                      AND NOT EXISTS (
+                          SELECT 1
+                          FROM tbl_gate_pass_requests r
+                          WHERE r.prepared_by_signature_file_id =
+                                tbl_signature_files.signature_file_id
+                      )
+                      AND NOT EXISTS (
+                          SELECT 1
+                          FROM tbl_approval_signatures a
+                          WHERE a.signature_file_id =
+                                tbl_signature_files.signature_file_id
+                      );
                     """,
                     new { SignatureFileIds = signatureFileIds.Distinct().ToArray() },
                     transaction,

@@ -18,6 +18,42 @@ function getGuardRemarksText(p) {
     return String(p?.status || 'Pending').toUpperCase();
 }
 
+function normalizeDocumentStatus(status) {
+    return String(status || 'Pending')
+        .trim()
+        .replace(/[_-]+/g, ' ')
+        .replace(/\s+/g, ' ')
+        .toUpperCase();
+}
+
+function shouldShowGuardStatusRow(pass) {
+    const status = normalizeDocumentStatus(pass?.status);
+    return status !== '' && status !== 'DRAFT';
+}
+
+function getDocumentStatusBadgeClass(status) {
+    const normalized = normalizeDocumentStatus(status);
+    if (normalized.includes('REJECTED') ||
+        normalized.includes('CANCELLED') ||
+        normalized.includes('CANCELED') ||
+        normalized.includes('EXPIRED') ||
+        normalized.includes('OVERDUE')) {
+        return 'document-status-badge status-badge-danger';
+    }
+    if (normalized.startsWith('PENDING') || normalized === 'DRAFT') {
+        return 'document-status-badge status-badge-pending';
+    }
+    if (normalized === 'OUTSIDE') {
+        return 'document-status-badge status-badge-info';
+    }
+    if (normalized.includes('APPROVED') ||
+        normalized.includes('RETURNED') ||
+        normalized.includes('CLOSED')) {
+        return 'document-status-badge status-badge-success';
+    }
+    return 'document-status-badge status-badge-neutral';
+}
+
 function getGuardScanName(p, actionCode) {
     const fallback = actionCode === 'TIME_IN'
         ? p?.actualInGuardName
@@ -466,7 +502,7 @@ async function renderMaterialBundle(pass) {
                         </div>
 
                         <!-- GUARD TRACKING ROW FOR MATERIAL (Document View) -->
-                        <div class="guard-status-row ${['Approved', 'Outside', 'Overdue', 'Returned', 'Closed'].includes(pass.status) ? 'flex' : 'hidden'} flex-row justify-between items-end w-full mt-1 pt-0" style="-webkit-print-color-adjust: exact; print-color-adjust: exact;">
+                        <div class="guard-status-row ${shouldShowGuardStatusRow(pass) ? 'flex' : 'hidden'} flex-row justify-between items-end w-full mt-1 pt-0" style="-webkit-print-color-adjust: exact; print-color-adjust: exact;">
                             <div class="flex items-end space-x-1 w-[33%] text-[7.5px]">
                                 <span class="font-bold text-gray-500 uppercase whitespace-nowrap">ACTUAL OUT</span>
                                 <div class="guard-scan-stack">
@@ -483,7 +519,7 @@ async function renderMaterialBundle(pass) {
                             </div>
                             <div class="flex items-end space-x-1 w-[34%] text-[7.5px]">
                                 <span class="font-bold text-gray-500 uppercase whitespace-nowrap">REMARKS</span>
-                                <div class="border-b border-gray-400 flex-grow text-center font-bold text-[7.5px] pb-0.5">${materialEscape(getGuardRemarksText(pass))}</div>
+                                <div class="${getDocumentStatusBadgeClass(pass.status)}">${materialEscape(getGuardRemarksText(pass))}</div>
                             </div>
                         </div>
 
@@ -1148,18 +1184,18 @@ async function renderMaterialGatePassClone(p) {
 
         div.innerHTML = `
             <!-- Brand Header (Centered relative to the entire page, shifted slightly left of the QR code) -->
-            <div class="material-form-header" style="display: flex; align-items: center; justify-content: center; text-align: center; gap: 3.5mm; min-height: 0; width: 100%; margin-bottom: 0.5mm; padding-right: 22mm;">
-                <div class="material-form-brand" style="display: flex; align-items: center; justify-content: center; gap: 3.5mm; min-width: 0;">
-                    <img src="Frontend/Design/images/logo.png" alt="MPI Logo" style="width: 28mm; height: 13mm; object-fit: contain;">
+            <div class="material-form-header" style="display: flex; align-items: center; justify-content: center; text-align: center; gap: 2.5mm; min-height: 0; width: 100%; margin-bottom: 0.5mm; padding-right: 22mm;">
+                <div class="material-form-brand" style="display: flex; align-items: center; justify-content: center; gap: 2.5mm; min-width: 0;">
+                    <img src="Frontend/Design/images/logo.png" alt="MPI Logo" style="width: 18mm; height: 8.5mm; object-fit: contain;">
                     <div class="text-left">
-                        <h1 style="margin: 0; font-size: 11px; font-weight: 800; line-height: 1.05; letter-spacing: 0.2px; white-space: nowrap;">MORIROKU PHILIPPINES, INC.</h1>
-                        <p style="margin: 1px 0 0; font-size: 5.5px; line-height: 1.05; color: #4b5563; white-space: nowrap;">115 North Science Avenue, Laguna Technopark 4024, Biñan, Laguna Philippines</p>
+                        <h1 style="margin: 0; font-size: 9px; font-weight: 800; line-height: 1.05; letter-spacing: 0.1px; white-space: nowrap;">MORIROKU PHILIPPINES, INC.</h1>
+                        <p style="margin: 0.5px 0 0; font-size: 4.6px; line-height: 1.05; color: #4b5563; white-space: nowrap;">115 North Science Avenue, Laguna Technopark 4024, Biñan, Laguna Philippines</p>
                     </div>
                 </div>
             </div>
 
             <!-- Centered Title -->
-            <h2 class="font-extrabold text-[10.5px] uppercase tracking-[1px] text-center w-full" style="margin: 0 0 1.5mm 0; padding: 0; font-size: 10.5px; line-height: 1; letter-spacing: 1px; text-align: center; padding-right: 22mm;">MATERIAL GATE PASS</h2>
+            <h2 class="font-extrabold text-[9.5px] uppercase tracking-[0.5px] text-center w-full" style="margin: 0 0 1.2mm 0; padding: 0; font-size: 9.5px; line-height: 1; letter-spacing: 0.5px; text-align: center; padding-right: 22mm;">MATERIAL GATE PASS</h2>
 
             <!-- Underlined Metadata Fields (Restricted width to avoid QR code) -->
             <div class="grid grid-cols-12 gap-x-2 gap-y-1.5 text-[7px] leading-none mb-1.5 w-[74%]">
@@ -1216,28 +1252,28 @@ async function renderMaterialGatePassClone(p) {
             </table>
 
             <!-- Underlined Remarks -->
-            <div class="flex items-end text-[7.5px] leading-tight" style="margin-top: 1.5mm; margin-bottom: 1.5mm;">
+            <div class="flex items-end text-[7px] leading-tight" style="margin-top: 1.2mm; margin-bottom: 1.1mm;">
                 <span class="font-bold text-gray-800 mr-2">REMARKS:</span>
                 <span class="border-b border-gray-400 flex-grow pl-1 font-bold pb-0.5">${materialEscape(p.materialRemarks || p.purpose || '—')}</span>
             </div>
 
-            <div class="material-form-signatures pt-1" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 4mm; margin-top: 2.2mm; text-align: left; font-size: 6.6px; line-height: 1.12; border-top: 1px solid #111827;">
-                <div style="position: relative; min-height: 15mm;">
-                    <strong style="display: block; text-align: left; font-size: 7.5px;">Prepared By:</strong>
-                    <div class="sig-wrapper sig-mat-prepared material-signature-image" style="height: 9mm; display: flex; align-items: end; justify-content: center; margin-bottom: 0.5mm;"></div>
-                    <span class="name sig-mat-prepared-name" style="display: block; border-top: 1px solid #111827; border-bottom: none; padding-top: 0.5mm; text-align: center; font-size: 8px; font-weight: 700; text-transform: uppercase;"></span>
+            <div class="material-form-signatures pt-1" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 4mm; margin-top: 1.4mm; text-align: left; font-size: 6.4px; line-height: 1.05; border-top: 1px solid #111827;">
+                <div style="position: relative; min-height: 13.2mm;">
+                    <strong style="display: block; text-align: left; font-size: 7px;">Prepared By:</strong>
+                    <div class="sig-wrapper sig-mat-prepared material-signature-image" style="height: 6.2mm; display: flex; align-items: end; justify-content: center; margin-bottom: 0.25mm;"></div>
+                    <span class="name sig-mat-prepared-name" style="display: block; border-top: 1px solid #111827; border-bottom: none; padding-top: 0.25mm; text-align: center; font-size: 7.5px; font-weight: 700; text-transform: uppercase;"></span>
                 </div>
-                <div style="position: relative; min-height: 15mm;">
-                    <strong style="display: block; text-align: left; font-size: 7.5px;">Noted By:</strong>
-                    <div class="sig-wrapper sig-mat-superior material-signature-image" style="height: 9mm; display: flex; align-items: end; justify-content: center; margin-bottom: 0.5mm;"></div>
-                    <span class="name sig-mat-superior-name" style="display: block; border-top: 1px solid #111827; border-bottom: none; padding-top: 0.5mm; text-align: center; font-size: 8px; font-weight: 700; text-transform: uppercase;"></span>
-                    <small style="display: block; text-align: center; font-size: 5.8px; margin-top: 0.5mm;">Immediate Superior</small>
+                <div style="position: relative; min-height: 13.2mm;">
+                    <strong style="display: block; text-align: left; font-size: 7px;">Noted By:</strong>
+                    <div class="sig-wrapper sig-mat-superior material-signature-image" style="height: 6.2mm; display: flex; align-items: end; justify-content: center; margin-bottom: 0.25mm;"></div>
+                    <span class="name sig-mat-superior-name" style="display: block; border-top: 1px solid #111827; border-bottom: none; padding-top: 0.25mm; text-align: center; font-size: 7.5px; font-weight: 700; text-transform: uppercase;"></span>
+                    <small style="display: block; text-align: center; font-size: 5.4px; margin-top: 0.35mm;">Immediate Superior</small>
                 </div>
-                <div style="position: relative; min-height: 15mm;">
-                    <strong style="display: block; text-align: left; font-size: 7.5px;">Approved By:</strong>
-                    <div class="sig-wrapper sig-mat-pas material-signature-image" style="height: 9mm; display: flex; align-items: end; justify-content: center; margin-bottom: 0.5mm;"></div>
-                    <span class="name sig-mat-pas-name" style="display: block; border-top: 1px solid #111827; border-bottom: none; padding-top: 0.5mm; text-align: center; font-size: 8px; font-weight: 700; text-transform: uppercase;"></span>
-                    <small style="display: block; text-align: center; font-size: 5.8px; margin-top: 0.5mm;">Personnel &amp; Admin Section</small>
+                <div style="position: relative; min-height: 13.2mm;">
+                    <strong style="display: block; text-align: left; font-size: 7px;">Approved By:</strong>
+                    <div class="sig-wrapper sig-mat-pas material-signature-image" style="height: 6.2mm; display: flex; align-items: end; justify-content: center; margin-bottom: 0.25mm;"></div>
+                    <span class="name sig-mat-pas-name" style="display: block; border-top: 1px solid #111827; border-bottom: none; padding-top: 0.25mm; text-align: center; font-size: 7.5px; font-weight: 700; text-transform: uppercase;"></span>
+                    <small style="display: block; text-align: center; font-size: 5.4px; margin-top: 0.35mm;">Personnel &amp; Admin Section</small>
                 </div>
             </div>
 
@@ -1259,7 +1295,7 @@ async function renderMaterialGatePassClone(p) {
                 </div>
                 <div class="flex items-end space-x-1 w-[34%] text-[7.5px]">
                     <span class="font-bold text-gray-500 uppercase whitespace-nowrap">REMARKS</span>
-                    <div class="vGuardRemarks border-b border-gray-400 flex-grow text-center font-bold text-[7.5px] pb-0.5"></div>
+                    <div class="vGuardRemarks document-status-badge status-badge-neutral"></div>
                 </div>
             </div>
 
@@ -1282,7 +1318,7 @@ async function renderMaterialGatePassClone(p) {
         }
 
         const matGuardRow = div.querySelector('.guard-status-row');
-        if (matGuardRow && ['Approved', 'Outside', 'Overdue', 'Returned', 'Closed'].includes(p.status)) {
+        if (matGuardRow && shouldShowGuardStatusRow(p)) {
             matGuardRow.classList.remove('hidden');
             matGuardRow.classList.add('flex');
 
@@ -1304,7 +1340,10 @@ async function renderMaterialGatePassClone(p) {
             if (vIn) vIn.innerText = safeFormatTime(p.actualIn);
             if (vOutGuardName) vOutGuardName.innerText = getGuardScanName(p, 'TIME_OUT');
             if (vInGuardName) vInGuardName.innerText = getGuardScanName(p, 'TIME_IN');
-            if (vRem) vRem.innerText = getGuardRemarksText(p);
+            if (vRem) {
+                vRem.innerText = getGuardRemarksText(p);
+                vRem.className = `vGuardRemarks ${getDocumentStatusBadgeClass(p.status)}`;
+            }
             if (vBadge) {
                 vBadge.innerText = p.status.toUpperCase();
                 vBadge.className = 'vGuardBadge px-2 py-0.5 rounded-full font-extrabold text-[7.5px] text-center select-none uppercase tracking-wide ' +
@@ -1423,10 +1462,10 @@ async function printSelectedLogs() {
             const pair2 = pagesPairs[i + 1];
 
             const a4Front = document.createElement('div');
-            a4Front.className = 'a4-wrapper';
-            a4Front.style.cssText = 'display: flex; flex-direction: column; gap: 0; page-break-after: always; width: 210mm; height: 297mm; max-height: 297mm; overflow: hidden; align-items: center; justify-content: flex-start; padding-top: 10mm; box-sizing: border-box;';
+            a4Front.className = 'a4-wrapper is-batch-print';
+            a4Front.style.cssText = 'display: flex; flex-direction: column; gap: 0; page-break-after: always; width: 210mm; min-height: 297mm; overflow: visible; align-items: center; justify-content: flex-start; padding-top: 4mm; box-sizing: border-box;';
 
-            pair1.front.style.cssText += 'page-break-after: avoid !important; break-after: avoid !important; margin-bottom: 10mm !important; box-shadow: none !important; margin-top: 0 !important;';
+            pair1.front.style.cssText += 'page-break-after: avoid !important; break-after: avoid !important; margin-bottom: 4mm !important; box-shadow: none !important; margin-top: 0 !important;';
             a4Front.appendChild(pair1.front);
 
             if (pair2) {
@@ -1438,15 +1477,15 @@ async function printSelectedLogs() {
             const hasBack = !!(pair1.back || (pair2 && pair2.back));
             if (hasBack) {
                 const a4Back = document.createElement('div');
-                a4Back.className = 'a4-wrapper';
-                a4Back.style.cssText = 'display: flex; flex-direction: column; gap: 0; page-break-after: always; width: 210mm; height: 297mm; max-height: 297mm; overflow: hidden; align-items: center; justify-content: flex-start; padding-top: 10mm; box-sizing: border-box;';
+                a4Back.className = 'a4-wrapper is-batch-print';
+                a4Back.style.cssText = 'display: flex; flex-direction: column; gap: 0; page-break-after: always; width: 210mm; min-height: 297mm; overflow: visible; align-items: center; justify-content: flex-start; padding-top: 4mm; box-sizing: border-box;';
 
                 if (pair1.back) {
-                    pair1.back.style.cssText += 'page-break-before: avoid !important; break-before: avoid !important; page-break-after: avoid !important; break-after: avoid !important; margin-bottom: 10mm !important; margin-top: 0 !important;';
+                    pair1.back.style.cssText += 'page-break-before: avoid !important; break-before: avoid !important; page-break-after: avoid !important; break-after: avoid !important; margin-bottom: 4mm !important; margin-top: 0 !important;';
                     a4Back.appendChild(pair1.back);
                 } else {
                     const empty = document.createElement('div');
-                    empty.style.cssText = 'height: 105mm; width: 148mm; margin-bottom: 10mm;';
+                    empty.style.cssText = 'height: 105mm; width: 148mm; margin-bottom: 4mm;';
                     a4Back.appendChild(empty);
                 }
 
@@ -1463,6 +1502,13 @@ async function printSelectedLogs() {
                 multiContainer.appendChild(a4Back);
             }
         }
+
+        const printSheets = Array.from(multiContainer.querySelectorAll('.a4-wrapper'));
+        printSheets.forEach((sheet, index) => {
+            const isLastSheet = index === printSheets.length - 1;
+            sheet.style.breakAfter = isLastSheet ? 'auto' : 'page';
+            sheet.style.pageBreakAfter = isLastSheet ? 'auto' : 'always';
+        });
 
         const modal = document.getElementById('printModal');
         const content = document.getElementById('printModalContent');

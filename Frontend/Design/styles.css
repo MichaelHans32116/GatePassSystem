@@ -157,6 +157,11 @@
                 break-after: page;
                 page-break-after: always;
             }
+            .a4-wrapper:last-child,
+            #multiPrintableArea > .a4-wrapper:last-child {
+                break-after: auto !important;
+                page-break-after: auto !important;
+            }
             .material-print-page {
                 width: 148mm !important;
                 height: 105mm !important;
@@ -403,6 +408,50 @@
             overflow: hidden;
             text-overflow: ellipsis;
         }
+        .document-status-badge {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            min-width: 17mm;
+            min-height: 4mm;
+            padding: 0.35mm 1.5mm;
+            border: 0.35mm solid transparent;
+            border-radius: 999px;
+            font-size: 7.5px;
+            line-height: 1;
+            font-weight: 900;
+            letter-spacing: 0.2px;
+            text-align: center;
+            text-transform: uppercase;
+            white-space: nowrap;
+            -webkit-print-color-adjust: exact;
+            print-color-adjust: exact;
+        }
+        .status-badge-success {
+            color: #166534;
+            background: #dcfce7;
+            border-color: #86efac;
+        }
+        .status-badge-pending {
+            color: #92400e;
+            background: #fef3c7;
+            border-color: #f59e0b;
+        }
+        .status-badge-info {
+            color: #1e40af;
+            background: #dbeafe;
+            border-color: #93c5fd;
+        }
+        .status-badge-danger {
+            color: #991b1b;
+            background: #fee2e2;
+            border-color: #fca5a5;
+        }
+        .status-badge-neutral {
+            color: #374151;
+            background: #e5e7eb;
+            border-color: #cbd5e1;
+        }
         .form-type-card.active {
             border-color: #155CA2;
             box-shadow: 0 8px 22px rgba(21, 92, 162, 0.12);
@@ -494,6 +543,26 @@
             font-family: Consolas, "Courier New", monospace;
             color: #475569;
             white-space: nowrap;
+        }
+        .material-front-qr-panel {
+            top: 1.4mm !important;
+        }
+        .material-front-qr-panel .materialQrCodeDisplay {
+            width: 22mm !important;
+            height: 22mm !important;
+            margin-bottom: 0.15mm !important;
+        }
+        .material-front-qr-panel .material-front-qr-control,
+        .material-front-qr-panel .material-front-qr-scan {
+            display: block;
+            position: relative;
+            z-index: 2;
+            background: #ffffff;
+            padding: 0 0.4mm;
+        }
+        .material-front-qr-panel .material-front-qr-scan {
+            margin-top: 0.15mm;
+            font-size: 4.7px;
         }
         .material-front-table {
             margin-top: 2.4mm !important;
@@ -905,6 +974,114 @@
         }
         .a4-wrapper .multi-print-item {
             flex: 0 0 auto;
+        }
+        .a4-wrapper.is-batch-print {
+            min-height: 297mm;
+            padding-top: 4mm;
+            overflow: visible;
+        }
+        .a4-wrapper.is-batch-print .multi-print-item {
+            box-sizing: border-box;
+            width: 148mm !important;
+            height: 105mm !important;
+            min-height: 105mm !important;
+            max-height: 105mm !important;
+            margin-bottom: 4mm !important;
+            overflow: hidden;
+        }
+        .a4-wrapper.is-batch-print .multi-print-item:last-child {
+            margin-bottom: 0 !important;
+        }
+        .a4-wrapper.is-batch-print .material-print-page {
+            padding: 1.8mm 3mm 1.6mm !important;
+        }
+        .a4-wrapper.is-batch-print .material-front-table {
+            margin-top: 1.5mm !important;
+        }
+        .a4-wrapper.is-batch-print .material-items-table {
+            font-size: 5.9px;
+            line-height: 1.05;
+        }
+        .a4-wrapper.is-batch-print .material-items-table th,
+        .a4-wrapper.is-batch-print .material-items-table td {
+            height: 3.15mm;
+            padding: 0.18mm 0.7mm;
+            line-height: 1.05;
+        }
+        .a4-wrapper.is-batch-print .material-form-signatures {
+            margin-top: 1.1mm !important;
+            gap: 4mm !important;
+            line-height: 1.05 !important;
+        }
+        .a4-wrapper.is-batch-print .material-form-signatures > div {
+            min-height: 13.2mm !important;
+        }
+        .a4-wrapper.is-batch-print .material-form-signatures span {
+            min-height: 2.2mm !important;
+            padding-top: 0.2mm !important;
+        }
+        .a4-wrapper.is-batch-print .material-signature-image {
+            height: 6.2mm !important;
+            margin-bottom: 0.25mm !important;
+        }
+        .a4-wrapper.is-batch-print .material-signature-image img {
+            max-height: 6.8mm !important;
+        }
+        .a4-wrapper.is-batch-print .guard-status-row {
+            margin-top: 0.35mm !important;
+            padding-top: 0 !important;
+        }
+        .a4-wrapper.is-batch-print .guard-scan-stack {
+            min-height: 4.3mm;
+        }
+        .a4-wrapper.is-batch-print .material-page-number {
+            bottom: 0.8mm !important;
+        }
+        .a4-wrapper.is-batch-print .person-print-form {
+            width: 148mm !important;
+            height: 105mm !important;
+            min-height: 105mm !important;
+            max-height: 105mm !important;
+            box-sizing: border-box !important;
+            overflow: hidden !important;
+        }
+        .a4-wrapper.is-batch-print .person-print-form table {
+            height: 100% !important;
+        }
+        .a4-wrapper.is-batch-print .person-print-form td {
+            padding: 2px !important;
+            font-size: 9px;
+        }
+        .a4-wrapper.is-batch-print .person-print-form #qrCodeDisplay canvas,
+        .a4-wrapper.is-batch-print .person-print-form #qrCodeDisplay img {
+            width: 22mm !important;
+            height: 22mm !important;
+        }
+        .a4-wrapper.is-batch-print .person-print-form #vControlNoQR {
+            font-size: 6px !important;
+            line-height: 1.05 !important;
+            margin-top: 0.2mm !important;
+        }
+        .a4-wrapper.is-batch-print .person-print-form #vScanTextQR {
+            font-size: 5.3px !important;
+            line-height: 1.05 !important;
+            margin-top: 0.1mm !important;
+        }
+        .a4-wrapper.is-batch-print .person-print-form .guard-status-row td {
+            padding-top: 0.5mm !important;
+            padding-bottom: 0.5mm !important;
+        }
+        .a4-wrapper.is-batch-print .person-print-form .guard-scan-stack {
+            min-width: 21mm;
+        }
+        .a4-wrapper.is-batch-print .person-print-form .guard-scan-time {
+            min-height: 3.2mm;
+            font-size: 7.2px;
+        }
+        .a4-wrapper.is-batch-print .person-print-form .guard-scan-name {
+            min-height: 2.4mm;
+            margin-top: 0.2mm;
+            font-size: 5.8px;
         }
 
         /* Signature Object Fit */
