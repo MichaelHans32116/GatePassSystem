@@ -161,6 +161,29 @@
                 box-sizing: border-box !important;
                 padding-top: 4mm !important;
                 margin: 0 !important;
+                position: relative !important;
+            }
+            .a4-wrapper.has-multiple-passes {
+                justify-content: space-evenly !important;
+                padding-top: 0 !important;
+                padding-bottom: 0 !important;
+            }
+            .a4-wrapper.has-multiple-passes::before {
+                content: "\2702  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -";
+                position: absolute;
+                top: 148.5mm;
+                left: 0;
+                width: 100%;
+                transform: translateY(-50%);
+                color: #94a3b8;
+                font-size: 8px;
+                letter-spacing: 1.5px;
+                line-height: 1;
+                text-align: center;
+                z-index: 50;
+                pointer-events: none;
+                -webkit-print-color-adjust: exact;
+                print-color-adjust: exact;
             }
             .a4-wrapper:last-child,
             #multiPrintableArea > .a4-wrapper:last-child {
@@ -430,6 +453,14 @@
             max-height: 100%;
             width: auto;
             object-fit: contain;
+        }
+        .material-print-page .guard-scan-sig {
+            min-height: 9.5mm;
+            max-height: 9.5mm;
+            overflow: visible;
+        }
+        .material-print-page .guard-scan-sig img {
+            max-height: 9.2mm;
         }
         .document-status-badge {
             display: inline-flex;
@@ -997,6 +1028,7 @@
             box-sizing: border-box;
             padding-top: 10mm;
             overflow: hidden;
+            position: relative;
         }
         .a4-wrapper .multi-print-item {
             flex: 0 0 auto;
@@ -1016,6 +1048,29 @@
             overflow: hidden;
         }
         .a4-wrapper.is-batch-print .multi-print-item:last-child {
+            margin-bottom: 0 !important;
+        }
+        .a4-wrapper.has-multiple-passes {
+            justify-content: space-evenly;
+            padding-top: 0;
+            padding-bottom: 0;
+        }
+        .a4-wrapper.has-multiple-passes::before {
+            content: "\2702  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -";
+            position: absolute;
+            top: 148.5mm;
+            left: 0;
+            width: 100%;
+            transform: translateY(-50%);
+            color: #94a3b8;
+            font-size: 8px;
+            letter-spacing: 1.5px;
+            line-height: 1;
+            text-align: center;
+            z-index: 50;
+            pointer-events: none;
+        }
+        .a4-wrapper.has-multiple-passes .multi-print-item {
             margin-bottom: 0 !important;
         }
         .a4-wrapper.is-batch-print .material-print-page {
@@ -1091,6 +1146,15 @@
         }
         .a4-wrapper.is-batch-print .guard-scan-sig img {
             max-height: 6.8mm !important;
+        }
+        .a4-wrapper.is-batch-print .material-print-page .guard-scan-sig {
+            height: 9.5mm !important;
+            min-height: 9.5mm !important;
+            max-height: 9.5mm !important;
+            overflow: visible !important;
+        }
+        .a4-wrapper.is-batch-print .material-print-page .guard-scan-sig img {
+            max-height: 9.2mm !important;
         }
         .a4-wrapper.is-batch-print .person-print-form #qrCodeDisplay canvas,
         .a4-wrapper.is-batch-print .person-print-form #qrCodeDisplay img {

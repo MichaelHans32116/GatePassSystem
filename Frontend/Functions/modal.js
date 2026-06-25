@@ -26,6 +26,29 @@ function normalizeDocumentStatus(status) {
         .toUpperCase();
 }
 
+function isFinishedDocumentStatus(status) {
+    const normalized = normalizeDocumentStatus(status);
+    return [
+        'CLOSED',
+        'RETURNED',
+        'REJECTED',
+        'CANCELLED',
+        'CANCELED',
+        'EXPIRED'
+    ].includes(normalized);
+}
+
+function isSecurityScanActionableStatus(status) {
+    const normalized = normalizeDocumentStatus(status);
+    return [
+        'APPROVED',
+        'OUTSIDE',
+        'OVERDUE',
+        'WAITING OUT',
+        'WAITING IN'
+    ].includes(normalized);
+}
+
 function shouldShowGuardStatusRow(pass) {
     const status = normalizeDocumentStatus(pass?.status);
     return status !== '' && status !== 'DRAFT';
@@ -508,7 +531,7 @@ async function renderMaterialBundle(pass) {
                             <div style="display: flex; align-items: center; gap: 1.5mm; min-width: 0; width: 100%;">
                                 <strong style="font-size: 7px; color: #4b5563; font-weight: 700; white-space: nowrap; text-transform: uppercase;">ACTUAL OUT</strong>
                                 <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; position: relative; min-width: 0;">
-                                    <div class="sig-wrapper sig-mat-guard-out guard-scan-sig" ${guardOutSlot.imageAttribute} style="height: 6mm; display: flex; align-items: end; justify-content: center; width: 100%;"></div>
+                                    <div class="sig-wrapper sig-mat-guard-out guard-scan-sig" ${guardOutSlot.imageAttribute} style="height: 9.5mm; display: flex; align-items: end; justify-content: center; width: 100%;"></div>
                                     <span class="guard-scan-time vActOut" style="display: block; text-align: center; font-size: 7px; font-weight: 700; min-height: 3.5mm; line-height: 1;">${pass.actualOut ? new Date(pass.actualOut).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '—'}</span>
                                     <div style="width: 100%; border-top: 1px solid #111827; margin-top: 0.2mm; margin-bottom: 0.2mm;"></div>
                                     <small class="name sig-mat-guard-out-name guard-scan-name" ${guardOutSlot.nameAttribute} style="display: block; text-align: center; font-size: 5.4px; color: #4b5563; font-weight: bold; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${materialEscape(getGuardScanName(pass, 'TIME_OUT')) || 'Guard'}</small>
@@ -517,7 +540,7 @@ async function renderMaterialBundle(pass) {
                             <div style="display: flex; align-items: center; gap: 1.5mm; min-width: 0; width: 100%;">
                                 <strong style="font-size: 7px; color: #4b5563; font-weight: 700; white-space: nowrap; text-transform: uppercase;">ACTUAL IN</strong>
                                 <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; position: relative; min-width: 0;">
-                                    <div class="sig-wrapper sig-mat-guard-in guard-scan-sig" ${guardInSlot.imageAttribute} style="height: 6mm; display: flex; align-items: end; justify-content: center; width: 100%;"></div>
+                                    <div class="sig-wrapper sig-mat-guard-in guard-scan-sig" ${guardInSlot.imageAttribute} style="height: 9.5mm; display: flex; align-items: end; justify-content: center; width: 100%;"></div>
                                     <span class="guard-scan-time vActIn" style="display: block; text-align: center; font-size: 7px; font-weight: 700; min-height: 3.5mm; line-height: 1;">${pass.actualIn ? new Date(pass.actualIn).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '—'}</span>
                                     <div style="width: 100%; border-top: 1px solid #111827; margin-top: 0.2mm; margin-bottom: 0.2mm;"></div>
                                     <small class="name sig-mat-guard-in-name guard-scan-name" ${guardInSlot.nameAttribute} style="display: block; text-align: center; font-size: 5.4px; color: #4b5563; font-weight: bold; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${materialEscape(getGuardScanName(pass, 'TIME_IN')) || 'Guard'}</small>
@@ -588,7 +611,10 @@ async function viewPass(id, isReviewing = false) {
                 return;
             }
             if(!p) return;
-            if (['Closed', 'Returned', 'Rejected', 'Cancelled'].includes(p.status)) {
+            if (isFinishedDocumentStatus(p.status) ||
+                (currentUser?.role === 'Security' &&
+                    isReviewing &&
+                    !isSecurityScanActionableStatus(p.status))) {
                 isReviewing = false;
             }
             currentViewedPassId = getGatePassViewKey(p);
@@ -1407,7 +1433,7 @@ async function renderMaterialGatePassClone(p) {
                 <div style="display: flex; align-items: center; gap: 1.5mm; min-width: 0; width: 100%;">
                     <strong style="font-size: 7px; color: #4b5563; font-weight: 700; white-space: nowrap; text-transform: uppercase;">ACTUAL OUT</strong>
                     <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; position: relative; min-width: 0;">
-                        <div class="sig-wrapper sig-mat-guard-out guard-scan-sig" ${guardOutSlot.imageAttribute} style="height: 6mm; display: flex; align-items: end; justify-content: center; width: 100%;"></div>
+                        <div class="sig-wrapper sig-mat-guard-out guard-scan-sig" ${guardOutSlot.imageAttribute} style="height: 9.5mm; display: flex; align-items: end; justify-content: center; width: 100%;"></div>
                         <span class="guard-scan-time vActOut" style="display: block; text-align: center; font-size: 7px; font-weight: 700; min-height: 3.5mm; line-height: 1;"></span>
                         <div style="width: 100%; border-top: 1px solid #111827; margin-top: 0.2mm; margin-bottom: 0.2mm;"></div>
                         <small class="name sig-mat-guard-out-name guard-scan-name" ${guardOutSlot.nameAttribute} style="display: block; text-align: center; font-size: 5.4px; color: #4b5563; font-weight: bold; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></small>
@@ -1416,7 +1442,7 @@ async function renderMaterialGatePassClone(p) {
                 <div style="display: flex; align-items: center; gap: 1.5mm; min-width: 0; width: 100%;">
                     <strong style="font-size: 7px; color: #4b5563; font-weight: 700; white-space: nowrap; text-transform: uppercase;">ACTUAL IN</strong>
                     <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; position: relative; min-width: 0;">
-                        <div class="sig-wrapper sig-mat-guard-in guard-scan-sig" ${guardInSlot.imageAttribute} style="height: 6mm; display: flex; align-items: end; justify-content: center; width: 100%;"></div>
+                        <div class="sig-wrapper sig-mat-guard-in guard-scan-sig" ${guardInSlot.imageAttribute} style="height: 9.5mm; display: flex; align-items: end; justify-content: center; width: 100%;"></div>
                         <span class="guard-scan-time vActIn" style="display: block; text-align: center; font-size: 7px; font-weight: 700; min-height: 3.5mm; line-height: 1;"></span>
                         <div style="width: 100%; border-top: 1px solid #111827; margin-top: 0.2mm; margin-bottom: 0.2mm;"></div>
                         <small class="name sig-mat-guard-in-name guard-scan-name" ${guardInSlot.nameAttribute} style="display: block; text-align: center; font-size: 5.4px; color: #4b5563; font-weight: bold; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></small>
@@ -1504,7 +1530,7 @@ async function renderMaterialGatePassClone(p) {
             if (inName) inName.innerText = 'Guard';
         }
 
-        const handleSig = async (sigData, wrapperSelector, nameSelector) => {
+        async function handleSig(sigData, wrapperSelector, nameSelector) {
             const wrapperEls = div.querySelectorAll(wrapperSelector);
             const nameEls = div.querySelectorAll(nameSelector);
 
@@ -1529,13 +1555,15 @@ async function renderMaterialGatePassClone(p) {
             wrapperEls.forEach(el => {
                 if (sigData) {
                     if (sigData.img) {
-                        el.innerHTML = `<img src="${sigData.img}" class="signature-img" style="width: 100%; max-height: 45px; object-fit: contain;">`;
+                        const w = sigData.w || 100;
+                        const y = sigData.y || 0;
+                        el.innerHTML = `<img src="${sigData.img}" class="signature-img" style="width: ${w}%; max-height: 100%; margin-bottom: ${y}px; object-fit: contain;">`;
                     } else {
                         el.innerHTML = `<span style="font-family: serif; font-style: italic; font-size: 11px; color: blue;">Digitally Signed</span>`;
                     }
                 }
             });
-        };
+        }
 
         await handleSig(p.signatures.imm, '.sig-mat-superior', '.sig-mat-superior-name');
         await handleSig(p.signatures.pas, '.sig-mat-pas', '.sig-mat-pas-name');
@@ -1615,7 +1643,7 @@ async function printSelectedLogs() {
             const pair2 = pagesPairs[i + 1];
 
             const a4Front = document.createElement('div');
-            a4Front.className = 'a4-wrapper is-batch-print';
+            a4Front.className = `a4-wrapper is-batch-print${pair2 ? ' has-multiple-passes' : ''}`;
             a4Front.style.cssText = 'display: flex; flex-direction: column; gap: 0; page-break-after: always; width: 210mm; height: 297mm; max-height: 297mm; overflow: hidden; align-items: center; justify-content: flex-start; padding-top: 4mm; box-sizing: border-box;';
 
             pair1.front.style.cssText += 'page-break-after: avoid !important; break-after: avoid !important; margin-bottom: 4mm !important; box-shadow: none !important; margin-top: 0 !important;';
@@ -1630,7 +1658,7 @@ async function printSelectedLogs() {
             const hasBack = !!(pair1.back || (pair2 && pair2.back));
             if (hasBack) {
                 const a4Back = document.createElement('div');
-                a4Back.className = 'a4-wrapper is-batch-print';
+                a4Back.className = `a4-wrapper is-batch-print${pair2 ? ' has-multiple-passes' : ''}`;
                 a4Back.style.cssText = 'display: flex; flex-direction: column; gap: 0; page-break-after: always; width: 210mm; height: 297mm; max-height: 297mm; overflow: hidden; align-items: center; justify-content: flex-start; padding-top: 4mm; box-sizing: border-box;';
 
                 if (pair1.back) {
