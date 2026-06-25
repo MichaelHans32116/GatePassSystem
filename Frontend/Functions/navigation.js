@@ -10,6 +10,7 @@ function toggleSidebar() {
 function setupRoleAccess(user) {
             // Reset visibility
             document.getElementById('navItemApply').style.display = 'flex';
+            document.getElementById('navItemSchedule').style.display = 'flex';
             document.getElementById('navGroupApprovals').style.display = 'block';
             document.getElementById('navGroupSecurity').style.display = 'none';
             document.getElementById('navGroupAdmin').style.display = 'block';
@@ -88,6 +89,7 @@ async function switchSection(targetId) {
                 'dashBoard':'Overview Dashboard', 'applyPass':'New Form Request',
                 'approvals':'Workflow Approvals', 'guardScan':'Security QR Scanner',
                 'fleetManagement': 'Vehicles & Drivers',
+                'scheduleCalendar': 'Vehicle Schedule Calendar',
                 'adminPanel': currentUser && currentUser.role === 'System Admin' ? 'System Configuration' : 'Department Logs'
             };
             document.getElementById('pageTitle').innerText = titles[targetId] || 'System';
@@ -112,6 +114,7 @@ async function switchSection(targetId) {
                     renderAdminLogs(1);
                 }
             }
+            if(sectionTargetId === 'scheduleCalendar') initializeScheduleCalendar();
         }
 
 

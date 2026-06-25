@@ -403,6 +403,32 @@ public sealed class FleetRepository(
                 return false;
             }
 
+            var fixedConflicts = await connection.ExecuteScalarAsync<int>(
+                new CommandDefinition(
+                    """
+                    SELECT COUNT(*)
+                    FROM tbl_fixed_vehicle_schedules fs
+                    WHERE fs.vehicle_id = @VehicleId
+                      AND fs.is_active = TRUE
+                      AND fs.day_of_week = DAYOFWEEK(@ReservedFrom) - 1
+                      AND fs.start_time < CAST(COALESCE(@ReservedUntil, '23:59:59') AS TIME)
+                      AND fs.end_time > CAST(@ReservedFrom AS TIME);
+                    """,
+                    new
+                    {
+                        VehicleId = vehicleId,
+                        ReservedFrom = reservedFrom,
+                        ReservedUntil = reservedUntil
+                    },
+                    transaction,
+                    cancellationToken: cancellationToken));
+
+            if (fixedConflicts > 0)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                return false;
+            }
+
             var conflicts = await connection.ExecuteScalarAsync<int>(
                 new CommandDefinition(
                     """
@@ -472,6 +498,100 @@ public sealed class FleetRepository(
             await transaction.RollbackAsync(cancellationToken);
             throw;
         }
+    }
+
+    public async Task<IReadOnlyList<VehicleScheduleRecord>> GetScheduleAsync(
+        DateTime from,
+        DateTime to,
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection =
+            await connectionFactory.OpenConnectionAsync(cancellationToken);
+        var schedules = await connection.QueryAsync<VehicleScheduleRecord>(
+            new CommandDefinition(
+                """
+                SELECT
+                    reservation.reservation_id AS ScheduleId,
+                    'RESERVATION' AS ScheduleSource,
+                    vehicle.vehicle_id AS VehicleId,
+                    vehicle.vehicle_name AS VehicleName,
+                    vehicle.plate_number AS PlateNumber,
+                    vehicle.vehicle_type AS VehicleType,
+                    reservation.driver_id AS DriverId,
+                    driver.full_name AS DriverName,
+                    DATE(reservation.reserved_from) AS ScheduleDate,
+                    TIME(reservation.reserved_from) AS StartTime,
+                    TIME(COALESCE(reservation.reserved_until,
+                         ADDTIME(reservation.reserved_from, '01:00:00'))) AS EndTime,
+                    CONCAT(
+                        requester.full_name,
+                        COALESCE(CONCAT(' - ', gpr.destination), '')
+                    ) AS Title,
+                    gpr.purpose AS Description,
+                    reservation.reservation_status_code AS StatusCode,
+                    requester.full_name AS RequesterName,
+                    gpr.destination AS Destination,
+                    gpr.gate_pass_id AS GatePassId,
+                    gpr.control_no AS ControlNo
+                FROM tbl_vehicle_reservations reservation
+                JOIN tbl_vehicles vehicle
+                    ON vehicle.vehicle_id = reservation.vehicle_id
+                LEFT JOIN tbl_drivers driver
+                    ON driver.driver_id = reservation.driver_id
+                JOIN tbl_gate_pass_requests gpr
+                    ON gpr.gate_pass_id = reservation.gate_pass_id
+                JOIN tbl_employees requester
+                    ON requester.employee_record_id = gpr.requester_employee_id
+                WHERE reservation.reservation_status_code NOT IN
+                      ('CANCELLED', 'REJECTED', 'EXPIRED')
+                  AND DATE(reservation.reserved_from) >= @From
+                  AND DATE(reservation.reserved_from) <= @To
+
+                UNION ALL
+
+                SELECT
+                    fs.fixed_schedule_id AS ScheduleId,
+                    'FIXED' AS ScheduleSource,
+                    vehicle.vehicle_id AS VehicleId,
+                    vehicle.vehicle_name AS VehicleName,
+                    vehicle.plate_number AS PlateNumber,
+                    vehicle.vehicle_type AS VehicleType,
+                    fs.driver_id AS DriverId,
+                    driver.full_name AS DriverName,
+                    dates.dt AS ScheduleDate,
+                    fs.start_time AS StartTime,
+                    fs.end_time AS EndTime,
+                    fs.title AS Title,
+                    fs.description AS Description,
+                    'FIXED' AS StatusCode,
+                    NULL AS RequesterName,
+                    NULL AS Destination,
+                    NULL AS GatePassId,
+                    NULL AS ControlNo
+                FROM (
+                    WITH RECURSIVE date_range AS (
+                        SELECT DATE(@From) AS dt
+                        UNION ALL
+                        SELECT dt + INTERVAL 1 DAY
+                        FROM date_range
+                        WHERE dt < DATE(@To)
+                    )
+                    SELECT dt FROM date_range
+                ) dates
+                JOIN tbl_fixed_vehicle_schedules fs
+                    ON fs.day_of_week = DAYOFWEEK(dates.dt) - 1
+                   AND fs.is_active = TRUE
+                JOIN tbl_vehicles vehicle
+                    ON vehicle.vehicle_id = fs.vehicle_id
+                   AND vehicle.is_active = TRUE
+                LEFT JOIN tbl_drivers driver
+                    ON driver.driver_id = fs.driver_id
+
+                ORDER BY ScheduleDate, StartTime, VehicleName;
+                """,
+                new { From = from, To = to },
+                cancellationToken: cancellationToken));
+        return schedules.AsList();
     }
 }
 

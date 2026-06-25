@@ -34,5 +34,10 @@ public interface IFleetRepository
         DateTime reservedFrom,
         DateTime? reservedUntil,
         CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<VehicleScheduleRecord>> GetScheduleAsync(
+        DateTime from,
+        DateTime to,
+        CancellationToken cancellationToken = default);
 }
 

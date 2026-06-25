@@ -92,6 +92,12 @@ public sealed class FleetService(IFleetRepository repository) : IFleetService
         long driverId,
         CancellationToken cancellationToken = default) =>
         repository.ArchiveDriverAsync(driverId, cancellationToken);
+
+    public Task<IReadOnlyList<VehicleScheduleRecord>> GetScheduleAsync(
+        DateTime from,
+        DateTime to,
+        CancellationToken cancellationToken = default) =>
+        repository.GetScheduleAsync(from, to, cancellationToken);
 }
 
 public sealed class SignatureService(

@@ -101,5 +101,16 @@ public sealed class FleetController(
         await fleetService.ArchiveDriverAsync(id, cancellationToken);
         return NoContent();
     }
+
+    [HttpGet("fleet/schedule")]
+    public async Task<ActionResult<ApiResponse<IReadOnlyList<VehicleScheduleRecord>>>> Schedule(
+        [FromQuery] DateTime? from,
+        [FromQuery] DateTime? to,
+        CancellationToken cancellationToken)
+    {
+        var fromDate = from ?? DateTime.UtcNow.Date;
+        var toDate = to ?? fromDate.AddDays(42); // ~6 weeks
+        return Success(await fleetService.GetScheduleAsync(fromDate, toDate, cancellationToken));
+    }
 }
 

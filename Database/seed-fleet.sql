@@ -34,13 +34,86 @@ WHERE NOT EXISTS (
     WHERE full_name = 'FRANCIS REFE'
 );
 
-UPDATE tbl_drivers
-SET is_active = TRUE
-WHERE full_name IN ('JONATHAN TURRECHA', 'FRANCIS REFE');
+INSERT INTO tbl_drivers (
+    employee_record_id,
+    full_name,
+    driver_type_code,
+    is_active
+)
+SELECT
+    employee.employee_record_id,
+    'GERONIMO LEYSA',
+    'EXTERNAL',
+    TRUE
+FROM tbl_employees employee
+WHERE employee.employee_id = 'GA108'
+  AND NOT EXISTS (
+    SELECT 1
+    FROM tbl_drivers
+    WHERE full_name = 'GERONIMO LEYSA'
+);
+
+INSERT INTO tbl_drivers (
+    employee_record_id,
+    full_name,
+    driver_type_code,
+    is_active
+)
+SELECT
+    NULL,
+    'JOHN NEIL VALENCIA',
+    'EXTERNAL',
+    TRUE
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM tbl_drivers
+    WHERE full_name = 'JOHN NEIL VALENCIA'
+);
+
+INSERT INTO tbl_drivers (
+    employee_record_id,
+    full_name,
+    driver_type_code,
+    is_active
+)
+SELECT
+    NULL,
+    'ALEX',
+    'EXTERNAL',
+    TRUE
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM tbl_drivers
+    WHERE full_name = 'ALEX'
+);
+
+INSERT INTO tbl_drivers (
+    employee_record_id,
+    full_name,
+    driver_type_code,
+    is_active
+)
+SELECT
+    NULL,
+    'ALVIN',
+    'EXTERNAL',
+    TRUE
+WHERE NOT EXISTS (
+    SELECT 1
+    FROM tbl_drivers
+    WHERE full_name = 'ALVIN'
+);
 
 UPDATE tbl_drivers
-SET is_active = FALSE
-WHERE full_name LIKE 'JOHN NEIL%VALENCIA%';
+SET is_active = TRUE
+WHERE full_name IN (
+    'JONATHAN TURRECHA',
+    'FRANCIS REFE',
+    'GERONIMO LEYSA',
+    'JOHN NEIL VALENCIA',
+    'ALEX',
+    'ALVIN'
+);
 
 INSERT INTO tbl_vehicles (
     vehicle_name,
@@ -71,13 +144,10 @@ INSERT INTO tbl_vehicles (
     'DAH-7724',
     'SEDAN',
     (
-        SELECT driver_row.driver_id
-        FROM tbl_drivers driver_row
-        JOIN tbl_employees employee
-            ON employee.employee_record_id =
-               driver_row.employee_record_id
-        WHERE employee.employee_id = 'GA108'
-          AND driver_row.is_active = TRUE
+        SELECT driver_id
+        FROM tbl_drivers
+        WHERE full_name = 'GERONIMO LEYSA'
+          AND is_active = TRUE
         LIMIT 1
     ),
     'AVAILABLE',
@@ -103,16 +173,28 @@ INSERT INTO tbl_vehicles (
     'HONDA BRV',
     'DAZ-7569',
     'MPV',
-    NULL,
+    (
+        SELECT driver_id
+        FROM tbl_drivers
+        WHERE full_name = 'JOHN NEIL VALENCIA'
+          AND is_active = TRUE
+        LIMIT 1
+    ),
     'AVAILABLE',
-    'Coding day: Friday. Previous assigned driver is no longer active.',
+    'Coding day: Friday',
     TRUE
 ),
 (
     'HONDA CITY',
     'VHF-561',
     'SEDAN',
-    NULL,
+    (
+        SELECT driver_id
+        FROM tbl_drivers
+        WHERE full_name = 'GERONIMO LEYSA'
+          AND is_active = TRUE
+        LIMIT 1
+    ),
     'AVAILABLE',
     'Coding day: Monday',
     TRUE
@@ -121,34 +203,58 @@ INSERT INTO tbl_vehicles (
     'TOYOTA INNOVA',
     'WVO-408',
     'MPV',
-    NULL,
+    (
+        SELECT driver_id
+        FROM tbl_drivers
+        WHERE full_name = 'JONATHAN TURRECHA'
+          AND is_active = TRUE
+        LIMIT 1
+    ),
     'AVAILABLE',
     'Coding day: Thursday',
     TRUE
 ),
 (
-    'ISUZU TRUCK',
+    'FLEXI VAN',
     'NAW-3504',
     'TRUCK',
-    NULL,
+    (
+        SELECT driver_id
+        FROM tbl_drivers
+        WHERE full_name = 'FRANCIS REFE'
+          AND is_active = TRUE
+        LIMIT 1
+    ),
     'AVAILABLE',
     'Coding day: Tuesday',
     TRUE
 ),
 (
-    'ISUZU TRUCK',
+    'ISUZU CANTER',
     'ZJE-745',
     'TRUCK',
-    NULL,
+    (
+        SELECT driver_id
+        FROM tbl_drivers
+        WHERE full_name = 'ALEX'
+          AND is_active = TRUE
+        LIMIT 1
+    ),
     'AVAILABLE',
     'Coding day: Wednesday',
     TRUE
 ),
 (
-    'FUSO TRUCK',
+    'MITSUBISHI FUSO',
     'DAV-3864',
     'TRUCK',
-    NULL,
+    (
+        SELECT driver_id
+        FROM tbl_drivers
+        WHERE full_name = 'ALVIN'
+          AND is_active = TRUE
+        LIMIT 1
+    ),
     'AVAILABLE',
     'Coding day: Tuesday',
     TRUE

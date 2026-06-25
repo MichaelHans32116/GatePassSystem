@@ -389,6 +389,28 @@ CREATE TABLE IF NOT EXISTS tbl_vehicles (
     INDEX ix_vehicles_status (vehicle_status_code, is_active)
 ) ENGINE=InnoDB;
 
+CREATE TABLE IF NOT EXISTS tbl_fixed_vehicle_schedules (
+    fixed_schedule_id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+    vehicle_id BIGINT UNSIGNED NOT NULL,
+    driver_id BIGINT UNSIGNED NULL,
+    day_of_week TINYINT UNSIGNED NOT NULL COMMENT '0=Sunday,1=Monday,...,6=Saturday',
+    start_time TIME NOT NULL,
+    end_time TIME NOT NULL,
+    title VARCHAR(255) NOT NULL,
+    description VARCHAR(500) NULL,
+    schedule_type VARCHAR(30) NOT NULL DEFAULT 'RECURRING' COMMENT 'RECURRING or BLOCK',
+    is_active BOOLEAN NOT NULL DEFAULT TRUE,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_fixed_schedule_vehicle
+        FOREIGN KEY (vehicle_id) REFERENCES tbl_vehicles(vehicle_id),
+    CONSTRAINT fk_fixed_schedule_driver
+        FOREIGN KEY (driver_id) REFERENCES tbl_drivers(driver_id),
+    INDEX ix_fixed_schedule_day_vehicle (day_of_week, vehicle_id, is_active),
+    INDEX ix_fixed_schedule_vehicle_active (vehicle_id, is_active)
+) ENGINE=InnoDB;
+
 -- =========================================================
 -- GATE PASS WORKFLOW TABLES
 -- =========================================================
