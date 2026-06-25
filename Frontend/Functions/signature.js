@@ -307,11 +307,19 @@ function featherAlphaEdges(data, width, height) {
 function getSignatureTargetContainerId() {
             const pass = findGatePassRecord();
             if (pass?.formTypeCode === 'MATERIAL_GATE_PASS') {
+                if (currentUser?.role === 'Security') {
+                    if (pass.status === 'Approved' || pass.status === 'Overdue') return 'sigMatGuardOut';
+                    if (pass.status === 'Outside') return 'sigMatGuardIn';
+                }
                 if (pass.status === 'Pending Superior') return 'sigMatSuperior';
                 if (pass.status === 'Pending PAS') return 'sigMatPas';
                 return currentUser?.canNoteGatePass
                     ? 'sigMatPas'
                     : 'sigMatSuperior';
+            }
+            if (currentUser?.role === 'Security') {
+                if (pass?.status === 'Approved' || pass?.status === 'Overdue') return 'vActOutSignature';
+                if (pass?.status === 'Outside') return 'vActInSignature';
             }
             if (pass?.status === 'Pending Superior') return 'sigImm';
             if (pass?.status === 'Pending President') return 'sigPres';

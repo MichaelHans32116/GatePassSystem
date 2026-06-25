@@ -57,7 +57,7 @@
                 width: 100% !important;
                 background: white !important;
                 margin: 0 !important;
-                padding: 10mm 0 0 0 !important; /* Move down a bit from top */
+                padding: 0 !important;
                 opacity: 1 !important;
                 overflow: visible !important;
             }
@@ -87,14 +87,13 @@
             #printableArea {
                 width: 148mm !important;
                 height: 105mm !important;
-                margin: 0 auto !important; /* Center horizontally */
+                margin: 10mm auto !important; /* Center horizontally with margin for single print */
                 box-shadow: none !important;
                 page-break-inside: avoid;
                 break-inside: avoid;
                 overflow: visible !important;
                 flex-shrink: 0 !important;
                 position: relative;
-                margin-bottom: 10mm !important;
             }
             #printableArea::after {
                 content: "";
@@ -156,6 +155,12 @@
             .a4-wrapper {
                 break-after: page;
                 page-break-after: always;
+                height: 297mm !important;
+                max-height: 297mm !important;
+                overflow: hidden !important;
+                box-sizing: border-box !important;
+                padding-top: 4mm !important;
+                margin: 0 !important;
             }
             .a4-wrapper:last-child,
             #multiPrintableArea > .a4-wrapper:last-child {
@@ -165,7 +170,7 @@
             .material-print-page {
                 width: 148mm !important;
                 height: 105mm !important;
-                margin: 0 auto !important;
+                margin: 10mm auto !important; /* Margin for single print */
                 box-shadow: none !important;
                 break-inside: avoid;
                 page-break-inside: avoid;
@@ -173,6 +178,9 @@
             .material-print-page:not(:last-child) {
                 break-after: page;
                 page-break-after: always;
+            }
+            .a4-wrapper .material-print-page {
+                margin: 0 auto !important; /* Override single print margin in batch print */
             }
             .print-hide { display: none !important; }
             .person-header-qr { display: none !important; }
@@ -1063,12 +1071,26 @@
             box-sizing: border-box !important;
             overflow: hidden !important;
         }
+        .a4-wrapper.is-batch-print .person-header-cell {
+            height: 11mm !important;
+        }
+        .a4-wrapper.is-batch-print .person-approval-cell {
+            height: 11mm !important;
+        }
         .a4-wrapper.is-batch-print .person-print-form table {
             height: 100% !important;
         }
         .a4-wrapper.is-batch-print .person-print-form td {
-            padding: 2px !important;
+            padding: 1.5px !important;
             font-size: 9px;
+        }
+        .a4-wrapper.is-batch-print .guard-scan-sig {
+            height: 6.2mm !important;
+            min-height: 6.2mm !important;
+            max-height: 6.2mm !important;
+        }
+        .a4-wrapper.is-batch-print .guard-scan-sig img {
+            max-height: 6.8mm !important;
         }
         .a4-wrapper.is-batch-print .person-print-form #qrCodeDisplay canvas,
         .a4-wrapper.is-batch-print .person-print-form #qrCodeDisplay img {

@@ -37,6 +37,7 @@ public sealed class SecurityQueueItem
     public DateTime? ExpectedInAt { get; init; }
     public DateTime? ActualOutAt { get; init; }
     public DateTime? ActualInAt { get; init; }
+    public long? EmployeeRecordId { get; init; }
     public string EmployeeId { get; init; } = string.Empty;
     public string FullName { get; init; } = string.Empty;
     public string DepartmentName { get; init; } = string.Empty;

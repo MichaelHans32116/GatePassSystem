@@ -380,7 +380,7 @@ async function renderMaterialBundle(pass) {
             if (!container) return;
 
             const itemRows = [...(pass.materialItems || [])];
-            const pageCount = Math.max(1, Math.ceil(itemRows.length / 9));
+            const pageCount = Math.max(1, Math.ceil(itemRows.length / 8));
             const formDate = pass.formDate
                 ? new Date(`${String(pass.formDate).slice(0, 10)}T00:00:00`)
                     .toLocaleDateString()
@@ -390,12 +390,14 @@ async function renderMaterialBundle(pass) {
                 .slice(0, 20);
 
             container.innerHTML = Array.from({ length: pageCount }, (_, pageIndex) => {
-                const pageItems = itemRows.slice(pageIndex * 9, pageIndex * 9 + 9);
-                while (pageItems.length < 9) pageItems.push(null);
+                const pageItems = itemRows.slice(pageIndex * 8, pageIndex * 8 + 8);
+                while (pageItems.length < 8) pageItems.push(null);
 
                 const prepared = materialSignatureSlot('sigMatPrepared', pageIndex);
                 const superior = materialSignatureSlot('sigMatSuperior', pageIndex);
                 const pas = materialSignatureSlot('sigMatPas', pageIndex);
+                const guardOutSlot = materialSignatureSlot('sigMatGuardOut', pageIndex);
+                const guardInSlot = materialSignatureSlot('sigMatGuardIn', pageIndex);
                 const rowsHtml = pageItems.map(item => item
                     ? `<tr>
                         <td>${materialEscape(item.itemNo || '')}</td>
@@ -501,27 +503,29 @@ async function renderMaterialBundle(pass) {
                             </div>
                         </div>
 
-                        <!-- GUARD TRACKING ROW FOR MATERIAL (Document View) -->
-                        <div class="guard-status-row ${shouldShowGuardStatusRow(pass) ? 'flex' : 'hidden'} flex-row justify-between items-end w-full mt-1 pt-0" style="-webkit-print-color-adjust: exact; print-color-adjust: exact;">
-                            <div class="flex items-end space-x-1 w-[33%] text-[7.5px]">
-                                <span class="font-bold text-gray-500 uppercase whitespace-nowrap">ACTUAL OUT</span>
-                                <div class="guard-scan-stack">
-                                    <div class="guard-scan-time">${pass.actualOut || ''}</div>
-                                    <div class="guard-scan-sig" data-material-guard-sig-out="${pageIndex}"></div>
-                                    <div class="guard-scan-name">${materialEscape(getGuardScanName(pass, 'TIME_OUT'))}</div>
+                        <!-- GUARD TRACKING ROW FOR MATERIAL -->
+                        <div class="guard-status-row ${shouldShowGuardStatusRow(pass) ? 'grid' : 'hidden'}" style="display: grid; grid-template-columns: 1.15fr 1.15fr 0.7fr; gap: 4mm; margin-top: 2.2mm; align-items: center; width: 100%;">
+                            <div style="display: flex; align-items: center; gap: 1.5mm; min-width: 0; width: 100%;">
+                                <strong style="font-size: 7px; color: #4b5563; font-weight: 700; white-space: nowrap; text-transform: uppercase;">ACTUAL OUT</strong>
+                                <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; position: relative; min-width: 0;">
+                                    <div class="sig-wrapper sig-mat-guard-out guard-scan-sig" ${guardOutSlot.imageAttribute} style="height: 6mm; display: flex; align-items: end; justify-content: center; width: 100%;"></div>
+                                    <span class="guard-scan-time vActOut" style="display: block; text-align: center; font-size: 7px; font-weight: 700; min-height: 3.5mm; line-height: 1;">${pass.actualOut ? new Date(pass.actualOut).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '—'}</span>
+                                    <div style="width: 100%; border-top: 1px solid #111827; margin-top: 0.2mm; margin-bottom: 0.2mm;"></div>
+                                    <small class="name sig-mat-guard-out-name guard-scan-name" ${guardOutSlot.nameAttribute} style="display: block; text-align: center; font-size: 5.4px; color: #4b5563; font-weight: bold; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${materialEscape(getGuardScanName(pass, 'TIME_OUT')) || 'Guard'}</small>
                                 </div>
                             </div>
-                            <div class="flex items-end space-x-1 w-[33%] text-[7.5px]">
-                                <span class="font-bold text-gray-500 uppercase whitespace-nowrap">ACTUAL IN</span>
-                                <div class="guard-scan-stack">
-                                    <div class="guard-scan-time">${pass.actualIn || ''}</div>
-                                    <div class="guard-scan-sig" data-material-guard-sig-in="${pageIndex}"></div>
-                                    <div class="guard-scan-name">${materialEscape(getGuardScanName(pass, 'TIME_IN'))}</div>
+                            <div style="display: flex; align-items: center; gap: 1.5mm; min-width: 0; width: 100%;">
+                                <strong style="font-size: 7px; color: #4b5563; font-weight: 700; white-space: nowrap; text-transform: uppercase;">ACTUAL IN</strong>
+                                <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; position: relative; min-width: 0;">
+                                    <div class="sig-wrapper sig-mat-guard-in guard-scan-sig" ${guardInSlot.imageAttribute} style="height: 6mm; display: flex; align-items: end; justify-content: center; width: 100%;"></div>
+                                    <span class="guard-scan-time vActIn" style="display: block; text-align: center; font-size: 7px; font-weight: 700; min-height: 3.5mm; line-height: 1;">${pass.actualIn ? new Date(pass.actualIn).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '—'}</span>
+                                    <div style="width: 100%; border-top: 1px solid #111827; margin-top: 0.2mm; margin-bottom: 0.2mm;"></div>
+                                    <small class="name sig-mat-guard-in-name guard-scan-name" ${guardInSlot.nameAttribute} style="display: block; text-align: center; font-size: 5.4px; color: #4b5563; font-weight: bold; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${materialEscape(getGuardScanName(pass, 'TIME_IN')) || 'Guard'}</small>
                                 </div>
                             </div>
-                            <div class="flex items-end space-x-1 w-[34%] text-[7.5px]">
-                                <span class="font-bold text-gray-500 uppercase whitespace-nowrap">REMARKS</span>
-                                <div class="${getDocumentStatusBadgeClass(pass.status)}">${materialEscape(getGuardRemarksText(pass))}</div>
+                            <div style="display: flex; align-items: center; gap: 1.5mm; min-width: 0; justify-content: flex-start;">
+                                <strong style="font-size: 7px; color: #4b5563; font-weight: 700; white-space: nowrap; text-transform: uppercase;">REMARKS</strong>
+                                <div class="${getDocumentStatusBadgeClass(pass.status)} vGuardRemarks" style="font-size: 7.5px; font-weight: 800; padding: 1px 4.5px;">${materialEscape(getGuardRemarksText(pass))}</div>
                             </div>
                         </div>
 
@@ -554,36 +558,6 @@ async function renderMaterialBundle(pass) {
                     qc.innerHTML = '<span class="text-[6px] text-gray-400">Not Approved</span>';
                 });
             }
-
-            // Load and render Guard signatures for Material Gate Pass
-            const renderMaterialGuardSigs = async () => {
-                const sigOutContainers = container.querySelectorAll('[data-material-guard-sig-out]');
-                const sigInContainers = container.querySelectorAll('[data-material-guard-sig-in]');
-                
-                const loadAndSet = async (fileId, containers) => {
-                    if (!fileId || containers.length === 0) return;
-                    try {
-                        const blob = await ApiClient.blob(`/signatures/${fileId}`);
-                        const imgUrl = await new Promise((resolve) => {
-                            const reader = new FileReader();
-                            reader.onload = () => resolve(reader.result);
-                            reader.readAsDataURL(blob);
-                        });
-                        containers.forEach(c => {
-                            c.innerHTML = `<img src="${imgUrl}" class="max-h-full w-auto object-contain">`;
-                        });
-                    } catch {
-                        containers.forEach(c => {
-                            c.innerHTML = `<span style="font-family: serif; font-style: italic; font-size: 8px; color: blue;">Signed</span>`;
-                        });
-                    }
-                };
-
-                await loadAndSet(pass.actualOutSignatureFileId, sigOutContainers);
-                await loadAndSet(pass.actualInSignatureFileId, sigInContainers);
-            };
-
-            await renderMaterialGuardSigs();
         }
 
 function syncMaterialSignatureCopies(idPrefix) {
@@ -614,6 +588,9 @@ async function viewPass(id, isReviewing = false) {
                 return;
             }
             if(!p) return;
+            if (['Closed', 'Returned', 'Rejected', 'Cancelled'].includes(p.status)) {
+                isReviewing = false;
+            }
             currentViewedPassId = getGatePassViewKey(p);
 
             const setVal = (elemId, val) => {
@@ -681,7 +658,7 @@ async function viewPass(id, isReviewing = false) {
             }
 
             // Signatures handling
-            ['sigImm', 'sigPres', 'sigPAS', 'sigMatPrepared', 'sigMatSuperior', 'sigMatPas'].forEach(idPrefix => {
+            ['sigImm', 'sigPres', 'sigPAS', 'sigMatPrepared', 'sigMatSuperior', 'sigMatPas', 'sigMatGuardOut', 'sigMatGuardIn'].forEach(idPrefix => {
                 const sigDiv = document.getElementById(idPrefix);
                 const nameSpan = document.getElementById(idPrefix + 'Name');
                 if(sigDiv) sigDiv.innerHTML = '';
@@ -750,6 +727,49 @@ async function viewPass(id, isReviewing = false) {
                             '<span style="font-family:serif;font-style:italic;font-size:11px;color:#155CA2;">Digitally Prepared</span>';
                     }
                     syncMaterialSignatureCopies('sigMatPrepared');
+                }
+
+                // LOAD GUARD SIGNATURES FOR MATERIAL
+                const outGuardSignature = p.actualOutSignatureFileId
+                    ? {
+                        name: getGuardScanName(p, 'TIME_OUT'),
+                        fileId: p.actualOutSignatureFileId,
+                        w: 100,
+                        y: 0
+                    }
+                    : null;
+                const inGuardSignature = p.actualInSignatureFileId
+                    ? {
+                        name: getGuardScanName(p, 'TIME_IN'),
+                        fileId: p.actualInSignatureFileId,
+                        w: 100,
+                        y: 0
+                    }
+                    : null;
+
+                if (outGuardSignature) {
+                    await handleSig(outGuardSignature, 'sigMatGuardOut');
+                } else {
+                    const outContainer = document.getElementById('sigMatGuardOut');
+                    if (outContainer) outContainer.innerHTML = '';
+                    const outName = document.getElementById('sigMatGuardOutName');
+                    if (outName) {
+                        outName.innerText = 'Guard';
+                        outName.classList.remove('hidden');
+                    }
+                    syncMaterialSignatureCopies('sigMatGuardOut');
+                }
+                if (inGuardSignature) {
+                    await handleSig(inGuardSignature, 'sigMatGuardIn');
+                } else {
+                    const inContainer = document.getElementById('sigMatGuardIn');
+                    if (inContainer) inContainer.innerHTML = '';
+                    const inName = document.getElementById('sigMatGuardInName');
+                    if (inName) {
+                        inName.innerText = 'Guard';
+                        inName.classList.remove('hidden');
+                    }
+                    syncMaterialSignatureCopies('sigMatGuardIn');
                 }
             }
 
@@ -901,6 +921,27 @@ async function viewPass(id, isReviewing = false) {
                         if (vActOutGuardName) vActOutGuardName.innerText = getGuardScanName(p, 'TIME_OUT');
                         if (vActInGuardName) vActInGuardName.innerText = getGuardScanName(p, 'TIME_IN');
 
+                        const vOutSig = document.getElementById('vActOutSignature');
+                        const vInSig = document.getElementById('vActInSignature');
+                        const renderGuardSig = async (fileId, containerEl) => {
+                            if (!containerEl) return;
+                            containerEl.innerHTML = '';
+                            if (!fileId) return;
+                            try {
+                                const blob = await ApiClient.blob(`/signatures/${fileId}`);
+                                const imgUrl = await new Promise((resolve) => {
+                                    const reader = new FileReader();
+                                    reader.onload = () => resolve(reader.result);
+                                    reader.readAsDataURL(blob);
+                                });
+                                containerEl.innerHTML = `<img src="${imgUrl}" class="max-h-full w-auto object-contain">`;
+                            } catch {
+                                containerEl.innerHTML = `<span style="font-family: serif; font-style: italic; font-size: 8px; color: blue;">Signed</span>`;
+                            }
+                        };
+                        if (vOutSig) await renderGuardSig(p.actualOutSignatureFileId, vOutSig);
+                        if (vInSig) await renderGuardSig(p.actualInSignatureFileId, vInSig);
+
                         vGuardRemarks.innerText = getGuardRemarksText(p);
                         if (['Returned', 'Closed', 'Approved'].includes(p.status)) {
                             vGuardRemarks.classList.remove('bg-gray-200', 'text-gray-600', 'bg-blue-100', 'text-mpiBlue');
@@ -922,17 +963,33 @@ async function viewPass(id, isReviewing = false) {
                     actionArea.style.display = 'flex';
 
                     if (currentUser.role === 'Security') {
-                        approvalSignatureEditor?.classList.add('hidden');
+                        approvalSignatureEditor?.classList.remove('hidden');
                         if (btnApprove) {
                             if (p.status === 'Approved' || p.status === 'Overdue') {
                                 btnApprove.innerHTML = '<i class="fas fa-sign-out-alt mr-1"></i> Confirm Time Out';
-                                btnApprove.onclick = () => { window.executeSecurityScan(p.controlNo); forceCloseModal(); };
                             } else if (p.status === 'Outside') {
                                 btnApprove.innerHTML = '<i class="fas fa-sign-in-alt mr-1"></i> Confirm Time In';
-                                btnApprove.onclick = () => { window.executeSecurityScan(p.controlNo); forceCloseModal(); };
                             }
+                            btnApprove.onclick = async () => {
+                                btnApprove.disabled = true;
+                                try {
+                                    let sigId = null;
+                                    if (currentUploadedSig) {
+                                        const signature = await window.uploadCurrentSignature();
+                                        sigId = signature?.signatureFileId || null;
+                                    }
+                                    await window.executeSecurityScan(p.controlNo, sigId);
+                                    forceCloseModal();
+                                } catch (err) {
+                                    showToast('Error uploading signature: ' + err.message, 'error');
+                                } finally {
+                                    btnApprove.disabled = false;
+                                }
+                            };
                         }
                         if (btnReject) btnReject.classList.add('hidden');
+                        resetApprovalSignatureComposer();
+                        showSignatureSource('upload');
                     } else {
                         approvalSignatureEditor?.classList.remove('hidden');
                         if (btnApprove) {
@@ -942,9 +999,17 @@ async function viewPass(id, isReviewing = false) {
                         if (btnReject) btnReject.classList.remove('hidden');
                         resetApprovalSignatureComposer();
                         showSignatureSource('upload');
+                    }
 
-                        // PRE-FILL USERNAME FOR TRUE LIVE PREVIEW ALIGNMENT
-                        let targetContainerId = null;
+                    // PRE-FILL USERNAME FOR TRUE LIVE PREVIEW ALIGNMENT
+                    let targetContainerId = null;
+                    if (currentUser.role === 'Security') {
+                        if (p.status === 'Approved' || p.status === 'Overdue') {
+                            targetContainerId = isMaterial ? 'sigMatGuardOut' : 'vActOutSignature';
+                        } else if (p.status === 'Outside') {
+                            targetContainerId = isMaterial ? 'sigMatGuardIn' : 'vActInSignature';
+                        }
+                    } else {
                         if (p.status === 'Pending Superior') {
                             targetContainerId = isMaterial ? 'sigMatSuperior' : 'sigImm';
                         } else if (p.status === 'Pending President') {
@@ -952,9 +1017,13 @@ async function viewPass(id, isReviewing = false) {
                         } else if (p.status === 'Pending PAS') {
                             targetContainerId = isMaterial ? 'sigMatPas' : 'sigPAS';
                         }
+                    }
 
                     if (targetContainerId) {
-                        const nameSpan = document.getElementById(targetContainerId + 'Name');
+                        let nameSpanId = targetContainerId + 'Name';
+                        if (targetContainerId === 'vActOutSignature') nameSpanId = 'vActOutGuardName';
+                        if (targetContainerId === 'vActInSignature') nameSpanId = 'vActInGuardName';
+                        const nameSpan = document.getElementById(nameSpanId);
                         if (nameSpan) {
                             nameSpan.innerText = currentUser.name;
                             nameSpan.classList.remove('hidden');
@@ -985,7 +1054,6 @@ async function viewPass(id, isReviewing = false) {
                         document.getElementById('sigControls').classList.remove('hidden');
                         document.getElementById('saveDefaultSig').checked = true;
                         setSignatureStatus('Saved default signature loaded. Adjust size or upload/draw a replacement if needed.', 'success');
-                    }
                     }
                 } else {
                     document.getElementById('printModalContent')?.classList.remove('is-reviewing');
@@ -1203,7 +1271,7 @@ async function renderPersonGatePassClone(p) {
 async function renderMaterialGatePassClone(p) {
     const pages = [];
     const itemRows = [...(p.materialItems || [])];
-    const pageCount = Math.max(1, Math.ceil(itemRows.length / 9));
+    const pageCount = Math.max(1, Math.ceil(itemRows.length / 8));
     const formDate = p.formDate
         ? new Date(`${String(p.formDate).slice(0, 10)}T00:00:00`).toLocaleDateString()
         : p.dateFiled;
@@ -1219,12 +1287,15 @@ async function renderMaterialGatePassClone(p) {
     }
 
     for (let pageIndex = 0; pageIndex < pageCount; pageIndex++) {
-        const pageItems = itemRows.slice(pageIndex * 9, pageIndex * 9 + 9);
-        while (pageItems.length < 9) pageItems.push(null);
+        const pageItems = itemRows.slice(pageIndex * 8, pageIndex * 8 + 8);
+        while (pageItems.length < 8) pageItems.push(null);
 
         const div = document.createElement('div');
         div.className = 'material-print-page multi-print-item';
         div.setAttribute('data-material-page', pageIndex + 1);
+
+        const guardOutSlot = materialSignatureSlot('sigMatGuardOut', pageIndex);
+        const guardInSlot = materialSignatureSlot('sigMatGuardIn', pageIndex);
 
         const rowsHtml = pageItems.map(item => item
             ? `<tr>
@@ -1332,24 +1403,28 @@ async function renderMaterialGatePassClone(p) {
             </div>
 
             <!-- GUARD TRACKING ROW FOR MATERIAL -->
-            <div class="guard-status-row hidden flex-row justify-between items-end w-full mt-1 pt-0" style="-webkit-print-color-adjust: exact; print-color-adjust: exact;">
-                <div class="flex items-end space-x-1 w-[33%] text-[7.5px]">
-                    <span class="font-bold text-gray-500 uppercase whitespace-nowrap">ACTUAL OUT</span>
-                    <div class="guard-scan-stack">
-                        <div class="vActOut guard-scan-time"></div>
-                        <div class="vActOutGuardName guard-scan-name"></div>
+            <div class="guard-status-row hidden" style="display: none; grid-template-columns: 1.15fr 1.15fr 0.7fr; gap: 4mm; margin-top: 2.2mm; align-items: center; width: 100%;">
+                <div style="display: flex; align-items: center; gap: 1.5mm; min-width: 0; width: 100%;">
+                    <strong style="font-size: 7px; color: #4b5563; font-weight: 700; white-space: nowrap; text-transform: uppercase;">ACTUAL OUT</strong>
+                    <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; position: relative; min-width: 0;">
+                        <div class="sig-wrapper sig-mat-guard-out guard-scan-sig" ${guardOutSlot.imageAttribute} style="height: 6mm; display: flex; align-items: end; justify-content: center; width: 100%;"></div>
+                        <span class="guard-scan-time vActOut" style="display: block; text-align: center; font-size: 7px; font-weight: 700; min-height: 3.5mm; line-height: 1;"></span>
+                        <div style="width: 100%; border-top: 1px solid #111827; margin-top: 0.2mm; margin-bottom: 0.2mm;"></div>
+                        <small class="name sig-mat-guard-out-name guard-scan-name" ${guardOutSlot.nameAttribute} style="display: block; text-align: center; font-size: 5.4px; color: #4b5563; font-weight: bold; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></small>
                     </div>
                 </div>
-                <div class="flex items-end space-x-1 w-[33%] text-[7.5px]">
-                    <span class="font-bold text-gray-500 uppercase whitespace-nowrap">ACTUAL IN</span>
-                    <div class="guard-scan-stack">
-                        <div class="vActIn guard-scan-time"></div>
-                        <div class="vActInGuardName guard-scan-name"></div>
+                <div style="display: flex; align-items: center; gap: 1.5mm; min-width: 0; width: 100%;">
+                    <strong style="font-size: 7px; color: #4b5563; font-weight: 700; white-space: nowrap; text-transform: uppercase;">ACTUAL IN</strong>
+                    <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; position: relative; min-width: 0;">
+                        <div class="sig-wrapper sig-mat-guard-in guard-scan-sig" ${guardInSlot.imageAttribute} style="height: 6mm; display: flex; align-items: end; justify-content: center; width: 100%;"></div>
+                        <span class="guard-scan-time vActIn" style="display: block; text-align: center; font-size: 7px; font-weight: 700; min-height: 3.5mm; line-height: 1;"></span>
+                        <div style="width: 100%; border-top: 1px solid #111827; margin-top: 0.2mm; margin-bottom: 0.2mm;"></div>
+                        <small class="name sig-mat-guard-in-name guard-scan-name" ${guardInSlot.nameAttribute} style="display: block; text-align: center; font-size: 5.4px; color: #4b5563; font-weight: bold; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;"></small>
                     </div>
                 </div>
-                <div class="flex items-end space-x-1 w-[34%] text-[7.5px]">
-                    <span class="font-bold text-gray-500 uppercase whitespace-nowrap">REMARKS</span>
-                    <div class="vGuardRemarks document-status-badge status-badge-neutral"></div>
+                <div style="display: flex; align-items: center; gap: 1.5mm; min-width: 0; justify-content: flex-start;">
+                    <strong style="font-size: 7px; color: #4b5563; font-weight: 700; white-space: nowrap; text-transform: uppercase;">REMARKS</strong>
+                    <div class="vGuardRemarks document-status-badge status-badge-neutral" style="font-size: 7.5px; font-weight: 800; padding: 1px 4.5px;"></div>
                 </div>
             </div>
 
@@ -1374,35 +1449,59 @@ async function renderMaterialGatePassClone(p) {
         const matGuardRow = div.querySelector('.guard-status-row');
         if (matGuardRow && shouldShowGuardStatusRow(p)) {
             matGuardRow.classList.remove('hidden');
-            matGuardRow.classList.add('flex');
+            matGuardRow.style.display = 'grid';
 
             const vOut = div.querySelector('.vActOut');
             const vIn = div.querySelector('.vActIn');
-            const vOutGuardName = div.querySelector('.vActOutGuardName');
-            const vInGuardName = div.querySelector('.vActInGuardName');
             const vRem = div.querySelector('.vGuardRemarks');
-            const vBadge = div.querySelector('.vGuardBadge');
 
             const safeFormatTime = (ts) => {
-                if (!ts) return '';
+                if (!ts) return '—';
                 if (typeof ts === 'string' && ts.includes(':') && !ts.includes('-')) return ts;
                 const d = new Date(ts);
-                if (isNaN(d.getTime()) || d.getFullYear() < 2000) return '';
+                if (isNaN(d.getTime()) || d.getFullYear() < 2000) return '—';
                 return d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
             };
             if (vOut) vOut.innerText = safeFormatTime(p.actualOut);
             if (vIn) vIn.innerText = safeFormatTime(p.actualIn);
-            if (vOutGuardName) vOutGuardName.innerText = getGuardScanName(p, 'TIME_OUT');
-            if (vInGuardName) vInGuardName.innerText = getGuardScanName(p, 'TIME_IN');
             if (vRem) {
                 vRem.innerText = getGuardRemarksText(p);
                 vRem.className = `vGuardRemarks ${getDocumentStatusBadgeClass(p.status)}`;
             }
-            if (vBadge) {
-                vBadge.innerText = p.status.toUpperCase();
-                vBadge.className = 'vGuardBadge px-2 py-0.5 rounded-full font-extrabold text-[7.5px] text-center select-none uppercase tracking-wide ' +
-                    (['Returned', 'Closed', 'Approved'].includes(p.status) ? 'bg-green-100 text-green-800' : (['Outside', 'Overdue'].includes(p.status) ? 'bg-blue-100 text-mpiBlue' : 'bg-gray-200 text-gray-600'));
+        }
+
+        const outGuardSignature = p.actualOutSignatureFileId
+            ? {
+                name: getGuardScanName(p, 'TIME_OUT'),
+                fileId: p.actualOutSignatureFileId,
+                w: 100,
+                y: 0
             }
+            : null;
+        const inGuardSignature = p.actualInSignatureFileId
+            ? {
+                name: getGuardScanName(p, 'TIME_IN'),
+                fileId: p.actualInSignatureFileId,
+                w: 100,
+                y: 0
+            }
+            : null;
+
+        if (outGuardSignature) {
+            await handleSig(outGuardSignature, '.sig-mat-guard-out', '.sig-mat-guard-out-name');
+        } else {
+            const outWrapper = div.querySelector('.sig-mat-guard-out');
+            if (outWrapper) outWrapper.innerHTML = '';
+            const outName = div.querySelector('.sig-mat-guard-out-name');
+            if (outName) outName.innerText = 'Guard';
+        }
+        if (inGuardSignature) {
+            await handleSig(inGuardSignature, '.sig-mat-guard-in', '.sig-mat-guard-in-name');
+        } else {
+            const inWrapper = div.querySelector('.sig-mat-guard-in');
+            if (inWrapper) inWrapper.innerHTML = '';
+            const inName = div.querySelector('.sig-mat-guard-in-name');
+            if (inName) inName.innerText = 'Guard';
         }
 
         const handleSig = async (sigData, wrapperSelector, nameSelector) => {
@@ -1517,7 +1616,7 @@ async function printSelectedLogs() {
 
             const a4Front = document.createElement('div');
             a4Front.className = 'a4-wrapper is-batch-print';
-            a4Front.style.cssText = 'display: flex; flex-direction: column; gap: 0; page-break-after: always; width: 210mm; min-height: 297mm; overflow: visible; align-items: center; justify-content: flex-start; padding-top: 4mm; box-sizing: border-box;';
+            a4Front.style.cssText = 'display: flex; flex-direction: column; gap: 0; page-break-after: always; width: 210mm; height: 297mm; max-height: 297mm; overflow: hidden; align-items: center; justify-content: flex-start; padding-top: 4mm; box-sizing: border-box;';
 
             pair1.front.style.cssText += 'page-break-after: avoid !important; break-after: avoid !important; margin-bottom: 4mm !important; box-shadow: none !important; margin-top: 0 !important;';
             a4Front.appendChild(pair1.front);
@@ -1532,7 +1631,7 @@ async function printSelectedLogs() {
             if (hasBack) {
                 const a4Back = document.createElement('div');
                 a4Back.className = 'a4-wrapper is-batch-print';
-                a4Back.style.cssText = 'display: flex; flex-direction: column; gap: 0; page-break-after: always; width: 210mm; min-height: 297mm; overflow: visible; align-items: center; justify-content: flex-start; padding-top: 4mm; box-sizing: border-box;';
+                a4Back.style.cssText = 'display: flex; flex-direction: column; gap: 0; page-break-after: always; width: 210mm; height: 297mm; max-height: 297mm; overflow: hidden; align-items: center; justify-content: flex-start; padding-top: 4mm; box-sizing: border-box;';
 
                 if (pair1.back) {
                     pair1.back.style.cssText += 'page-break-before: avoid !important; break-before: avoid !important; page-break-after: avoid !important; break-after: avoid !important; margin-bottom: 4mm !important; margin-top: 0 !important;';

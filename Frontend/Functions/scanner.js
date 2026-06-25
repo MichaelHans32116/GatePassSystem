@@ -66,11 +66,29 @@ async function simulateQrScan(identifierOverride = null, fromCamera = false) {
         
         if (isQrToken) {
             try {
-                const payload = identifier.slice(4);
-                const decoded = atob(payload);
-                const parsed = JSON.parse(decoded);
-                if (parsed.dbId) {
-                    viewPass(parsed.dbId, true);
+                const parts = identifier.split('.');
+                if (parts.length >= 2) {
+                    const idVal = parseInt(parts[1], 10);
+                    if (identifier.startsWith('GP1.')) {
+                        viewPass(idVal, true);
+                    } else if (identifier.startsWith('EMP1.')) {
+                        const queue = await ApiClient.get('/security/queue');
+                        const match = queue.find(item => item.employeeRecordId === idVal);
+                        if (match) {
+                            viewPass(match.gatePassId, true);
+                        } else {
+                            // If not in active queue, check if there's any pass in history
+                            try {
+                                const lookup = await ApiClient.request(
+                                    `/form-requests?page=1&pageSize=20&search=`
+                                );
+                                // Since we don't have search by employeeRecordId, we can search for the employee by typing their name
+                                showToast('No active gate pass queue for this employee.', 'info');
+                            } catch {
+                                showToast('No active gate pass queue for this employee.', 'info');
+                            }
+                        }
+                    }
                 } else {
                     showToast('Invalid QR payload', 'error');
                 }
@@ -266,7 +284,15 @@ async function scanQrCameraFrame() {
                         requestAnimationFrame(scanQrCameraFrame);
                     return;
                 }
-                qrClientCooldowns.delete(rawValue);
+                qrClientCooldowns.set(rawValue, Date.now() + 30000); // 30s cooldown for this specific QR
+                
+                // Clean up expired client-side cooldowns
+                for (const [key, expiry] of qrClientCooldowns.entries()) {
+                    if (expiry <= Date.now()) {
+                        qrClientCooldowns.delete(key);
+                    }
+                }
+
                 qrCameraScanning = false;
                 setQrCameraStatus('QR detected. Checking queue...', 'info');
                 await simulateQrScan(rawValue, true);
@@ -350,6 +376,7 @@ async function renderGuardDashboard() {
                 controlNo: item.controlNo,
                 userName: item.fullName,
                 willReturn: item.willReturn,
+                employeeRecordId: item.employeeRecordId,
                 status: gatePassStatusLabels[item.gatePassStatusCode] || item.statusName,
                 vehicle: item.vehicleName ? {
                     name: item.vehicleName,

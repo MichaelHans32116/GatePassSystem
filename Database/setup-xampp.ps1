@@ -169,6 +169,22 @@ if ($databaseExists -eq 0) {
             Write-Host 'Applying database migration 009...' -ForegroundColor Yellow
             Invoke-MySqlSource 'Database\Migrations\009_update_security_gate_queue_view.sql'
         }
+
+        $guardSignaturesApplied = Invoke-MySqlScalarInt `
+            "SELECT COUNT(*) FROM gate_pass_system.tbl_schema_versions WHERE version_no='010';"
+
+        if ($guardSignaturesApplied -eq 0) {
+            Write-Host 'Applying database migration 010...' -ForegroundColor Yellow
+            Invoke-MySqlSource 'Database\Migrations\010_add_guard_signatures.sql'
+        }
+
+        $unifyControlsApplied = Invoke-MySqlScalarInt `
+            "SELECT COUNT(*) FROM gate_pass_system.tbl_schema_versions WHERE version_no='011';"
+
+        if ($unifyControlsApplied -eq 0) {
+            Write-Host 'Applying database migration 011...' -ForegroundColor Yellow
+            Invoke-MySqlSource 'Database\Migrations\011_unify_control_numbers_and_view.sql'
+        }
     }
 }
 

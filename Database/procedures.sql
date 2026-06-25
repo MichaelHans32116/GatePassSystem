@@ -292,7 +292,7 @@ BEGIN
 
     SET v_gate_pass_id = LAST_INSERT_ID();
     SET v_gate_pass_no = CONCAT(
-        'MGP-',
+        'GP-',
         DATE_FORMAT(p_form_date, '%Y%m%d'),
         '-',
         LPAD(v_control_sequence, 6, '0')

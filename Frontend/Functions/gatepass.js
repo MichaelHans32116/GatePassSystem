@@ -155,6 +155,8 @@ function mapApiGatePass(record) {
         ).length,
         actualOut: record.actualOutAt ? formatDateTime(record.actualOutAt, false) : null,
         actualIn: record.actualInAt ? formatDateTime(record.actualInAt, false) : null,
+        actualOutSignatureFileId: record.actualOutSignatureFileId || null,
+        actualInSignatureFileId: record.actualInSignatureFileId || null,
         actualOutGuardName: timeOutScan?.guardName || '',
         actualInGuardName: timeInScan?.guardName || '',
         willReturn: record.willReturn !== false,
