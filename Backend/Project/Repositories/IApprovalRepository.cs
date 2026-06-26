@@ -16,6 +16,10 @@ public interface IApprovalRepository
         long? signatureFileId,
         string? qrTokenHash,
         DateTime? qrExpiresAt,
+        long? vehicleId,
+        long? driverId,
+        bool? putOnHold,
+        string? tripType,
         string traceId,
         CancellationToken cancellationToken = default);
 }

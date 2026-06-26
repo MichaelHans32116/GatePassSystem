@@ -964,7 +964,8 @@ async function viewPass(id, isReviewing = false) {
                                 });
                                 const w = metadataResponse.widthPercent || 100;
                                 const y = metadataResponse.yOffset || 0;
-                                containerEl.innerHTML = `<img src="${imgUrl}" style="height: ${w}%; transform: translateY(${y}%);" class="w-auto object-contain transition-all duration-300">`;
+                                const wStyle = w !== 100 ? `width: ${w}%;` : 'width: auto; max-width: 100%;';
+                                containerEl.innerHTML = `<img src="${imgUrl}" style="${wStyle} margin-bottom: ${y}px; max-height: 100%; object-fit: contain;" class="transition-all duration-300">`;
                             } catch {
                                 containerEl.innerHTML = `<span style="font-family: serif; font-style: italic; font-size: 8px; color: blue;">Signed</span>`;
                             }
@@ -1022,9 +1023,45 @@ async function viewPass(id, isReviewing = false) {
                         showSignatureSource('upload');
                     } else {
                         approvalSignatureEditor?.classList.remove('hidden');
-                        if (btnApprove) {
-                            btnApprove.innerHTML = '<i class="fas fa-check-circle mr-1"></i> Approve Request';
-                            btnApprove.onclick = approveCurrentPass;
+                        const hrArea = document.getElementById('hrAssignmentArea');
+                        const holdBtn = document.getElementById('holdRequestButton');
+                        
+                        if (p.status === 'Pending HR Assignment' || p.status === 'On Hold') {
+                            if (hrArea) {
+                                hrArea.classList.remove('hidden');
+                                hrArea.classList.add('flex');
+                                
+                                const tripTypeSpan = document.getElementById('hrRequestedTripType');
+                                if (tripTypeSpan) {
+                                    tripTypeSpan.innerText = p.privateVehicleDetails || 'Company Vehicle Needed';
+                                }
+                                
+                                const vSelect = document.getElementById('hrAssignVehicle');
+                                if (vSelect) {
+                                    vSelect.innerHTML = '<option value="">Select Vehicle</option>';
+                                    (databaseVehicles || []).forEach(v => {
+                                        vSelect.innerHTML += `<option value="${v.id}">${v.name} (${v.plate})</option>`;
+                                    });
+                                    if (p.vehicle?.id) vSelect.value = p.vehicle.id;
+                                }
+                                
+                                populateHrAssignDrivers(p.vehicle?.id);
+                            }
+                            if (holdBtn) holdBtn.classList.remove('hidden');
+                            if (btnApprove) {
+                                btnApprove.innerHTML = '<i class="fas fa-arrow-right mr-1"></i> Assign & Forward';
+                                btnApprove.onclick = approveCurrentPass;
+                            }
+                        } else {
+                            if (hrArea) {
+                                hrArea.classList.add('hidden');
+                                hrArea.classList.remove('flex');
+                            }
+                            if (holdBtn) holdBtn.classList.add('hidden');
+                            if (btnApprove) {
+                                btnApprove.innerHTML = '<i class="fas fa-check-circle mr-1"></i> Approve Request';
+                                btnApprove.onclick = approveCurrentPass;
+                            }
                         }
                         if (btnReject) btnReject.classList.remove('hidden');
                         resetApprovalSignatureComposer();
@@ -1247,7 +1284,8 @@ async function renderPersonGatePassClone(p) {
                 });
                 const w = metadataResponse.widthPercent || 100;
                 const y = metadataResponse.yOffset || 0;
-                containerEl.innerHTML = `<img src="${imgUrl}" style="height: ${w}%; transform: translateY(${y}%);" class="w-auto object-contain transition-all duration-300">`;
+                const wStyle = w !== 100 ? `width: ${w}%;` : 'width: auto; max-width: 100%;';
+                containerEl.innerHTML = `<img src="${imgUrl}" style="${wStyle} margin-bottom: ${y}px; max-height: 100%; object-fit: contain;" class="transition-all duration-300">`;
             } catch {
                 containerEl.innerHTML = `<span style="font-family: serif; font-style: italic; font-size: 8px; color: blue;">Signed</span>`;
             }
@@ -1742,3 +1780,26 @@ window.viewPass = viewPass;
 window.closeModal = closeModal;
 window.forceCloseModal = forceCloseModal;
 window.printSelectedLogs = printSelectedLogs;
+
+function populateHrAssignDrivers(vehicleId = null) {
+    const dSelect = document.getElementById('hrAssignDriver');
+    if (!dSelect) return;
+    dSelect.innerHTML = '<option value="">Select Driver (Optional)</option>';
+    (databaseDrivers || []).forEach(d => {
+        dSelect.innerHTML += `<option value="${d.driverId}">${d.fullName}</option>`;
+    });
+
+    if (vehicleId) {
+        const vehicle = (databaseVehicles || []).find(v => String(v.id) === String(vehicleId));
+        if (vehicle && vehicle.defaultDriverId) {
+            dSelect.value = vehicle.defaultDriverId;
+        }
+    }
+}
+
+function handleHrAssignVehicleChange(select) {
+    populateHrAssignDrivers(select.value);
+}
+
+window.populateHrAssignDrivers = populateHrAssignDrivers;
+window.handleHrAssignVehicleChange = handleHrAssignVehicleChange;

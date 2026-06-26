@@ -106,6 +106,10 @@ public sealed class ApprovalRepository(
         long? signatureFileId,
         string? qrTokenHash,
         DateTime? qrExpiresAt,
+        long? vehicleId,
+        long? driverId,
+        bool? putOnHold,
+        string? tripType,
         string traceId,
         CancellationToken cancellationToken = default)
     {
@@ -164,9 +168,9 @@ public sealed class ApprovalRepository(
                     FROM tbl_gate_pass_requests request_row
                     JOIN tbl_gate_pass_approval_steps step
                         ON step.gate_pass_id = request_row.gate_pass_id
-                       AND request_row.gate_pass_status_code = CONCAT(
-                           'PENDING_',
-                           step.approval_step_code
+                       AND (
+                           request_row.gate_pass_status_code = CONCAT('PENDING_', step.approval_step_code)
+                           OR (request_row.gate_pass_status_code = 'ON_HOLD' AND step.approval_status_code = 'PENDING')
                        )
                     WHERE request_row.gate_pass_id = @GatePassId
                       AND step.approval_status_code = 'PENDING'
@@ -193,6 +197,149 @@ public sealed class ApprovalRepository(
             }
 
             var actedAt = DateTime.UtcNow;
+
+            // 1. Handle Put On Hold option for HR Assignment step
+            if (current.ApprovalStepCode == "HR_ASSIGN" && putOnHold == true)
+            {
+                await connection.ExecuteAsync(new CommandDefinition(
+                    """
+                    UPDATE tbl_gate_pass_requests
+                    SET gate_pass_status_code = 'ON_HOLD',
+                        version_no = version_no + 1
+                    WHERE gate_pass_id = @GatePassId;
+
+                    INSERT INTO tbl_gate_pass_status_history (
+                        gate_pass_id,
+                        from_status_code,
+                        to_status_code,
+                        changed_by_user_id,
+                        remarks,
+                        trace_id
+                    ) VALUES (
+                        @GatePassId,
+                        @PreviousStatus,
+                        'ON_HOLD',
+                        @ActorUserId,
+                        @Comment,
+                        @TraceId
+                    );
+                    """,
+                    new
+                    {
+                        GatePassId = gatePassId,
+                        PreviousStatus = current.CurrentStatus,
+                        ActorUserId = actorUserId,
+                        Comment = comment ?? "Put on hold by HR.",
+                        TraceId = traceId
+                    },
+                    transaction,
+                    cancellationToken: cancellationToken));
+
+                // Send notification to requester
+                await connection.ExecuteAsync(new CommandDefinition(
+                    """
+                    INSERT INTO tbl_notifications (
+                        user_id,
+                        title,
+                        message,
+                        notification_type_code,
+                        related_entity_type,
+                        related_entity_id,
+                        is_read
+                    ) VALUES (
+                        @UserId,
+                        'Gate Pass Put on Hold',
+                        @Message,
+                        'SYSTEM_INFO',
+                        'GATE_PASS',
+                        @GatePassId,
+                        0
+                    );
+                    """,
+                    new
+                    {
+                        UserId = current.RequesterUserId,
+                        Message = $"Your gate pass request has been put on hold by HR. Comment: {comment}",
+                        GatePassId = gatePassId
+                    },
+                    transaction,
+                    cancellationToken: cancellationToken));
+
+                await transaction.CommitAsync(cancellationToken);
+                return new ApprovalMutation(
+                    gatePassId,
+                    current.FormTypeCode,
+                    current.CurrentStatus,
+                    "ON_HOLD",
+                    null);
+            }
+
+            // 2. Handle Vehicle/Driver assignment on HR approval
+            if (current.ApprovalStepCode == "HR_ASSIGN" && approve)
+            {
+                await connection.ExecuteAsync(new CommandDefinition(
+                    """
+                    UPDATE tbl_gate_pass_requests
+                    SET vehicle_id = @VehicleId,
+                        driver_id = @DriverId,
+                        private_vehicle_details = CASE 
+                            WHEN @VehicleId IS NULL THEN @TripType 
+                            ELSE private_vehicle_details 
+                        END,
+                        vehicle_usage_code = CASE
+                            WHEN @VehicleId IS NULL AND @TripType IS NOT NULL THEN 'PRIVATE'
+                            ELSE 'COMPANY'
+                        END
+                    WHERE gate_pass_id = @GatePassId;
+                    """,
+                    new
+                    {
+                        GatePassId = gatePassId,
+                        VehicleId = vehicleId,
+                        DriverId = driverId,
+                        TripType = tripType
+                    },
+                    transaction,
+                    cancellationToken: cancellationToken));
+
+                if (vehicleId.HasValue && vehicleId.Value > 0)
+                {
+                    // Clean up any existing reservation first to avoid duplicates
+                    await connection.ExecuteAsync(new CommandDefinition(
+                        "DELETE FROM tbl_vehicle_reservations WHERE gate_pass_id = @GatePassId;",
+                        new { GatePassId = gatePassId },
+                        transaction,
+                        cancellationToken: cancellationToken));
+
+                    await connection.ExecuteAsync(new CommandDefinition(
+                        """
+                        INSERT INTO tbl_vehicle_reservations (
+                            gate_pass_id,
+                            vehicle_id,
+                            driver_id,
+                            reserved_from,
+                            reserved_until,
+                            reservation_status_code
+                        ) VALUES (
+                            @GatePassId,
+                            @VehicleId,
+                            @DriverId,
+                            (SELECT expected_out_at FROM tbl_gate_pass_requests WHERE gate_pass_id = @GatePassId),
+                            (SELECT expected_in_at FROM tbl_gate_pass_requests WHERE gate_pass_id = @GatePassId),
+                            'PENDING'
+                        );
+                        """,
+                        new
+                        {
+                            GatePassId = gatePassId,
+                            VehicleId = vehicleId.Value,
+                            DriverId = driverId
+                        },
+                        transaction,
+                        cancellationToken: cancellationToken));
+                }
+            }
+
             var decisionCode = approve ? "APPROVED" : "REJECTED";
             await connection.ExecuteAsync(new CommandDefinition(
                 """

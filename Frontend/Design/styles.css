@@ -173,7 +173,7 @@
                 padding-top: 0 !important;
                 padding-bottom: 0 !important;
             }
-            .a4-wrapper.has-multiple-passes::before {
+            .a4-wrapper::before {
                 content: "\2702  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -";
                 position: absolute;
                 top: 148.5mm;
@@ -1065,7 +1065,7 @@
             padding-top: 0;
             padding-bottom: 0;
         }
-        .a4-wrapper.has-multiple-passes::before {
+        .a4-wrapper::before {
             content: "\2702  - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - -";
             position: absolute;
             top: 148.5mm;

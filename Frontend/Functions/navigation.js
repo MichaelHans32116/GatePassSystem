@@ -10,7 +10,12 @@ function toggleSidebar() {
 function setupRoleAccess(user) {
             // Reset visibility
             document.getElementById('navItemApply').style.display = 'flex';
-            document.getElementById('navItemSchedule').style.display = 'flex';
+            const allowedCalendarUserIds = ['GA125', 'GA120', 'GA150', 'GA133', 'GA139', 'GA407'];
+            if (allowedCalendarUserIds.includes(user.id)) {
+                document.getElementById('navItemSchedule').style.display = 'flex';
+            } else {
+                document.getElementById('navItemSchedule').style.display = 'none';
+            }
             document.getElementById('navGroupApprovals').style.display = 'block';
             document.getElementById('navGroupSecurity').style.display = 'none';
             document.getElementById('navGroupAdmin').style.display = 'block';

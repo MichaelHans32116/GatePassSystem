@@ -214,6 +214,7 @@ async function logout() {
     clearTransientApplicationState?.();
     resetRequestForms?.();
     currentUser = null;
+    window.isGuestCalendarView = false;
     document.getElementById('appView').classList.add('hidden');
     document.getElementById('loginView').classList.remove('hidden');
     document.getElementById('loginForm').reset();

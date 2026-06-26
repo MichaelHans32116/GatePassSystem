@@ -77,6 +77,11 @@ public sealed class GatePassService(
             routeCodes.Add("SUPERIOR");
         }
 
+        if (usesCompanyVehicle)
+        {
+            routeCodes.Add("HR_ASSIGN");
+        }
+
         if (requiresPresident)
         {
             routeCodes.Add("PRESIDENT");
@@ -114,11 +119,11 @@ public sealed class GatePassService(
             traceId,
             cancellationToken);
 
-        if (usesCompanyVehicle)
+        if (usesCompanyVehicle && request.VehicleId.HasValue)
         {
             var reserved = await fleetRepository.ReserveAsync(
                 draft.GatePassId,
-                request.VehicleId!.Value,
+                request.VehicleId.Value,
                 request.DriverId,
                 request.ExpectedOutAt.UtcDateTime,
                 request.ExpectedInAt?.UtcDateTime,
@@ -412,7 +417,7 @@ public sealed class GatePassService(
             return "Vehicle usage must be NONE, PRIVATE, or COMPANY.";
         }
 
-        if (usage == "COMPANY" && !request.VehicleId.HasValue)
+        if (usage == "COMPANY" && !request.VehicleId.HasValue && string.IsNullOrWhiteSpace(request.PrivateVehicleDetails))
         {
             return "A company vehicle is required.";
         }

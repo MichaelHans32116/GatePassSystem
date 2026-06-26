@@ -157,6 +157,12 @@ function mapApiGatePass(record) {
         actualIn: record.actualInAt ? formatDateTime(record.actualInAt, false) : null,
         actualOutSignatureFileId: record.actualOutSignatureFileId || null,
         actualInSignatureFileId: record.actualInSignatureFileId || null,
+        preparedBySignatureWidth: record.preparedBySignatureWidth || null,
+        preparedBySignatureYOffset: record.preparedBySignatureYOffset || null,
+        actualOutSignatureWidth: record.actualOutSignatureWidth || null,
+        actualOutSignatureYOffset: record.actualOutSignatureYOffset || null,
+        actualInSignatureWidth: record.actualInSignatureWidth || null,
+        actualInSignatureYOffset: record.actualInSignatureYOffset || null,
         actualOutGuardName: timeOutScan?.guardName || '',
         actualInGuardName: timeInScan?.guardName || '',
         willReturn: record.willReturn !== false,
@@ -244,10 +250,31 @@ function updateApprovalRoutePreview() {
 function toggleVehicleFields() {
     const isNeeded = document.getElementById('gpNeedVehicle').checked;
     document.getElementById('vehicleFields').style.display = isNeeded ? 'flex' : 'none';
-    document.getElementById('gpVehicle').required = isNeeded;
-    if (!isNeeded) {
-        document.getElementById('gpVehicle').value = '';
-        handleVehicleChange(document.getElementById('gpVehicle'));
+    
+    const isHRorAdmin = currentUser && (
+        currentUser.role === 'System Admin' || 
+        (currentUser.roles || []).includes('PAS_NOTER') ||
+        ['GA120', 'GA150', 'GA133', 'GA139', 'GA409'].includes(currentUser.id)
+    );
+
+    const tripTypeField = document.getElementById('employeeTripTypeField');
+    const hrFields = document.getElementById('hrVehicleAssignmentFields');
+    const vehicleSelect = document.getElementById('gpVehicle');
+
+    if (isNeeded) {
+        if (isHRorAdmin) {
+            tripTypeField.style.display = 'none';
+            hrFields.style.display = 'flex';
+            vehicleSelect.required = true;
+        } else {
+            tripTypeField.style.display = 'block';
+            hrFields.style.display = 'none';
+            vehicleSelect.required = false;
+        }
+    } else {
+        vehicleSelect.value = '';
+        vehicleSelect.required = false;
+        handleVehicleChange(vehicleSelect);
     }
     updateApprovalRoutePreview();
 }
@@ -290,7 +317,33 @@ async function submitGatePass(e) {
         return;
     }
 
-    const isManual = needsVehicle && vehicleSelection === 'others';
+    const isHRorAdmin = currentUser && (
+        currentUser.role === 'System Admin' || 
+        currentUser.roles.includes('PAS_NOTER') ||
+        ['GA120', 'GA150', 'GA133', 'GA139', 'GA409'].includes(currentUser.id)
+    );
+
+    const isManual = needsVehicle && isHRorAdmin && vehicleSelection === 'others';
+    
+    let vehicleUsageCode = 'NONE';
+    let vehicleId = null;
+    let driverId = null;
+    let privateVehicleDetails = null;
+
+    if (needsVehicle) {
+        if (!isHRorAdmin) {
+            vehicleUsageCode = 'COMPANY';
+            privateVehicleDetails = document.getElementById('gpTripType').value;
+        } else {
+            vehicleUsageCode = isManual ? 'PRIVATE' : 'COMPANY';
+            vehicleId = !isManual ? Number(vehicleSelection) : null;
+            privateVehicleDetails = isManual
+                ? `${document.getElementById('gpManualVehicle').value.trim()} / Driver: ${document.getElementById('gpManualDriver').value.trim()}`
+                : null;
+            driverId = !isManual ? (Number(document.getElementById('gpDriver').value) || null) : null;
+        }
+    }
+
     const payload = {
         requesterDepartmentId,
         destination: document.getElementById('gpDestination').value.trim(),
@@ -298,14 +351,10 @@ async function submitGatePass(e) {
         expectedOutAt: expectedOut.toISOString(),
         expectedInAt: expectedIn?.toISOString() || null,
         willReturn,
-        vehicleUsageCode: needsVehicle ? (isManual ? 'PRIVATE' : 'COMPANY') : 'NONE',
-        vehicleId: needsVehicle && !isManual ? Number(vehicleSelection) : null,
-        privateVehicleDetails: isManual
-            ? `${document.getElementById('gpManualVehicle').value.trim()} / Driver: ${document.getElementById('gpManualDriver').value.trim()}`
-            : null,
-        driverId: needsVehicle && !isManual
-            ? Number(document.getElementById('gpDriver').value) || null
-            : null
+        vehicleUsageCode,
+        vehicleId,
+        privateVehicleDetails,
+        driverId
     };
 
     submitButton.disabled = true;
@@ -370,7 +419,7 @@ function submitMockGatePass(e) {
 }
 
 async function loadFleetReferences() {
-    if (!isDatabaseSession()) {
+    if (!isDatabaseSession() && !window.isGuestCalendarView) {
         databaseVehicles = [];
         databaseDrivers = [];
         initializeGatePassForm();

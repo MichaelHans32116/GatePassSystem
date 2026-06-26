@@ -123,6 +123,7 @@ async function refreshApplicationState(reason = 'general', options = {}) {
 
         if (isDatabaseSession() && currentUser.role !== 'Security') {
             await loadMyGatePasses();
+            await checkUnreadNotifications();
         }
 
         await renderApprovalQueue();
@@ -168,7 +169,25 @@ window.addEventListener('gatepass:authenticated', async () => {
     await refreshApplicationState('authenticated', { resetState: true });
 });
 
+async function checkUnreadNotifications() {
+    if (!currentUser) return;
+    try {
+        const res = await ApiClient.get('/notifications/unread');
+        const notifications = Array.isArray(res) ? res : (res && res.items ? res.items : []);
+        if (notifications.length > 0) {
+            notifications.forEach(notif => {
+                showToast(`${notif.title}: ${notif.message}`, 'info');
+            });
+            // Mark them as read
+            await ApiClient.post('/notifications/mark-read');
+        }
+    } catch (err) {
+        console.error('Failed to check unread notifications:', err);
+    }
+}
+
 window.updateDate = updateDate;
 window.showToast = showToast;
 window.refreshDashboards = refreshDashboards;
 window.refreshApplicationState = refreshApplicationState;
+window.checkUnreadNotifications = checkUnreadNotifications;

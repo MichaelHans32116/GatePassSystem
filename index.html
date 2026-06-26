@@ -368,6 +368,7 @@
 
                     <!-- Export Bar -->
                     <div class="mt-4 flex flex-wrap gap-3 justify-end">
+                        <button id="btnRequestServiceSchedule" onclick="openServiceScheduleRequestModal()" class="text-xs bg-mpiBlue text-white px-4 py-2 rounded hover:bg-blue-700 transition hidden"><i class="fas fa-car mr-1"></i> Request Service Schedule</button>
                         <button id="btnManageFixedSchedules" onclick="openFixedSchedulesModal()" class="text-xs bg-amber-600 text-white px-4 py-2 rounded hover:bg-amber-700 transition hidden"><i class="fas fa-cog mr-1"></i> Manage Fixed Schedules</button>
                         <button onclick="exportScheduleExcel('vehicle')" class="text-xs bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition"><i class="fas fa-file-excel mr-1"></i> Export Vehicles (Weekly)</button>
                         <button onclick="exportScheduleExcel('truck')" class="text-xs bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"><i class="fas fa-file-excel mr-1"></i> Export Trucks (Weekly)</button>
@@ -457,30 +458,42 @@
                                 </label>
 
                                 <div id="vehicleFields" class="hidden mt-4 pt-4 border-t border-gray-200 flex-col space-y-4">
-                                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
-                                        <div>
-                                            <label class="block text-[11px] font-semibold text-gray-500 uppercase mb-1">Select Vehicle</label>
-                                            <select id="gpVehicle" class="w-full bg-white border border-gray-300 p-2 rounded text-sm focus:ring-1 focus:ring-mpiBlue" onchange="handleVehicleChange(this)">
-                                                <!-- Populated JS -->
-                                            </select>
-                                        </div>
-                                        <div>
-                                            <label class="block text-[11px] font-semibold text-gray-500 uppercase mb-1">Driver (change if needed)</label>
-                                            <select id="gpDriver" class="w-full bg-white border border-gray-300 p-2 rounded text-sm text-gray-700" disabled>
-                                                <option value="">Unassigned</option>
-                                            </select>
-                                        </div>
+                                    <!-- Trip Type Field (Visible for regular employees requesting) -->
+                                    <div id="employeeTripTypeField" class="hidden">
+                                        <label class="block text-[11px] font-semibold text-gray-500 uppercase mb-1">Trip Type</label>
+                                        <select id="gpTripType" class="w-full bg-white border border-gray-300 p-2 rounded text-sm focus:ring-1 focus:ring-mpiBlue">
+                                            <option value="Hatid Lang">Hatid Lang</option>
+                                            <option value="Hatid at Sundo">Hatid at Sundo</option>
+                                        </select>
                                     </div>
 
-                                    <!-- Manual Vehicle Entry (Appears when "Others" is selected) -->
-                                    <div id="manualVehicleFields" class="hidden grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-3 border border-blue-200 rounded">
-                                        <div>
-                                            <label class="block text-[10px] font-bold text-mpiBlue uppercase mb-1">Manual Vehicle / Plate No.</label>
-                                            <input type="text" id="gpManualVehicle" class="w-full border border-gray-300 p-2 rounded text-sm focus:ring-1 focus:ring-mpiBlue" placeholder="e.g. Toyota Vios [ABC 123]">
+                                    <!-- HR Assignment Fields (Visible for HR/Admin) -->
+                                    <div id="hrVehicleAssignmentFields" class="flex-col space-y-4">
+                                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                                            <div>
+                                                <label class="block text-[11px] font-semibold text-gray-500 uppercase mb-1">Select Vehicle</label>
+                                                <select id="gpVehicle" class="w-full bg-white border border-gray-300 p-2 rounded text-sm focus:ring-1 focus:ring-mpiBlue" onchange="handleVehicleChange(this)">
+                                                    <!-- Populated JS -->
+                                                </select>
+                                            </div>
+                                            <div>
+                                                <label class="block text-[11px] font-semibold text-gray-500 uppercase mb-1">Driver (change if needed)</label>
+                                                <select id="gpDriver" class="w-full bg-white border border-gray-300 p-2 rounded text-sm text-gray-700" disabled>
+                                                    <option value="">Unassigned</option>
+                                                </select>
+                                            </div>
                                         </div>
-                                        <div>
-                                            <label class="block text-[10px] font-bold text-mpiBlue uppercase mb-1">Manual Driver Name</label>
-                                            <input type="text" id="gpManualDriver" class="w-full border border-gray-300 p-2 rounded text-sm focus:ring-1 focus:ring-mpiBlue" placeholder="e.g. John Doe">
+
+                                        <!-- Manual Vehicle Entry (Appears when "Others" is selected) -->
+                                        <div id="manualVehicleFields" class="hidden grid grid-cols-1 md:grid-cols-2 gap-4 bg-white p-3 border border-blue-200 rounded">
+                                            <div>
+                                                <label class="block text-[10px] font-bold text-mpiBlue uppercase mb-1">Manual Vehicle / Plate No.</label>
+                                                <input type="text" id="gpManualVehicle" class="w-full border border-gray-300 p-2 rounded text-sm focus:ring-1 focus:ring-mpiBlue" placeholder="e.g. Toyota Vios [ABC 123]">
+                                            </div>
+                                            <div>
+                                                <label class="block text-[10px] font-bold text-mpiBlue uppercase mb-1">Manual Driver Name</label>
+                                                <input type="text" id="gpManualDriver" class="w-full border border-gray-300 p-2 rounded text-sm focus:ring-1 focus:ring-mpiBlue" placeholder="e.g. John Doe">
+                                            </div>
                                         </div>
                                     </div>
                                 </div>
@@ -995,8 +1008,29 @@
                     </div>
                 </div>
 
+                <!-- HR Assignment Selectors (Visible only during HR Assignment step) -->
+                <div id="hrAssignmentArea" class="bg-amber-50 border border-amber-200 p-4 rounded-xl hidden flex-col space-y-3">
+                    <h3 class="font-extrabold text-amber-800 text-sm mb-1"><i class="fas fa-truck mr-1"></i> Assign Vehicle & Driver</h3>
+                    <p class="text-xs text-gray-600 mb-2">Requested Trip Type: <span id="hrRequestedTripType" class="font-bold text-gray-800"></span></p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Select Vehicle</label>
+                            <select id="hrAssignVehicle" class="w-full bg-white border border-gray-300 p-2 rounded text-xs focus:outline-none focus:border-mpiBlue" onchange="handleHrAssignVehicleChange(this)">
+                                <!-- Dynamically populated -->
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Select Driver</label>
+                            <select id="hrAssignDriver" class="w-full bg-white border border-gray-300 p-2 rounded text-xs focus:outline-none focus:border-mpiBlue">
+                                <!-- Dynamically populated -->
+                            </select>
+                        </div>
+                    </div>
+                </div>
+
                 <div class="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2">
                     <button onclick="closeModal()" class="px-4 py-2 rounded border border-gray-300 text-sm font-medium hover:bg-gray-200 transition">Cancel</button>
+                    <button id="holdRequestButton" onclick="holdCurrentPass()" class="bg-amber-600 hover:bg-amber-700 text-white px-5 py-2 rounded shadow text-sm font-bold transition hidden"><i class="fas fa-pause-circle mr-1"></i> Put on Hold</button>
                     <button onclick="rejectCurrentPass()" class="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded shadow text-sm font-bold transition"><i class="fas fa-times-circle mr-1"></i> Reject</button>
                     <button id="approveRequestButton" onclick="approveCurrentPass()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded shadow text-sm font-bold transition"><i class="fas fa-check-circle mr-1"></i> Approve Request</button>
                 </div>
@@ -1048,7 +1082,7 @@
 
     <!-- Schedule Day Detail Modal -->
     <div id="scheduleDayModal" class="fixed inset-0 z-[80] hidden items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
-        <div class="w-full max-w-2xl rounded-2xl bg-white shadow-2xl max-h-[85vh] flex flex-col">
+        <div class="w-full max-w-4xl rounded-2xl bg-white shadow-2xl max-h-[85vh] flex flex-col">
             <div class="px-5 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50/50 rounded-t-2xl">
                 <h3 class="font-bold text-gray-800" id="scheduleDayModalTitle">Schedule for June 25, 2026</h3>
                 <button onclick="closeScheduleDayModal()" class="rounded-full bg-gray-100 px-3 py-2 text-xs font-bold text-gray-600 transition hover:bg-gray-200"><i class="fas fa-times"></i></button>
@@ -1164,6 +1198,58 @@
                 <div class="flex justify-end gap-2 pt-2 border-t">
                     <button type="button" onclick="closeFixedScheduleFormModal()" class="text-xs text-gray-600 px-3 py-1.5 rounded border border-gray-300 hover:bg-gray-100 transition">Cancel</button>
                     <button type="submit" class="text-xs bg-mpiBlue text-white font-bold px-4 py-1.5 rounded hover:bg-mpiDark transition">Save</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
+    <!-- Service Schedule Request Form Modal (President's direct booking) -->
+    <div id="serviceScheduleRequestModal" class="fixed inset-0 z-[90] hidden items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
+        <div class="w-full max-w-md rounded-2xl bg-white shadow-2xl flex flex-col">
+            <div class="px-5 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50/50 rounded-t-2xl">
+                <h3 class="font-bold text-gray-800">Request Service Schedule</h3>
+                <button type="button" onclick="closeServiceScheduleRequestModal()" class="rounded-full bg-gray-100 px-3 py-2 text-xs font-bold text-gray-600 transition hover:bg-gray-200"><i class="fas fa-times"></i></button>
+            </div>
+            <form id="serviceScheduleRequestForm" onsubmit="saveServiceScheduleRequest(event)" class="p-5 space-y-4">
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Date</label>
+                    <input type="date" id="serviceRequestDate" class="w-full border border-gray-300 rounded px-3 py-2 text-xs focus:outline-none focus:border-mpiBlue" required>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Start Time</label>
+                        <input type="time" id="serviceRequestStartTime" class="w-full border border-gray-300 rounded px-3 py-2 text-xs focus:outline-none focus:border-mpiBlue" required>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">End Time</label>
+                        <input type="time" id="serviceRequestEndTime" class="w-full border border-gray-300 rounded px-3 py-2 text-xs focus:outline-none focus:border-mpiBlue" required>
+                    </div>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Destination</label>
+                    <input type="text" id="serviceRequestDestination" placeholder="e.g. Head Office, Client Site..." class="w-full border border-gray-300 rounded px-3 py-2 text-xs focus:outline-none focus:border-mpiBlue" required>
+                </div>
+                <div>
+                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Purpose</label>
+                    <input type="text" id="serviceRequestPurpose" placeholder="e.g. Business Meeting, Site Inspection..." class="w-full border border-gray-300 rounded px-3 py-2 text-xs focus:outline-none focus:border-mpiBlue" required>
+                </div>
+                <div class="grid grid-cols-2 gap-3">
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Vehicle</label>
+                        <select id="serviceRequestVehicle" class="w-full border border-gray-300 rounded px-3 py-2 text-xs focus:outline-none focus:border-mpiBlue" required>
+                            <!-- Dynamically populated -->
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Driver</label>
+                        <select id="serviceRequestDriver" class="w-full border border-gray-300 rounded px-3 py-2 text-xs focus:outline-none focus:border-mpiBlue" required>
+                            <!-- Dynamically populated -->
+                        </select>
+                    </div>
+                </div>
+                <div class="flex justify-end gap-2 pt-2 border-t">
+                    <button type="button" onclick="closeServiceScheduleRequestModal()" class="text-xs text-gray-600 px-3 py-1.5 rounded border border-gray-300 hover:bg-gray-100 transition">Cancel</button>
+                    <button type="submit" class="text-xs bg-mpiBlue text-white font-bold px-4 py-1.5 rounded hover:bg-mpiDark transition">Submit Request</button>
                 </div>
             </form>
         </div>

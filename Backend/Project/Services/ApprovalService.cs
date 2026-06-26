@@ -52,6 +52,10 @@ public sealed class ApprovalService(
             request.SignatureFileId,
             qrHash,
             qrExpiresAt,
+            request.VehicleId,
+            request.DriverId,
+            request.PutOnHold,
+            request.TripType,
             traceId,
             cancellationToken);
 

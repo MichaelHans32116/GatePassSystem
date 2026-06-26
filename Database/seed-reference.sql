@@ -45,6 +45,7 @@ INSERT INTO tbl_approval_step_types (
     approval_step_code, step_name, sort_order
 ) VALUES
 ('SUPERIOR', 'Immediate Superior Approval', 10),
+('HR_ASSIGN', 'HR Assignment', 15),
 ('PRESIDENT', 'President Approval', 20),
 ('PAS', 'PAS Noting', 30)
 ON DUPLICATE KEY UPDATE
@@ -76,6 +77,8 @@ INSERT INTO tbl_gate_pass_statuses (
 ) VALUES
 ('DRAFT', 'Draft', 'DRAFT', FALSE, FALSE, 10),
 ('PENDING_SUPERIOR', 'Pending Superior Approval', 'PENDING', FALSE, FALSE, 20),
+('PENDING_HR_ASSIGN', 'Pending HR Assignment', 'PENDING', FALSE, FALSE, 25),
+('ON_HOLD', 'On Hold', 'PENDING', FALSE, FALSE, 28),
 ('PENDING_PRESIDENT', 'Pending President Approval', 'PENDING', FALSE, FALSE, 30),
 ('PENDING_PAS', 'Pending PAS Noting', 'PENDING', FALSE, FALSE, 40),
 ('APPROVED', 'Approved', 'ACTIVE', FALSE, TRUE, 50),

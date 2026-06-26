@@ -77,7 +77,11 @@ public sealed record GatePassCreationResult(
 
 public sealed record ApprovalDecisionRequest(
     string? Comment,
-    long? SignatureFileId);
+    long? SignatureFileId,
+    long? VehicleId = null,
+    long? DriverId = null,
+    bool? PutOnHold = null,
+    string? TripType = null);
 
 public sealed record ApprovalDecisionResult(
     long GatePassId,

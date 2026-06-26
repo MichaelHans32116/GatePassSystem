@@ -19,23 +19,23 @@ class Program
         await connection.OpenAsync();
         Console.WriteLine("Connected to database successfully!");
 
-        // 1. Hash "Password123!" and update GU001
+        // 1. Hash "Password123!" and update G001
         var hasher = new Pbkdf2PasswordHasher();
         var hash = hasher.Hash("Password123!");
         await connection.ExecuteAsync(
-            "UPDATE tbl_user_accounts SET password_hash = @Hash WHERE username = 'GU001'",
+            "UPDATE tbl_user_accounts SET password_hash = @Hash WHERE username = 'G001'",
             new { Hash = hash }
         );
-        Console.WriteLine("Updated GU001 password hash in database.");
+        Console.WriteLine("Updated G001 password hash in database.");
 
         // 2. Perform HTTP test
         using var client = new HttpClient();
         client.BaseAddress = new Uri("http://localhost:5087");
 
-        Console.WriteLine("Logging in as Guard Hans (GU001)...");
+        Console.WriteLine("Logging in as Guard Hans (G001)...");
         var loginResponse = await client.PostAsJsonAsync("/api/auth/login", new
         {
-            username = "GU001",
+            username = "G001",
             password = "Password123!"
         });
 

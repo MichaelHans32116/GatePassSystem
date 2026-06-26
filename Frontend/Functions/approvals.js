@@ -29,10 +29,31 @@ async function approveCurrentPass() {
     const approveButton = document.getElementById('approveRequestButton');
     if (approveButton) approveButton.disabled = true;
     try {
+        const isHRorAdmin = currentUser && (
+            currentUser.role === 'System Admin' || 
+            currentUser.roles.includes('PAS_NOTER') ||
+            ['GA120', 'GA150', 'GA133', 'GA139', 'GA409'].includes(currentUser.id)
+        );
+
+        let vehicleId = null;
+        let driverId = null;
+        let tripType = null;
+        let putOnHold = null;
+
+        if (isHRorAdmin && (pass.status === 'Pending HR Assignment' || pass.status === 'On Hold')) {
+            vehicleId = Number(document.getElementById('hrAssignVehicle').value) || null;
+            driverId = Number(document.getElementById('hrAssignDriver').value) || null;
+            tripType = document.getElementById('hrRequestedTripType').innerText;
+        }
+
         const signature = await uploadCurrentSignature();
         await ApiClient.post(`/approvals/${pass.dbId}/approve`, {
             signatureFileId: signature?.signatureFileId || null,
-            comment: null
+            comment: null,
+            vehicleId,
+            driverId,
+            tripType,
+            putOnHold
         });
         if (saveCheck?.checked && currentUploadedSig) {
             saveApprovalSignaturePreference(
@@ -50,6 +71,31 @@ async function approveCurrentPass() {
         showToast(error instanceof ApiError ? error.message : 'Unable to approve document.', 'error');
     } finally {
         if (approveButton) approveButton.disabled = false;
+    }
+}
+
+async function holdCurrentPass() {
+    const pass = findGatePassRecord();
+    if (!pass) return;
+    const comment = window.prompt('Please enter a reason/remarks for putting this request on hold:');
+    if (comment === null) return;
+
+    const holdButton = document.getElementById('holdRequestButton');
+    if (holdButton) holdButton.disabled = true;
+
+    try {
+        await ApiClient.post(`/approvals/${pass.dbId}/approve`, {
+            signatureFileId: null,
+            comment: comment.trim() || 'Put on hold by HR.',
+            putOnHold: true
+        });
+        showToast('Request put on hold.');
+        closeModal();
+        await refreshApplicationState('hold-request');
+    } catch (error) {
+        showToast(error instanceof ApiError ? error.message : 'Unable to put request on hold.', 'error');
+    } finally {
+        if (holdButton) holdButton.disabled = false;
     }
 }
 
@@ -212,5 +258,6 @@ function updateApprovalQueueDisplay(toApprove) {
 
 window.approveCurrentPass = approveCurrentPass;
 window.rejectCurrentPass = rejectCurrentPass;
+window.holdCurrentPass = holdCurrentPass;
 window.renderApprovalQueue = renderApprovalQueue;
 window.uploadCurrentSignature = uploadCurrentSignature;

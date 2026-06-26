@@ -116,6 +116,14 @@ function schedFilteredData() {
             const haystack = [entry.requesterName, entry.title, entry.destination, entry.controlNo, entry.vehicleName, entry.driverName]
                 .filter(Boolean).join(' ').toLowerCase();
             if (!haystack.includes(q)) return false;
+        } else {
+            // Hide past schedules if no search is active
+            if (entry.scheduleDate) {
+                const datePart = entry.scheduleDate.split('T')[0];
+                const endPart = entry.endTime ? entry.endTime : '23:59:59';
+                const eventEnd = new Date(`${datePart}T${endPart}`);
+                if (eventEnd < new Date()) return false;
+            }
         }
         return true;
     });
@@ -189,7 +197,7 @@ async function initializeScheduleCalendar() {
     populateScheduleFilterDropdowns();
     
     // Check if current user is an authorized HR manager
-    const authorizedHR = ['GA120', 'GA150', 'GA133', 'GA407'];
+    const authorizedHR = ['GA120', 'GA150', 'GA133', 'GA139', 'GA407'];
     const activeUser = typeof currentUser !== 'undefined' ? currentUser : null;
     const btn = document.getElementById('btnManageFixedSchedules');
     if (btn) {
@@ -197,6 +205,15 @@ async function initializeScheduleCalendar() {
             btn.classList.remove('hidden');
         } else {
             btn.classList.add('hidden');
+        }
+    }
+
+    const btnRequest = document.getElementById('btnRequestServiceSchedule');
+    if (btnRequest) {
+        if (activeUser && (activeUser.id === 'GA125' || activeUser.id === 'GA407')) {
+            btnRequest.classList.remove('hidden');
+        } else {
+            btnRequest.classList.add('hidden');
         }
     }
 
@@ -220,7 +237,7 @@ async function loadAndRenderScheduleMonth() {
 
 // ─── Data Loading ────────────────────────────────────────────────────
 async function loadScheduleData(from, to) {
-    if (!isDatabaseSession()) return;
+    if (!isDatabaseSession() && !window.isGuestCalendarView) return;
     try {
         const params = new URLSearchParams();
         if (from) params.set('from', from);
@@ -339,7 +356,7 @@ function openScheduleDayModal(dateStr) {
         // Sort by start time
         events.sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
 
-        let listHtml = '<div class="space-y-3">';
+        let listHtml = '<div class="grid grid-cols-1 md:grid-cols-2 gap-3">';
         events.forEach(ev => {
             const timeRange = ev.startTime && ev.endTime
                 ? `${schedFormatTime12(ev.startTime)} – ${schedFormatTime12(ev.endTime)}`
@@ -744,6 +761,7 @@ function buildTruckSheet(wb, monday, saturday, weekData, weekNum) {
 // ─── Guest Public Access ─────────────────────────────────────────────
 async function showPublicDriverCalendar() {
     try {
+        window.isGuestCalendarView = true;
         currentUser = null;
 
         // Load references (vehicles and drivers)
@@ -870,11 +888,11 @@ function renderFixedSchedulesList() {
             <td class="px-4 py-3 text-gray-600">${item.driverName || 'Unassigned'}</td>
             <td class="px-4 py-3">
                 <div class="font-bold text-gray-800">${item.title}</div>
-                \${item.description ? `<div class="text-gray-500 text-[10px]">\${item.description}</div>` : ''}
+                ${item.description ? `<div class="text-gray-500 text-[10px]">${item.description}</div>` : ''}
             </td>
             <td class="px-4 py-3 space-x-2">
-                <button onclick="openEditFixedScheduleForm(\${item.fixedScheduleId})" class="text-blue-600 hover:underline"><i class="fas fa-edit"></i> Edit</button>
-                <button onclick="deleteFixedSchedule(\${item.fixedScheduleId})" class="text-red-600 hover:underline"><i class="fas fa-trash"></i> Delete</button>
+                <button onclick="openEditFixedScheduleForm(${item.fixedScheduleId})" class="text-blue-600 hover:underline"><i class="fas fa-edit"></i> Edit</button>
+                <button onclick="deleteFixedSchedule(${item.fixedScheduleId})" class="text-red-600 hover:underline"><i class="fas fa-trash"></i> Delete</button>
             </td>
         `;
         tbody.appendChild(tr);
@@ -1009,3 +1027,86 @@ window.closeFixedScheduleFormModal = closeFixedScheduleFormModal;
 window.saveFixedScheduleForm = saveFixedScheduleForm;
 window.openEditFixedScheduleForm = openEditFixedScheduleForm;
 window.deleteFixedSchedule = deleteFixedSchedule;
+
+function openServiceScheduleRequestModal() {
+    const modal = document.getElementById('serviceScheduleRequestModal');
+    if (!modal) return;
+
+    // Reset form
+    document.getElementById('serviceScheduleRequestForm')?.reset();
+
+    // Default to today's date
+    const today = new Date().toISOString().split('T')[0];
+    const dateInput = document.getElementById('serviceRequestDate');
+    if (dateInput) dateInput.value = today;
+
+    // Populate Vehicles
+    const vehicleSelect = document.getElementById('serviceRequestVehicle');
+    if (vehicleSelect) {
+        vehicleSelect.innerHTML = '';
+        (databaseVehicles || []).forEach(v => {
+            const opt = document.createElement('option');
+            opt.value = v.id;
+            opt.textContent = `${v.name} (${v.plate})`;
+            vehicleSelect.appendChild(opt);
+        });
+        const crv = (databaseVehicles || []).find(v => v.name?.toUpperCase().includes('CRV'));
+        if (crv) vehicleSelect.value = crv.id;
+    }
+
+    // Populate Drivers
+    const driverSelect = document.getElementById('serviceRequestDriver');
+    if (driverSelect) {
+        driverSelect.innerHTML = '';
+        (databaseDrivers || []).forEach(d => {
+            const opt = document.createElement('option');
+            opt.value = d.driverId;
+            opt.textContent = d.fullName;
+            driverSelect.appendChild(opt);
+        });
+        const jt = (databaseDrivers || []).find(d => d.fullName?.toUpperCase().includes('TURRECHA'));
+        if (jt) driverSelect.value = jt.driverId;
+    }
+
+    modal.classList.remove('hidden');
+    modal.classList.add('flex');
+}
+
+function closeServiceScheduleRequestModal() {
+    const modal = document.getElementById('serviceScheduleRequestModal');
+    if (!modal) return;
+    modal.classList.remove('flex');
+    modal.classList.add('hidden');
+}
+
+async function saveServiceScheduleRequest(event) {
+    event.preventDefault();
+    const date = document.getElementById('serviceRequestDate').value;
+    const startTime = document.getElementById('serviceRequestStartTime').value;
+    const endTime = document.getElementById('serviceRequestEndTime').value;
+    const destination = document.getElementById('serviceRequestDestination').value;
+    const purpose = document.getElementById('serviceRequestPurpose').value;
+    const vehicleId = Number(document.getElementById('serviceRequestVehicle').value);
+    const driverId = Number(document.getElementById('serviceRequestDriver').value);
+
+    try {
+        await ApiClient.post('/fleet/service-request', {
+            date,
+            startTime,
+            endTime,
+            destination,
+            purpose,
+            vehicleId,
+            driverId
+        });
+        showToast('Service schedule requested and auto-approved successfully.');
+        closeServiceScheduleRequestModal();
+        await loadAndRenderScheduleMonth();
+    } catch (err) {
+        showToast(err instanceof ApiError ? err.message : 'Failed to submit service schedule request.', 'error');
+    }
+}
+
+window.openServiceScheduleRequestModal = openServiceScheduleRequestModal;
+window.closeServiceScheduleRequestModal = closeServiceScheduleRequestModal;
+window.saveServiceScheduleRequest = saveServiceScheduleRequest;
