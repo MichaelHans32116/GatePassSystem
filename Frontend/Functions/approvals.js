@@ -43,7 +43,10 @@ async function approveCurrentPass() {
         if (isHRorAdmin && (pass.status === 'Pending HR Assignment' || pass.status === 'On Hold')) {
             vehicleId = Number(document.getElementById('hrAssignVehicle').value) || null;
             driverId = Number(document.getElementById('hrAssignDriver').value) || null;
-            tripType = document.getElementById('hrRequestedTripType').innerText;
+            if (!vehicleId) {
+                showToast('Select an available company vehicle before forwarding.', 'error');
+                return;
+            }
         }
 
         const signature = await uploadCurrentSignature();

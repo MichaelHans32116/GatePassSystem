@@ -195,6 +195,7 @@ function populateScheduleFilterDropdowns() {
 // ─── Initialize ──────────────────────────────────────────────────────
 async function initializeScheduleCalendar() {
     populateScheduleFilterDropdowns();
+    syncScheduleExportWeekInput();
     
     // Check if current user is an authorized HR manager
     const authorizedHR = ['GA120', 'GA150', 'GA133', 'GA139', 'GA407'];
@@ -333,6 +334,8 @@ function navigateScheduleMonth(dir) {
 // ─── Day Detail Modal ────────────────────────────────────────────────
 function openScheduleDayModal(dateStr) {
     scheduleSelectedDay = dateStr;
+    const exportWeekInput = document.getElementById('schedExportWeek');
+    if (exportWeekInput) exportWeekInput.value = schedIsoWeekInputValue(schedParseDateLocal(dateStr));
     const modal = document.getElementById('scheduleDayModal');
     const titleEl = document.getElementById('scheduleDayModalTitle');
     const bodyEl = document.getElementById('scheduleDayModalBody');
@@ -404,19 +407,261 @@ function closeScheduleDayModal() {
 }
 
 // ─── Excel Export ────────────────────────────────────────────────────
+const scheduleVehicleColorMap = [
+    { keys: ['HONDA CRV', 'NOV8084'], fill: 'FFA9D18E', width: 13 },
+    { keys: ['HONDA ACCORD', 'DAH7724'], fill: 'FFF4B183', width: 23.5 },
+    { keys: ['HONDA HRV', 'DBP7296'], fill: 'FF9DC3E6', width: 25 },
+    { keys: ['HONDA BRV', 'DAZ7569'], fill: 'FF404040', width: 25.5, fontColor: 'FFFFFFFF' },
+    { keys: ['TOYOTA INNOVA', 'WVO408'], fill: 'FFFFD966', width: 20.75 },
+    { keys: ['HONDA CITY', 'VHF561'], fill: 'FFD0AAE8', width: 24.5 },
+    { keys: ['FLEXI VAN', 'NAW3504'], fill: 'FF93D9D6', width: 13 },
+    { keys: ['ISUZU', 'CANTER', 'ZJE745'], fill: 'FFB8FEC9', width: 13 },
+    { keys: ['MITSUBISHI', 'FUSO', 'DAV3864'], fill: 'FFFCE4D6', width: 13 }
+];
+
+const scheduleFallbackColors = [
+    'FFA9D18E', 'FFF4B183', 'FF9DC3E6', 'FFFFD966', 'FFD0AAE8',
+    'FF93D9D6', 'FFE2F0D9', 'FFFFE699', 'FFEADCF8'
+];
+
+function schedNormalizeKey(value) {
+    return String(value || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+}
+
+function schedExcelFill(argb) {
+    return { type: 'pattern', pattern: 'solid', fgColor: { argb } };
+}
+
+function schedExcelBorder(style = 'thin') {
+    return {
+        top: { style },
+        bottom: { style },
+        left: { style },
+        right: { style }
+    };
+}
+
+function schedVehicleStyle(vehicle, index = 0) {
+    const key = `${schedNormalizeKey(vehicle?.name)} ${schedNormalizeKey(vehicle?.plate)}`;
+    const match = scheduleVehicleColorMap.find(item =>
+        item.keys.some(matchKey => key.includes(schedNormalizeKey(matchKey)))
+    );
+    return match || {
+        fill: scheduleFallbackColors[index % scheduleFallbackColors.length],
+        width: 18
+    };
+}
+
+function schedDriverLabel(driverName) {
+    const value = String(driverName || '').trim().toUpperCase();
+    if (!value || value === 'UNASSIGNED') return 'ADMIN';
+    if (value.includes('JONATHAN')) return 'JONATHAN T.';
+    if (value.includes('GERONIMO')) return 'GERONIMO L.';
+    if (value.includes('FRANCIS') || value.includes('REFE')) return 'F. REFE';
+    if (value.includes('JOHN')) return 'JOHN V.';
+    if (value.includes('ALEX')) return 'ALEX';
+    if (value.includes('ALVIN')) return 'ALVIN';
+    return value.split(/\s+/).slice(0, 2).join(' ');
+}
+
+function schedVehicleHeader(vehicle, compact = false) {
+    const plate = String(vehicle?.plate || '').toUpperCase();
+    const driver = schedDriverLabel(vehicle?.driver);
+    if (compact) {
+        return `${String(vehicle?.name || '').toUpperCase()}\n(${plate} / ${driver})`;
+    }
+    return `${String(vehicle?.name || '').toUpperCase()}\n${plate} ${driver}`;
+}
+
+function schedVehicleSortKey(vehicle) {
+    const key = schedNormalizeKey(`${vehicle?.name || ''} ${vehicle?.plate || ''}`);
+    const order = ['HONDACRV', 'HONDAACCORD', 'HONDAHRV', 'HONDABRV', 'TOYOTAINNOVA', 'HONDACITY', 'FLEXIVAN'];
+    const idx = order.findIndex(item => key.includes(item));
+    return idx >= 0 ? idx : 100;
+}
+
+function schedTruckSortKey(vehicle) {
+    const key = schedNormalizeKey(`${vehicle?.name || ''} ${vehicle?.plate || ''}`);
+    const order = ['ISUZUCANTER', 'MITSUBISHIFUSO', 'FLEXIVAN'];
+    const idx = order.findIndex(item => key.includes(item));
+    return idx >= 0 ? idx : 100;
+}
+
+function schedIsTruckPlanVehicle(vehicle) {
+    const key = schedNormalizeKey(`${vehicle?.name || ''} ${vehicle?.plate || ''}`);
+    return key.includes('ISUZU') ||
+        key.includes('CANTER') ||
+        key.includes('FUSO') ||
+        key.includes('MITSUBISHI') ||
+        key.includes('FLEXIVAN') ||
+        key.includes('NAW3504');
+}
+
+function schedIsMonitoringVehicle(vehicle) {
+    const key = schedNormalizeKey(`${vehicle?.name || ''} ${vehicle?.plate || ''}`);
+    return !key.includes('ISUZU') && !key.includes('CANTER') && !key.includes('FUSO') && !key.includes('MITSUBISHI');
+}
+
+function schedMonitoringVehicles() {
+    return [...(databaseVehicles || [])]
+        .filter(schedIsMonitoringVehicle)
+        .sort((a, b) => schedVehicleSortKey(a) - schedVehicleSortKey(b) || String(a.name).localeCompare(String(b.name)));
+}
+
+function schedTruckVehicles() {
+    const found = [...(databaseVehicles || [])]
+        .filter(schedIsTruckPlanVehicle)
+        .sort((a, b) => schedTruckSortKey(a) - schedTruckSortKey(b) || String(a.name).localeCompare(String(b.name)));
+
+    if (found.length) return found;
+
+    return [
+        { id: 'TRUCK-ISUZU', name: 'ISUZU - CANTER', plate: 'ZJE 745', driver: 'ALEX' },
+        { id: 'TRUCK-FUSO', name: 'MITSUBISHI - FUSO', plate: 'DAV 3864', driver: 'ALVIN' },
+        { id: 'TRUCK-FLEXI', name: 'FLEXI VAN', plate: 'NAW 3504', driver: 'ADMIN' }
+    ];
+}
+
+function schedTimeToMinutes(timeStr) {
+    if (!timeStr) return null;
+    const [h, m] = String(timeStr).substring(0, 5).split(':').map(Number);
+    if (!Number.isFinite(h) || !Number.isFinite(m)) return null;
+    return h * 60 + m;
+}
+
+function schedBuildTimeSlots(kind) {
+    const starts = [];
+    if (kind === 'vehicle') {
+        starts.push([5, 30], [6, 0], [6, 30], [7, 30]);
+        for (let h = 8; h <= 18; h++) {
+            starts.push([h, 0], [h, 30]);
+        }
+    } else {
+        for (let h = 7; h <= 18; h++) {
+            starts.push([h, 30]);
+            if (h < 18) starts.push([h + 1, 0]);
+        }
+    }
+
+    return starts.map(([h, m]) => {
+        const endTotal = h * 60 + m + 30;
+        const eh = Math.floor(endTotal / 60);
+        const em = endTotal % 60;
+        const fmt = (hr, mn) => `${hr}:${String(mn).padStart(2, '0')}`;
+        return {
+            label: `${fmt(h, m)} ~ ${fmt(eh, em)}`,
+            start: h * 60 + m,
+            end: endTotal,
+            startKey: fmt(h, m),
+            endKey: fmt(eh, em)
+        };
+    });
+}
+
+function schedEventRangeForSlots(event, slots) {
+    const start = schedTimeToMinutes(event.startTime);
+    const end = schedTimeToMinutes(event.endTime) || (start === null ? null : start + 30);
+    if (start === null || end === null) return null;
+    const indexes = slots
+        .map((slot, index) => (start < slot.end && end > slot.start ? index : -1))
+        .filter(index => index >= 0);
+    if (!indexes.length) return null;
+    return { first: indexes[0], last: indexes[indexes.length - 1] };
+}
+
+function schedEventMatchesVehicle(event, vehicle) {
+    if (event.vehicleId && vehicle?.id && String(event.vehicleId) === String(vehicle.id)) return true;
+    const eventPlate = schedNormalizeKey(event.plateNumber);
+    const vehiclePlate = schedNormalizeKey(vehicle?.plate);
+    if (eventPlate && vehiclePlate && eventPlate === vehiclePlate) return true;
+    const eventName = schedNormalizeKey(event.vehicleName);
+    const vehicleName = schedNormalizeKey(vehicle?.name);
+    return Boolean(eventName && vehicleName && (eventName.includes(vehicleName) || vehicleName.includes(eventName)));
+}
+
+function schedEventLabel(event) {
+    return String(event.title || event.destination || event.requesterName || event.description || 'Reserved').trim();
+}
+
+function schedApplyCellBase(cell, options = {}) {
+    cell.border = options.border || schedExcelBorder('thin');
+    cell.alignment = {
+        horizontal: options.horizontal || 'center',
+        vertical: options.vertical || 'middle',
+        wrapText: options.wrapText !== false
+    };
+    cell.font = options.font || { name: 'Calibri', size: 10, bold: true };
+}
+
+function schedTryMerge(ws, startRow, startCol, endRow, endCol) {
+    if (startRow === endRow && startCol === endCol) return true;
+    try {
+        ws.mergeCells(startRow, startCol, endRow, endCol);
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+function schedStyleMergedBlock(ws, startRow, startCol, endRow, endCol, fill, font = {}) {
+    for (let r = startRow; r <= endRow; r++) {
+        for (let c = startCol; c <= endCol; c++) {
+            const cell = ws.getCell(r, c);
+            cell.fill = schedExcelFill(fill);
+            cell.border = schedExcelBorder('thin');
+            cell.alignment = { horizontal: 'center', vertical: 'middle', wrapText: true };
+            cell.font = { name: 'Calibri', size: font.size || 10, bold: font.bold !== false, color: { argb: font.color || 'FF000000' } };
+        }
+    }
+}
+
+function schedWeekInputToMonday(value) {
+    const match = String(value || '').match(/^(\d{4})-W(\d{2})$/);
+    if (!match) return null;
+    const year = Number(match[1]);
+    const week = Number(match[2]);
+    const fourthJan = new Date(year, 0, 4);
+    const monday = schedGetMonday(fourthJan);
+    monday.setDate(monday.getDate() + (week - 1) * 7);
+    return monday;
+}
+
+function schedIsoWeekInputValue(date) {
+    const monday = schedGetMonday(date);
+    const thursday = new Date(monday);
+    thursday.setDate(monday.getDate() + 3);
+    const weekYear = thursday.getFullYear();
+    const week = schedGetWeekNumber(monday);
+    return `${weekYear}-W${String(week).padStart(2, '0')}`;
+}
+
+function syncScheduleExportWeekInput() {
+    const input = document.getElementById('schedExportWeek');
+    if (!input || input.value) return;
+    const refDate = scheduleSelectedDay
+        ? schedParseDateLocal(scheduleSelectedDay)
+        : new Date(scheduleCurrentYear, scheduleCurrentMonth, 1);
+    input.value = schedIsoWeekInputValue(refDate);
+}
+
+function schedGetExportMonday() {
+    const weekInput = document.getElementById('schedExportWeek');
+    const weekMonday = schedWeekInputToMonday(weekInput?.value);
+    if (weekMonday) return weekMonday;
+    const refDate = scheduleSelectedDay
+        ? schedParseDateLocal(scheduleSelectedDay)
+        : new Date(scheduleCurrentYear, scheduleCurrentMonth, new Date().getDate());
+    return schedGetMonday(refDate);
+}
+
 async function exportScheduleExcel(format) {
     if (typeof ExcelJS === 'undefined') {
         showToast('ExcelJS library not loaded. Please refresh and try again.', 'error');
         return;
     }
 
-    // Determine the reference date and week range
-    const refDate = scheduleSelectedDay
-        ? schedParseDateLocal(scheduleSelectedDay)
-        : new Date(scheduleCurrentYear, scheduleCurrentMonth, new Date().getDate());
-
-    const monday = schedGetMonday(refDate);
-    const saturday = schedGetSaturday(refDate);
+    const monday = schedGetExportMonday();
+    const saturday = schedGetSaturday(monday);
 
     // Ensure data is loaded for the week
     const weekFrom = schedFmtDate(monday);
@@ -434,10 +679,10 @@ async function exportScheduleExcel(format) {
     wb.created = new Date();
 
     if (format === 'vehicle' || format === 'both') {
-        buildVehicleSheets(wb, monday, saturday, weekData, weekNum);
+        buildVehicleSheetsV2(wb, monday, saturday, weekData, weekNum);
     }
     if (format === 'truck' || format === 'both') {
-        buildTruckSheet(wb, monday, saturday, weekData, weekNum);
+        buildTruckSheetV2(wb, monday, saturday, weekData, weekNum);
     }
 
     // Trigger download
@@ -756,6 +1001,298 @@ function buildTruckSheet(wb, monday, saturday, weekData, weekNum) {
             });
         });
     });
+}
+
+function buildVehicleSheetsV2(wb, monday, saturday, weekData, weekNum) {
+    const vehicleList = schedMonitoringVehicles();
+    const timeSlots = schedBuildTimeSlots('vehicle');
+    const totalCols = Math.max(8, vehicleList.length + 1);
+
+    for (let dayOff = 0; dayOff <= 5; dayOff++) {
+        const dayDate = new Date(monday);
+        dayDate.setDate(monday.getDate() + dayOff);
+        const dateStr = schedFmtDate(dayDate);
+        const dayName = schedDayName(dayDate.getDay());
+        const dayEvents = weekData.filter(e => (e.scheduleDate || '').split('T')[0] === dateStr);
+        const ws = wb.addWorksheet(dayName);
+
+        ws.views = [{ showGridLines: false }];
+        ws.pageSetup = { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 1 };
+        ws.getColumn(1).width = 23.9;
+        vehicleList.forEach((vehicle, index) => {
+            ws.getColumn(index + 2).width = schedVehicleStyle(vehicle, index).width || 13;
+        });
+        for (let c = vehicleList.length + 2; c <= totalCols; c++) {
+            ws.getColumn(c).width = 13;
+        }
+
+        [1, 2].forEach(rowNo => { ws.getRow(rowNo).height = 15; });
+        ws.getRow(3).height = 18.75;
+        ws.getRow(4).height = 23.25;
+        ws.getRow(5).height = 75.75;
+        ws.getRow(6).height = 15.75;
+        timeSlots.forEach((_, index) => {
+            ws.getRow(7 + index).height = index >= timeSlots.length - 2 ? 21 : 25.5;
+        });
+
+        const titleCell = ws.getCell(1, 1);
+        titleCell.value = `VEHICLE MONITORING SCHEDULE FOR ${dayDate.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric' }).toUpperCase()}`;
+        titleCell.fill = schedExcelFill('FFFFF2CC');
+        titleCell.font = { name: 'Calibri', size: 20, bold: true };
+        titleCell.alignment = { horizontal: 'left', vertical: 'center' };
+        schedTryMerge(ws, 1, 1, 2, totalCols);
+
+        schedStyleMergedBlock(ws, 3, 1, 6, 1, 'FFC6E0B4', { size: 18 });
+        ws.getCell(3, 1).value = `WEEK ${weekNum}`;
+        schedTryMerge(ws, 3, 1, 6, 1);
+
+        schedStyleMergedBlock(ws, 3, 2, 4, totalCols, 'FFDDEBF7', { size: 20 });
+        ws.getCell(3, 2).value = dayName;
+        schedTryMerge(ws, 3, 2, 4, totalCols);
+
+        vehicleList.forEach((vehicle, index) => {
+            const col = index + 2;
+            const style = schedVehicleStyle(vehicle, index);
+            const headerFontSize = schedNormalizeKey(vehicle?.name).includes('HRV') ? 10 : 14;
+
+            schedStyleMergedBlock(ws, 5, col, 5, col, style.fill, {
+                size: headerFontSize,
+                color: style.fontColor || 'FF000000'
+            });
+            ws.getCell(5, col).value = schedVehicleHeader(vehicle);
+
+            schedStyleMergedBlock(ws, 6, col, 6, col, style.fill, {
+                size: 11,
+                color: style.fontColor || 'FF000000'
+            });
+            ws.getCell(6, col).value = 'PLAN';
+        });
+
+        timeSlots.forEach((slot, index) => {
+            const rowNo = 7 + index;
+            const timeCell = ws.getCell(rowNo, 1);
+            timeCell.value = slot.label;
+            schedApplyCellBase(timeCell, { font: { name: 'Calibri', size: 16, bold: true } });
+
+            vehicleList.forEach((_, vehicleIndex) => {
+                const cell = ws.getCell(rowNo, vehicleIndex + 2);
+                schedApplyCellBase(cell, { font: { name: 'Calibri', size: 10, bold: true } });
+                if (slot.start >= 16 * 60 + 30) {
+                    cell.fill = schedExcelFill('FF262626');
+                }
+            });
+        });
+
+        const occupied = new Set();
+        const markOccupied = (r1, c1, r2, c2) => {
+            for (let r = r1; r <= r2; r++) {
+                for (let c = c1; c <= c2; c++) occupied.add(`${r}:${c}`);
+            }
+        };
+        const isOccupied = (r1, c1, r2, c2) => {
+            for (let r = r1; r <= r2; r++) {
+                for (let c = c1; c <= c2; c++) {
+                    if (occupied.has(`${r}:${c}`)) return true;
+                }
+            }
+            return false;
+        };
+
+        ['MORNING MEETING', 'LUNCH BREAK'].forEach(label => {
+            const event = dayEvents.find(ev => schedNormalizeKey(schedEventLabel(ev)).includes(schedNormalizeKey(label)));
+            if (!event) return;
+            const range = schedEventRangeForSlots(event, timeSlots);
+            if (!range) return;
+            const startRow = 7 + range.first;
+            const endRow = 7 + range.last;
+            if (isOccupied(startRow, 2, endRow, totalCols)) return;
+            schedStyleMergedBlock(ws, startRow, 2, endRow, totalCols, 'FFFFFFFF', {
+                size: label === 'LUNCH BREAK' ? 22 : 16,
+                color: 'FFFF0000'
+            });
+            ws.getCell(startRow, 2).value = label;
+            schedTryMerge(ws, startRow, 2, endRow, totalCols);
+            markOccupied(startRow, 2, endRow, totalCols);
+        });
+
+        vehicleList.forEach((vehicle, vehicleIndex) => {
+            const col = vehicleIndex + 2;
+            const style = schedVehicleStyle(vehicle, vehicleIndex);
+            const events = dayEvents
+                .filter(ev => schedEventMatchesVehicle(ev, vehicle))
+                .filter(ev => {
+                    const label = schedNormalizeKey(schedEventLabel(ev));
+                    return !label.includes('MORNINGMEETING') && !label.includes('LUNCHBREAK');
+                })
+                .sort((a, b) => String(a.startTime || '').localeCompare(String(b.startTime || '')));
+
+            events.forEach(event => {
+                const range = schedEventRangeForSlots(event, timeSlots);
+                if (!range) return;
+                const startRow = 7 + range.first;
+                const endRow = 7 + range.last;
+                if (isOccupied(startRow, col, endRow, col)) return;
+                schedStyleMergedBlock(ws, startRow, col, endRow, col, style.fill, {
+                    size: schedEventLabel(event).length > 60 ? 9 : 11,
+                    color: style.fontColor || 'FF000000'
+                });
+                ws.getCell(startRow, col).value = schedEventLabel(event);
+                schedTryMerge(ws, startRow, col, endRow, col);
+                markOccupied(startRow, col, endRow, col);
+            });
+        });
+    }
+}
+
+function buildTruckSheetV2(wb, monday, saturday, weekData, weekNum) {
+    const truckList = schedTruckVehicles();
+    const timeSlots = schedBuildTimeSlots('truck');
+    const days = Array.from({ length: 6 }, (_, dayOff) => {
+        const date = new Date(monday);
+        date.setDate(monday.getDate() + dayOff);
+        return date;
+    });
+    const totalCols = 1 + days.length * truckList.length;
+    const ws = wb.addWorksheet('Plan');
+
+    ws.views = [{ showGridLines: false }];
+    ws.pageSetup = { orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 1 };
+    ws.getColumn(1).width = 23.85;
+    for (let c = 2; c <= totalCols; c++) {
+        ws.getColumn(c).width = 13;
+    }
+
+    ws.getRow(1).height = 26.25;
+    ws.getRow(2).height = 14.45;
+    [3, 4, 6].forEach(rowNo => { ws.getRow(rowNo).height = 23.45; });
+    ws.getRow(5).height = 56.25;
+    timeSlots.forEach((_, index) => { ws.getRow(7 + index).height = 25.5; });
+
+    const monthA = monday.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+    const monthB = saturday.toLocaleDateString('en-US', { month: 'short' }).toUpperCase();
+    const rangeLabel = monthA === monthB
+        ? `${monthA}. ${String(monday.getDate()).padStart(2, '0')}-${String(saturday.getDate()).padStart(2, '0')}, ${saturday.getFullYear()}`
+        : `${monthA}. ${String(monday.getDate()).padStart(2, '0')} - ${monthB}. ${String(saturday.getDate()).padStart(2, '0')}, ${saturday.getFullYear()}`;
+
+    schedStyleMergedBlock(ws, 1, 1, 2, totalCols, 'FFFFD966', { size: 20 });
+    ws.getCell(1, 1).value = `LOGISTICS TRUCK SCHEDULE: ${rangeLabel}`;
+    schedTryMerge(ws, 1, 1, 2, totalCols);
+
+    schedStyleMergedBlock(ws, 3, 1, 6, 1, 'FFC6E0B4', { size: 18 });
+    ws.getCell(3, 1).value = `WEEK ${weekNum}`;
+    schedTryMerge(ws, 3, 1, 6, 1);
+
+    days.forEach((dayDate, dayIndex) => {
+        const startCol = 2 + dayIndex * truckList.length;
+        const endCol = startCol + truckList.length - 1;
+        schedStyleMergedBlock(ws, 3, startCol, 3, endCol, 'FFDDEBF7', { size: 16 });
+        ws.getCell(3, startCol).value = schedDayName(dayDate.getDay());
+        schedTryMerge(ws, 3, startCol, 3, endCol);
+
+        schedStyleMergedBlock(ws, 4, startCol, 4, endCol, 'FFDDEBF7', { size: 16 });
+        ws.getCell(4, startCol).value = `${dayDate.getMonth() + 1}-${dayDate.getDate()}`;
+        schedTryMerge(ws, 4, startCol, 4, endCol);
+
+        truckList.forEach((truck, truckIndex) => {
+            const col = startCol + truckIndex;
+            const style = schedVehicleStyle(truck, truckIndex + 7);
+            const fontSize = schedNormalizeKey(truck?.name).includes('FLEXI') ? 10 : 14;
+            schedStyleMergedBlock(ws, 5, col, 5, col, style.fill, {
+                size: fontSize,
+                color: style.fontColor || 'FF000000'
+            });
+            ws.getCell(5, col).value = schedVehicleHeader(truck, true);
+            schedStyleMergedBlock(ws, 6, col, 6, col, style.fill, {
+                size: 11,
+                color: style.fontColor || 'FF000000'
+            });
+            ws.getCell(6, col).value = 'PLAN';
+        });
+    });
+
+    timeSlots.forEach((slot, index) => {
+        const rowNo = 7 + index;
+        const timeCell = ws.getCell(rowNo, 1);
+        timeCell.value = slot.label;
+        schedApplyCellBase(timeCell, { font: { name: 'Calibri', size: 16, bold: true } });
+        for (let c = 2; c <= totalCols; c++) {
+            const cell = ws.getCell(rowNo, c);
+            schedApplyCellBase(cell, { font: { name: 'Calibri', size: 10, bold: true } });
+            if (slot.start >= 16 * 60 + 30) {
+                cell.fill = schedExcelFill('FF262626');
+            }
+        }
+    });
+
+    const occupied = new Set();
+    const markOccupied = (r1, c1, r2, c2) => {
+        for (let r = r1; r <= r2; r++) {
+            for (let c = c1; c <= c2; c++) occupied.add(`${r}:${c}`);
+        }
+    };
+    const isOccupied = (r1, c1, r2, c2) => {
+        for (let r = r1; r <= r2; r++) {
+            for (let c = c1; c <= c2; c++) {
+                if (occupied.has(`${r}:${c}`)) return true;
+            }
+        }
+        return false;
+    };
+
+    days.forEach((dayDate, dayIndex) => {
+        const dateStr = schedFmtDate(dayDate);
+        const dayEvents = weekData.filter(e => (e.scheduleDate || '').split('T')[0] === dateStr);
+        const dayStartCol = 2 + dayIndex * truckList.length;
+        const dayEndCol = dayStartCol + truckList.length - 1;
+        const meeting = dayEvents.find(ev => schedNormalizeKey(schedEventLabel(ev)).includes('MORNINGMEETING'));
+        if (meeting) {
+            const range = schedEventRangeForSlots(meeting, timeSlots);
+            if (range) {
+                const startRow = 7 + range.first;
+                const endRow = 7 + range.last;
+                if (!isOccupied(startRow, dayStartCol, endRow, dayEndCol)) {
+                    schedStyleMergedBlock(ws, startRow, dayStartCol, endRow, dayEndCol, 'FFFFFFFF', { size: 15 });
+                    ws.getCell(startRow, dayStartCol).value = 'MORNING MEETING';
+                    schedTryMerge(ws, startRow, dayStartCol, endRow, dayEndCol);
+                    markOccupied(startRow, dayStartCol, endRow, dayEndCol);
+                }
+            }
+        }
+
+        truckList.forEach((truck, truckIndex) => {
+            const col = dayStartCol + truckIndex;
+            const style = schedVehicleStyle(truck, truckIndex + 7);
+            const events = dayEvents
+                .filter(ev => schedEventMatchesVehicle(ev, truck))
+                .filter(ev => !schedNormalizeKey(schedEventLabel(ev)).includes('MORNINGMEETING'))
+                .sort((a, b) => String(a.startTime || '').localeCompare(String(b.startTime || '')));
+
+            events.forEach(event => {
+                const range = schedEventRangeForSlots(event, timeSlots);
+                if (!range) return;
+                const startRow = 7 + range.first;
+                const endRow = 7 + range.last;
+                if (isOccupied(startRow, col, endRow, col)) return;
+                schedStyleMergedBlock(ws, startRow, col, endRow, col, style.fill, {
+                    size: schedEventLabel(event).length > 65 ? 9 : 11,
+                    color: style.fontColor || 'FF000000'
+                });
+                ws.getCell(startRow, col).value = schedEventLabel(event);
+                schedTryMerge(ws, startRow, col, endRow, col);
+                markOccupied(startRow, col, endRow, col);
+            });
+        });
+    });
+
+    const noteRow = 7 + timeSlots.length + 1;
+    schedStyleMergedBlock(ws, noteRow, 1, noteRow, 1, 'FF00B0F0', { size: 16 });
+    ws.getCell(noteRow, 1).value = 'NOTE:';
+    schedStyleMergedBlock(ws, noteRow + 1, 1, noteRow + 1, Math.min(totalCols, 10), 'FFFFFF00', { size: 16 });
+    ws.getCell(noteRow + 1, 1).value = 'PICK UP DANPLA IN BOSHOKU (MONDAY & THURSDAY)';
+    schedTryMerge(ws, noteRow + 1, 1, noteRow + 1, Math.min(totalCols, 10));
+    schedStyleMergedBlock(ws, noteRow + 2, 1, noteRow + 2, Math.min(totalCols, 10), 'FFFFFF00', { size: 16, color: 'FFFF0000' });
+    ws.getCell(noteRow + 2, 1).value = 'MAKE SURE NO ANY PRODUCTS INSIDE THE DELIVERY CAR BEFORE LEAVING THE COMPANY';
+    schedTryMerge(ws, noteRow + 2, 1, noteRow + 2, Math.min(totalCols, 10));
 }
 
 // ─── Guest Public Access ─────────────────────────────────────────────

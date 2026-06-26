@@ -284,7 +284,7 @@ public sealed class ApprovalRepository(
                         driver_id = @DriverId,
                         private_vehicle_details = CASE 
                             WHEN @VehicleId IS NULL THEN @TripType 
-                            ELSE private_vehicle_details 
+                            ELSE NULL
                         END,
                         vehicle_usage_code = CASE
                             WHEN @VehicleId IS NULL AND @TripType IS NOT NULL THEN 'PRIVATE'

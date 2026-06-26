@@ -6,6 +6,7 @@ var databaseDrivers = [];
 const gatePassStatusLabels = {
     DRAFT: 'Draft',
     PENDING_SUPERIOR: 'Pending Superior',
+    PENDING_HR_ASSIGN: 'Pending HR Assignment',
     PENDING_PRESIDENT: 'Pending President',
     PENDING_PAS: 'Pending PAS',
     APPROVED: 'Approved',
@@ -142,6 +143,7 @@ function mapApiGatePass(record) {
         expectedOut: formatDateTime(record.expectedOutAt, false),
         expectedIn: record.expectedInAt ? formatDateTime(record.expectedInAt, false) : 'N/A',
         purpose: record.purpose,
+        privateVehicleDetails: record.privateVehicleDetails || '',
         vehicle,
         status,
         statusCode: record.gatePassStatusCode,
@@ -242,40 +244,45 @@ function updateApprovalRoutePreview() {
 
     const steps = [];
     if (requiresSuperiorApproval(currentUser)) steps.push('Immediate Superior');
+    if (isVehicleNeeded) steps.push('HRAD Assignment');
     if (requiresPresidentApproval(currentUser, isVehicleNeeded)) steps.push('President');
     steps.push('PAS');
-    routeText.innerText = steps.join(' → ');
+    routeText.innerText = steps.join(' -> ');
 }
 
 function toggleVehicleFields() {
-    const isNeeded = document.getElementById('gpNeedVehicle').checked;
-    document.getElementById('vehicleFields').style.display = isNeeded ? 'flex' : 'none';
-    
-    const isHRorAdmin = currentUser && (
-        currentUser.role === 'System Admin' || 
-        (currentUser.roles || []).includes('PAS_NOTER') ||
-        ['GA120', 'GA150', 'GA133', 'GA139', 'GA409'].includes(currentUser.id)
-    );
-
+    const vehicleFields = document.getElementById('vehicleFields');
     const tripTypeField = document.getElementById('employeeTripTypeField');
     const hrFields = document.getElementById('hrVehicleAssignmentFields');
     const vehicleSelect = document.getElementById('gpVehicle');
+    const driverSelect = document.getElementById('gpDriver');
+    const manualFields = document.getElementById('manualVehicleFields');
+    const manualVehicle = document.getElementById('gpManualVehicle');
+    const manualDriver = document.getElementById('gpManualDriver');
 
-    if (isNeeded) {
-        if (isHRorAdmin) {
-            tripTypeField.style.display = 'none';
-            hrFields.style.display = 'flex';
-            vehicleSelect.required = true;
-        } else {
-            tripTypeField.style.display = 'block';
-            hrFields.style.display = 'none';
-            vehicleSelect.required = false;
-        }
-    } else {
+    if (vehicleFields) vehicleFields.style.display = 'none';
+    if (tripTypeField) tripTypeField.style.display = 'none';
+    if (hrFields) hrFields.style.display = 'none';
+    if (manualFields) manualFields.classList.add('hidden');
+
+    if (vehicleSelect) {
         vehicleSelect.value = '';
         vehicleSelect.required = false;
-        handleVehicleChange(vehicleSelect);
     }
+    if (driverSelect) {
+        driverSelect.value = '';
+        driverSelect.required = false;
+        driverSelect.disabled = true;
+    }
+    if (manualVehicle) {
+        manualVehicle.value = '';
+        manualVehicle.required = false;
+    }
+    if (manualDriver) {
+        manualDriver.value = '';
+        manualDriver.required = false;
+    }
+
     updateApprovalRoutePreview();
 }
 
@@ -299,7 +306,6 @@ async function submitGatePass(e) {
     const submitButton = form.querySelector('button[type="submit"]');
     const needsVehicle = document.getElementById('gpNeedVehicle').checked;
     const willReturn = document.querySelector('input[name="gpWillReturn"]:checked').value === 'yes';
-    const vehicleSelection = document.getElementById('gpVehicle').value;
     const expectedOut = localDateTimeFromTime(document.getElementById('gpExpectedOut').value);
     const expectedIn = willReturn
         ? localDateTimeFromTime(document.getElementById('gpExpectedIn').value)
@@ -317,31 +323,14 @@ async function submitGatePass(e) {
         return;
     }
 
-    const isHRorAdmin = currentUser && (
-        currentUser.role === 'System Admin' || 
-        currentUser.roles.includes('PAS_NOTER') ||
-        ['GA120', 'GA150', 'GA133', 'GA139', 'GA409'].includes(currentUser.id)
-    );
-
-    const isManual = needsVehicle && isHRorAdmin && vehicleSelection === 'others';
-    
     let vehicleUsageCode = 'NONE';
     let vehicleId = null;
     let driverId = null;
     let privateVehicleDetails = null;
 
     if (needsVehicle) {
-        if (!isHRorAdmin) {
-            vehicleUsageCode = 'COMPANY';
-            privateVehicleDetails = document.getElementById('gpTripType').value;
-        } else {
-            vehicleUsageCode = isManual ? 'PRIVATE' : 'COMPANY';
-            vehicleId = !isManual ? Number(vehicleSelection) : null;
-            privateVehicleDetails = isManual
-                ? `${document.getElementById('gpManualVehicle').value.trim()} / Driver: ${document.getElementById('gpManualDriver').value.trim()}`
-                : null;
-            driverId = !isManual ? (Number(document.getElementById('gpDriver').value) || null) : null;
-        }
+        vehicleUsageCode = 'COMPANY';
+        privateVehicleDetails = 'Company Vehicle Needed';
     }
 
     const payload = {
@@ -377,19 +366,16 @@ async function submitGatePass(e) {
 function submitMockGatePass(e) {
     const isV = document.getElementById('gpNeedVehicle').checked;
     const willReturnBool = document.querySelector('input[name="gpWillReturn"]:checked').value === 'yes';
-    const selectedV = document.getElementById('gpVehicle').value;
     let customVehicleInfo = null;
 
-    if (isV && selectedV === 'others') {
+    if (isV) {
         customVehicleInfo = {
-            id: 'MANUAL',
-            name: document.getElementById('gpManualVehicle').value,
-            plate: 'N/A',
-            driver: document.getElementById('gpManualDriver').value,
-            status: 'In Use'
+            id: '',
+            name: 'Company Vehicle',
+            plate: 'Pending HRAD Assignment',
+            driver: 'Unassigned',
+            status: 'Requested'
         };
-    } else if (isV) {
-        customVehicleInfo = mockVehicles.find(vehicle => vehicle.id === selectedV);
     }
 
     gatePasses.push({
@@ -438,8 +424,11 @@ async function loadFleetReferences() {
                 id: vehicle.vehicleId,
                 name: vehicle.vehicleName,
                 plate: vehicle.plateNumber,
+                vehicleType: vehicle.vehicleType,
+                type: vehicle.vehicleType,
                 driver: driver?.fullName || 'Unassigned',
                 driverId: driver?.driverId || null,
+                defaultDriverId: vehicle.defaultDriverId || null,
                 status: gatePassStatusLabels[vehicle.availabilityStatusCode] || vehicle.availabilityStatusCode
             };
         });

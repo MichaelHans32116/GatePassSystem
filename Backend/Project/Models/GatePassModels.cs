@@ -61,6 +61,7 @@ public sealed class GatePassDetail : GatePassRecord
 {
     public bool WillReturn { get; init; }
     public string VehicleUsageCode { get; init; } = string.Empty;
+    public string? PrivateVehicleDetails { get; init; }
     public long? VehicleId { get; init; }
     public string? VehicleName { get; init; }
     public string? PlateNumber { get; init; }

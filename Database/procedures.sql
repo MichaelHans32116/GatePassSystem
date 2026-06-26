@@ -46,11 +46,6 @@ BEGIN
             SET MESSAGE_TEXT = 'Expected Time In must be later than Expected Time Out.';
     END IF;
 
-    IF p_vehicle_usage_code = 'COMPANY' AND p_vehicle_id IS NULL AND p_private_vehicle_details IS NULL THEN
-        SIGNAL SQLSTATE '45000'
-            SET MESSAGE_TEXT = 'A company vehicle record is required.';
-    END IF;
-
     START TRANSACTION;
 
     SET v_form_date = DATE(p_expected_out_at);

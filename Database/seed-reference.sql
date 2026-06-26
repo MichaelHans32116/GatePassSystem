@@ -119,7 +119,7 @@ INSERT INTO tbl_vehicle_usage_types (
 ) VALUES
 ('NONE', 'No Vehicle', FALSE, FALSE),
 ('PRIVATE', 'Private Vehicle', FALSE, FALSE),
-('COMPANY', 'Company Vehicle', TRUE, TRUE)
+('COMPANY', 'Company Vehicle', FALSE, TRUE)
 ON DUPLICATE KEY UPDATE
     usage_name = VALUES(usage_name),
     requires_vehicle_record = VALUES(requires_vehicle_record),

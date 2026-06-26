@@ -417,11 +417,6 @@ public sealed class GatePassService(
             return "Vehicle usage must be NONE, PRIVATE, or COMPANY.";
         }
 
-        if (usage == "COMPANY" && !request.VehicleId.HasValue && string.IsNullOrWhiteSpace(request.PrivateVehicleDetails))
-        {
-            return "A company vehicle is required.";
-        }
-
         if (usage == "PRIVATE" &&
             string.IsNullOrWhiteSpace(request.PrivateVehicleDetails))
         {

@@ -368,6 +368,10 @@
 
                     <!-- Export Bar -->
                     <div class="mt-4 flex flex-wrap gap-3 justify-end">
+                        <div class="flex items-center gap-2 rounded border border-gray-200 bg-white px-3 py-2">
+                            <label for="schedExportWeek" class="text-[10px] font-bold uppercase tracking-wider text-gray-500">Export Week</label>
+                            <input type="week" id="schedExportWeek" class="border border-gray-300 rounded px-2 py-1 text-xs focus:outline-none focus:border-mpiBlue">
+                        </div>
                         <button id="btnRequestServiceSchedule" onclick="openServiceScheduleRequestModal()" class="text-xs bg-mpiBlue text-white px-4 py-2 rounded hover:bg-blue-700 transition hidden"><i class="fas fa-car mr-1"></i> Request Service Schedule</button>
                         <button id="btnManageFixedSchedules" onclick="openFixedSchedulesModal()" class="text-xs bg-amber-600 text-white px-4 py-2 rounded hover:bg-amber-700 transition hidden"><i class="fas fa-cog mr-1"></i> Manage Fixed Schedules</button>
                         <button onclick="exportScheduleExcel('vehicle')" class="text-xs bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition"><i class="fas fa-file-excel mr-1"></i> Export Vehicles (Weekly)</button>
@@ -501,7 +505,7 @@
 
                             <div class="text-[10px] md:text-xs text-gray-500 bg-blue-50 p-3 rounded flex items-center">
                                 <i class="fas fa-route text-mpiBlue mr-2 text-lg"></i>
-                                <span><strong>Approval Flow:</strong> <span id="routeApprovalText">Immediate Superior → PAS</span></span>
+                                <span><strong>Approval Flow:</strong> <span id="routeApprovalText">Immediate Superior -> PAS</span></span>
                             </div>
 
                             <div class="prepared-signature-panel hidden" aria-hidden="true">
