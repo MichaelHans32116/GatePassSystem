@@ -45,40 +45,6 @@ public sealed class SecurityRepository(
 
         try
         {
-            var now = timeProvider.GetUtcNow().UtcDateTime;
-            var cooldownFrom = now.AddSeconds(-ScanCooldownSeconds);
-            var lastIdentifierScanAt =
-                await connection.QuerySingleOrDefaultAsync<DateTime?>(
-                    new CommandDefinition(
-                        """
-                        SELECT MAX(scanned_at)
-                        FROM tbl_gate_pass_scans
-                        WHERE provided_identifier_hash = @IdentifierHash
-                          AND scanned_at >= @CooldownFrom;
-                        """,
-                        new
-                        {
-                            IdentifierHash = providedIdentifierHash,
-                            CooldownFrom = cooldownFrom
-                        },
-                        transaction,
-                        cancellationToken: cancellationToken));
-            if (lastIdentifierScanAt.HasValue)
-            {
-                var remaining = Math.Max(
-                    1,
-                    ScanCooldownSeconds -
-                    (int)Math.Floor((now - lastIdentifierScanAt.Value).TotalSeconds));
-                await transaction.CommitAsync(cancellationToken);
-                return new SecurityScanResult(
-                    null,
-                    "SCAN_COOLDOWN",
-                    $"Please wait {remaining} second{(remaining == 1 ? "" : "s")} before scanning this employee again.",
-                    null,
-                    null,
-                    remaining);
-            }
-
             var gatePass = await connection.QuerySingleOrDefaultAsync<ScanTarget>(
                 new CommandDefinition(
                     """
@@ -141,6 +107,40 @@ public sealed class SecurityRepository(
                     },
                     transaction,
                     cancellationToken: cancellationToken));
+
+            var now = timeProvider.GetUtcNow().UtcDateTime;
+            var cooldownFrom = now.AddSeconds(-ScanCooldownSeconds);
+            var lastIdentifierScanAt =
+                await connection.QuerySingleOrDefaultAsync<DateTime?>(
+                    new CommandDefinition(
+                        """
+                        SELECT MAX(scanned_at)
+                        FROM tbl_gate_pass_scans
+                        WHERE provided_identifier_hash = @IdentifierHash
+                          AND scanned_at >= @CooldownFrom;
+                        """,
+                        new
+                        {
+                            IdentifierHash = providedIdentifierHash,
+                            CooldownFrom = cooldownFrom
+                        },
+                        transaction,
+                        cancellationToken: cancellationToken));
+            if (lastIdentifierScanAt.HasValue)
+            {
+                var remaining = Math.Max(
+                    1,
+                    ScanCooldownSeconds -
+                    (int)Math.Floor((now - lastIdentifierScanAt.Value).TotalSeconds));
+                await transaction.CommitAsync(cancellationToken);
+                return new SecurityScanResult(
+                    null,
+                    "SCAN_COOLDOWN",
+                    $"Please wait {remaining} second{(remaining == 1 ? "" : "s")} before scanning this employee again.",
+                    null,
+                    null,
+                    remaining);
+            }
 
             if (gatePass is null)
             {

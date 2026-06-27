@@ -136,7 +136,7 @@
                     </a>
                 </div>
 
-                <div id="navGroupHR" class="mt-4 hidden">
+                <div id="navGroupHRAD" class="mt-4 hidden">
                     <div class="px-6 py-2 text-[10px] font-bold text-blue-300 uppercase tracking-widest">Operations</div>
                     <a href="#" class="nav-item px-6 py-3 transition text-white" data-target="fleetManagement" onclick="switchSection('fleetManagement')">
                         <i class="fas fa-truck w-6 text-left"></i> <span class="text-sm">Vehicles & Drivers</span>
@@ -178,6 +178,30 @@
                 </div>
                 <div class="flex items-center space-x-4 md:space-x-6">
                     <div class="text-xs text-gray-500 font-medium hidden md:block" id="currentDateDisplay">Loading...</div>
+
+                    <!-- Notification Bell -->
+                    <div class="relative" id="notificationBellWrapper">
+                        <button id="notificationBellBtn" onclick="toggleNotificationDropdown()" class="relative text-gray-500 hover:text-mpiBlue transition p-1 focus:outline-none" title="Notifications">
+                            <i class="fas fa-bell text-xl"></i>
+                            <span id="notificationBadge" class="hidden absolute -top-1 -right-1 bg-red-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center leading-none px-1 shadow-sm animate-pulse">0</span>
+                        </button>
+                        <!-- Notification Dropdown Panel -->
+                        <div id="notificationDropdown" class="hidden absolute right-0 top-full mt-2 w-80 sm:w-96 bg-white rounded-lg shadow-xl border border-gray-200 z-50 overflow-hidden" style="max-height: 420px;">
+                            <div class="flex items-center justify-between px-4 py-3 bg-gradient-to-r from-blue-600 to-blue-700 text-white">
+                                <span class="text-sm font-semibold"><i class="fas fa-bell mr-1.5"></i>Notifications</span>
+                                <button onclick="markAllNotificationsAsRead()" class="text-[11px] bg-white/20 hover:bg-white/30 rounded px-2 py-0.5 transition font-medium" title="Mark all as read">
+                                    <i class="fas fa-check-double mr-1"></i>Mark all read
+                                </button>
+                            </div>
+                            <div id="notificationList" class="overflow-y-auto divide-y divide-gray-100" style="max-height: 350px;">
+                                <div class="px-4 py-8 text-center text-gray-400 text-sm">
+                                    <i class="fas fa-bell-slash text-2xl mb-2 block"></i>
+                                    No notifications yet.
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
                     <div class="flex items-center space-x-2 md:border-l md:pl-6 border-gray-200">
                         <i class="fas fa-user-circle text-gray-400 text-2xl md:text-xl"></i>
                         <div class="flex flex-col hidden sm:flex">
@@ -370,7 +394,9 @@
                     <div class="mt-4 flex flex-wrap gap-3 justify-end">
                         <div class="flex items-center gap-2 rounded border border-gray-200 bg-white px-3 py-2">
                             <label for="schedExportWeek" class="text-[10px] font-bold uppercase tracking-wider text-gray-500">Export Week</label>
-                            <input type="week" id="schedExportWeek" class="border border-gray-300 rounded px-2 py-1 text-xs focus:outline-none focus:border-mpiBlue">
+                            <select id="schedExportWeek" class="border border-gray-300 rounded px-2 py-1 text-xs focus:outline-none focus:border-mpiBlue bg-white">
+                                <!-- Populated dynamically -->
+                            </select>
                         </div>
                         <button id="btnRequestServiceSchedule" onclick="openServiceScheduleRequestModal()" class="text-xs bg-mpiBlue text-white px-4 py-2 rounded hover:bg-blue-700 transition hidden"><i class="fas fa-car mr-1"></i> Request Service Schedule</button>
                         <button id="btnManageFixedSchedules" onclick="openFixedSchedulesModal()" class="text-xs bg-amber-600 text-white px-4 py-2 rounded hover:bg-amber-700 transition hidden"><i class="fas fa-cog mr-1"></i> Manage Fixed Schedules</button>
@@ -471,8 +497,8 @@
                                         </select>
                                     </div>
 
-                                    <!-- HR Assignment Fields (Visible for HR/Admin) -->
-                                    <div id="hrVehicleAssignmentFields" class="flex-col space-y-4">
+                                    <!-- HRAD Assignment Fields (Visible for HRAD/Admin) -->
+                                    <div id="hradVehicleAssignmentFields" class="flex-col space-y-4">
                                         <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
                                             <div>
                                                 <label class="block text-[11px] font-semibold text-gray-500 uppercase mb-1">Select Vehicle</label>
@@ -564,6 +590,42 @@
                                         </thead>
                                         <tbody id="materialItemsBody"></tbody>
                                     </table>
+                                </div>
+                            </div>
+
+                            <!-- Photo Proofs -->
+                            <div class="space-y-2">
+                                <div>
+                                    <label class="block text-xs font-semibold uppercase tracking-wider text-gray-600">Photo Proof <span class="text-red-500">*</span></label>
+                                    <p class="text-[10px] text-gray-500">Provide at least 1 photo, and up to 2 photos as proof for material release.</p>
+                                </div>
+                                <div class="grid grid-cols-2 gap-4">
+                                    <!-- Photo 1 Slot -->
+                                    <div class="relative border-2 border-dashed border-gray-300 rounded-lg p-4 flex flex-col items-center justify-center cursor-pointer hover:border-mpiBlue transition bg-white group min-h-[120px]" onclick="document.getElementById('materialProofFile1').click()">
+                                        <input type="file" id="materialProofFile1" accept="image/*" class="hidden" onchange="previewMaterialProof(1, this)">
+                                        <div id="materialProofEmpty1" class="text-center">
+                                            <i class="fas fa-camera text-gray-400 text-xl mb-1 group-hover:text-mpiBlue transition"></i>
+                                            <p class="text-[10px] font-semibold text-gray-600">Photo 1 (Required)</p>
+                                            <p class="text-[8px] text-gray-400">Click to upload/capture</p>
+                                        </div>
+                                        <div id="materialProofPreviewContainer1" class="hidden absolute inset-0 rounded-lg overflow-hidden bg-white">
+                                            <img id="materialProofImg1" class="w-full h-full object-cover">
+                                            <button type="button" onclick="clearMaterialProof(1, event)" class="absolute top-1.5 right-1.5 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] hover:bg-red-700 transition shadow z-10"><i class="fas fa-times"></i></button>
+                                        </div>
+                                    </div>
+                                    <!-- Photo 2 Slot -->
+                                    <div class="relative border-2 border-dashed border-gray-300 rounded-lg p-4 flex flex-col items-center justify-center cursor-pointer hover:border-mpiBlue transition bg-white group min-h-[120px]" onclick="document.getElementById('materialProofFile2').click()">
+                                        <input type="file" id="materialProofFile2" accept="image/*" class="hidden" onchange="previewMaterialProof(2, this)">
+                                        <div id="materialProofEmpty2" class="text-center">
+                                            <i class="fas fa-camera text-gray-400 text-xl mb-1 group-hover:text-mpiBlue transition"></i>
+                                            <p class="text-[10px] font-semibold text-gray-600">Photo 2 (Optional)</p>
+                                            <p class="text-[8px] text-gray-400">Click to upload/capture</p>
+                                        </div>
+                                        <div id="materialProofPreviewContainer2" class="hidden absolute inset-0 rounded-lg overflow-hidden bg-white">
+                                            <img id="materialProofImg2" class="w-full h-full object-cover">
+                                            <button type="button" onclick="clearMaterialProof(2, event)" class="absolute top-1.5 right-1.5 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] hover:bg-red-700 transition shadow z-10"><i class="fas fa-times"></i></button>
+                                        </div>
+                                    </div>
                                 </div>
                             </div>
 
@@ -971,6 +1033,14 @@
 
                 <div id="materialPrintableArea" class="material-print-bundle hidden"></div>
                 <div id="multiPrintableArea" class="hidden"></div>
+
+                <!-- Material Photo Proofs Gallery -->
+                <div id="materialProofsGallery" class="mt-6 bg-white rounded-lg border border-slate-200 p-4 print-hide hidden">
+                    <h3 class="font-extrabold text-slate-800 text-xs uppercase tracking-wider mb-3"><i class="fas fa-camera mr-1 text-mpiBlue"></i> Material Release Photo Proof</h3>
+                    <div class="grid grid-cols-2 gap-4" id="materialProofsList">
+                        <!-- Dynamically populated images -->
+                    </div>
+                </div>
             </div>
 
             <!-- Approval Action Area (E-Signature Input) -->
@@ -1012,20 +1082,20 @@
                     </div>
                 </div>
 
-                <!-- HR Assignment Selectors (Visible only during HR Assignment step) -->
-                <div id="hrAssignmentArea" class="bg-amber-50 border border-amber-200 p-4 rounded-xl hidden flex-col space-y-3">
+                <!-- HRAD Assignment Selectors (Visible only during HRAD Assignment step) -->
+                <div id="hradAssignmentArea" class="bg-amber-50 border border-amber-200 p-4 rounded-xl hidden flex-col space-y-3">
                     <h3 class="font-extrabold text-amber-800 text-sm mb-1"><i class="fas fa-truck mr-1"></i> Assign Vehicle & Driver</h3>
-                    <p class="text-xs text-gray-600 mb-2">Requested Trip Type: <span id="hrRequestedTripType" class="font-bold text-gray-800"></span></p>
+                    <p class="text-xs text-gray-600 mb-2">Requested Trip Type: <span id="hradRequestedTripType" class="font-bold text-gray-800"></span></p>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div>
                             <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Select Vehicle</label>
-                            <select id="hrAssignVehicle" class="w-full bg-white border border-gray-300 p-2 rounded text-xs focus:outline-none focus:border-mpiBlue" onchange="handleHrAssignVehicleChange(this)">
+                            <select id="hradAssignVehicle" class="w-full bg-white border border-gray-300 p-2 rounded text-xs focus:outline-none focus:border-mpiBlue" onchange="handleHradAssignVehicleChange(this)">
                                 <!-- Dynamically populated -->
                             </select>
                         </div>
                         <div>
                             <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Select Driver</label>
-                            <select id="hrAssignDriver" class="w-full bg-white border border-gray-300 p-2 rounded text-xs focus:outline-none focus:border-mpiBlue">
+                            <select id="hradAssignDriver" class="w-full bg-white border border-gray-300 p-2 rounded text-xs focus:outline-none focus:border-mpiBlue">
                                 <!-- Dynamically populated -->
                             </select>
                         </div>

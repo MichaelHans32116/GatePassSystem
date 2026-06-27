@@ -18,7 +18,6 @@ public sealed class FleetController(
     IFleetService fleetService,
     IDatabaseConnectionFactory connectionFactory) : ApiControllerBase
 {
-    [AllowAnonymous]
     [HttpGet("vehicles")]
     public async Task<ActionResult<ApiResponse<IReadOnlyList<VehicleRecord>>>> Vehicles(
         CancellationToken cancellationToken) =>
@@ -63,7 +62,6 @@ public sealed class FleetController(
         return NoContent();
     }
 
-    [AllowAnonymous]
     [HttpGet("drivers")]
     public async Task<ActionResult<ApiResponse<IReadOnlyList<DriverRecord>>>> Drivers(
         CancellationToken cancellationToken) =>
@@ -108,7 +106,6 @@ public sealed class FleetController(
         return NoContent();
     }
 
-    [AllowAnonymous]
     [HttpGet("fleet/schedule")]
     public async Task<ActionResult<ApiResponse<IReadOnlyList<VehicleScheduleRecord>>>> Schedule(
         [FromQuery] DateTime? from,
@@ -120,7 +117,6 @@ public sealed class FleetController(
         return Success(await fleetService.GetScheduleAsync(fromDate, toDate, cancellationToken));
     }
 
-    [AllowAnonymous]
     [HttpGet("fleet/fixed-schedules")]
     public async Task<ActionResult<ApiResponse<IReadOnlyList<FixedScheduleRecord>>>> FixedSchedules(
         CancellationToken cancellationToken) =>

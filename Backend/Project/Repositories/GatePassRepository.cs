@@ -59,33 +59,61 @@ public sealed class GatePassRepository(
         await using var connection =
             await connectionFactory.OpenConnectionAsync(cancellationToken);
 
-        return await connection.QuerySingleAsync<GatePassRecord>(
-            new CommandDefinition(
-                "SP_CreateMaterialGatePass",
-                new
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+        try
+        {
+            var record = await connection.QuerySingleAsync<GatePassRecord>(
+                new CommandDefinition(
+                    "SP_CreateMaterialGatePass",
+                    new
+                    {
+                        p_requester_user_id = requester.UserId,
+                        p_requester_employee_id = requester.EmployeeRecordId,
+                        p_requester_department_id = requester.DepartmentId!.Value,
+                        p_requester_position_id = requester.PositionId,
+                        p_prepared_by_signature_file_id =
+                            request.PreparedBySignatureFileId,
+                        p_authorized_employee_id =
+                            authorizedEmployee.EmployeeRecordId,
+                        p_authorized_department_id =
+                            authorizedEmployee.DepartmentId!.Value,
+                        p_form_date = request.FormDate.ToDateTime(TimeOnly.MinValue),
+                        p_material_remarks = request.Remarks,
+                        p_items_json = JsonSerializer.Serialize(
+                            request.Items,
+                            new JsonSerializerOptions
+                            {
+                                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
+                            }),
+                        p_trace_id = traceId
+                    },
+                    commandType: CommandType.StoredProcedure,
+                    transaction: transaction,
+                    cancellationToken: cancellationToken));
+
+            if (request.ProofFileIds != null && request.ProofFileIds.Count > 0)
+            {
+                foreach (var fileId in request.ProofFileIds)
                 {
-                    p_requester_user_id = requester.UserId,
-                    p_requester_employee_id = requester.EmployeeRecordId,
-                    p_requester_department_id = requester.DepartmentId!.Value,
-                    p_requester_position_id = requester.PositionId,
-                    p_prepared_by_signature_file_id =
-                        request.PreparedBySignatureFileId,
-                    p_authorized_employee_id =
-                        authorizedEmployee.EmployeeRecordId,
-                    p_authorized_department_id =
-                        authorizedEmployee.DepartmentId!.Value,
-                    p_form_date = request.FormDate.ToDateTime(TimeOnly.MinValue),
-                    p_material_remarks = request.Remarks,
-                    p_items_json = JsonSerializer.Serialize(
-                        request.Items,
-                        new JsonSerializerOptions
-                        {
-                            PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-                        }),
-                    p_trace_id = traceId
-                },
-                commandType: CommandType.StoredProcedure,
-                cancellationToken: cancellationToken));
+                    await connection.ExecuteAsync(new CommandDefinition(
+                        """
+                        INSERT INTO tbl_material_gate_pass_proofs (gate_pass_id, signature_file_id)
+                        VALUES (@GatePassId, @SignatureFileId);
+                        """,
+                        new { GatePassId = record.GatePassId, SignatureFileId = fileId },
+                        transaction,
+                        cancellationToken: cancellationToken));
+                }
+            }
+
+            await transaction.CommitAsync(cancellationToken);
+            return record;
+        }
+        catch
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
     }
 
     public async Task<long?> FindApproverAsync(
@@ -335,6 +363,11 @@ public sealed class GatePassRepository(
             FROM tbl_material_gate_pass_items
             WHERE gate_pass_id = @GatePassId
             ORDER BY line_no;
+
+            SELECT
+                signature_file_id
+            FROM tbl_material_gate_pass_proofs
+            WHERE gate_pass_id = @GatePassId;
             """;
 
         using var grid = await connection.QueryMultipleAsync(
@@ -353,8 +386,9 @@ public sealed class GatePassRepository(
         var scans = (await grid.ReadAsync<GatePassScanRecord>()).AsList();
         var materialItems =
             (await grid.ReadAsync<MaterialGatePassItemRecord>()).AsList();
+        var proofFileIds = (await grid.ReadAsync<long>()).AsList();
 
-        return CopyDetail(detail, steps, scans, materialItems);
+        return CopyDetail(detail, steps, scans, materialItems, proofFileIds);
     }
 
     public async Task EnsureQrTokenAsync(
@@ -622,7 +656,8 @@ public sealed class GatePassRepository(
         GatePassDetail source,
         IReadOnlyList<ApprovalStepRecord> steps,
         IReadOnlyList<GatePassScanRecord> scans,
-        IReadOnlyList<MaterialGatePassItemRecord> materialItems) =>
+        IReadOnlyList<MaterialGatePassItemRecord> materialItems,
+        IReadOnlyList<long> proofFileIds) =>
         new()
         {
             GatePassId = source.GatePassId,
@@ -683,6 +718,7 @@ public sealed class GatePassRepository(
             ActualInSignatureYOffset = source.ActualInSignatureYOffset,
             ApprovalSteps = steps,
             Scans = scans,
-            MaterialItems = materialItems
+            MaterialItems = materialItems,
+            ProofFileIds = proofFileIds
         };
 }

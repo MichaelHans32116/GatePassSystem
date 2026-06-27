@@ -19,7 +19,7 @@ function setupRoleAccess(user) {
             document.getElementById('navGroupApprovals').style.display = 'block';
             document.getElementById('navGroupSecurity').style.display = 'none';
             document.getElementById('navGroupAdmin').style.display = 'block';
-            document.getElementById('navGroupHR').style.display = 'none';
+            document.getElementById('navGroupHRAD').style.display = 'none';
             document.getElementById('navItemDashboard').style.display = 'flex';
 
             const guestLogin = document.getElementById('navItemGuestLogin');
@@ -73,7 +73,7 @@ function setupRoleAccess(user) {
                     document.getElementById('filterDeptContainer').style.display = 'none';
 
                     if(user.canNoteGatePass) {
-                        document.getElementById('navGroupHR').style.display = 'block';
+                        document.getElementById('navGroupHRAD').style.display = 'block';
                         document.getElementById('tab-fleet').style.display = 'inline-block';
                     }
                 }

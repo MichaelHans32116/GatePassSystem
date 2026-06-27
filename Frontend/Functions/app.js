@@ -27,6 +27,12 @@ function showToast(message, type = 'success') {
             }, 3000);
         }
 
+// ── Notification state ──────────────────────────────────────────────────────
+// Tracks notification IDs that have already produced a toast in this session
+// so the 10-second poll never shows the same alert twice.
+const seenNotificationIds = new Set();
+let isInitialNotificationLoad = true;
+
 function clearTransientApplicationState() {
     gatePasses = [];
     currentViewedPassId = null;
@@ -44,6 +50,10 @@ function clearTransientApplicationState() {
     if (typeof materialEmployeeDirectory !== 'undefined') {
         materialEmployeeDirectory = [];
     }
+
+    // Reset notification session tracking
+    seenNotificationIds.clear();
+    isInitialNotificationLoad = true;
 
     forceCloseModal?.();
 }
@@ -163,26 +173,203 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeSignatureControls();
     initializeGatePassForm();
     renderAdminTables();
+
+    // Poll for new notifications every 10 seconds
+    window.setInterval(() => {
+        if (currentUser && isDatabaseSession() && currentUser.role !== 'Security') {
+            checkUnreadNotifications();
+        }
+    }, 10000);
+
+    // Close notification dropdown when clicking outside
+    document.addEventListener('click', (e) => {
+        const wrapper = document.getElementById('notificationBellWrapper');
+        const dropdown = document.getElementById('notificationDropdown');
+        if (wrapper && dropdown && !wrapper.contains(e.target)) {
+            dropdown.classList.add('hidden');
+        }
+    });
 });
 
 window.addEventListener('gatepass:authenticated', async () => {
     await refreshApplicationState('authenticated', { resetState: true });
 });
 
+// ── Notification System ─────────────────────────────────────────────────────
+
+/**
+ * Polls the backend for unread notifications. Only shows toast alerts for
+ * notifications the user hasn't already seen in this session.
+ * On initial load, it seeds the seenNotificationIds set WITHOUT toasting
+ * so old unreads don't flood the screen on page refresh.
+ */
 async function checkUnreadNotifications() {
     if (!currentUser) return;
     try {
         const res = await ApiClient.get('/notifications/unread');
         const notifications = Array.isArray(res) ? res : (res && res.items ? res.items : []);
+
+        // Update the bell badge count (always reflects true unread count)
+        updateNotificationBadge(notifications.length);
+
         if (notifications.length > 0) {
-            notifications.forEach(notif => {
-                showToast(`${notif.title}: ${notif.message}`, 'info');
-            });
-            // Mark them as read
-            await ApiClient.post('/notifications/mark-read');
+            if (isInitialNotificationLoad) {
+                // First load after login/refresh: seed seen IDs without toasting
+                notifications.forEach(n => seenNotificationIds.add(n.notificationId));
+                isInitialNotificationLoad = false;
+            } else {
+                // Subsequent polls: only toast truly new (unseen) notifications
+                const newNotifications = notifications.filter(
+                    n => !seenNotificationIds.has(n.notificationId)
+                );
+                newNotifications.forEach(notif => {
+                    seenNotificationIds.add(notif.notificationId);
+                    showToast(`${notif.title}: ${notif.message}`, 'info');
+                });
+            }
+        } else {
+            isInitialNotificationLoad = false;
         }
+
+        // Refresh the dropdown panel content
+        await refreshNotificationDropdown();
     } catch (err) {
         console.error('Failed to check unread notifications:', err);
+    }
+}
+
+/**
+ * Updates the red badge count on the bell icon.
+ */
+function updateNotificationBadge(count) {
+    const badge = document.getElementById('notificationBadge');
+    if (!badge) return;
+    if (count > 0) {
+        badge.textContent = count > 99 ? '99+' : count;
+        badge.classList.remove('hidden');
+    } else {
+        badge.classList.add('hidden');
+    }
+}
+
+/**
+ * Fetches all notifications (read + unread, last 50) and renders them
+ * into the dropdown list.
+ */
+async function refreshNotificationDropdown() {
+    if (!currentUser) return;
+    const listEl = document.getElementById('notificationList');
+    if (!listEl) return;
+
+    try {
+        const res = await ApiClient.get('/notifications/all');
+        const all = Array.isArray(res) ? res : (res && res.items ? res.items : []);
+
+        if (all.length === 0) {
+            listEl.innerHTML = `
+                <div class="px-4 py-8 text-center text-gray-400 text-sm">
+                    <i class="fas fa-bell-slash text-2xl mb-2 block"></i>
+                    No notifications yet.
+                </div>`;
+            return;
+        }
+
+        listEl.innerHTML = all.map(n => {
+            const isUnread = !n.isRead;
+            const typeIcon = getNotificationIcon(n.notificationTypeCode);
+            const timeAgo = formatTimeAgo(n.createdAt);
+            return `
+                <div class="px-4 py-3 flex items-start gap-3 hover:bg-gray-50 transition cursor-default ${isUnread ? 'bg-blue-50/60' : ''}">
+                    <div class="flex-shrink-0 mt-0.5">
+                        <span class="inline-flex items-center justify-center w-8 h-8 rounded-full ${typeIcon.bgClass}">
+                            <i class="fas ${typeIcon.icon} ${typeIcon.textClass} text-xs"></i>
+                        </span>
+                    </div>
+                    <div class="flex-1 min-w-0">
+                        <p class="text-sm ${isUnread ? 'font-semibold text-gray-800' : 'text-gray-600'}">
+                            ${escapeHtml(n.title)}
+                        </p>
+                        <p class="text-xs text-gray-500 mt-0.5 line-clamp-2">${escapeHtml(n.message)}</p>
+                        <p class="text-[10px] text-gray-400 mt-1"><i class="far fa-clock mr-1"></i>${timeAgo}</p>
+                    </div>
+                    ${isUnread ? '<span class="flex-shrink-0 w-2 h-2 bg-blue-500 rounded-full mt-2"></span>' : ''}
+                </div>`;
+        }).join('');
+    } catch (err) {
+        console.error('Failed to load notification list:', err);
+    }
+}
+
+/**
+ * Returns icon config based on notification type code.
+ */
+function getNotificationIcon(typeCode) {
+    const code = (typeCode || '').toUpperCase();
+    if (code.includes('APPROVE') || code.includes('COMPLETE') || code.includes('SUCCESS'))
+        return { icon: 'fa-check', bgClass: 'bg-green-100', textClass: 'text-green-600' };
+    if (code.includes('REJECT') || code.includes('DENIED') || code.includes('ERROR'))
+        return { icon: 'fa-times', bgClass: 'bg-red-100', textClass: 'text-red-600' };
+    if (code.includes('WARN') || code.includes('PENDING') || code.includes('REMIND'))
+        return { icon: 'fa-exclamation-triangle', bgClass: 'bg-amber-100', textClass: 'text-amber-600' };
+    if (code.includes('SCAN') || code.includes('GUARD'))
+        return { icon: 'fa-qrcode', bgClass: 'bg-purple-100', textClass: 'text-purple-600' };
+    // Default: info
+    return { icon: 'fa-info', bgClass: 'bg-blue-100', textClass: 'text-blue-600' };
+}
+
+/**
+ * Returns a human-readable relative time string.
+ */
+function formatTimeAgo(dateStr) {
+    const date = new Date(dateStr);
+    const now = new Date();
+    const diffMs = now - date;
+    const diffSec = Math.floor(diffMs / 1000);
+    if (diffSec < 60) return 'just now';
+    const diffMin = Math.floor(diffSec / 60);
+    if (diffMin < 60) return `${diffMin}m ago`;
+    const diffHr = Math.floor(diffMin / 60);
+    if (diffHr < 24) return `${diffHr}h ago`;
+    const diffDay = Math.floor(diffHr / 24);
+    if (diffDay < 7) return `${diffDay}d ago`;
+    return date.toLocaleDateString('en-US', { month: 'short', day: 'numeric' });
+}
+
+/**
+ * Escapes HTML to prevent XSS.
+ */
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.appendChild(document.createTextNode(text || ''));
+    return div.innerHTML;
+}
+
+/**
+ * Toggles the notification dropdown panel visibility.
+ */
+function toggleNotificationDropdown() {
+    const dropdown = document.getElementById('notificationDropdown');
+    if (!dropdown) return;
+    const isHidden = dropdown.classList.contains('hidden');
+    dropdown.classList.toggle('hidden');
+    if (isHidden) {
+        // Refresh the panel content when opening
+        refreshNotificationDropdown();
+    }
+}
+
+/**
+ * Marks all notifications as read, clears badge, and refreshes the dropdown.
+ */
+async function markAllNotificationsAsRead() {
+    if (!currentUser) return;
+    try {
+        await ApiClient.post('/notifications/mark-read', {});
+        updateNotificationBadge(0);
+        await refreshNotificationDropdown();
+    } catch (err) {
+        console.error('Failed to mark notifications as read:', err);
+        showToast('Failed to mark notifications as read.', 'error');
     }
 }
 
@@ -191,3 +378,5 @@ window.showToast = showToast;
 window.refreshDashboards = refreshDashboards;
 window.refreshApplicationState = refreshApplicationState;
 window.checkUnreadNotifications = checkUnreadNotifications;
+window.toggleNotificationDropdown = toggleNotificationDropdown;
+window.markAllNotificationsAsRead = markAllNotificationsAsRead;

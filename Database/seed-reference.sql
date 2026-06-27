@@ -45,7 +45,7 @@ INSERT INTO tbl_approval_step_types (
     approval_step_code, step_name, sort_order
 ) VALUES
 ('SUPERIOR', 'Immediate Superior Approval', 10),
-('HR_ASSIGN', 'HR Assignment', 15),
+('HRAD_ASSIGN', 'HRAD Assignment', 15),
 ('PRESIDENT', 'President Approval', 20),
 ('PAS', 'PAS Noting', 30)
 ON DUPLICATE KEY UPDATE
@@ -77,7 +77,7 @@ INSERT INTO tbl_gate_pass_statuses (
 ) VALUES
 ('DRAFT', 'Draft', 'DRAFT', FALSE, FALSE, 10),
 ('PENDING_SUPERIOR', 'Pending Superior Approval', 'PENDING', FALSE, FALSE, 20),
-('PENDING_HR_ASSIGN', 'Pending HR Assignment', 'PENDING', FALSE, FALSE, 25),
+('PENDING_HRAD_ASSIGN', 'Pending HRAD Assignment', 'PENDING', FALSE, FALSE, 25),
 ('ON_HOLD', 'On Hold', 'PENDING', FALSE, FALSE, 28),
 ('PENDING_PRESIDENT', 'Pending President Approval', 'PENDING', FALSE, FALSE, 30),
 ('PENDING_PAS', 'Pending PAS Noting', 'PENDING', FALSE, FALSE, 40),
@@ -240,7 +240,7 @@ INSERT INTO tbl_permissions (
 ('gatepass.read.all', 'Read all gate pass records.'),
 ('gatepass.approve.superior', 'Act on an assigned immediate-superior approval step.'),
 ('gatepass.approve.president', 'Act on a required president approval step.'),
-('gatepass.note.pas', 'Act on the final PAS/HR noting step.'),
+('gatepass.note.pas', 'Act on the final PAS/HRAD noting step.'),
 ('gatepass.scan', 'Verify and scan approved gate passes.'),
 ('gatepass.monitor.outside', 'View currently outside and overdue associates.'),
 ('employees.read', 'View approved employee identity fields.'),

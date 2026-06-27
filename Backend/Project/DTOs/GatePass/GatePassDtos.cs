@@ -40,6 +40,8 @@ public sealed class CreateMaterialGatePassRequest
 
     public long? PreparedBySignatureFileId { get; init; }
 
+    public IReadOnlyList<long> ProofFileIds { get; init; } = [];
+
     [Required, MinLength(1), MaxLength(20)]
     public IReadOnlyList<MaterialGatePassItemRequest> Items { get; init; } = [];
 }

@@ -199,7 +199,7 @@ public sealed class ApprovalRepository(
             var actedAt = DateTime.UtcNow;
 
             // 1. Handle Put On Hold option for HR Assignment step
-            if (current.ApprovalStepCode == "HR_ASSIGN" && putOnHold == true)
+            if (current.ApprovalStepCode == "HRAD_ASSIGN" && putOnHold == true)
             {
                 await connection.ExecuteAsync(new CommandDefinition(
                     """
@@ -275,7 +275,7 @@ public sealed class ApprovalRepository(
             }
 
             // 2. Handle Vehicle/Driver assignment on HR approval
-            if (current.ApprovalStepCode == "HR_ASSIGN" && approve)
+            if (current.ApprovalStepCode == "HRAD_ASSIGN" && approve)
             {
                 await connection.ExecuteAsync(new CommandDefinition(
                     """

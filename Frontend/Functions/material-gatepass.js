@@ -6,6 +6,7 @@ var materialEmployeeSearchTimer = null;
 var preparedSignatureState = null;
 var preparedSignatureOriginalData = null;
 var materialSignaturePadState = { drawing: false, lastX: 0, lastY: 0 };
+var materialProofState = { file1: null, file2: null };
 
 function materialEscape(value) {
     return String(value ?? '')
@@ -65,6 +66,7 @@ function initializeMaterialGatePassForm() {
             ? 'PAS'
             : 'Immediate Superior → PAS';
     }
+    resetMaterialProofState();
 }
 
 async function loadMaterialEmployees() {
@@ -541,16 +543,35 @@ async function submitMaterialGatePass(event) {
         return;
     }
 
+    // Photo Proof validation (at least 1 photo proof is required!)
+    if (!materialProofState.file1 && !materialProofState.file2) {
+        showToast('At least 1 photo proof is required for Material Gate Pass.', 'error');
+        return;
+    }
+
     submitButton.disabled = true;
     submitButton.classList.add('opacity-60', 'cursor-wait');
     try {
         const signatureFileId = await uploadPreparedSignature('MATERIAL_GATE_PASS');
+        
+        // Upload photo proofs
+        const proofFileIds = [];
+        if (materialProofState.file1) {
+            const p1 = await uploadMaterialProofFile(materialProofState.file1);
+            if (p1) proofFileIds.push(p1);
+        }
+        if (materialProofState.file2) {
+            const p2 = await uploadMaterialProofFile(materialProofState.file2);
+            if (p2) proofFileIds.push(p2);
+        }
+
         const created = await ApiClient.post('/form-requests/material', {
             requesterDepartmentId,
             authorizedEmployeeId: authorizedEmployee.employeeRecordId,
             formDate: document.getElementById('materialFormDate').value,
             remarks: document.getElementById('materialRemarks').value.trim() || null,
             preparedBySignatureFileId: signatureFileId,
+            proofFileIds,
             items
         });
 
@@ -558,6 +579,7 @@ async function submitMaterialGatePass(event) {
         clearSelectedMaterialEmployee();
         document.getElementById('materialItemsBody').innerHTML = '';
         clearPreparedSignature('MATERIAL_GATE_PASS');
+        resetMaterialProofState();
         initializeMaterialGatePassForm();
         renderMaterialEmployeeSuggestions();
         showToast(`Material request ${created.gatePass.controlNo} submitted.`);
@@ -711,3 +733,54 @@ window.showMaterialPreparedSignatureSource = showMaterialPreparedSignatureSource
 window.clearMaterialPreparedSignaturePad = clearMaterialPreparedSignaturePad;
 window.useMaterialPreparedDrawnSignature = useMaterialPreparedDrawnSignature;
 window.resetMaterialPreparedSignatureState = resetMaterialPreparedSignatureState;
+
+function previewMaterialProof(idx, input) {
+    const file = input.files[0];
+    if (file) {
+        if (file.size > 5 * 1024 * 1024) {
+            showToast('Photo proof file must be less than 5 MB.', 'error');
+            input.value = '';
+            return;
+        }
+        materialProofState['file' + idx] = file;
+        const reader = new FileReader();
+        reader.onload = function(e) {
+            document.getElementById('materialProofEmpty' + idx).classList.add('hidden');
+            document.getElementById('materialProofPreviewContainer' + idx).classList.remove('hidden');
+            document.getElementById('materialProofImg' + idx).src = e.target.result;
+        };
+        reader.readAsDataURL(file);
+    }
+}
+
+function clearMaterialProof(idx, event) {
+    if (event) event.stopPropagation();
+    materialProofState['file' + idx] = null;
+    const fileInput = document.getElementById('materialProofFile' + idx);
+    if (fileInput) fileInput.value = '';
+    
+    const container = document.getElementById('materialProofPreviewContainer' + idx);
+    if (container) container.classList.add('hidden');
+    const empty = document.getElementById('materialProofEmpty' + idx);
+    if (empty) empty.classList.remove('hidden');
+}
+
+async function uploadMaterialProofFile(file) {
+    if (!file) return null;
+    const formData = new FormData();
+    formData.append('file', file);
+    formData.append('widthPercent', '100');
+    formData.append('yOffset', '0');
+    const uploaded = await ApiClient.post('/signatures', formData);
+    return uploaded.signatureFileId;
+}
+
+function resetMaterialProofState() {
+    clearMaterialProof(1);
+    clearMaterialProof(2);
+}
+
+window.previewMaterialProof = previewMaterialProof;
+window.clearMaterialProof = clearMaterialProof;
+window.uploadMaterialProofFile = uploadMaterialProofFile;
+window.resetMaterialProofState = resetMaterialProofState;

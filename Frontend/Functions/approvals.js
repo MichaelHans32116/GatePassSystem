@@ -29,7 +29,7 @@ async function approveCurrentPass() {
     const approveButton = document.getElementById('approveRequestButton');
     if (approveButton) approveButton.disabled = true;
     try {
-        const isHRorAdmin = currentUser && (
+        const isHRADorAdmin = currentUser && (
             currentUser.role === 'System Admin' || 
             currentUser.roles.includes('PAS_NOTER') ||
             ['GA120', 'GA150', 'GA133', 'GA139', 'GA409', 'GA407'].includes(currentUser.id)
@@ -40,9 +40,9 @@ async function approveCurrentPass() {
         let tripType = null;
         let putOnHold = null;
 
-        if (isHRorAdmin && (pass.status === 'Pending HR Assignment' || pass.status === 'On Hold')) {
-            vehicleId = Number(document.getElementById('hrAssignVehicle').value) || null;
-            driverId = Number(document.getElementById('hrAssignDriver').value) || null;
+        if (isHRADorAdmin && (pass.status === 'Pending HRAD Assignment' || pass.status === 'On Hold')) {
+            vehicleId = Number(document.getElementById('hradAssignVehicle').value) || null;
+            driverId = Number(document.getElementById('hradAssignDriver').value) || null;
             if (!vehicleId) {
                 showToast('Select an available company vehicle before forwarding.', 'error');
                 return;

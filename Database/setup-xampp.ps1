@@ -193,6 +193,22 @@ if ($databaseExists -eq 0) {
             Write-Host 'Applying database migration 012...' -ForegroundColor Yellow
             Invoke-MySqlSource 'Database\Migrations\012_vehicle_schedule_and_constants.sql'
         }
+
+        $renameHrToHradApplied = Invoke-MySqlScalarInt `
+            "SELECT COUNT(*) FROM gate_pass_system.tbl_schema_versions WHERE version_no='013';"
+
+        if ($renameHrToHradApplied -eq 0) {
+            Write-Host 'Applying database migration 013...' -ForegroundColor Yellow
+            Invoke-MySqlSource 'Database\Migrations\013_rename_hr_to_hrad_and_add_assignments.sql'
+        }
+
+        $materialProofsApplied = Invoke-MySqlScalarInt `
+            "SELECT COUNT(*) FROM gate_pass_system.tbl_schema_versions WHERE version_no='014';"
+
+        if ($materialProofsApplied -eq 0) {
+            Write-Host 'Applying database migration 014...' -ForegroundColor Yellow
+            Invoke-MySqlSource 'Database\Migrations\014_material_gate_pass_proofs.sql'
+        }
     }
 }
 

@@ -79,7 +79,7 @@ public sealed class GatePassService(
 
         if (usesCompanyVehicle)
         {
-            routeCodes.Add("HR_ASSIGN");
+            routeCodes.Add("HRAD_ASSIGN");
         }
 
         if (requiresPresident)
@@ -453,6 +453,16 @@ public sealed class GatePassService(
             {
                 return $"Material item {index + 1} needs a description, positive quantity, and unit.";
             }
+        }
+
+        if (request.ProofFileIds is null || request.ProofFileIds.Count < 1)
+        {
+            return "At least 1 photo proof is required for Material Gate Pass.";
+        }
+
+        if (request.ProofFileIds.Count > 2)
+        {
+            return "A maximum of 2 photo proofs are allowed for Material Gate Pass.";
         }
 
         return null;

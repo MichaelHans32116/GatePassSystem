@@ -10,10 +10,18 @@ public sealed class MariaDbConnectionFactory(string connectionString) : IDatabas
         CancellationToken cancellationToken = default)
     {
         var connection = new MySqlConnection(connectionString);
-        await connection.OpenAsync(cancellationToken);
-        await connection.ExecuteAsync(new CommandDefinition(
-            "SET time_zone = '+00:00';",
-            cancellationToken: cancellationToken));
-        return connection;
+        try
+        {
+            await connection.OpenAsync(cancellationToken);
+            await connection.ExecuteAsync(new CommandDefinition(
+                "SET time_zone = '+00:00';",
+                cancellationToken: cancellationToken));
+            return connection;
+        }
+        catch
+        {
+            await connection.DisposeAsync();
+            throw;
+        }
     }
 }

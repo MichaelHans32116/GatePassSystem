@@ -899,6 +899,37 @@ async function viewPass(id, isReviewing = false) {
 
             resetDocumentModalLayout();
 
+            // Populate Photo Proofs for Material Gate Pass
+            const galleryDiv = document.getElementById('materialProofsGallery');
+            const listDiv = document.getElementById('materialProofsList');
+            if (galleryDiv && listDiv) {
+                galleryDiv.classList.add('hidden');
+                listDiv.innerHTML = '';
+                
+                if (isMaterial && p.proofFileIds && p.proofFileIds.length > 0) {
+                    galleryDiv.classList.remove('hidden');
+                    p.proofFileIds.forEach((fileId, i) => {
+                        const col = document.createElement('div');
+                        col.className = 'relative rounded-lg overflow-hidden border border-slate-200 bg-slate-50 flex items-center justify-center min-h-[160px] cursor-pointer hover:shadow transition';
+                        col.innerHTML = `
+                            <div class="text-xs text-slate-400 font-semibold"><i class="fas fa-spinner fa-spin mr-1"></i>Loading Photo ${i+1}...</div>
+                        `;
+                        listDiv.appendChild(col);
+
+                        // Async fetch photo
+                        ApiClient.blob(`/signatures/${fileId}`).then(blob => {
+                            const reader = new FileReader();
+                            reader.onload = function(e) {
+                                col.innerHTML = `<img src="${e.target.result}" class="w-full h-full object-cover max-h-[220px]" onclick="viewFullScreenImage('${e.target.result.replace(/'/g, "\\'")}')">`;
+                            };
+                            reader.readAsDataURL(blob);
+                        }).catch(() => {
+                            col.innerHTML = `<div class="text-xs text-red-500 font-semibold p-4 text-center"><i class="fas fa-exclamation-circle mr-1"></i>Failed to load photo</div>`;
+                        });
+                    });
+                }
+            }
+
             const modal = document.getElementById('printModal');
             if(modal) {
                 modal.classList.remove('hidden');
@@ -1023,20 +1054,20 @@ async function viewPass(id, isReviewing = false) {
                         showSignatureSource('upload');
                     } else {
                         approvalSignatureEditor?.classList.remove('hidden');
-                        const hrArea = document.getElementById('hrAssignmentArea');
+                        const hradArea = document.getElementById('hradAssignmentArea');
                         const holdBtn = document.getElementById('holdRequestButton');
                         
-                        if (p.status === 'Pending HR Assignment' || p.status === 'On Hold') {
-                            if (hrArea) {
-                                hrArea.classList.remove('hidden');
-                                hrArea.classList.add('flex');
+                        if (p.status === 'Pending HRAD Assignment' || p.status === 'On Hold') {
+                            if (hradArea) {
+                                hradArea.classList.remove('hidden');
+                                hradArea.classList.add('flex');
                                 
-                                const tripTypeSpan = document.getElementById('hrRequestedTripType');
+                                const tripTypeSpan = document.getElementById('hradRequestedTripType');
                                 if (tripTypeSpan) {
                                     tripTypeSpan.innerText = p.privateVehicleDetails || 'Company Vehicle Needed';
                                 }
                                 
-                                const vSelect = document.getElementById('hrAssignVehicle');
+                                const vSelect = document.getElementById('hradAssignVehicle');
                                 if (vSelect) {
                                     vSelect.innerHTML = '<option value="">Select Vehicle</option>';
                                     (databaseVehicles || []).forEach(v => {
@@ -1045,7 +1076,7 @@ async function viewPass(id, isReviewing = false) {
                                     if (p.vehicle?.id) vSelect.value = p.vehicle.id;
                                 }
                                 
-                                populateHrAssignDrivers(p.vehicle?.id);
+                                populateHradAssignDrivers(p.vehicle?.id);
                             }
                             if (holdBtn) holdBtn.classList.remove('hidden');
                             if (btnApprove) {
@@ -1781,8 +1812,8 @@ window.closeModal = closeModal;
 window.forceCloseModal = forceCloseModal;
 window.printSelectedLogs = printSelectedLogs;
 
-function populateHrAssignDrivers(vehicleId = null) {
-    const dSelect = document.getElementById('hrAssignDriver');
+function populateHradAssignDrivers(vehicleId = null) {
+    const dSelect = document.getElementById('hradAssignDriver');
     if (!dSelect) return;
     dSelect.innerHTML = '<option value="">Select Driver (Optional)</option>';
     (databaseDrivers || []).forEach(d => {
@@ -1797,9 +1828,37 @@ function populateHrAssignDrivers(vehicleId = null) {
     }
 }
 
-function handleHrAssignVehicleChange(select) {
-    populateHrAssignDrivers(select.value);
+function handleHradAssignVehicleChange(select) {
+    populateHradAssignDrivers(select.value);
 }
 
-window.populateHrAssignDrivers = populateHrAssignDrivers;
-window.handleHrAssignVehicleChange = handleHrAssignVehicleChange;
+window.populateHradAssignDrivers = populateHradAssignDrivers;
+window.handleHradAssignVehicleChange = handleHradAssignVehicleChange;
+
+function viewFullScreenImage(src) {
+    let overlay = document.getElementById('fullScreenImageOverlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'fullScreenImageOverlay';
+        overlay.className = 'fixed inset-0 z-[100] bg-black/95 flex items-center justify-center p-4 cursor-zoom-out opacity-0 transition-opacity duration-300 hidden';
+        overlay.onclick = function() {
+            overlay.classList.add('opacity-0');
+            setTimeout(() => overlay.classList.add('hidden'), 300);
+        };
+        overlay.innerHTML = `
+            <img id="fullScreenImageEl" class="max-w-full max-h-full object-contain rounded shadow-2xl transition-transform duration-300 scale-95">
+            <button class="absolute top-4 right-4 text-white text-2xl hover:text-gray-300 transition focus:outline-none"><i class="fas fa-times"></i></button>
+        `;
+        document.body.appendChild(overlay);
+    }
+    
+    const img = document.getElementById('fullScreenImageEl');
+    if (img) img.src = src;
+    overlay.classList.remove('hidden');
+    setTimeout(() => {
+        overlay.classList.remove('opacity-0');
+        img?.classList.remove('scale-95');
+        img?.classList.add('scale-100');
+    }, 10);
+}
+window.viewFullScreenImage = viewFullScreenImage;

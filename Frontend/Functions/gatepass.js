@@ -6,7 +6,7 @@ var databaseDrivers = [];
 const gatePassStatusLabels = {
     DRAFT: 'Draft',
     PENDING_SUPERIOR: 'Pending Superior',
-    PENDING_HR_ASSIGN: 'Pending HR Assignment',
+    PENDING_HRAD_ASSIGN: 'Pending HRAD Assignment',
     PENDING_PRESIDENT: 'Pending President',
     PENDING_PAS: 'Pending PAS',
     APPROVED: 'Approved',
@@ -253,7 +253,7 @@ function updateApprovalRoutePreview() {
 function toggleVehicleFields() {
     const vehicleFields = document.getElementById('vehicleFields');
     const tripTypeField = document.getElementById('employeeTripTypeField');
-    const hrFields = document.getElementById('hrVehicleAssignmentFields');
+    const hradFields = document.getElementById('hradVehicleAssignmentFields');
     const vehicleSelect = document.getElementById('gpVehicle');
     const driverSelect = document.getElementById('gpDriver');
     const manualFields = document.getElementById('manualVehicleFields');
@@ -262,7 +262,7 @@ function toggleVehicleFields() {
 
     if (vehicleFields) vehicleFields.style.display = 'none';
     if (tripTypeField) tripTypeField.style.display = 'none';
-    if (hrFields) hrFields.style.display = 'none';
+    if (hradFields) hradFields.style.display = 'none';
     if (manualFields) manualFields.classList.add('hidden');
 
     if (vehicleSelect) {

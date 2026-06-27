@@ -234,6 +234,7 @@ async function loadAndRenderScheduleMonth() {
 
     await loadScheduleData(schedFmtDate(gridStart), schedFmtDate(gridEnd));
     renderScheduleCalendar();
+    syncScheduleExportWeekInput();
 }
 
 // ─── Data Loading ────────────────────────────────────────────────────
@@ -334,8 +335,7 @@ function navigateScheduleMonth(dir) {
 // ─── Day Detail Modal ────────────────────────────────────────────────
 function openScheduleDayModal(dateStr) {
     scheduleSelectedDay = dateStr;
-    const exportWeekInput = document.getElementById('schedExportWeek');
-    if (exportWeekInput) exportWeekInput.value = schedIsoWeekInputValue(schedParseDateLocal(dateStr));
+    syncScheduleExportWeekInput();
     const modal = document.getElementById('scheduleDayModal');
     const titleEl = document.getElementById('scheduleDayModalTitle');
     const bodyEl = document.getElementById('scheduleDayModalBody');
@@ -615,39 +615,82 @@ function schedStyleMergedBlock(ws, startRow, startCol, endRow, endCol, fill, fon
     }
 }
 
-function schedWeekInputToMonday(value) {
-    const match = String(value || '').match(/^(\d{4})-W(\d{2})$/);
-    if (!match) return null;
-    const year = Number(match[1]);
-    const week = Number(match[2]);
-    const fourthJan = new Date(year, 0, 4);
-    const monday = schedGetMonday(fourthJan);
-    monday.setDate(monday.getDate() + (week - 1) * 7);
-    return monday;
+function getWeeksForMonth(year, month) {
+    const weeks = [];
+    const firstDay = new Date(year, month, 1);
+    const day = firstDay.getDay();
+    const diff = (day === 0 ? -6 : 1) - day;
+    const currentMonday = new Date(firstDay);
+    currentMonday.setDate(firstDay.getDate() + diff);
+
+    let weekIndex = 1;
+    const lastDay = new Date(year, month + 1, 0);
+    while (currentMonday <= lastDay) {
+        const saturday = new Date(currentMonday);
+        saturday.setDate(currentMonday.getDate() + 5);
+        
+        weeks.push({
+            weekNum: weekIndex,
+            monday: new Date(currentMonday),
+            saturday: saturday
+        });
+        
+        currentMonday.setDate(currentMonday.getDate() + 7);
+        weekIndex++;
+    }
+    return weeks;
 }
 
-function schedIsoWeekInputValue(date) {
-    const monday = schedGetMonday(date);
-    const thursday = new Date(monday);
-    thursday.setDate(monday.getDate() + 3);
-    const weekYear = thursday.getFullYear();
-    const week = schedGetWeekNumber(monday);
-    return `${weekYear}-W${String(week).padStart(2, '0')}`;
+function formatWeekRange(monday, saturday) {
+    const mMonths = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+    const mStr = `${mMonths[monday.getMonth()]} ${monday.getDate()}`;
+    const sStr = `${mMonths[saturday.getMonth()]} ${saturday.getDate()}`;
+    const yearStr = monday.getFullYear() === saturday.getFullYear() 
+        ? monday.getFullYear() 
+        : `${monday.getFullYear()}/${saturday.getFullYear()}`;
+    return `${mStr} - ${sStr}, ${yearStr}`;
 }
 
 function syncScheduleExportWeekInput() {
-    const input = document.getElementById('schedExportWeek');
-    if (!input || input.value) return;
-    const refDate = scheduleSelectedDay
-        ? schedParseDateLocal(scheduleSelectedDay)
-        : new Date(scheduleCurrentYear, scheduleCurrentMonth, 1);
-    input.value = schedIsoWeekInputValue(refDate);
+    const select = document.getElementById('schedExportWeek');
+    if (!select) return;
+
+    const prevSelectedVal = select.value;
+    select.innerHTML = '';
+
+    const weeks = getWeeksForMonth(scheduleCurrentYear, scheduleCurrentMonth);
+    weeks.forEach(w => {
+        const val = schedFmtDate(w.monday);
+        const text = `Week ${w.weekNum} (${formatWeekRange(w.monday, w.saturday)})`;
+        const option = document.createElement('option');
+        option.value = val;
+        option.text = text;
+        select.appendChild(option);
+    });
+
+    if (scheduleSelectedDay) {
+        const targetDate = schedParseDateLocal(scheduleSelectedDay);
+        const mondayStr = schedFmtDate(schedGetMonday(targetDate));
+        select.value = mondayStr;
+    } else if (prevSelectedVal && Array.from(select.options).some(o => o.value === prevSelectedVal)) {
+        select.value = prevSelectedVal;
+    } else {
+        const today = new Date();
+        if (today.getFullYear() === scheduleCurrentYear && today.getMonth() === scheduleCurrentMonth) {
+            const todayMondayStr = schedFmtDate(schedGetMonday(today));
+            if (Array.from(select.options).some(o => o.value === todayMondayStr)) {
+                select.value = todayMondayStr;
+            }
+        }
+    }
 }
 
 function schedGetExportMonday() {
-    const weekInput = document.getElementById('schedExportWeek');
-    const weekMonday = schedWeekInputToMonday(weekInput?.value);
-    if (weekMonday) return weekMonday;
+    const select = document.getElementById('schedExportWeek');
+    if (select && select.value) {
+        const parts = select.value.split('-');
+        return new Date(Number(parts[0]), Number(parts[1]) - 1, Number(parts[2]));
+    }
     const refDate = scheduleSelectedDay
         ? schedParseDateLocal(scheduleSelectedDay)
         : new Date(scheduleCurrentYear, scheduleCurrentMonth, new Date().getDate());
@@ -1285,6 +1328,7 @@ function openServiceScheduleRequestModal() {
         });
         const crv = (databaseVehicles || []).find(v => v.name?.toUpperCase().includes('CRV'));
         if (crv) vehicleSelect.value = crv.id;
+        vehicleSelect.disabled = true;
     }
 
     // Populate Drivers
@@ -1299,6 +1343,7 @@ function openServiceScheduleRequestModal() {
         });
         const jt = (databaseDrivers || []).find(d => d.fullName?.toUpperCase().includes('TURRECHA'));
         if (jt) driverSelect.value = jt.driverId;
+        driverSelect.disabled = true;
     }
 
     modal.classList.remove('hidden');

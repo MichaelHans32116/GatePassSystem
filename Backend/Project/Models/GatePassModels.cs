@@ -78,6 +78,7 @@ public sealed class GatePassDetail : GatePassRecord
     public IReadOnlyList<ApprovalStepRecord> ApprovalSteps { get; init; } = [];
     public IReadOnlyList<GatePassScanRecord> Scans { get; init; } = [];
     public IReadOnlyList<MaterialGatePassItemRecord> MaterialItems { get; init; } = [];
+    public IReadOnlyList<long> ProofFileIds { get; init; } = [];
 }
 
 public sealed class MaterialGatePassItemRecord
