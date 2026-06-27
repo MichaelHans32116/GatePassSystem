@@ -740,6 +740,7 @@ function previewMaterialProof(idx, input) {
         if (file.size > 5 * 1024 * 1024) {
             showToast('Photo proof file must be less than 5 MB.', 'error');
             input.value = '';
+            clearMaterialProof(idx);
             return;
         }
         materialProofState['file' + idx] = file;
