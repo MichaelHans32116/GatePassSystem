@@ -324,6 +324,22 @@
 
                 <!-- SECTION: SCHEDULE CALENDAR -->
                 <section id="sec-scheduleCalendar" class="view-section hidden fade-in max-w-7xl mx-auto">
+                    <!-- Title & Actions Header -->
+                    <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 mb-4">
+                        <div>
+                            <h2 class="text-xl font-bold text-gray-800 tracking-tight">Vehicle Schedule Calendar</h2>
+                            <p class="text-xs text-gray-500">Monitor and manage all fleet bookings and recurring schedules</p>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button id="btnRequestServiceSchedule" onclick="openServiceScheduleRequestModal()" class="text-xs bg-mpiBlue hover:bg-blue-700 text-white font-bold px-4 py-2.5 rounded-lg shadow-sm transition flex items-center gap-1.5 hidden">
+                                <i class="fas fa-car text-sm"></i> Request Service Schedule
+                            </button>
+                            <button id="btnManageFixedSchedules" onclick="openFixedSchedulesModal()" class="text-xs bg-amber-600 hover:bg-amber-700 text-white font-bold px-4 py-2.5 rounded-lg shadow-sm transition flex items-center gap-1.5 hidden">
+                                <i class="fas fa-cog text-sm"></i> Manage Fixed Schedules
+                            </button>
+                        </div>
+                    </div>
+
                     <!-- Filter Bar -->
                     <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-6">
                         <div class="flex flex-wrap gap-3 items-end">
@@ -398,8 +414,6 @@
                                 <!-- Populated dynamically -->
                             </select>
                         </div>
-                        <button id="btnRequestServiceSchedule" onclick="openServiceScheduleRequestModal()" class="text-xs bg-mpiBlue text-white px-4 py-2 rounded hover:bg-blue-700 transition hidden"><i class="fas fa-car mr-1"></i> Request Service Schedule</button>
-                        <button id="btnManageFixedSchedules" onclick="openFixedSchedulesModal()" class="text-xs bg-amber-600 text-white px-4 py-2 rounded hover:bg-amber-700 transition hidden"><i class="fas fa-cog mr-1"></i> Manage Fixed Schedules</button>
                         <button onclick="exportScheduleExcel('vehicle')" class="text-xs bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition"><i class="fas fa-file-excel mr-1"></i> Export Vehicles (Weekly)</button>
                         <button onclick="exportScheduleExcel('truck')" class="text-xs bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"><i class="fas fa-file-excel mr-1"></i> Export Trucks (Weekly)</button>
                         <button onclick="exportScheduleExcel('both')" class="text-xs bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 transition"><i class="fas fa-file-excel mr-1"></i> Export Both</button>
