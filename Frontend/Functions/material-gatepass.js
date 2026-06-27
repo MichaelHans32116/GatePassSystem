@@ -301,6 +301,7 @@ function renumberMaterialItemRows() {
         const line = row.querySelector('.material-line-number');
         if (line) line.innerText = String(index + 1);
     });
+    if (typeof renderMaterialProofSlots === 'function') renderMaterialProofSlots();
 }
 
 function readMaterialItems() {
@@ -544,7 +545,14 @@ async function submitMaterialGatePass(event) {
     }
 
     // Photo Proof validation (at least 1 photo proof is required!)
-    if (!materialProofState.file1 && !materialProofState.file2) {
+    let hasAnyPhoto = false;
+    for (let i = 1; i <= items.length; i++) {
+        if (materialProofState['file' + i]) {
+            hasAnyPhoto = true;
+            break;
+        }
+    }
+    if (!hasAnyPhoto) {
         showToast('At least 1 photo proof is required for Material Gate Pass.', 'error');
         return;
     }
@@ -554,15 +562,14 @@ async function submitMaterialGatePass(event) {
     try {
         const signatureFileId = await uploadPreparedSignature('MATERIAL_GATE_PASS');
         
-        // Upload photo proofs
+        // Upload photo proofs dynamically up to the number of items
         const proofFileIds = [];
-        if (materialProofState.file1) {
-            const p1 = await uploadMaterialProofFile(materialProofState.file1);
-            if (p1) proofFileIds.push(p1);
-        }
-        if (materialProofState.file2) {
-            const p2 = await uploadMaterialProofFile(materialProofState.file2);
-            if (p2) proofFileIds.push(p2);
+        for (let i = 1; i <= items.length; i++) {
+            const file = materialProofState['file' + i];
+            if (file) {
+                const fid = await uploadMaterialProofFile(file);
+                if (fid) proofFileIds.push(fid);
+            }
         }
 
         const created = await ApiClient.post('/form-requests/material', {
@@ -744,26 +751,14 @@ function previewMaterialProof(idx, input) {
             return;
         }
         materialProofState['file' + idx] = file;
-        const reader = new FileReader();
-        reader.onload = function(e) {
-            document.getElementById('materialProofEmpty' + idx).classList.add('hidden');
-            document.getElementById('materialProofPreviewContainer' + idx).classList.remove('hidden');
-            document.getElementById('materialProofImg' + idx).src = e.target.result;
-        };
-        reader.readAsDataURL(file);
+        renderMaterialProofSlots();
     }
 }
 
 function clearMaterialProof(idx, event) {
     if (event) event.stopPropagation();
     materialProofState['file' + idx] = null;
-    const fileInput = document.getElementById('materialProofFile' + idx);
-    if (fileInput) fileInput.value = '';
-    
-    const container = document.getElementById('materialProofPreviewContainer' + idx);
-    if (container) container.classList.add('hidden');
-    const empty = document.getElementById('materialProofEmpty' + idx);
-    if (empty) empty.classList.remove('hidden');
+    renderMaterialProofSlots();
 }
 
 async function uploadMaterialProofFile(file) {
@@ -777,11 +772,65 @@ async function uploadMaterialProofFile(file) {
 }
 
 function resetMaterialProofState() {
-    clearMaterialProof(1);
-    clearMaterialProof(2);
+    materialProofState = {};
+    renderMaterialProofSlots();
+}
+
+function triggerMaterialProofUpload(idx) {
+    const input = document.getElementById('materialProofFile' + idx);
+    if (input) input.click();
+}
+
+function renderMaterialProofSlots() {
+    const container = document.getElementById('materialProofSlotsContainer');
+    if (!container) return;
+
+    // Get current number of items
+    const itemsCount = readMaterialItems().length;
+    const maxPhotos = Math.max(1, itemsCount); // At least 1 slot
+
+    // Update help text
+    const helpText = document.getElementById('materialProofHelpText');
+    if (helpText) {
+        helpText.innerText = `Provide at least 1 photo, and up to ${maxPhotos} photo(s) as proof (matching the number of items).`;
+    }
+
+    // Clean state variables beyond current maxPhotos
+    for (let key in materialProofState) {
+        const num = parseInt(key.replace('file', ''), 10);
+        if (num > maxPhotos) {
+            delete materialProofState[key];
+        }
+    }
+
+    // Render slots
+    let html = '';
+    for (let i = 1; i <= maxPhotos; i++) {
+        const fileObj = materialProofState['file' + i];
+        const hasFile = !!fileObj;
+        const isRequired = i === 1;
+
+        html += `
+            <div class="relative border-2 border-dashed border-gray-300 rounded-lg p-4 flex flex-col items-center justify-center cursor-pointer hover:border-mpiBlue transition bg-white group min-h-[120px]" onclick="triggerMaterialProofUpload(${i})">
+                <input type="file" id="materialProofFile${i}" accept="image/*" class="hidden" onchange="previewMaterialProof(${i}, this)">
+                <div id="materialProofEmpty${i}" class="text-center ${hasFile ? 'hidden' : ''}">
+                    <i class="fas fa-camera text-gray-400 text-xl mb-1 group-hover:text-mpiBlue transition"></i>
+                    <p class="text-[10px] font-semibold text-gray-600">Photo ${i} ${isRequired ? '(Required)' : '(Optional)'}</p>
+                    <p class="text-[8px] text-gray-400">Click to upload/capture</p>
+                </div>
+                <div id="materialProofPreviewContainer${i}" class="absolute inset-0 rounded-lg overflow-hidden bg-white ${hasFile ? '' : 'hidden'}">
+                    <img id="materialProofImg${i}" class="w-full h-full object-cover" ${hasFile ? `src="${URL.createObjectURL(fileObj)}"` : ''}>
+                    <button type="button" onclick="clearMaterialProof(${i}, event)" class="absolute top-1.5 right-1.5 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] hover:bg-red-700 transition shadow z-10"><i class="fas fa-times"></i></button>
+                </div>
+            </div>
+        `;
+    }
+    container.innerHTML = html;
 }
 
 window.previewMaterialProof = previewMaterialProof;
 window.clearMaterialProof = clearMaterialProof;
 window.uploadMaterialProofFile = uploadMaterialProofFile;
 window.resetMaterialProofState = resetMaterialProofState;
+window.triggerMaterialProofUpload = triggerMaterialProofUpload;
+window.renderMaterialProofSlots = renderMaterialProofSlots;

@@ -611,35 +611,10 @@
                             <div class="space-y-2">
                                 <div>
                                     <label class="block text-xs font-semibold uppercase tracking-wider text-gray-600">Photo Proof <span class="text-red-500">*</span></label>
-                                    <p class="text-[10px] text-gray-500">Provide at least 1 photo, and up to 2 photos as proof for material release.</p>
+                                    <p id="materialProofHelpText" class="text-[10px] text-gray-500">Provide at least 1 photo as proof for material release.</p>
                                 </div>
-                                <div class="grid grid-cols-2 gap-4">
-                                    <!-- Photo 1 Slot -->
-                                    <div class="relative border-2 border-dashed border-gray-300 rounded-lg p-4 flex flex-col items-center justify-center cursor-pointer hover:border-mpiBlue transition bg-white group min-h-[120px]" onclick="document.getElementById('materialProofFile1').click()">
-                                        <input type="file" id="materialProofFile1" accept="image/*" class="hidden" onchange="previewMaterialProof(1, this)">
-                                        <div id="materialProofEmpty1" class="text-center">
-                                            <i class="fas fa-camera text-gray-400 text-xl mb-1 group-hover:text-mpiBlue transition"></i>
-                                            <p class="text-[10px] font-semibold text-gray-600">Photo 1 (Required)</p>
-                                            <p class="text-[8px] text-gray-400">Click to upload/capture</p>
-                                        </div>
-                                        <div id="materialProofPreviewContainer1" class="hidden absolute inset-0 rounded-lg overflow-hidden bg-white">
-                                            <img id="materialProofImg1" class="w-full h-full object-cover">
-                                            <button type="button" onclick="clearMaterialProof(1, event)" class="absolute top-1.5 right-1.5 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] hover:bg-red-700 transition shadow z-10"><i class="fas fa-times"></i></button>
-                                        </div>
-                                    </div>
-                                    <!-- Photo 2 Slot -->
-                                    <div class="relative border-2 border-dashed border-gray-300 rounded-lg p-4 flex flex-col items-center justify-center cursor-pointer hover:border-mpiBlue transition bg-white group min-h-[120px]" onclick="document.getElementById('materialProofFile2').click()">
-                                        <input type="file" id="materialProofFile2" accept="image/*" class="hidden" onchange="previewMaterialProof(2, this)">
-                                        <div id="materialProofEmpty2" class="text-center">
-                                            <i class="fas fa-camera text-gray-400 text-xl mb-1 group-hover:text-mpiBlue transition"></i>
-                                            <p class="text-[10px] font-semibold text-gray-600">Photo 2 (Optional)</p>
-                                            <p class="text-[8px] text-gray-400">Click to upload/capture</p>
-                                        </div>
-                                        <div id="materialProofPreviewContainer2" class="hidden absolute inset-0 rounded-lg overflow-hidden bg-white">
-                                            <img id="materialProofImg2" class="w-full h-full object-cover">
-                                            <button type="button" onclick="clearMaterialProof(2, event)" class="absolute top-1.5 right-1.5 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] hover:bg-red-700 transition shadow z-10"><i class="fas fa-times"></i></button>
-                                        </div>
-                                    </div>
+                                <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-4" id="materialProofSlotsContainer">
+                                    <!-- Populated dynamically by JavaScript -->
                                 </div>
                             </div>
 

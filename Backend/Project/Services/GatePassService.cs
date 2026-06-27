@@ -460,9 +460,9 @@ public sealed class GatePassService(
             return "At least 1 photo proof is required for Material Gate Pass.";
         }
 
-        if (request.ProofFileIds.Count > 2)
+        if (request.ProofFileIds.Count > request.Items.Count)
         {
-            return "A maximum of 2 photo proofs are allowed for Material Gate Pass.";
+            return $"A maximum of {request.Items.Count} photo proof(s) are allowed for this gate pass (matching the item count).";
         }
 
         return null;
