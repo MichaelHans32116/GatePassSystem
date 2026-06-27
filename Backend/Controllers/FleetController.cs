@@ -132,7 +132,7 @@ public sealed class FleetController(
         CancellationToken cancellationToken)
     {
         var username = User.FindFirst("username")?.Value;
-        if (username != "GA120" && username != "GA150" && username != "GA133" && username != "GA139" && username != "GA407")
+        if (username != "GA120" && username != "GA150" && username != "GA133" && username != "GA139" && username != "GA409" && username != "GA407")
         {
             return Forbid();
         }
@@ -148,7 +148,7 @@ public sealed class FleetController(
         CancellationToken cancellationToken)
     {
         var username = User.FindFirst("username")?.Value;
-        if (username != "GA120" && username != "GA150" && username != "GA133" && username != "GA139" && username != "GA407")
+        if (username != "GA120" && username != "GA150" && username != "GA133" && username != "GA139" && username != "GA409" && username != "GA407")
         {
             return Forbid();
         }
@@ -163,7 +163,7 @@ public sealed class FleetController(
         CancellationToken cancellationToken)
     {
         var username = User.FindFirst("username")?.Value;
-        if (username != "GA120" && username != "GA150" && username != "GA133" && username != "GA139" && username != "GA407")
+        if (username != "GA120" && username != "GA150" && username != "GA133" && username != "GA139" && username != "GA409" && username != "GA407")
         {
             return Forbid();
         }

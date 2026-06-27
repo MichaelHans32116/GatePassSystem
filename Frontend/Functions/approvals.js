@@ -32,7 +32,7 @@ async function approveCurrentPass() {
         const isHRorAdmin = currentUser && (
             currentUser.role === 'System Admin' || 
             currentUser.roles.includes('PAS_NOTER') ||
-            ['GA120', 'GA150', 'GA133', 'GA139', 'GA409'].includes(currentUser.id)
+            ['GA120', 'GA150', 'GA133', 'GA139', 'GA409', 'GA407'].includes(currentUser.id)
         );
 
         let vehicleId = null;

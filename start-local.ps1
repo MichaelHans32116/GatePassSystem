@@ -44,7 +44,17 @@ if (-not (Test-LocalPort 3306)) {
     Start-Process -FilePath $mysqld `
         -ArgumentList '--defaults-file=C:\xampp\mysql\bin\my.ini' `
         -WindowStyle Hidden
-    Start-Sleep -Seconds 4
+    Write-Host 'Waiting for MariaDB to start on port 3306...' -ForegroundColor Yellow
+    for ($i = 0; $i -lt 20; $i++) {
+        if (Test-LocalPort 3306) {
+            break
+        }
+        Start-Sleep -Seconds 1
+    }
+    if (Test-LocalPort 3306) {
+        Write-Host 'MariaDB port detected. Waiting 5 seconds for database initialization...' -ForegroundColor Yellow
+        Start-Sleep -Seconds 5
+    }
 }
 
 if (-not (Test-LocalPort 3306)) {

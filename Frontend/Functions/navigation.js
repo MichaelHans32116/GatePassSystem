@@ -10,7 +10,7 @@ function toggleSidebar() {
 function setupRoleAccess(user) {
             // Reset visibility
             document.getElementById('navItemApply').style.display = 'flex';
-            const allowedCalendarUserIds = ['GA125', 'GA120', 'GA150', 'GA133', 'GA139', 'GA407'];
+            const allowedCalendarUserIds = ['GA125', 'GA120', 'GA150', 'GA133', 'GA139', 'GA409', 'GA407'];
             if (allowedCalendarUserIds.includes(user.id)) {
                 document.getElementById('navItemSchedule').style.display = 'flex';
             } else {
