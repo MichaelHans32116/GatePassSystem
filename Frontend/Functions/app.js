@@ -347,14 +347,25 @@ function escapeHtml(text) {
 /**
  * Toggles the notification dropdown panel visibility.
  */
-function toggleNotificationDropdown() {
+async function toggleNotificationDropdown() {
     const dropdown = document.getElementById('notificationDropdown');
     if (!dropdown) return;
     const isHidden = dropdown.classList.contains('hidden');
     dropdown.classList.toggle('hidden');
     if (isHidden) {
         // Refresh the panel content when opening
-        refreshNotificationDropdown();
+        await refreshNotificationDropdown();
+
+        // If there are unread notifications, automatically mark them as read in the backend
+        const badge = document.getElementById('notificationBadge');
+        if (badge && !badge.classList.contains('hidden')) {
+            try {
+                await ApiClient.post('/notifications/mark-read', {});
+                updateNotificationBadge(0);
+            } catch (err) {
+                console.error('Failed to automatically mark notifications as read:', err);
+            }
+        }
     }
 }
 
