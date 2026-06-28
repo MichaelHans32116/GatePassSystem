@@ -333,6 +333,214 @@ function navigateScheduleMonth(dir) {
 }
 
 // ─── Day Detail Modal ────────────────────────────────────────────────
+// Day-view mode: 'grid' renders the Excel-style per-day layout (vehicles as columns,
+// time slots as rows); 'list' keeps the compact card list. Defaults to grid.
+var scheduleDayView = 'grid';
+
+function setScheduleDayView(mode) {
+    scheduleDayView = mode === 'list' ? 'list' : 'grid';
+    if (scheduleSelectedDay) openScheduleDayModal(scheduleSelectedDay);
+}
+
+function schedEscape(value) {
+    return String(value == null ? '' : value)
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#39;');
+}
+
+// 'FFA9D18E' (ExcelJS ARGB) -> '#A9D18E' so the on-screen grid uses the exact same
+// colours as the downloaded workbook.
+function schedArgbToHex(argb) {
+    const s = String(argb || '').replace(/[^0-9a-fA-F]/g, '');
+    if (s.length === 8) return '#' + s.slice(2);
+    if (s.length === 6) return '#' + s;
+    return '#ffffff';
+}
+
+// Pick black/white text for legibility on a given fill when the colour map has no explicit
+// font colour (e.g. the dark BRV fill ships its own white).
+function schedReadableTextColor(hex) {
+    const m = /^#?([0-9a-fA-F]{6})$/.exec(hex || '');
+    if (!m) return '#0f172a';
+    const n = parseInt(m[1], 16);
+    const r = (n >> 16) & 255, g = (n >> 8) & 255, b = n & 255;
+    const luminance = 0.299 * r + 0.587 * g + 0.114 * b;
+    return luminance < 140 ? '#ffffff' : '#0f172a';
+}
+
+function schedEventTooltip(ev) {
+    const parts = [];
+    if (ev.startTime) {
+        parts.push(ev.endTime
+            ? `${schedFormatTime12(ev.startTime)} – ${schedFormatTime12(ev.endTime)}`
+            : schedFormatTime12(ev.startTime));
+    }
+    if (ev.vehicleName) parts.push(`${ev.vehicleName}${ev.plateNumber ? ' (' + ev.plateNumber + ')' : ''}`);
+    if (ev.driverName) parts.push(`Driver: ${ev.driverName}`);
+    if (ev.requesterName) parts.push(`Requested by: ${ev.requesterName}`);
+    if (ev.destination) parts.push(`To: ${ev.destination}`);
+    if (ev.controlNo) parts.push(`Control: ${ev.controlNo}`);
+    if (ev.statusCode) parts.push(`Status: ${String(ev.statusCode).replace(/_/g, ' ')}`);
+    return parts.join('\n');
+}
+
+// Build a [slot][vehicle] render matrix mirroring buildVehicleSheetsV2 placement:
+// MORNING MEETING / LUNCH BREAK span every vehicle column; other events occupy their
+// vehicle column across their time-slot range. Cells are either undefined (empty),
+// 'skip' (covered by a rowspan/colspan above) or a block descriptor.
+function schedBuildDayMatrix(vehicles, timeSlots, dayEvents) {
+    const nCols = vehicles.length;
+    const nRows = timeSlots.length;
+    const matrix = Array.from({ length: nRows }, () => Array(nCols).fill(undefined));
+
+    const rangeFree = (r1, r2, c1, c2) => {
+        for (let r = r1; r <= r2; r++) {
+            for (let c = c1; c <= c2; c++) if (matrix[r][c] !== undefined) return false;
+        }
+        return true;
+    };
+    const fillSkip = (r1, r2, c1, c2) => {
+        for (let r = r1; r <= r2; r++) {
+            for (let c = c1; c <= c2; c++) matrix[r][c] = 'skip';
+        }
+    };
+
+    ['MORNING MEETING', 'LUNCH BREAK'].forEach(label => {
+        const ev = dayEvents.find(e =>
+            schedNormalizeKey(schedEventLabel(e)).includes(schedNormalizeKey(label)));
+        if (!ev) return;
+        const range = schedEventRangeForSlots(ev, timeSlots);
+        if (!range || !rangeFree(range.first, range.last, 0, nCols - 1)) return;
+        fillSkip(range.first, range.last, 0, nCols - 1);
+        matrix[range.first][0] = {
+            type: 'special',
+            label,
+            rowspan: range.last - range.first + 1,
+            colspan: nCols
+        };
+    });
+
+    vehicles.forEach((vehicle, vi) => {
+        const events = dayEvents
+            .filter(ev => schedEventMatchesVehicle(ev, vehicle))
+            .filter(ev => {
+                const label = schedNormalizeKey(schedEventLabel(ev));
+                return !label.includes('MORNINGMEETING') && !label.includes('LUNCHBREAK');
+            })
+            .sort((a, b) => String(a.startTime || '').localeCompare(String(b.startTime || '')));
+
+        events.forEach(ev => {
+            const range = schedEventRangeForSlots(ev, timeSlots);
+            if (!range || !rangeFree(range.first, range.last, vi, vi)) return;
+            const style = schedVehicleStyle(vehicle, vi);
+            const fill = schedArgbToHex(style.fill);
+            fillSkip(range.first, range.last, vi, vi);
+            matrix[range.first][vi] = {
+                type: 'event',
+                ev,
+                rowspan: range.last - range.first + 1,
+                fill,
+                fontColor: style.fontColor ? schedArgbToHex(style.fontColor) : schedReadableTextColor(fill)
+            };
+        });
+    });
+
+    return matrix;
+}
+
+const SCHED_AFTER_HOURS_MIN = 16 * 60 + 30; // 4:30 PM — shaded "closed" band, matches Excel
+
+function schedRenderScheduleGrid(heading, vehicles, timeSlots, dayEvents) {
+    if (!vehicles.length) return '';
+    const matrix = schedBuildDayMatrix(vehicles, timeSlots, dayEvents);
+
+    let head = '<th class="sched-grid-time-head">TIME</th>';
+    vehicles.forEach((vehicle, vi) => {
+        const style = schedVehicleStyle(vehicle, vi);
+        const bg = schedArgbToHex(style.fill);
+        const fc = style.fontColor ? schedArgbToHex(style.fontColor) : schedReadableTextColor(bg);
+        const name = String(vehicle?.name || '').toUpperCase();
+        const plate = String(vehicle?.plate || '').toUpperCase();
+        const driver = schedDriverLabel(vehicle?.driver);
+        const sub = [plate, driver].filter(Boolean).join(' · ');
+        head += `<th class="sched-grid-vh" style="background:${bg};color:${fc}">
+            <span class="sched-grid-vh-name">${schedEscape(name)}</span>
+            ${sub ? `<span class="sched-grid-vh-sub">${schedEscape(sub)}</span>` : ''}
+        </th>`;
+    });
+
+    let rows = '';
+    timeSlots.forEach((slot, ri) => {
+        const afterHours = slot.start >= SCHED_AFTER_HOURS_MIN;
+        let tds = '';
+        for (let vi = 0; vi < vehicles.length; vi++) {
+            const cell = matrix[ri][vi];
+            if (cell === 'skip') continue;
+            if (cell === undefined) {
+                tds += `<td class="sched-grid-cell${afterHours ? ' sched-grid-after' : ''}"></td>`;
+            } else if (cell.type === 'special') {
+                tds += `<td class="sched-grid-special" rowspan="${cell.rowspan}" colspan="${cell.colspan}">${schedEscape(cell.label)}</td>`;
+            } else {
+                const ev = cell.ev;
+                tds += `<td class="sched-grid-event" rowspan="${cell.rowspan}" style="background:${cell.fill};color:${cell.fontColor}" title="${schedEscape(schedEventTooltip(ev))}">
+                    <span class="sched-grid-event-title">${schedEscape(schedEventLabel(ev))}</span>
+                </td>`;
+            }
+        }
+        rows += `<tr><td class="sched-grid-time${afterHours ? ' sched-grid-time-after' : ''}">${schedEscape(slot.label)}</td>${tds}</tr>`;
+    });
+
+    return `
+    <div class="sched-grid-wrap">
+        ${heading ? `<div class="sched-grid-heading">${heading}</div>` : ''}
+        <div class="sched-grid-scroll">
+            <table class="sched-grid-table">
+                <thead><tr>${head}</tr></thead>
+                <tbody>${rows}</tbody>
+            </table>
+        </div>
+    </div>`;
+}
+
+function schedRenderDayList(events) {
+    const sorted = [...events].sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
+    let listHtml = '<div class="grid grid-cols-1 md:grid-cols-2 gap-3">';
+    sorted.forEach(ev => {
+        const timeRange = ev.startTime && ev.endTime
+            ? `${schedFormatTime12(ev.startTime)} – ${schedFormatTime12(ev.endTime)}`
+            : (ev.startTime ? schedFormatTime12(ev.startTime) : 'All Day');
+
+        listHtml += `
+        <div class="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 transition">
+            <div class="flex items-start justify-between mb-1.5">
+                <div class="flex items-center gap-2">
+                    <i class="fas fa-clock text-gray-400 text-xs"></i>
+                    <span class="text-xs font-bold text-gray-700">${schedEscape(timeRange)}</span>
+                </div>
+                ${schedStatusBadge(ev.statusCode)}
+            </div>
+            <div class="ml-5 space-y-1">
+                <div class="text-sm font-semibold text-gray-800">${schedEscape(ev.title || 'Untitled')}</div>
+                <div class="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-gray-500">
+                    <span><i class="fas fa-car mr-1 text-gray-400"></i>${schedEscape(ev.vehicleName || '—')} ${ev.plateNumber ? '(' + schedEscape(ev.plateNumber) + ')' : ''}</span>
+                    <span><i class="fas fa-user mr-1 text-gray-400"></i>${schedEscape(ev.driverName || '—')}</span>
+                </div>
+                ${ev.description ? `<div class="text-xs text-gray-500 mt-0.5">${schedEscape(ev.description)}</div>` : ''}
+                ${ev.scheduleSource === 'RESERVATION' ? `
+                <div class="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-gray-500 mt-1 pt-1 border-t border-gray-100">
+                    ${ev.requesterName ? `<span><i class="fas fa-user-tag mr-1 text-gray-400"></i>${schedEscape(ev.requesterName)}</span>` : ''}
+                    ${ev.destination ? `<span><i class="fas fa-map-marker-alt mr-1 text-gray-400"></i>${schedEscape(ev.destination)}</span>` : ''}
+                    ${ev.controlNo ? `<span><i class="fas fa-hashtag mr-1 text-gray-400"></i>${schedEscape(ev.controlNo)}</span>` : ''}
+                </div>` : ''}
+            </div>
+        </div>`;
+    });
+    return listHtml + '</div>';
+}
+
 function openScheduleDayModal(dateStr) {
     scheduleSelectedDay = dateStr;
     syncScheduleExportWeekInput();
@@ -347,51 +555,44 @@ function openScheduleDayModal(dateStr) {
     titleEl.textContent = `Schedule for ${d.toLocaleDateString('en-US', opts)}`;
 
     const events = schedEventsForDate(dateStr);
-    countEl.textContent = `${events.length} ${events.length === 1 ? 'entry' : 'entries'}`;
+    if (countEl) countEl.textContent = `${events.length} ${events.length === 1 ? 'entry' : 'entries'}`;
+
+    const toggle = `
+        <div class="sched-view-toggle">
+            <button type="button" class="${scheduleDayView === 'grid' ? 'active' : ''}" onclick="setScheduleDayView('grid')"><i class="fas fa-table-cells mr-1"></i>Grid</button>
+            <button type="button" class="${scheduleDayView === 'list' ? 'active' : ''}" onclick="setScheduleDayView('list')"><i class="fas fa-list-ul mr-1"></i>List</button>
+        </div>`;
 
     if (events.length === 0) {
-        bodyEl.innerHTML = `
+        bodyEl.innerHTML = `${toggle}
             <div class="py-12 text-center">
                 <i class="fas fa-calendar-day text-4xl text-gray-200 mb-3"></i>
                 <p class="text-sm text-gray-400">No scheduled entries for this day.</p>
             </div>`;
+    } else if (scheduleDayView === 'list') {
+        bodyEl.innerHTML = toggle + schedRenderDayList(events);
     } else {
-        // Sort by start time
-        events.sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
+        const vehicles = schedMonitoringVehicles();
+        const vehicleSlots = schedBuildTimeSlots('vehicle');
+        const trucks = schedTruckVehicles();
+        const truckSlots = schedBuildTimeSlots('truck');
+        const hasTruckEvents = events.some(ev => trucks.some(t => schedEventMatchesVehicle(ev, t)));
 
-        let listHtml = '<div class="grid grid-cols-1 md:grid-cols-2 gap-3">';
-        events.forEach(ev => {
-            const timeRange = ev.startTime && ev.endTime
-                ? `${schedFormatTime12(ev.startTime)} – ${schedFormatTime12(ev.endTime)}`
-                : (ev.startTime ? schedFormatTime12(ev.startTime) : 'All Day');
+        const dayLabel = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+        let gridHtml = '';
+        if (vehicles.length) {
+            gridHtml += schedRenderScheduleGrid(
+                `<i class="fas fa-car-side text-mpiBlue"></i> Vehicle Monitoring — ${schedEscape(dayLabel)}`,
+                vehicles, vehicleSlots, events);
+        }
+        if (hasTruckEvents && trucks.length) {
+            gridHtml += schedRenderScheduleGrid(
+                `<i class="fas fa-truck text-mpiBlue"></i> Truck Schedule — ${schedEscape(dayLabel)}`,
+                trucks, truckSlots, events);
+        }
 
-            listHtml += `
-            <div class="border border-gray-200 rounded-lg p-3 hover:bg-gray-50 transition">
-                <div class="flex items-start justify-between mb-1.5">
-                    <div class="flex items-center gap-2">
-                        <i class="fas fa-clock text-gray-400 text-xs"></i>
-                        <span class="text-xs font-bold text-gray-700">${timeRange}</span>
-                    </div>
-                    ${schedStatusBadge(ev.statusCode)}
-                </div>
-                <div class="ml-5 space-y-1">
-                    <div class="text-sm font-semibold text-gray-800">${ev.title || 'Untitled'}</div>
-                    <div class="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-gray-500">
-                        <span><i class="fas fa-car mr-1 text-gray-400"></i>${ev.vehicleName || '—'} ${ev.plateNumber ? '(' + ev.plateNumber + ')' : ''}</span>
-                        <span><i class="fas fa-user mr-1 text-gray-400"></i>${ev.driverName || '—'}</span>
-                    </div>
-                    ${ev.description ? `<div class="text-xs text-gray-500 mt-0.5">${ev.description}</div>` : ''}
-                    ${ev.scheduleSource === 'RESERVATION' ? `
-                    <div class="flex flex-wrap gap-x-4 gap-y-0.5 text-xs text-gray-500 mt-1 pt-1 border-t border-gray-100">
-                        ${ev.requesterName ? `<span><i class="fas fa-user-tag mr-1 text-gray-400"></i>${ev.requesterName}</span>` : ''}
-                        ${ev.destination ? `<span><i class="fas fa-map-marker-alt mr-1 text-gray-400"></i>${ev.destination}</span>` : ''}
-                        ${ev.controlNo ? `<span><i class="fas fa-hashtag mr-1 text-gray-400"></i>${ev.controlNo}</span>` : ''}
-                    </div>` : ''}
-                </div>
-            </div>`;
-        });
-        listHtml += '</div>';
-        bodyEl.innerHTML = listHtml;
+        // Fall back to the list when there are no vehicle columns to render a grid into.
+        bodyEl.innerHTML = toggle + (gridHtml || schedRenderDayList(events));
     }
 
     modal.classList.remove('hidden');
@@ -1292,6 +1493,7 @@ window.navigateScheduleMonth = navigateScheduleMonth;
 window.applyScheduleFilters = applyScheduleFilters;
 window.clearScheduleFilters = clearScheduleFilters;
 window.openScheduleDayModal = openScheduleDayModal;
+window.setScheduleDayView = setScheduleDayView;
 window.closeScheduleDayModal = closeScheduleDayModal;
 window.exportScheduleExcel = exportScheduleExcel;
 window.populateScheduleFilterDropdowns = populateScheduleFilterDropdowns;
