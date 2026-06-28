@@ -721,7 +721,7 @@ DELIMITER ;
 INSERT INTO tbl_schema_versions (
     version_no, description, script_name
 ) VALUES (
-    '003',
+    '003-procedures',
     'Add transactional gate pass lifecycle and reporting stored procedures.',
     'Database/procedures.sql'
 )

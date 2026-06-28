@@ -309,8 +309,8 @@ function renderScheduleCalendar() {
         visibleEvents.forEach(ev => {
             const pillCls = schedEventPillClass(ev);
             const timeLabel = ev.startTime ? schedFormatTime12(ev.startTime) : '';
-            html += `<div class="text-[9px] leading-tight truncate px-1.5 py-0.5 rounded border mb-0.5 ${pillCls}" title="${(ev.title || ev.vehicleName || '').replace(/"/g, '&quot;')}">`;
-            html += `${timeLabel ? timeLabel + ' ' : ''}${ev.vehicleName || ev.title || ''}`;
+            html += `<div class="text-[9px] leading-tight truncate px-1.5 py-0.5 rounded border mb-0.5 ${pillCls}" title="${schedEscape(ev.title || ev.vehicleName || '')}">`;
+            html += `${timeLabel ? schedEscape(timeLabel) + ' ' : ''}${schedEscape(ev.vehicleName || ev.title || '')}`;
             html += `</div>`;
         });
 
@@ -1361,11 +1361,11 @@ function renderFixedSchedulesList() {
         tr.innerHTML = `
             <td class="px-4 py-3 font-semibold text-gray-700">${daysOfWeekNames[item.dayOfWeek] || item.dayOfWeek}</td>
             <td class="px-4 py-3 text-gray-600 font-mono">${(item.startTime || '').substring(0, 5)} - ${(item.endTime || '').substring(0, 5)}</td>
-            <td class="px-4 py-3 text-gray-800">${item.vehicleName} <span class="text-xs text-gray-500 font-mono">(${item.plateNumber})</span></td>
-            <td class="px-4 py-3 text-gray-600">${item.driverName || 'Unassigned'}</td>
+            <td class="px-4 py-3 text-gray-800">${schedEscape(item.vehicleName)} <span class="text-xs text-gray-500 font-mono">(${schedEscape(item.plateNumber)})</span></td>
+            <td class="px-4 py-3 text-gray-600">${schedEscape(item.driverName || 'Unassigned')}</td>
             <td class="px-4 py-3">
-                <div class="font-bold text-gray-800">${item.title}</div>
-                ${item.description ? `<div class="text-gray-500 text-[10px]">${item.description}</div>` : ''}
+                <div class="font-bold text-gray-800">${schedEscape(item.title)}</div>
+                ${item.description ? `<div class="text-gray-500 text-[10px]">${schedEscape(item.description)}</div>` : ''}
             </td>
             <td class="px-4 py-3 space-x-2">
                 <button onclick="openEditFixedScheduleForm(${item.fixedScheduleId})" class="text-blue-600 hover:underline"><i class="fas fa-edit"></i> Edit</button>
@@ -1428,13 +1428,13 @@ function populateFixedScheduleFormDropdowns() {
     // Populate Vehicles
     vSelect.innerHTML = '<option value="">Select Vehicle</option>';
     (databaseVehicles || []).forEach(v => {
-        vSelect.innerHTML += `<option value="\${v.id}">\${v.name} (\${v.plate})</option>`;
+        vSelect.innerHTML += `<option value="${schedEscape(v.id)}">${schedEscape(v.name)} (${schedEscape(v.plate)})</option>`;
     });
 
     // Populate Drivers
     dSelect.innerHTML = '<option value="">Select Driver (Optional)</option>';
     (databaseDrivers || []).forEach(d => {
-        dSelect.innerHTML += `<option value="\${d.driverId}">\${d.fullName}</option>`;
+        dSelect.innerHTML += `<option value="${schedEscape(d.driverId)}">${schedEscape(d.fullName)}</option>`;
     });
 }
 
@@ -1455,14 +1455,10 @@ async function saveFixedScheduleForm(event) {
 
     try {
         if (id) {
-            await ApiClient.put(`/fleet/fixed-schedule/\${id}`, {
-                body: JSON.stringify(body)
-            });
+            await ApiClient.put(`/fleet/fixed-schedule/${id}`, body);
             showToast('Fixed schedule updated successfully.');
         } else {
-            await ApiClient.post('/fleet/fixed-schedule', {
-                body: JSON.stringify(body)
-            });
+            await ApiClient.post('/fleet/fixed-schedule', body);
             showToast('Fixed schedule created successfully.');
         }
         closeFixedScheduleFormModal();
@@ -1476,7 +1472,7 @@ async function saveFixedScheduleForm(event) {
 async function deleteFixedSchedule(id) {
     if (!confirm('Are you sure you want to delete this fixed schedule?')) return;
     try {
-        await ApiClient.delete(`/fleet/fixed-schedule/\${id}`);
+        await ApiClient.delete(`/fleet/fixed-schedule/${id}`);
         showToast('Fixed schedule deleted successfully.');
         await loadFixedSchedulesList();
         await loadAndRenderScheduleMonth();

@@ -785,6 +785,12 @@ function renderMaterialProofSlots() {
     const container = document.getElementById('materialProofSlotsContainer');
     if (!container) return;
 
+    // Revoke object URLs created by the previous render so blob references are not leaked.
+    if (Array.isArray(window._materialProofObjectUrls)) {
+        window._materialProofObjectUrls.forEach(url => URL.revokeObjectURL(url));
+    }
+    window._materialProofObjectUrls = [];
+
     // Get current number of items
     const itemsCount = readMaterialItems().length;
     const maxPhotos = Math.max(1, itemsCount); // At least 1 slot
@@ -796,11 +802,16 @@ function renderMaterialProofSlots() {
     }
 
     // Clean state variables beyond current maxPhotos
+    let droppedPhoto = false;
     for (let key in materialProofState) {
         const num = parseInt(key.replace('file', ''), 10);
         if (num > maxPhotos) {
+            if (materialProofState[key]) droppedPhoto = true;
             delete materialProofState[key];
         }
+    }
+    if (droppedPhoto && typeof showToast === 'function') {
+        showToast('A proof photo was removed because it no longer matches an item row.', 'info');
     }
 
     // Render slots
@@ -809,6 +820,11 @@ function renderMaterialProofSlots() {
         const fileObj = materialProofState['file' + i];
         const hasFile = !!fileObj;
         const isRequired = i === 1;
+        let imgSrc = '';
+        if (hasFile) {
+            imgSrc = URL.createObjectURL(fileObj);
+            window._materialProofObjectUrls.push(imgSrc);
+        }
 
         html += `
             <div class="relative border-2 border-dashed border-gray-300 rounded-lg p-4 flex flex-col items-center justify-center cursor-pointer hover:border-mpiBlue transition bg-white group min-h-[120px]" onclick="triggerMaterialProofUpload(${i})">
@@ -819,7 +835,7 @@ function renderMaterialProofSlots() {
                     <p class="text-[8px] text-gray-400">Click to upload/capture</p>
                 </div>
                 <div id="materialProofPreviewContainer${i}" class="absolute inset-0 rounded-lg overflow-hidden bg-white ${hasFile ? '' : 'hidden'}">
-                    <img id="materialProofImg${i}" class="w-full h-full object-cover" ${hasFile ? `src="${URL.createObjectURL(fileObj)}"` : ''}>
+                    <img id="materialProofImg${i}" class="w-full h-full object-cover" ${hasFile ? `src="${imgSrc}"` : ''}>
                     <button type="button" onclick="clearMaterialProof(${i}, event)" class="absolute top-1.5 right-1.5 bg-red-600 text-white rounded-full w-5 h-5 flex items-center justify-center text-[10px] hover:bg-red-700 transition shadow z-10"><i class="fas fa-times"></i></button>
                 </div>
             </div>

@@ -354,8 +354,13 @@ public sealed class GatePassService(
         }
 
         var qrToken = qrTokenService.CreateToken(detail.GatePassId);
-        var qrExpiresAt = detail.QrExpiresAt ??
-            DateTime.UtcNow.AddDays(7);
+        // Refresh the expiry when it is missing OR already in the past, so an
+        // approved-but-stale pass (approved more than 7 days ago) can still produce
+        // a scannable QR. The token itself is deterministic (HMAC of the gate-pass
+        // id), so extending the expiry keeps the existing QR valid.
+        var qrExpiresAt = (detail.QrExpiresAt is null || detail.QrExpiresAt < DateTime.UtcNow)
+            ? DateTime.UtcNow.AddDays(7)
+            : detail.QrExpiresAt.Value;
         await gatePassRepository.EnsureQrTokenAsync(
             detail.GatePassId,
             qrTokenService.HashToken(qrToken),

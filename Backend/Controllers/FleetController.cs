@@ -16,7 +16,8 @@ namespace GatePassSystem.Api.Controllers;
 [Route("api")]
 public sealed class FleetController(
     IFleetService fleetService,
-    IDatabaseConnectionFactory connectionFactory) : ApiControllerBase
+    IDatabaseConnectionFactory connectionFactory,
+    ILogger<FleetController> logger) : ApiControllerBase
 {
     [HttpGet("vehicles")]
     public async Task<ActionResult<ApiResponse<IReadOnlyList<VehicleRecord>>>> Vehicles(
@@ -207,9 +208,13 @@ public sealed class FleetController(
             }
 
             // 2. Parse expected times
-            var parsedDate = DateOnly.Parse(request.Date);
-            var parsedStartTime = TimeOnly.Parse(request.StartTime);
-            var parsedEndTime = TimeOnly.Parse(request.EndTime);
+            if (!DateOnly.TryParse(request.Date, out var parsedDate)
+                || !TimeOnly.TryParse(request.StartTime, out var parsedStartTime)
+                || !TimeOnly.TryParse(request.EndTime, out var parsedEndTime))
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                return BadRequest("Invalid date or time format in service request.");
+            }
 
             var expectedOutAt = DateTime.SpecifyKind(parsedDate.ToDateTime(parsedStartTime), DateTimeKind.Utc);
             var expectedInAt = DateTime.SpecifyKind(parsedDate.ToDateTime(parsedEndTime), DateTimeKind.Utc);
@@ -339,7 +344,8 @@ public sealed class FleetController(
         catch (Exception ex)
         {
             await transaction.RollbackAsync(cancellationToken);
-            return StatusCode(500, new { message = "Failed to create service request.", error = ex.Message });
+            logger.LogError(ex, "Failed to create service request for user {UserId}.", CurrentUserId);
+            return StatusCode(500, new { message = "Failed to create service request." });
         }
     }
 }

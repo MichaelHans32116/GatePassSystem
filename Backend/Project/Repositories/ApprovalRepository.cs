@@ -120,7 +120,7 @@ public sealed class ApprovalRepository(
 
         try
         {
-            var current = await connection.QuerySingleOrDefaultAsync<CurrentStep>(
+            var current = await connection.QueryFirstOrDefaultAsync<CurrentStep>(
                 new CommandDefinition(
                     """
                     SELECT
@@ -174,6 +174,8 @@ public sealed class ApprovalRepository(
                        )
                     WHERE request_row.gate_pass_id = @GatePassId
                       AND step.approval_status_code = 'PENDING'
+                    ORDER BY step.sequence_no
+                    LIMIT 1
                     FOR UPDATE;
                     """,
                     new

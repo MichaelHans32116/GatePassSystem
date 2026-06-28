@@ -405,7 +405,11 @@ public sealed class GatePassRepository(
                 """
                 UPDATE tbl_gate_pass_requests
                 SET qr_token_hash = COALESCE(qr_token_hash, @QrTokenHash),
-                    qr_expires_at = COALESCE(qr_expires_at, @QrExpiresAt)
+                    qr_expires_at = CASE
+                        WHEN qr_expires_at IS NULL OR qr_expires_at < UTC_TIMESTAMP()
+                            THEN @QrExpiresAt
+                        ELSE qr_expires_at
+                    END
                 WHERE gate_pass_id = @GatePassId
                   AND approved_at IS NOT NULL
                   AND gate_pass_status_code NOT IN (

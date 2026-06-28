@@ -92,9 +92,12 @@ async function simulateQrScan(identifierOverride = null, fromCamera = false) {
         } else if (identifier.startsWith('FRS|')) {
             const parts = identifier.split('|');
             console.log(`[simulateQrScan] FRS parts:`, parts);
-            if (parts.length >= 3) {
-                viewPass(parts[2], true);
+            const frsId = parts.length >= 3 ? (parts[2] || '').trim() : '';
+            if (frsId) {
+                viewPass(frsId, true);
                 success = true;
+            } else {
+                showToast('Invalid QR payload', 'error');
             }
         } else {
             // === MANUAL ENTRY / RAW EMPLOYEE ID PATH ===
@@ -409,7 +412,7 @@ async function initializeQrCameras() {
         const previous = select.value;
         select.innerHTML = devices.length
             ? devices.map((device, index) =>
-                `<option value="${device.deviceId}">${device.label || `Camera ${index + 1}`}</option>`
+                `<option value="${materialEscape(device.deviceId)}">${materialEscape(device.label || `Camera ${index + 1}`)}</option>`
             ).join('')
             : '<option value="">No camera detected</option>';
         if (devices.some(device => device.deviceId === previous)) {
@@ -625,10 +628,10 @@ async function renderGuardDashboard() {
         return `
             <tr class="border-b hover:bg-gray-50">
                 <td class="px-4 py-2 text-xs font-mono font-bold text-mpiBlue">
-                    <div>${pass.id}</div>
-                    ${pass.controlNo ? `<div class="text-[10px] text-gray-500 font-normal mt-0.5">Control: ${pass.controlNo}</div>` : ''}
+                    <div>${materialEscape(pass.id)}</div>
+                    ${pass.controlNo ? `<div class="text-[10px] text-gray-500 font-normal mt-0.5">Control: ${materialEscape(pass.controlNo)}</div>` : ''}
                 </td>
-                <td class="px-4 py-2 text-sm font-semibold">${pass.userName}</td>
+                <td class="px-4 py-2 text-sm font-semibold">${materialEscape(pass.userName)}</td>
                 <td class="px-4 py-2 text-xs">${pass.willReturn ? '<span class="text-green-600 font-bold">Yes</span>' : '<span class="text-red-500 font-bold">No (1-Way)</span>'}</td>
                 <td class="px-4 py-2"><span class="px-2 py-1 rounded text-[10px] font-bold ${waitingOut ? 'bg-yellow-100 text-yellow-800' : 'bg-blue-100 text-blue-800'}">${waitingOut ? 'Waiting OUT' : 'Waiting IN'}</span></td>
             </tr>

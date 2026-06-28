@@ -1074,7 +1074,7 @@ async function viewPass(id, isReviewing = false) {
                                 if (vSelect) {
                                     vSelect.innerHTML = '<option value="">Select Vehicle</option>';
                                     (databaseVehicles || []).forEach(v => {
-                                        vSelect.innerHTML += `<option value="${v.id}">${v.name} (${v.plate})</option>`;
+                                        vSelect.innerHTML += `<option value="${materialEscape(v.id)}">${materialEscape(v.name)} (${materialEscape(v.plate)})</option>`;
                                     });
                                     if (p.vehicle?.id) vSelect.value = p.vehicle.id;
                                 }
@@ -1087,9 +1087,9 @@ async function viewPass(id, isReviewing = false) {
                                 btnApprove.onclick = approveCurrentPass;
                             }
                         } else {
-                            if (hrArea) {
-                                hrArea.classList.add('hidden');
-                                hrArea.classList.remove('flex');
+                            if (hradArea) {
+                                hradArea.classList.add('hidden');
+                                hradArea.classList.remove('flex');
                             }
                             if (holdBtn) holdBtn.classList.add('hidden');
                             if (btnApprove) {
@@ -1816,7 +1816,7 @@ function populateHradAssignDrivers(vehicleId = null) {
     if (!dSelect) return;
     dSelect.innerHTML = '<option value="">Select Driver (Optional)</option>';
     (databaseDrivers || []).forEach(d => {
-        dSelect.innerHTML += `<option value="${d.driverId}">${d.fullName}</option>`;
+        dSelect.innerHTML += `<option value="${materialEscape(d.driverId)}">${materialEscape(d.fullName)}</option>`;
     });
 
     if (vehicleId) {

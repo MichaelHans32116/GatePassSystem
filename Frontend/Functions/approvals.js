@@ -2,14 +2,30 @@
 
 var databaseApprovalQueue = [];
 
+// Caches the most recent /signatures upload for the current approval session so a
+// retried approval (after a transient failure) reuses the same file instead of
+// uploading a fresh one each time and orphaning the previous upload. Reset per pass
+// by resetApprovalSignatureComposer().
+var lastSignatureUpload = null;
+
 async function uploadCurrentSignature() {
     if (!currentUploadedSig) return null;
 
+    const widthPercent = document.getElementById('sigSize').value || '100';
+    const yOffset = document.getElementById('sigY').value || '0';
+    const cacheKey = `${currentUploadedSig}|${widthPercent}|${yOffset}`;
+
+    if (lastSignatureUpload && lastSignatureUpload.key === cacheKey) {
+        return lastSignatureUpload.result;
+    }
+
     const formData = new FormData();
     formData.append('file', dataUrlToBlob(currentUploadedSig), 'signature.png');
-    formData.append('widthPercent', document.getElementById('sigSize').value || '100');
-    formData.append('yOffset', document.getElementById('sigY').value || '0');
-    return ApiClient.post('/signatures', formData);
+    formData.append('widthPercent', widthPercent);
+    formData.append('yOffset', yOffset);
+    const result = await ApiClient.post('/signatures', formData);
+    lastSignatureUpload = { key: cacheKey, result };
+    return result;
 }
 
 async function approveCurrentPass() {

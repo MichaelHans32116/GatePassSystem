@@ -78,7 +78,7 @@ function renderRequesterDepartmentSelectors() {
     const options = [
         '<option value="">-- Select department --</option>',
         ...requestable.map(department =>
-            `<option value="${department.departmentId}">${department.departmentName}</option>`
+            `<option value="${escapeHtml(department.departmentId)}">${escapeHtml(department.departmentName)}</option>`
         )
     ].join('');
 

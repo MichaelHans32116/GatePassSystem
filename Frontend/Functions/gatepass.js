@@ -454,7 +454,7 @@ function initializeGatePassForm() {
     vehicleSelect.innerHTML =
         '<option value="">-- Select --</option>' +
         vehicles.map((vehicle) =>
-            `<option value="${vehicle.id}" ${vehicle.status !== 'AVAILABLE' && vehicle.status !== 'Available' ? 'disabled' : ''}>${vehicle.name} (${vehicle.plate}) — ${vehicle.status}</option>`
+            `<option value="${adminEscape(vehicle.id)}" ${vehicle.status !== 'AVAILABLE' && vehicle.status !== 'Available' ? 'disabled' : ''}>${adminEscape(vehicle.name)} (${adminEscape(vehicle.plate)}) — ${adminEscape(vehicle.status)}</option>`
         ).join('') +
         '<option value="others" class="font-bold text-mpiBlue">Private / Manual Entry</option>';
 }

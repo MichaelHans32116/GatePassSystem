@@ -91,6 +91,9 @@ function clearSavedApprovalSignature(
 function resetApprovalSignatureComposer() {
             currentUploadedSig = null;
             currentOriginalSignatureData = null;
+            // New pass/composer session — forget any cached signature upload so the
+            // next approval uploads its own file rather than reusing a prior pass's.
+            if (typeof lastSignatureUpload !== 'undefined') lastSignatureUpload = null;
 
             const upload = document.getElementById('sigUpload');
             const fileName = document.getElementById('sigFileName');
