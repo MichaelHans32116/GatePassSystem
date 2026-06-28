@@ -718,10 +718,7 @@ async function viewPass(id, isReviewing = false) {
                 }
                 if(sigDiv) {
                     if(sigData.img) {
-                        const w = sigData.w || 100;
-                        const y = sigData.y || 0;
-                        const wStyle = sigData.w && sigData.w !== 100 ? `width: ${w}%;` : 'width: auto; max-width: 100%;';
-                        sigDiv.innerHTML = `<img src="${sigData.img}" class="signature-img" style="${wStyle} margin-bottom: ${y}px; max-height: 100%; object-fit: contain;">`;
+                        sigDiv.innerHTML = buildSignatureImgHtml(sigData.img, sigData.w, sigData.y);
                     }
                     else {
                         sigDiv.innerHTML = `<span style="font-family: serif; font-style: italic; font-size: 14px; color: blue;">Digitally Signed</span>`;
@@ -997,10 +994,12 @@ async function viewPass(id, isReviewing = false) {
                                     reader.onload = () => resolve(reader.result);
                                     reader.readAsDataURL(blob);
                                 });
-                                const w = metadataResponse.widthPercent || 100;
-                                const y = metadataResponse.yOffset || 0;
-                                const wStyle = w !== 100 ? `width: ${w}%;` : 'width: auto; max-width: 100%;';
-                                containerEl.innerHTML = `<img src="${imgUrl}" style="${wStyle} margin-bottom: ${y}px; max-height: 100%; object-fit: contain;" class="transition-all duration-300">`;
+                                containerEl.innerHTML = buildSignatureImgHtml(
+                                    imgUrl,
+                                    metadataResponse.widthPercent,
+                                    metadataResponse.yOffset,
+                                    { className: 'transition-all duration-300' }
+                                );
                             } catch {
                                 containerEl.innerHTML = `<span style="font-family: serif; font-style: italic; font-size: 8px; color: blue;">Signed</span>`;
                             }
@@ -1267,10 +1266,7 @@ async function renderPersonGatePassClone(p) {
         }
         if (el) {
             if (sigData.img) {
-                const w = sigData.w || 100;
-                const y = sigData.y || 0;
-                const wStyle = sigData.w && sigData.w !== 100 ? `width: ${w}%;` : 'width: auto; max-width: 100%;';
-                el.innerHTML = `<img src="${sigData.img}" class="signature-img" style="${wStyle} max-height: 100%; margin-bottom: ${y}px; object-fit: contain;">`;
+                el.innerHTML = buildSignatureImgHtml(sigData.img, sigData.w, sigData.y);
             } else {
                 el.innerHTML = `<span style="font-family: serif; font-style: italic; font-size: 14px; color: blue;">Digitally Signed</span>`;
             }
@@ -1317,10 +1313,12 @@ async function renderPersonGatePassClone(p) {
                     reader.onload = () => resolve(reader.result);
                     reader.readAsDataURL(blob);
                 });
-                const w = metadataResponse.widthPercent || 100;
-                const y = metadataResponse.yOffset || 0;
-                const wStyle = w !== 100 ? `width: ${w}%;` : 'width: auto; max-width: 100%;';
-                containerEl.innerHTML = `<img src="${imgUrl}" style="${wStyle} margin-bottom: ${y}px; max-height: 100%; object-fit: contain;" class="transition-all duration-300">`;
+                containerEl.innerHTML = buildSignatureImgHtml(
+                    imgUrl,
+                    metadataResponse.widthPercent,
+                    metadataResponse.yOffset,
+                    { className: 'transition-all duration-300' }
+                );
             } catch {
                 containerEl.innerHTML = `<span style="font-family: serif; font-style: italic; font-size: 8px; color: blue;">Signed</span>`;
             }
@@ -1636,10 +1634,7 @@ async function renderMaterialGatePassClone(p) {
             wrapperEls.forEach(el => {
                 if (sigData) {
                     if (sigData.img) {
-                        const w = sigData.w || 100;
-                        const y = sigData.y || 0;
-                        const wStyle = sigData.w && sigData.w !== 100 ? `width: ${w}%;` : 'width: auto; max-width: 100%;';
-                        el.innerHTML = `<img src="${sigData.img}" class="signature-img" style="${wStyle} max-height: 100%; margin-bottom: ${y}px; object-fit: contain;">`;
+                        el.innerHTML = buildSignatureImgHtml(sigData.img, sigData.w, sigData.y);
                     } else {
                         el.innerHTML = `<span style="font-family: serif; font-style: italic; font-size: 11px; color: blue;">Digitally Signed</span>`;
                     }

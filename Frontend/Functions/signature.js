@@ -330,18 +330,42 @@ function getSignatureTargetContainerId() {
             return 'sigImm';
         }
 
+// Canonical signature <img> markup. This is the SINGLE source of truth used by BOTH the
+// live composer preview AND every view/print render (modal.js). It binds the signature to
+// its cell's fixed height (height:100% + max-height:100% + object-fit:contain) so a saved
+// width% can never overflow the cell at view time. Previously each render site built its
+// own inline style and the view/print sites dropped `height: 100%`, which let a guard's
+// saved width render oversized when the signed pass was later viewed.
+//
+//   width   – the saved width percent. A finite value other than 100 scales the signature
+//             within the cell; 100 / null / non-numeric falls back to natural width.
+//   y       – vertical offset in px (margin-bottom).
+//   options – { className?: string, id?: string } for per-site classes/ids.
+function buildSignatureImgHtml(img, width, y, options = {}) {
+            const className = options.className || 'signature-img';
+            const idAttr = options.id ? ` id="${options.id}"` : '';
+            const safeYOffset = clampSignatureYOffset(y);
+            const numericWidth = Number(width);
+            // A positive, finite width other than 100 scales the signature; 0 / null / 100 /
+            // non-numeric all fall back to natural width (matches the old `widthPercent || 100`).
+            const hasCustomWidth =
+                Number.isFinite(numericWidth) && numericWidth > 0 && numericWidth !== 100;
+            const widthStyle = hasCustomWidth
+                ? `width: ${clampSignatureWidth(numericWidth)}%;`
+                : 'width: auto;';
+            return `<img${idAttr} src="${img}" class="${className}" style="${widthStyle} max-width: 96%; height: 100%; max-height: 100%; object-fit: contain; margin-bottom: ${safeYOffset}px;">`;
+        }
+
 function renderSignatureImage(dataUrl, width = SIGNATURE_WIDTH_DEFAULT, y = SIGNATURE_VERTICAL_OFFSET_DEFAULT) {
             const targetId = getSignatureTargetContainerId();
             const targetDiv = document.getElementById(targetId);
             if (targetDiv) {
-                const safeWidth = clampSignatureWidth(width);
-                const safeYOffset = clampSignatureYOffset(y);
-
-                // IMPORTANT:
-                // Use max-width so the slider can enlarge the signature, but it will not spill outside
-                // the approval cell. The drawn signature is also cropped before rendering, so blank
-                // canvas space will no longer make the signature look tiny.
-                targetDiv.innerHTML = `<img src="${dataUrl}" id="liveDocumentSig" class="signature-img" style="width: ${safeWidth}%; max-width: 96%; max-height: 100%; height: 100%; object-fit: contain; margin-bottom: ${safeYOffset}px;">`;
+                // The drawn signature is cropped before rendering, so blank canvas space will
+                // no longer make the signature look tiny. The shared helper keeps this live
+                // preview pixel-identical to how the saved signature renders on view/print.
+                targetDiv.innerHTML = buildSignatureImgHtml(dataUrl, clampSignatureWidth(width), y, {
+                    id: 'liveDocumentSig'
+                });
             }
             if (targetId?.startsWith('sigMat')) {
                 syncMaterialSignatureCopies?.(targetId);
@@ -726,6 +750,7 @@ function initializeSignatureControls() {
     offset?.addEventListener('input', applySignaturePlacementFromControls);
 }
 
+window.buildSignatureImgHtml = buildSignatureImgHtml;
 window.removeSignatureBackground = removeSignatureBackground;
 window.showSignatureSource = showSignatureSource;
 window.clearSignaturePad = clearSignaturePad;
