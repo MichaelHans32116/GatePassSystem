@@ -1091,7 +1091,7 @@
                     </div>
                 </div>
 
-                <div class="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2">
+                <div id="approvalActionButtons" class="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2 w-full mt-auto pt-3 border-t border-gray-100">
                     <button onclick="closeModal()" class="px-4 py-2 rounded border border-gray-300 text-sm font-medium hover:bg-gray-200 transition">Cancel</button>
                     <button id="holdRequestButton" onclick="holdCurrentPass()" class="bg-amber-600 hover:bg-amber-700 text-white px-5 py-2 rounded shadow text-sm font-bold transition hidden"><i class="fas fa-pause-circle mr-1"></i> Put on Hold</button>
                     <button onclick="rejectCurrentPass()" class="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded shadow text-sm font-bold transition"><i class="fas fa-times-circle mr-1"></i> Reject</button>

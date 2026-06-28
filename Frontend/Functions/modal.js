@@ -289,8 +289,12 @@ function initializeModalDragResize() {
 
                 if (isResizing && !isMaximized) {
                     e.preventDefault();
-                    const minWidth = Math.min(460, Math.max(320, window.innerWidth - modalStartLeft - 10));
-                    const minHeight = Math.min(420, Math.max(280, window.innerHeight - modalStartTop - 10));
+                    const isReviewingMode = modal.classList.contains('is-reviewing');
+                    const targetMinWidth = isReviewingMode ? 900 : 460;
+                    const targetMinHeight = isReviewingMode ? 600 : 420;
+
+                    const minWidth = Math.min(targetMinWidth, Math.max(320, window.innerWidth - modalStartLeft - 10));
+                    const minHeight = Math.min(targetMinHeight, Math.max(280, window.innerHeight - modalStartTop - 10));
                     const maxWidth = Math.max(minWidth, window.innerWidth - modalStartLeft - 10);
                     const maxHeight = Math.max(minHeight, window.innerHeight - modalStartTop - 10);
 
