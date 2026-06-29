@@ -1,5 +1,12 @@
 USE gate_pass_system;
 
+-- This migration flips parent PK values (approval_step_code, gate_pass_status_code)
+-- that child tables reference via FKs WITHOUT ON UPDATE CASCADE. Renaming the parent
+-- before the children fails with ERROR 1451 on any DB that has those child rows.
+-- Disable FK enforcement for the rename; every child is repointed below, so the graph
+-- is consistent again before checks are re-enabled at the end of this script.
+SET FOREIGN_KEY_CHECKS = 0;
+
 -- 1. Rename step type HR_ASSIGN to HRAD_ASSIGN
 UPDATE tbl_approval_step_types
 SET approval_step_code = 'HRAD_ASSIGN',
@@ -94,6 +101,9 @@ JOIN tbl_roles role_row
 WHERE employee.employee_id = 'GA139'
 ON DUPLICATE KEY UPDATE
     is_active = TRUE;
+
+-- Re-enable FK enforcement now that all parent/child codes are consistent.
+SET FOREIGN_KEY_CHECKS = 1;
 
 -- 9. Register schema version 013
 INSERT INTO tbl_schema_versions (
