@@ -1,0 +1,17 @@
+{
+  "version": "0.0.1",
+  "configurations": [
+    {
+      "name": "buildbid-proposal",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "4599", "--directory", "C:/Users/Michael Hans/OneDrive/Desktop/BuildBid/proposals/hans"],
+      "port": 4599
+    },
+    {
+      "name": "buildbid-web",
+      "runtimeExecutable": "npm",
+      "runtimeArgs": ["--prefix", "C:/Users/Michael Hans/OneDrive/Desktop/BuildBid/web-app", "run", "dev", "--", "-p", "3939"],
+      "port": 3939
+    }
+  ]
+}

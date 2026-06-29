@@ -11,7 +11,14 @@ function setupRoleAccess(user) {
             // Reset visibility
             document.getElementById('navItemApply').style.display = 'flex';
             const allowedCalendarUserIds = ['GA125', 'GA120', 'GA150', 'GA133', 'GA139', 'GA409', 'GA407'];
-            if (allowedCalendarUserIds.includes(user.id)) {
+            const hasCalendarAccess = allowedCalendarUserIds.includes(user.id) || 
+                                     user.role === 'System Admin' || 
+                                     user.role === 'President' || 
+                                     user.role === 'Security' || 
+                                     user.role === 'PAS' || 
+                                     user.role === 'HRAD' ||
+                                     user.canNoteGatePass;
+            if (hasCalendarAccess) {
                 document.getElementById('navItemSchedule').style.display = 'flex';
             } else {
                 document.getElementById('navItemSchedule').style.display = 'none';
