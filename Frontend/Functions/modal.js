@@ -230,7 +230,7 @@ function setCancelGatePassControls(pass) {
     if (area) area.classList.add('hidden');
     const isHradCanceller =
         typeof currentUser !== 'undefined' &&
-        currentUser && currentUser.id === 'GA120';
+        currentUser && (currentUser.id === 'GA120' || currentUser.id === 'GA139');
     const cancellable =
         pass && !isFinishedDocumentStatus(pass.status);
     const show = Boolean(isHradCanceller && cancellable);
@@ -1467,7 +1467,15 @@ async function viewPass(id, isReviewing = false) {
                                 
                                 populateHradAssignDrivers(p.vehicle?.id);
                             }
-                            if (holdBtn) holdBtn.classList.remove('hidden');
+                            if (holdBtn) {
+                                const isHradUser = currentUser && (currentUser.id === 'GA120' || currentUser.id === 'GA139');
+                                const isVehicleRequest = p.tripTypeCode === 'COMPANY_VEHICLE';
+                                if (isHradUser && isVehicleRequest) {
+                                    holdBtn.classList.remove('hidden');
+                                } else {
+                                    holdBtn.classList.add('hidden');
+                                }
+                            }
                             if (btnApprove) {
                                 btnApprove.innerHTML = '<i class="fas fa-arrow-right mr-1"></i> Assign & Forward';
                                 btnApprove.onclick = approveCurrentPass;
@@ -1483,13 +1491,14 @@ async function viewPass(id, isReviewing = false) {
                                 btnApprove.onclick = approveCurrentPass;
                             }
                         }
-                        // GA120 (Miss Joy) uses Cancel instead of Reject.
-                        if (btnReject) btnReject.classList.toggle('hidden', currentUser.id === 'GA120');
+                        // Joy and Roxanne use Cancel instead of Reject.
+                        const isJoyOrRox = currentUser && (currentUser.id === 'GA120' || currentUser.id === 'GA139');
+                        if (btnReject) btnReject.classList.toggle('hidden', isJoyOrRox);
                         resetApprovalSignatureComposer();
                         showSignatureSource('upload');
                     }
 
-                    // HRAD-only Cancel Gate Pass control (Miss Joy = GA120).
+                    // HRAD-only Cancel Gate Pass control (Miss Joy = GA120, Miss Rox = GA139).
                     // Shown only for the HRAD canceller on a non-terminal pass.
                     setCancelGatePassControls(p);
 

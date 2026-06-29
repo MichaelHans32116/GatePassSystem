@@ -49,9 +49,9 @@ public sealed class ApprovalsController(
         CancellationToken cancellationToken) =>
         Decide(requestId, false, request, cancellationToken);
 
-    // HRAD-only (Miss Joy, username GA120) hard-cancel with mandatory remarks.
+    // HRAD-only (Miss Joy GA120 & Miss Rox GA139) hard-cancel with mandatory remarks.
     private bool IsHradCanceller =>
-        User.FindFirst("username")?.Value == "GA120";
+        User.FindFirst("username")?.Value == "GA120" || User.FindFirst("username")?.Value == "GA139";
 
     [HttpPost("{requestId:long}/cancel")]
     public async Task<ActionResult<ApiResponse<GatePassCancelResult>>> Cancel(
