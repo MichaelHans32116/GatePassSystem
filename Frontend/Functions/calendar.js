@@ -117,11 +117,15 @@ function schedFilteredData() {
                 .filter(Boolean).join(' ').toLowerCase();
             if (!haystack.includes(q)) return false;
         } else {
-            // Hide past schedules if no search is active
+            // Hide past schedules if no search is active.
+            // Treat "00:00:00" (default TimeSpan for unassigned reservations) the same as
+            // null so events without an assigned end-time stay visible until midnight.
             if (entry.scheduleDate) {
                 const datePart = entry.scheduleDate.split('T')[0];
-                const endPart = entry.endTime ? entry.endTime : '23:59:59';
-                const eventEnd = new Date(`${datePart}T${endPart}`);
+                const endPart = (entry.endTime && entry.endTime !== '00:00:00') ? entry.endTime : '23:59:59';
+                const [yr, mo, dy] = datePart.split('-').map(Number);
+                const [hh, mm, ss] = endPart.split(':').map(Number);
+                const eventEnd = new Date(yr, mo - 1, dy, hh || 0, mm || 0, ss || 0);
                 if (eventEnd < new Date()) return false;
             }
         }

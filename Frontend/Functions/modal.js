@@ -215,7 +215,7 @@ function escapeDocumentText(value) {
 }
 
 // Shows/hides the HRAD-only Cancel Gate Pass controls.
-// Visible only for Miss Joy (GA120) on a non-terminal pass while reviewing.
+// Only the BUTTON is shown on modal open; the textarea AREA is revealed on first click.
 function setCancelGatePassControls(pass) {
     const area = document.getElementById('cancelGatePassArea');
     const button = document.getElementById('cancelGatePassButton');
@@ -226,13 +226,14 @@ function setCancelGatePassControls(pass) {
         result.innerHTML = '';
     }
     if (remarks) remarks.value = '';
+    // Always collapse the area — it only expands on the first click of the button.
+    if (area) area.classList.add('hidden');
     const isHradCanceller =
         typeof currentUser !== 'undefined' &&
         currentUser && currentUser.id === 'GA120';
     const cancellable =
         pass && !isFinishedDocumentStatus(pass.status);
     const show = Boolean(isHradCanceller && cancellable);
-    if (area) area.classList.toggle('hidden', !show);
     if (button) button.classList.toggle('hidden', !show);
 }
 
@@ -638,6 +639,15 @@ async function renderMaterialBundle(pass) {
                 .trim()
                 .slice(0, 20);
 
+            // pass.actualOut/actualIn are already-formatted time strings (e.g. "10:30 AM")
+            // from formatDateTime(..., false). Re-parsing via new Date() would give Invalid Date.
+            const matSafeTime = (ts) => {
+                if (!ts || ts === 'N/A') return '—';
+                if (/^\d{1,2}:\d{2}/.test(String(ts))) return ts; // already "HH:MM" or "H:MM AM"
+                const d = new Date(ts);
+                return isNaN(d.getTime()) ? '—' : d.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+            };
+
             container.innerHTML = Array.from({ length: pageCount }, (_, pageIndex) => {
                 const pageItems = itemRows.slice(pageIndex * 8, pageIndex * 8 + 8);
                 while (pageItems.length < 8) pageItems.push(null);
@@ -759,7 +769,7 @@ async function renderMaterialBundle(pass) {
                                 <strong style="font-size: 7px; color: #4b5563; font-weight: 700; white-space: nowrap; text-transform: uppercase;">ACTUAL OUT</strong>
                                 <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; position: relative; min-width: 0;">
                                     <div class="sig-wrapper sig-mat-guard-out guard-scan-sig" ${guardOutSlot.imageAttribute} style="height: 9.5mm; display: flex; align-items: end; justify-content: center; width: 100%;"></div>
-                                    <span class="guard-scan-time vActOut" style="display: block; text-align: center; font-size: 7px; font-weight: 700; min-height: 3.5mm; line-height: 1;">${pass.actualOut ? new Date(pass.actualOut).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '—'}</span>
+                                    <span class="guard-scan-time vActOut" style="display: block; text-align: center; font-size: 7px; font-weight: 700; min-height: 3.5mm; line-height: 1;">${matSafeTime(pass.actualOut)}</span>
                                     <div style="width: 100%; border-top: 1px solid #111827; margin-top: 0.2mm; margin-bottom: 0.2mm;"></div>
                                     <small class="name sig-mat-guard-out-name guard-scan-name" ${guardOutSlot.nameAttribute} style="display: block; text-align: center; font-size: 5.4px; color: #4b5563; font-weight: bold; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${materialEscape(getGuardScanName(pass, 'TIME_OUT')) || 'Guard'}</small>
                                 </div>
@@ -768,7 +778,7 @@ async function renderMaterialBundle(pass) {
                                 <strong style="font-size: 7px; color: #4b5563; font-weight: 700; white-space: nowrap; text-transform: uppercase;">ACTUAL IN</strong>
                                 <div style="flex-grow: 1; display: flex; flex-direction: column; align-items: center; justify-content: flex-end; position: relative; min-width: 0;">
                                     <div class="sig-wrapper sig-mat-guard-in guard-scan-sig" ${guardInSlot.imageAttribute} style="height: 9.5mm; display: flex; align-items: end; justify-content: center; width: 100%;"></div>
-                                    <span class="guard-scan-time vActIn" style="display: block; text-align: center; font-size: 7px; font-weight: 700; min-height: 3.5mm; line-height: 1;">${pass.actualIn ? new Date(pass.actualIn).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }) : '—'}</span>
+                                    <span class="guard-scan-time vActIn" style="display: block; text-align: center; font-size: 7px; font-weight: 700; min-height: 3.5mm; line-height: 1;">${matSafeTime(pass.actualIn)}</span>
                                     <div style="width: 100%; border-top: 1px solid #111827; margin-top: 0.2mm; margin-bottom: 0.2mm;"></div>
                                     <small class="name sig-mat-guard-in-name guard-scan-name" ${guardInSlot.nameAttribute} style="display: block; text-align: center; font-size: 5.4px; color: #4b5563; font-weight: bold; width: 100%; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;">${materialEscape(getGuardScanName(pass, 'TIME_IN')) || 'Guard'}</small>
                                 </div>
@@ -955,32 +965,9 @@ function renderDigitalView(p) {
                 sections.push(`<div class="digital-subsection"><div class="digital-subsection-title">Decision Remarks</div><ul class="digital-remarks-list">${decisionRemarks}</ul></div>`);
             }
 
-            // --- Proof photos placeholder (lazy-loaded after render) ---
-            if (isMaterial && Array.isArray(p.proofFileIds) && p.proofFileIds.length > 0) {
-                sections.push(`<div class="digital-subsection"><div class="digital-subsection-title">Material Release Photo Proof</div><div id="digitalProofPhotos" class="digital-proof-grid"></div></div>`);
-            }
-
             area.innerHTML = sections.join('');
-
-            // Lazy-load proof photos into the digital view (mirrors materialProofsGallery loader).
-            const proofGrid = document.getElementById('digitalProofPhotos');
-            if (proofGrid && isMaterial && Array.isArray(p.proofFileIds)) {
-                p.proofFileIds.forEach((fileId, i) => {
-                    const cell = document.createElement('div');
-                    cell.className = 'digital-proof-cell';
-                    cell.innerHTML = `<div class="text-xs text-slate-400 font-semibold"><i class="fas fa-spinner fa-spin mr-1"></i>Loading Photo ${i + 1}...</div>`;
-                    proofGrid.appendChild(cell);
-                    ApiClient.blob(`/signatures/${fileId}`).then(blob => {
-                        const reader = new FileReader();
-                        reader.onload = function (e) {
-                            cell.innerHTML = `<img src="${e.target.result}" class="w-full h-full object-cover max-h-[220px]" onclick="viewFullScreenImage('${e.target.result.replace(/'/g, "\\'")}')">`;
-                        };
-                        reader.readAsDataURL(blob);
-                    }).catch(() => {
-                        cell.innerHTML = `<div class="text-xs text-red-500 font-semibold p-4 text-center"><i class="fas fa-exclamation-circle mr-1"></i>Failed to load photo</div>`;
-                    });
-                });
-            }
+            // Proof photos are shown in #materialProofsGallery (rendered separately in viewPass)
+            // which setDocumentViewMode already hides in form view. No rendering needed here.
         }
 
 async function viewPass(id, isReviewing = false) {
@@ -1496,7 +1483,8 @@ async function viewPass(id, isReviewing = false) {
                                 btnApprove.onclick = approveCurrentPass;
                             }
                         }
-                        if (btnReject) btnReject.classList.remove('hidden');
+                        // GA120 (Miss Joy) uses Cancel instead of Reject.
+                        if (btnReject) btnReject.classList.toggle('hidden', currentUser.id === 'GA120');
                         resetApprovalSignatureComposer();
                         showSignatureSource('upload');
                     }

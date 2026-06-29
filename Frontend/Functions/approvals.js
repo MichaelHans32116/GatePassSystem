@@ -164,6 +164,15 @@ async function cancelCurrentPass() {
     const pass = findGatePassRecord();
     if (!pass) return;
 
+    const area = document.getElementById('cancelGatePassArea');
+    // First click: expand the cancel area and wait for the user to type a reason.
+    if (area && area.classList.contains('hidden')) {
+        area.classList.remove('hidden');
+        area.classList.add('flex');
+        document.getElementById('cancelGatePassRemarks')?.focus();
+        return;
+    }
+
     const remarksInput = document.getElementById('cancelGatePassRemarks');
     const resultBox = document.getElementById('decisionRemarksResult');
     const remarks = (remarksInput?.value || '').trim();

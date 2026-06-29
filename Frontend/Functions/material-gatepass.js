@@ -189,8 +189,22 @@ function hasUnconfirmedAssociateRows(formTypeCode) {
     const body = document.getElementById(associateBodyId(formTypeCode));
     if (!body) return false;
     return [...body.querySelectorAll('.associate-row')]
-        .some(row => !row.dataset.employeeId &&
-            (row.querySelector('[data-associate-search]')?.value || '').trim() !== '');
+        .some(row => {
+            if (row.dataset.employeeId) return false; // already confirmed
+            const inputVal = (row.querySelector('[data-associate-search]')?.value || '').trim();
+            if (!inputVal) return false; // empty rows are silently skipped by collectAssociates
+            // Try to auto-confirm if the display text still matches a cached employee
+            // (handles the rare case where oninput cleared dataset.employeeId after selection).
+            const match = associateDirectoryCache.find(e =>
+                `${e.fullName} (${e.employeeId})` === inputVal ||
+                (e.fullName || '').toLowerCase() === inputVal.toLowerCase()
+            );
+            if (match) {
+                selectAssociate(row.id, match.employeeRecordId);
+                return false;
+            }
+            return true; // genuinely unconfirmed row
+        });
 }
 
 function resetAssociateRows(formTypeCode) {
