@@ -649,6 +649,17 @@
                                 <textarea id="materialRemarks" maxlength="1000" class="h-20 w-full resize-none rounded border border-gray-300 p-2.5 text-sm focus:border-mpiBlue focus:ring-1 focus:ring-mpiBlue" placeholder="Optional control or release remarks"></textarea>
                             </div>
 
+                            <!-- Vehicle Option -->
+                            <div class="bg-gray-50 rounded border border-gray-200 p-4">
+                                <label class="flex items-center space-x-3 cursor-pointer select-none">
+                                    <input type="checkbox" id="matNeedVehicle" onchange="toggleMaterialVehicleFields()" class="w-4 h-4 text-mpiBlue rounded border-gray-300 focus:ring-mpiBlue">
+                                    <span class="font-semibold text-sm text-gray-800">Company Vehicle Needed</span>
+                                </label>
+                                <div id="matVehicleFields" class="hidden mt-3 pt-3 border-t border-gray-200">
+                                    <p class="text-xs text-blue-700 bg-blue-50 border border-blue-200 rounded px-3 py-2"><i class="fas fa-info-circle mr-1"></i>HRAD will assign a company vehicle and driver after the gate pass is approved.</p>
+                                </div>
+                            </div>
+
                             <div class="prepared-signature-panel">
                                 <div>
                                     <h3 class="text-xs font-bold uppercase tracking-wide text-gray-700">Prepared By Signature <span class="font-normal normal-case text-gray-400">(optional)</span></h3>
@@ -1381,14 +1392,14 @@
     <script src="Frontend/Functions/mock-data.js?v=20260624-7.2"></script>
     <script src="Frontend/Connectors/api-client.js?v=20260624-7.2"></script>
     <script src="Frontend/Functions/signature.js?v=20260629-bugfix"></script>
-    <script src="Frontend/Functions/material-gatepass.js?v=20260629-bugfix2"></script>
-    <script src="Frontend/Functions/modal.js?v=20260629-bugfix2"></script>
+    <script src="Frontend/Functions/material-gatepass.js?v=20260629-phase111"></script>
+    <script src="Frontend/Functions/modal.js?v=20260629-phase111"></script>
     <script src="Frontend/Functions/gatepass.js?v=20260629-phase11"></script>
-    <script src="Frontend/Functions/approvals.js?v=20260629-bugfix2"></script>
+    <script src="Frontend/Functions/approvals.js?v=20260629-phase111"></script>
     <script src="Frontend/Functions/scanner.js?v=20260629-bugfix"></script>
     <script src="Frontend/Functions/admin.js?v=20260624-7.2"></script>
     <script src="Frontend/Functions/navigation.js?v=20260624-7.2"></script>
-    <script src="Frontend/Functions/calendar.js?v=20260629-bugfix2"></script>
+    <script src="Frontend/Functions/calendar.js?v=20260629-phase111"></script>
     <script src="Frontend/Functions/auth.js?v=20260629-bugfix"></script>
     <script src="Frontend/Functions/app.js?v=20260629-bugfix"></script>
 </body>

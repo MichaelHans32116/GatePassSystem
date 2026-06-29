@@ -46,6 +46,12 @@ public sealed class CreateMaterialGatePassRequest
 
     public long? PreparedBySignatureFileId { get; init; }
 
+    [Required]
+    public string VehicleUsageCode { get; init; } = "NONE";
+
+    [StringLength(255)]
+    public string? PrivateVehicleDetails { get; init; }
+
     public IReadOnlyList<long> ProofFileIds { get; init; } = [];
 
     [Required, MinLength(1), MaxLength(20)]

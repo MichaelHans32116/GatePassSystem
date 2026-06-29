@@ -86,9 +86,9 @@ public sealed class ApprovalRepository(
                           )
                       )
                   )
-                  AND request_row.gate_pass_status_code = CONCAT(
-                      'PENDING_',
-                      step.approval_step_code
+                  AND (
+                      request_row.gate_pass_status_code = CONCAT('PENDING_', step.approval_step_code)
+                      OR (request_row.gate_pass_status_code = 'ON_HOLD' AND step.approval_step_code = 'HRAD_ASSIGN')
                   )
                 ORDER BY request_row.applied_at, step.approval_step_id;
                 """,

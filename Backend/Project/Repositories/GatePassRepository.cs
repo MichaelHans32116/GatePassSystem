@@ -90,6 +90,8 @@ public sealed class GatePassRepository(
                             authorizedEmployee.DepartmentId!.Value,
                         p_form_date = request.FormDate.ToDateTime(TimeOnly.MinValue),
                         p_material_remarks = request.Remarks,
+                        p_vehicle_usage_code = request.VehicleUsageCode,
+                        p_private_vehicle_details = request.PrivateVehicleDetails,
                         p_items_json = JsonSerializer.Serialize(
                             request.Items,
                             new JsonSerializerOptions

@@ -253,16 +253,34 @@ function initializeMaterialGatePassForm() {
         addMaterialItemRow();
     }
 
+    const vehCheck = document.getElementById('matNeedVehicle');
+    if (vehCheck) vehCheck.checked = false;
+    const vehFields = document.getElementById('matVehicleFields');
+    if (vehFields) vehFields.classList.add('hidden');
+    updateMaterialRouteText();
+    resetMaterialProofState();
+}
+
+function updateMaterialRouteText() {
     const routeText = document.getElementById('materialApprovalRouteText');
-    if (routeText) {
-        const activeUser = typeof currentUser !== 'undefined' ? currentUser : null;
-        routeText.innerText = (activeUser?.roles || []).includes(
-            'IMMEDIATE_SUPERIOR'
-        )
-            ? 'PAS'
+    if (!routeText) return;
+    const activeUser = typeof currentUser !== 'undefined' ? currentUser : null;
+    const isSuperior = (activeUser?.roles || []).includes('IMMEDIATE_SUPERIOR');
+    const needsVehicle = document.getElementById('matNeedVehicle')?.checked;
+    if (isSuperior) {
+        routeText.innerText = needsVehicle ? 'HRAD Assignment → PAS' : 'PAS';
+    } else {
+        routeText.innerText = needsVehicle
+            ? 'Immediate Superior → HRAD Assignment → PAS'
             : 'Immediate Superior → PAS';
     }
-    resetMaterialProofState();
+}
+
+function toggleMaterialVehicleFields() {
+    const checked = document.getElementById('matNeedVehicle')?.checked;
+    const fields = document.getElementById('matVehicleFields');
+    if (fields) fields.classList.toggle('hidden', !checked);
+    updateMaterialRouteText();
 }
 
 async function loadMaterialEmployees() {
@@ -774,11 +792,13 @@ async function submitMaterialGatePass(event) {
             }
         }
 
+        const needsVehicle = document.getElementById('matNeedVehicle')?.checked;
         const created = await ApiClient.post('/form-requests/material', {
             requesterDepartmentId,
             authorizedEmployeeId: authorizedEmployee.employeeRecordId,
             formDate: document.getElementById('materialFormDate').value,
             remarks: document.getElementById('materialRemarks').value.trim() || null,
+            vehicleUsageCode: needsVehicle ? 'COMPANY' : 'NONE',
             preparedBySignatureFileId: signatureFileId,
             proofFileIds,
             items,
@@ -946,6 +966,7 @@ window.handlePreparedSignatureUpload = handlePreparedSignatureUpload;
 window.clearPreparedSignature = clearPreparedSignature;
 window.uploadPreparedSignature = uploadPreparedSignature;
 window.submitMaterialGatePass = submitMaterialGatePass;
+window.toggleMaterialVehicleFields = toggleMaterialVehicleFields;
 window.showMaterialPreparedSignatureSource = showMaterialPreparedSignatureSource;
 window.clearMaterialPreparedSignaturePad = clearMaterialPreparedSignaturePad;
 window.useMaterialPreparedDrawnSignature = useMaterialPreparedDrawnSignature;

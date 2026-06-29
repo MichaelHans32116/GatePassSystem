@@ -270,9 +270,12 @@ public sealed class GatePassService(
         var requesterIsImmediateSuperior = requester.Roles.Contains(
             "IMMEDIATE_SUPERIOR",
             StringComparer.OrdinalIgnoreCase);
-        string[] routeCodes = requesterIsImmediateSuperior
-            ? ["PAS"]
-            : ["SUPERIOR", "PAS"];
+        var usesCompanyVehicle = request.VehicleUsageCode.Equals(
+            "COMPANY", StringComparison.OrdinalIgnoreCase);
+        var routeCodes = new List<string>();
+        if (!requesterIsImmediateSuperior) routeCodes.Add("SUPERIOR");
+        if (usesCompanyVehicle) routeCodes.Add("HRAD_ASSIGN");
+        routeCodes.Add("PAS");
         var route = new List<(string StepCode, long ApproverUserId)>();
 
         foreach (var stepCode in routeCodes)
@@ -290,9 +293,12 @@ public sealed class GatePassService(
             {
                 return ServiceResult<GatePassCreationResult>.Failure(
                     "APPROVER_NOT_CONFIGURED",
-                    stepCode == "PAS"
-                        ? "No active PAS approver is configured."
-                        : "No active immediate superior is configured for this requester.");
+                    stepCode switch
+                    {
+                        "PAS" => "No active PAS approver is configured.",
+                        "HRAD_ASSIGN" => "No active HRAD approver is configured.",
+                        _ => "No active immediate superior is configured for this requester."
+                    });
             }
 
             route.Add((stepCode, approverId.Value));

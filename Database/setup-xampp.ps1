@@ -225,6 +225,14 @@ if ($databaseExists -eq 0) {
             Write-Host 'Applying database migration 016...' -ForegroundColor Yellow
             Invoke-MySqlSource 'Database\Migrations\016_gate_pass_cancel_status.sql'
         }
+
+        $materialVehicleApplied = Invoke-MySqlScalarInt `
+            "SELECT COUNT(*) FROM gate_pass_system.tbl_schema_versions WHERE version_no='017';"
+
+        if ($materialVehicleApplied -eq 0) {
+            Write-Host 'Applying database migration 017...' -ForegroundColor Yellow
+            Invoke-MySqlSource 'Database\Migrations\017_material_gate_pass_vehicle.sql'
+        }
     }
 }
 

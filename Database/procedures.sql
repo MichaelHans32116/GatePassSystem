@@ -170,6 +170,8 @@ CREATE PROCEDURE SP_CreateMaterialGatePass(
     IN p_authorized_department_id BIGINT UNSIGNED,
     IN p_form_date DATE,
     IN p_material_remarks VARCHAR(1000),
+    IN p_vehicle_usage_code VARCHAR(30),
+    IN p_private_vehicle_details VARCHAR(255),
     IN p_items_json LONGTEXT,
     IN p_trace_id VARCHAR(100)
 )
@@ -263,6 +265,7 @@ BEGIN
         expected_in_at,
         will_return,
         vehicle_usage_code,
+        private_vehicle_details,
         gate_pass_status_code,
         requires_superior_approval,
         requires_president_approval
@@ -284,7 +287,8 @@ BEGIN
         TIMESTAMP(p_form_date, '00:00:00'),
         NULL,
         FALSE,
-        'NONE',
+        COALESCE(NULLIF(TRIM(p_vehicle_usage_code), ''), 'NONE'),
+        NULLIF(TRIM(p_private_vehicle_details), ''),
         'DRAFT',
         TRUE,
         FALSE
