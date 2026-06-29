@@ -1257,7 +1257,7 @@ async function showPublicDriverCalendar() {
         document.getElementById('navGroupApprovals').style.display = 'none';
         document.getElementById('navGroupSecurity').style.display = 'none';
         document.getElementById('navGroupAdmin').style.display = 'none';
-        document.getElementById('navGroupHR').style.display = 'none';
+        document.getElementById('navGroupHRAD').style.display = 'none';
 
         // Add guest navigation back to login if it doesn't exist
         let backToLoginBtn = document.getElementById('navItemGuestLogin');
