@@ -894,6 +894,23 @@ function renderDigitalView(p) {
             }
             sections.push(`<div class="digital-field-grid">${core.join('')}</div>`);
 
+            // --- Associates / Companions (full list, screen-only) ---
+            // index 0 is the primary (requester for Person, authorized employee for
+            // Material); show any additional companions so the complete list is always
+            // readable here even when the printable form paginates them.
+            const allAssociateNames = (typeof getAssociateNames === 'function') ? getAssociateNames(p) : [];
+            const extraCompanions = allAssociateNames.slice(1);
+            if (extraCompanions.length > 0) {
+                const items = extraCompanions
+                    .map(name => `<li>${esc(name)}</li>`)
+                    .join('');
+                sections.push(
+                    `<div class="digital-subsection"><div class="digital-subsection-title">`
+                    + `Additional Companions (${extraCompanions.length})</div>`
+                    + `<ul class="digital-remarks-list">${items}</ul></div>`
+                );
+            }
+
             // --- Material items table ---
             if (isMaterial) {
                 const items = p.materialItems || [];
@@ -2098,21 +2115,33 @@ async function printSelectedLogs() {
                     pagesPairs.push({ front: pages[i], back: null });
                 }
             } else {
-                const front = await renderPersonGatePassClone(p);
-                const back = front.querySelector('.qr-back-page');
-                if (back) front.removeChild(back);
+                // Phase 11 req5: paginate associates at 5 names per sheet; >5 spills
+                // onto continuation A6 sheets. Common case (<=5) = exactly one sheet.
+                const associatePages = (typeof buildAssociateNamePages === 'function')
+                    ? Math.max(1, buildAssociateNamePages(getAssociateNames(p)).length)
+                    : 1;
+                for (let ap = 0; ap < associatePages; ap++) {
+                    p._associatePageIndex = ap;
+                    const front = await renderPersonGatePassClone(p);
+                    // Only the first sheet carries the QR back page; continuation
+                    // sheets (overflow companions) drop it.
+                    const back = ap === 0 ? front.querySelector('.qr-back-page') : null;
+                    const existingBack = front.querySelector('.qr-back-page');
+                    if (existingBack) front.removeChild(existingBack);
 
-                // Enforce A6 bounds on Person Pass so it stacks nicely
-                front.style.width = '148mm';
-                front.style.height = '105mm';
-                front.style.border = '1px dashed #ccc';
-                if(back) {
-                    back.style.width = '148mm';
-                    back.style.height = '105mm';
-                    back.style.border = '1px dashed #ccc';
+                    // Enforce A6 bounds on Person Pass so it stacks nicely
+                    front.style.width = '148mm';
+                    front.style.height = '105mm';
+                    front.style.border = '1px dashed #ccc';
+                    if (back) {
+                        back.style.width = '148mm';
+                        back.style.height = '105mm';
+                        back.style.border = '1px dashed #ccc';
+                    }
+
+                    pagesPairs.push({ front, back });
                 }
-
-                pagesPairs.push({ front, back });
+                delete p._associatePageIndex;
             }
         }
 

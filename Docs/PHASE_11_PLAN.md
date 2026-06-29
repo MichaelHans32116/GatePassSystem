@@ -20,9 +20,11 @@ now stamped onto the approval step so it shows in the remarks panel; compress fa
 HttpClient timeout.
 
 ### Known limitations / follow-ups
-- **Req 5 print overflow:** >5 associates onto a *new printed sheet* is only partially wired (compact rendering +
-  `buildAssociateNamePages` helper + `clone.dataset.associatePages` exist; the batch-print loop that emits extra
-  A4 sheets per `_associatePageIndex` is not yet wired). ≤5 companions render compactly and fit.
+- **Req 5 print overflow:** the **batch print** path (`printSelectedLogs`) now paginates associates at 5 names
+  per A6 sheet and spills >5 onto continuation sheets (only the first sheet carries the QR back page). The
+  **Digital view** lists the full companion set on screen. The **single-pass** print (`window.print()` on the
+  live `#printableArea`) still renders companions compactly in the one cell (fits ≤5 cleanly); true single-pass
+  pagination onto extra sheets needs a visual print iteration and is the remaining follow-up.
 - **HRAD canceller hardcoded** to username `GA120` in two places (`ApprovalsController.IsHradCanceller` and
   `modal.js setCancelGatePassControls`). If the HRAD approver changes, update both (or move to a permission/role).
 - **Digital view** does not list Person-pass companions (shows "Requested By" only); could add an associates row.
