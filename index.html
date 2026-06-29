@@ -32,7 +32,7 @@
             }
         }
     </script>
-    <link rel="stylesheet" href="Frontend/Design/styles.css?v=20260628-day-grid">
+    <link rel="stylesheet" href="Frontend/Design/styles.css?v=20260629-phase11">
 </head>
 <body class="h-screen overflow-hidden flex flex-col font-sans text-sm md:text-base">
 
@@ -480,6 +480,19 @@
                                 <textarea id="gpPurpose" class="w-full border border-gray-300 p-2.5 rounded focus:ring-1 focus:ring-mpiBlue focus:border-mpiBlue transition text-sm h-20 resize-none" required></textarea>
                             </div>
 
+                            <!-- Associates / Companions (Phase 11 req5) -->
+                            <div class="overflow-hidden rounded-lg border border-gray-200">
+                                <div class="flex items-center justify-between border-b bg-gray-50 px-4 py-3">
+                                    <div>
+                                        <h3 class="text-sm font-bold text-gray-800">Additional Companions</h3>
+                                        <p class="text-[10px] text-gray-500">You (the requester) are the primary associate. Add co-travellers leaving with you (max 19).</p>
+                                    </div>
+                                    <button type="button" onclick="addAssociateRow('PERSON_GATE_PASS')" class="rounded bg-mpiBlue px-3 py-2 text-xs font-bold text-white hover:bg-mpiDark"><i class="fas fa-user-plus mr-1"></i>Add companion</button>
+                                </div>
+                                <div id="personAssociatesBody" class="divide-y divide-gray-100"></div>
+                                <p class="px-4 py-2 text-[10px] text-gray-400" id="personAssociatesEmpty">No additional companions added.</p>
+                            </div>
+
                             <div class="bg-yellow-50 border border-yellow-200 p-4 rounded relative overflow-hidden">
                                 <label class="block text-xs font-semibold text-gray-800 mb-2">Will you return to the company today?</label>
                                 <div class="flex flex-col sm:flex-row sm:space-x-6 space-y-2 sm:space-y-0">
@@ -605,6 +618,19 @@
                                         <tbody id="materialItemsBody"></tbody>
                                     </table>
                                 </div>
+                            </div>
+
+                            <!-- Associates / Companions (Phase 11 req5) -->
+                            <div class="overflow-hidden rounded-lg border border-gray-200">
+                                <div class="flex items-center justify-between border-b bg-gray-50 px-4 py-3">
+                                    <div>
+                                        <h3 class="text-sm font-bold text-gray-800">Additional Companions</h3>
+                                        <p class="text-[10px] text-gray-500">The employee selected above is the primary associate. Add co-carriers if more than one person brings out the items (max 19).</p>
+                                    </div>
+                                    <button type="button" onclick="addAssociateRow('MATERIAL_GATE_PASS')" class="rounded bg-mpiBlue px-3 py-2 text-xs font-bold text-white hover:bg-mpiDark"><i class="fas fa-user-plus mr-1"></i>Add companion</button>
+                                </div>
+                                <div id="materialAssociatesBody" class="divide-y divide-gray-100"></div>
+                                <p class="px-4 py-2 text-[10px] text-gray-400" id="materialAssociatesEmpty">No additional companions added.</p>
                             </div>
 
                             <!-- Photo Proofs -->
@@ -847,8 +873,12 @@
             <div class="w-full bg-white rounded-t-lg border-b border-gray-200 p-4 flex justify-between items-center z-10 print-hide cursor-move" id="modalDragHandle">
                 <h2 class="font-bold text-lg text-gray-800"><i class="fas fa-arrows-alt mr-2 text-gray-400"></i>Document Review</h2>
                 <div class="flex items-center space-x-2">
+                    <div id="docViewModeToggle" class="doc-view-toggle inline-flex rounded border border-gray-200 bg-gray-100 p-0.5 mr-1" role="group" aria-label="Document view mode">
+                        <button type="button" id="docViewDigitalBtn" onclick="setDocumentViewMode('digital')" class="doc-view-toggle-btn is-active text-xs font-semibold px-3 py-1.5 rounded transition" aria-pressed="true"><i class="fas fa-list-ul mr-1"></i> Digital</button>
+                        <button type="button" id="docViewFormBtn" onclick="setDocumentViewMode('form')" class="doc-view-toggle-btn text-xs font-semibold px-3 py-1.5 rounded transition" aria-pressed="false"><i class="fas fa-file-alt mr-1"></i> Printable Form</button>
+                    </div>
                     <button id="modalExpandButton" onclick="toggleMaximizeModal()" class="text-sm font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded transition" title="Expand document workspace"><i id="modalExpandIcon" class="fas fa-window-maximize mr-1"></i> <span id="modalExpandText">Expand</span></button>
-                    <button onclick="window.print()" class="text-sm font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded transition"><i class="fas fa-print mr-1"></i> Print</button>
+                    <button id="modalPrintButton" onclick="printCurrentDocument()" class="text-sm font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded transition"><i class="fas fa-print mr-1"></i> Print</button>
                     <button onclick="closeModal()" class="w-8 h-8 rounded hover:bg-red-50 hover:text-red-600 text-gray-500 flex items-center justify-center transition"><i class="fas fa-times text-xl"></i></button>
                 </div>
             </div>
@@ -861,8 +891,21 @@
                 </div>
             </div>
 
+            <!-- DECISION REMARKS / FEEDBACK (rejection reason + per-step comments; never prints) -->
+            <div id="decisionRemarksPanel" class="w-full bg-red-50 border-b border-red-200 p-3 print-hide hidden">
+                <h3 class="font-bold text-xs text-red-700 mb-2 uppercase tracking-wider"><i class="fas fa-comment-dots mr-1"></i> Decision Remarks / Feedback</h3>
+                <div class="space-y-2 text-xs text-gray-700" id="decisionRemarksBody">
+                    <!-- JS Injected remarks -->
+                </div>
+            </div>
+
             <!-- Scrollable Content Area -->
             <div class="modal-scroll-area w-full bg-gray-100 p-4 md:p-6 print:p-0 print:overflow-visible" id="modalScrollArea">
+
+                <!-- DIGITAL (READ-ONLY) VIEW — default; populated by renderDigitalView() in modal.js -->
+                <div id="digitalViewArea" class="digital-view-area print-hide w-full max-w-3xl mx-auto bg-white rounded-lg border border-gray-200 shadow-sm p-4 md:p-6">
+                    <!-- JS injected read-only field list -->
+                </div>
 
                 <!-- THE ACTUAL PRINT FORM (A6 Layout precisely matched to image_b33085.jpg) -->
                 <div id="printableArea" class="print-form person-print-form shadow-lg">
@@ -893,8 +936,9 @@
                                     <!-- Row 1: Name & Date -->
                                     <tr class="border-b-nested">
                                         <td class="align-top border-r-nested" style="width: 65%; height: 10mm;">
-                                            <div class="text-[7px] uppercase text-gray-500 font-semibold">NAME OF ASSOCIATES</div>
+                                            <div class="text-[7px] uppercase text-gray-500 font-semibold person-associates-label">NAME OF ASSOCIATES</div>
                                             <div id="vName" class="font-bold text-xs uppercase pl-1 pt-0.5"></div>
+                                            <div id="vAssociatesExtra" class="person-associates-extra pl-1"></div>
                                         </td>
                                         <td class="align-top" style="width: 35%; height: 10mm;">
                                             <div class="text-[7px] uppercase text-gray-500 font-semibold">DATE FILED</div>
@@ -1091,9 +1135,24 @@
                     </div>
                 </div>
 
+                <!-- Inline reason/remarks composer (replaces blocking window.prompt for Reject / Hold) -->
+                <div id="decisionReasonComposer" class="w-full hidden">
+                    <label id="decisionReasonLabel" for="decisionReasonInput" class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Reason / Remarks</label>
+                    <textarea id="decisionReasonInput" rows="3" maxlength="1000" class="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none focus:border-mpiBlue" placeholder="Enter your reason or remarks..."></textarea>
+                    <p id="decisionReasonError" class="hidden text-[11px] font-semibold text-red-600 mt-1">A reason is required.</p>
+                </div>
+                <!-- HRAD Cancel Gate Pass (remarks REQUIRED) + shared decision-remarks result container -->
+                <div id="cancelGatePassArea" class="bg-red-50 border border-red-200 p-4 rounded-xl hidden flex-col space-y-2">
+                    <h3 class="font-extrabold text-red-800 text-sm mb-1"><i class="fas fa-ban mr-1"></i> Cancel Gate Pass</h3>
+                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1" for="cancelGatePassRemarks">Cancellation Remarks <span class="text-red-600">*</span></label>
+                    <textarea id="cancelGatePassRemarks" rows="2" maxlength="1000" class="w-full bg-white border border-gray-300 p-2 rounded text-xs focus:outline-none focus:border-red-500" placeholder="Required: reason for cancelling this gate pass"></textarea>
+                </div>
+                <div id="decisionRemarksResult" class="hidden text-xs rounded-lg border p-3"></div>
+
                 <div id="approvalActionButtons" class="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2 w-full mt-auto pt-3 border-t border-gray-100">
                     <button onclick="closeModal()" class="px-4 py-2 rounded border border-gray-300 text-sm font-medium hover:bg-gray-200 transition">Cancel</button>
                     <button id="holdRequestButton" onclick="holdCurrentPass()" class="bg-amber-600 hover:bg-amber-700 text-white px-5 py-2 rounded shadow text-sm font-bold transition hidden"><i class="fas fa-pause-circle mr-1"></i> Put on Hold</button>
+                    <button id="cancelGatePassButton" onclick="cancelCurrentPass()" class="bg-rose-700 hover:bg-rose-800 text-white px-5 py-2 rounded shadow text-sm font-bold transition hidden"><i class="fas fa-ban mr-1"></i> Cancel Gate Pass</button>
                     <button onclick="rejectCurrentPass()" class="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded shadow text-sm font-bold transition"><i class="fas fa-times-circle mr-1"></i> Reject</button>
                     <button id="approveRequestButton" onclick="approveCurrentPass()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded shadow text-sm font-bold transition"><i class="fas fa-check-circle mr-1"></i> Approve Request</button>
                 </div>
@@ -1322,10 +1381,10 @@
     <script src="Frontend/Functions/mock-data.js?v=20260624-7.2"></script>
     <script src="Frontend/Connectors/api-client.js?v=20260624-7.2"></script>
     <script src="Frontend/Functions/signature.js?v=20260629-bugfix"></script>
-    <script src="Frontend/Functions/material-gatepass.js?v=20260629-bugfix"></script>
-    <script src="Frontend/Functions/modal.js?v=20260629-bugfix"></script>
-    <script src="Frontend/Functions/gatepass.js?v=20260629-bugfix"></script>
-    <script src="Frontend/Functions/approvals.js?v=20260629-bugfix"></script>
+    <script src="Frontend/Functions/material-gatepass.js?v=20260629-phase11"></script>
+    <script src="Frontend/Functions/modal.js?v=20260629-phase11"></script>
+    <script src="Frontend/Functions/gatepass.js?v=20260629-phase11"></script>
+    <script src="Frontend/Functions/approvals.js?v=20260629-phase11"></script>
     <script src="Frontend/Functions/scanner.js?v=20260629-bugfix"></script>
     <script src="Frontend/Functions/admin.js?v=20260624-7.2"></script>
     <script src="Frontend/Functions/navigation.js?v=20260624-7.2"></script>

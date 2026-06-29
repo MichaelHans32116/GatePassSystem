@@ -627,6 +627,30 @@ CREATE TABLE IF NOT EXISTS tbl_material_gate_pass_items (
     INDEX ix_material_item_description (description(120))
 ) ENGINE=InnoDB;
 
+CREATE TABLE IF NOT EXISTS tbl_gate_pass_associates (
+    associate_id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
+    gate_pass_id BIGINT UNSIGNED NOT NULL,
+    line_no INT UNSIGNED NOT NULL,
+    employee_id BIGINT UNSIGNED NULL,
+    department_id BIGINT UNSIGNED NULL,
+    full_name VARCHAR(255) NOT NULL,
+    created_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    updated_at DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+        ON UPDATE CURRENT_TIMESTAMP,
+    CONSTRAINT fk_gate_pass_associate_request
+        FOREIGN KEY (gate_pass_id)
+        REFERENCES tbl_gate_pass_requests(gate_pass_id)
+        ON DELETE CASCADE,
+    CONSTRAINT fk_gate_pass_associate_employee
+        FOREIGN KEY (employee_id)
+        REFERENCES tbl_employees(employee_record_id),
+    CONSTRAINT fk_gate_pass_associate_department
+        FOREIGN KEY (department_id)
+        REFERENCES tbl_departments(department_id),
+    UNIQUE KEY ux_gate_pass_associate_line (gate_pass_id, line_no),
+    INDEX ix_gate_pass_associate_employee (employee_id)
+) ENGINE=InnoDB;
+
 CREATE TABLE IF NOT EXISTS tbl_vehicle_reservations (
     reservation_id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
     gate_pass_id BIGINT UNSIGNED NOT NULL UNIQUE,

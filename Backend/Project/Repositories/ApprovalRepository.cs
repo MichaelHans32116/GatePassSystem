@@ -225,6 +225,15 @@ public sealed class ApprovalRepository(
                         @Comment,
                         @TraceId
                     );
+
+                    -- Stamp the hold reason onto the current pending step so it
+                    -- surfaces in the Decision Remarks panel. The step stays
+                    -- PENDING so the resume-from-hold flow still finds it.
+                    UPDATE tbl_gate_pass_approval_steps
+                    SET comments = NULLIF(TRIM(@Comment), '')
+                    WHERE gate_pass_id = @GatePassId
+                      AND approval_step_code = @ApprovalStepCode
+                      AND approval_status_code = 'PENDING';
                     """,
                     new
                     {
@@ -232,6 +241,7 @@ public sealed class ApprovalRepository(
                         PreviousStatus = current.CurrentStatus,
                         ActorUserId = actorUserId,
                         Comment = comment ?? "Put on hold by HR.",
+                        ApprovalStepCode = current.ApprovalStepCode,
                         TraceId = traceId
                     },
                     transaction,
@@ -530,6 +540,129 @@ public sealed class ApprovalRepository(
             await transaction.RollbackAsync(cancellationToken);
             throw;
         }
+    }
+
+    public async Task<ApprovalMutation?> CancelAsync(
+        long gatePassId,
+        long actorUserId,
+        string remarks,
+        string traceId,
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection =
+            await connectionFactory.OpenConnectionAsync(cancellationToken);
+        await using var transaction =
+            await connection.BeginTransactionAsync(cancellationToken);
+
+        try
+        {
+            // Lock the request row and read its current status + form type. Only
+            // non-terminal passes may be cancelled (terminal statuses already
+            // carry is_terminal = TRUE in tbl_gate_pass_statuses).
+            var current = await connection.QueryFirstOrDefaultAsync<CancelTarget>(
+                new CommandDefinition(
+                    """
+                    SELECT
+                        request_row.gate_pass_id AS GatePassId,
+                        request_row.form_type_code AS FormTypeCode,
+                        request_row.gate_pass_status_code AS CurrentStatus,
+                        status_row.is_terminal AS IsTerminal
+                    FROM tbl_gate_pass_requests request_row
+                    JOIN tbl_gate_pass_statuses status_row
+                        ON status_row.gate_pass_status_code =
+                           request_row.gate_pass_status_code
+                    WHERE request_row.gate_pass_id = @GatePassId
+                    FOR UPDATE;
+                    """,
+                    new { GatePassId = gatePassId },
+                    transaction,
+                    cancellationToken: cancellationToken));
+
+            if (current is null || current.IsTerminal)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                return null;
+            }
+
+            var cancelledAt = DateTime.UtcNow;
+
+            // 1. Move the request to the terminal CANCELLED status and record
+            //    the transition in the status history (remarks idiom matches
+            //    DecideAsync: NULLIF(TRIM(@Remarks), '')).
+            await connection.ExecuteAsync(new CommandDefinition(
+                """
+                UPDATE tbl_gate_pass_requests
+                SET gate_pass_status_code = 'CANCELLED',
+                    cancelled_at = @CancelledAt,
+                    version_no = version_no + 1
+                WHERE gate_pass_id = @GatePassId;
+
+                INSERT INTO tbl_gate_pass_status_history (
+                    gate_pass_id,
+                    from_status_code,
+                    to_status_code,
+                    changed_by_user_id,
+                    remarks,
+                    trace_id
+                ) VALUES (
+                    @GatePassId,
+                    @PreviousStatus,
+                    'CANCELLED',
+                    @ActorUserId,
+                    NULLIF(TRIM(@Remarks), ''),
+                    @TraceId
+                );
+                """,
+                new
+                {
+                    GatePassId = gatePassId,
+                    CancelledAt = cancelledAt,
+                    PreviousStatus = current.CurrentStatus,
+                    ActorUserId = actorUserId,
+                    Remarks = remarks,
+                    TraceId = traceId
+                },
+                transaction,
+                cancellationToken: cancellationToken));
+
+            // 2. Cancel any still-active vehicle reservation linked to this pass
+            //    so the vehicle is freed up (terminal reservation statuses are
+            //    left untouched).
+            await connection.ExecuteAsync(new CommandDefinition(
+                """
+                UPDATE tbl_vehicle_reservations reservation_row
+                JOIN tbl_reservation_statuses reservation_status
+                    ON reservation_status.reservation_status_code =
+                       reservation_row.reservation_status_code
+                SET reservation_row.reservation_status_code = 'CANCELLED'
+                WHERE reservation_row.gate_pass_id = @GatePassId
+                  AND reservation_status.is_terminal = FALSE;
+                """,
+                new { GatePassId = gatePassId },
+                transaction,
+                cancellationToken: cancellationToken));
+
+            await transaction.CommitAsync(cancellationToken);
+            return new ApprovalMutation(
+                gatePassId,
+                current.FormTypeCode,
+                current.CurrentStatus,
+                "CANCELLED",
+                null);
+        }
+        catch
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
+    }
+
+    private sealed class CancelTarget
+    {
+        public long GatePassId { get; init; }
+        public string FormTypeCode { get; init; } = "PERSON_GATE_PASS";
+        public string CurrentStatus { get; init; } = string.Empty;
+        public bool IsTerminal { get; init; }
     }
 
     private sealed class CurrentStep

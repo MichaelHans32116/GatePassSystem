@@ -27,6 +27,12 @@ public sealed class CreateGatePassRequest
     public string? PrivateVehicleDetails { get; init; }
 
     public long? DriverId { get; init; }
+
+    // Phase 11 / Requirement 5: optional additional associates/companions.
+    // The directory-selected companions who accompany the requester. These
+    // are stored line_no=2..N; line_no=1 is the primary (see service).
+    [MaxLength(20)]
+    public IReadOnlyList<AssociateRequest> Associates { get; init; } = [];
 }
 
 public sealed class CreateMaterialGatePassRequest
@@ -44,6 +50,12 @@ public sealed class CreateMaterialGatePassRequest
 
     [Required, MinLength(1), MaxLength(20)]
     public IReadOnlyList<MaterialGatePassItemRequest> Items { get; init; } = [];
+
+    // Phase 11 / Requirement 5: optional additional associates/companions.
+    // The AuthorizedEmployeeId above remains the PRIMARY (line_no=1); these
+    // are extra companions stored as line_no=2..N.
+    [MaxLength(20)]
+    public IReadOnlyList<AssociateRequest> Associates { get; init; } = [];
 }
 
 public sealed class MaterialGatePassItemRequest
@@ -59,6 +71,17 @@ public sealed class MaterialGatePassItemRequest
 
     [Required, StringLength(50)]
     public string Unit { get; init; } = string.Empty;
+}
+
+public sealed class AssociateRequest
+{
+    // Companions are chosen from the employee directory, so they carry an
+    // employee_record_id. The service resolves name/department from the
+    // directory; FullName here is accepted only as an optional display hint.
+    public long EmployeeId { get; init; }
+
+    [StringLength(255)]
+    public string? FullName { get; init; }
 }
 
 public sealed class GatePassQuery
@@ -91,6 +114,14 @@ public sealed record ApprovalDecisionResult(
     string NewStatus,
     string? NextApprovalStep,
     string? QrToken);
+
+public sealed record GatePassCancelRequest(
+    string? Remarks);
+
+public sealed record GatePassCancelResult(
+    long GatePassId,
+    string PreviousStatus,
+    string NewStatus);
 
 public sealed record SecurityScanRequest(
     string? QrToken,

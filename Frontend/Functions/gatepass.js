@@ -102,6 +102,45 @@ function getLatestScanByAction(scans = [], actionCode) {
         .sort((a, b) => new Date(b.scannedAt || 0) - new Date(a.scannedAt || 0))[0] || null;
 }
 
+// Normalize the associates/companions list for a gate pass (Phase 11 req5).
+// Returns [{ employeeId, departmentId, name }] where index 0 is the PRIMARY associate.
+// Falls back to the requester (Person) or authorized employee (Material) when the
+// backend has not (yet) returned an explicit associates array, so printing always works.
+function mapGatePassAssociates(record) {
+    const raw = Array.isArray(record.associates) ? record.associates : [];
+    const normalized = raw
+        .map(item => ({
+            employeeId: item.employeeId ?? item.employeeRecordId ?? null,
+            departmentId: item.departmentId ?? null,
+            name: (item.name || item.fullName || '').trim()
+        }))
+        .filter(item => item.name);
+    const isMaterial = (record.formTypeCode || 'PERSON_GATE_PASS') === 'MATERIAL_GATE_PASS';
+    if (normalized.length > 0) {
+        // Person passes store ONLY the additional companions (the requester is never
+        // an associate row), so the requester must lead the list as the primary name.
+        // Material passes already seed line_no=1 with the authorized employee.
+        if (!isMaterial) {
+            const requesterName = (record.fullName || '').trim();
+            if (requesterName && normalized[0].name !== requesterName) {
+                normalized.unshift({
+                    employeeId: null,
+                    departmentId: record.authorizedDepartmentId || null,
+                    name: requesterName
+                });
+            }
+        }
+        return normalized;
+    }
+
+    const primaryName = (isMaterial
+        ? (record.authorizedEmployeeName || record.fullName)
+        : record.fullName) || '';
+    return primaryName
+        ? [{ employeeId: null, departmentId: record.authorizedDepartmentId || null, name: primaryName.trim() }]
+        : [];
+}
+
 function mapApiGatePass(record) {
     const status = gatePassStatusLabels[record.gatePassStatusCode] || record.statusName || record.gatePassStatusCode;
     const vehicle = record.vehicleId || record.vehicleName
@@ -136,8 +175,10 @@ function mapApiGatePass(record) {
         authorizedEmployeeName: record.authorizedEmployeeName || null,
         authorizedDepartmentId: record.authorizedDepartmentId || null,
         authorizedDepartmentName: record.authorizedDepartmentName || null,
+        associates: mapGatePassAssociates(record),
         materialRemarks: record.materialRemarks || '',
         materialItems: record.materialItems || [],
+        proofFileIds: record.proofFileIds || [],
         dateFiled: formatDateTime(record.appliedAt || record.createdAt),
         destination: record.destination,
         expectedOut: formatDateTime(record.expectedOutAt, false),
@@ -323,6 +364,12 @@ async function submitGatePass(e) {
         return;
     }
 
+    if (typeof hasUnconfirmedAssociateRows === 'function' && hasUnconfirmedAssociateRows('PERSON_GATE_PASS')) {
+        showToast('Pick an employee for every companion row, or remove the empty rows.', 'error');
+        return;
+    }
+    const associates = typeof collectAssociates === 'function' ? collectAssociates('PERSON_GATE_PASS') : [];
+
     let vehicleUsageCode = 'NONE';
     let vehicleId = null;
     let driverId = null;
@@ -343,7 +390,8 @@ async function submitGatePass(e) {
         vehicleUsageCode,
         vehicleId,
         privateVehicleDetails,
-        driverId
+        driverId,
+        associates
     };
 
     submitButton.disabled = true;
@@ -351,6 +399,7 @@ async function submitGatePass(e) {
     try {
         const created = await ApiClient.post('/gate-pass-requests', payload);
         form.reset();
+        if (typeof resetAssociateRows === 'function') resetAssociateRows('PERSON_GATE_PASS');
         toggleVehicleFields();
         showToast(`Request ${created.gatePass.controlNo || created.gatePass.gatePassNo} submitted.`);
         await refreshApplicationState('submit-person-request');
@@ -686,6 +735,7 @@ window.visualViewport?.addEventListener('resize', renderExpandedEmployeeQr);
 
 window.isDatabaseSession = isDatabaseSession;
 window.mapApiGatePass = mapApiGatePass;
+window.mapGatePassAssociates = mapGatePassAssociates;
 window.setNowTime = setNowTime;
 window.handleVehicleChange = handleVehicleChange;
 window.toggleExpectedIn = toggleExpectedIn;

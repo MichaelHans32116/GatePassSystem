@@ -172,6 +172,45 @@ public sealed class SignatureRepository(
                             )
                         )
                   )
+                  OR EXISTS (
+                      SELECT 1
+                      FROM tbl_material_gate_pass_proofs proof_row
+                      JOIN tbl_gate_pass_requests proof_request
+                        ON proof_request.gate_pass_id =
+                           proof_row.gate_pass_id
+                      WHERE proof_row.signature_file_id =
+                            signature_file.signature_file_id
+                        AND (
+                            proof_request.requester_user_id = @UserId
+                            OR EXISTS (
+                                SELECT 1
+                                FROM tbl_gate_pass_approval_steps proof_viewer_step
+                                WHERE proof_viewer_step.gate_pass_id =
+                                      proof_request.gate_pass_id
+                                  AND proof_viewer_step.assigned_approver_user_id =
+                                      @UserId
+                            )
+                            OR (
+                                proof_request.requester_user_id <> @UserId
+                                AND proof_request.gate_pass_status_code =
+                                    'PENDING_PAS'
+                                AND EXISTS (
+                                    SELECT 1
+                                    FROM tbl_user_roles proof_viewer_role
+                                    JOIN tbl_role_permissions proof_permission
+                                      ON proof_permission.role_id =
+                                         proof_viewer_role.role_id
+                                    JOIN tbl_permissions permission_row
+                                      ON permission_row.permission_id =
+                                         proof_permission.permission_id
+                                    WHERE proof_viewer_role.user_id = @UserId
+                                      AND proof_viewer_role.is_active = TRUE
+                                      AND permission_row.permission_code =
+                                          'gatepass.note.pas'
+                                )
+                            )
+                        )
+                  )
               );
             """,
             new

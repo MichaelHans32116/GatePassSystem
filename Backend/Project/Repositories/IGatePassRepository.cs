@@ -11,6 +11,7 @@ public interface IGatePassRepository
         CreateGatePassRequest request,
         bool requiresSuperior,
         bool requiresPresident,
+        IReadOnlyList<AssociateRecord> associates,
         string traceId,
         CancellationToken cancellationToken = default);
 
@@ -18,6 +19,7 @@ public interface IGatePassRepository
         RequesterContext requester,
         EmployeeLookupRecord authorizedEmployee,
         CreateMaterialGatePassRequest request,
+        IReadOnlyList<AssociateRecord> associates,
         string traceId,
         CancellationToken cancellationToken = default);
 

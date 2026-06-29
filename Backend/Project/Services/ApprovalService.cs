@@ -97,4 +97,56 @@ public sealed class ApprovalService(
                 issuedQrToken));
     }
 
+    public async Task<ServiceResult<GatePassCancelResult>> CancelAsync(
+        long gatePassId,
+        long actorUserId,
+        GatePassCancelRequest request,
+        string traceId,
+        CancellationToken cancellationToken = default)
+    {
+        if (string.IsNullOrWhiteSpace(request.Remarks))
+        {
+            return ServiceResult<GatePassCancelResult>.Failure(
+                "CANCEL_REMARKS_REQUIRED",
+                "A cancellation remark is required.");
+        }
+
+        var mutation = await approvalRepository.CancelAsync(
+            gatePassId,
+            actorUserId,
+            request.Remarks.Trim(),
+            traceId,
+            cancellationToken);
+
+        if (mutation is null)
+        {
+            return ServiceResult<GatePassCancelResult>.Failure(
+                "CANCEL_NOT_AVAILABLE",
+                "This request can no longer be cancelled.");
+        }
+
+        await operationsRepository.WriteAuditAsync(
+            actorUserId,
+            "FORM_REQUEST_CANCELLED",
+            "FORM_REQUEST",
+            gatePassId,
+            JsonSerializer.Serialize(new
+            {
+                mutation.FormTypeCode,
+                mutation.PreviousStatus,
+                mutation.NewStatus,
+                Remarks = request.Remarks.Trim()
+            }),
+            null,
+            null,
+            traceId,
+            cancellationToken);
+
+        return ServiceResult<GatePassCancelResult>.Success(
+            new GatePassCancelResult(
+                gatePassId,
+                mutation.PreviousStatus,
+                mutation.NewStatus));
+    }
+
 }

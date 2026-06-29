@@ -43,6 +43,7 @@ services:
       Jwt__Key: ${GATEPASS_JWT_KEY:-DEVELOPMENT-ONLY-DOCKER-GATEPASS-KEY-CHANGE-BEFORE-SHARING-2026}
       SignatureStorage__RootPath: /app/Data/signatures
       SignatureStorage__BackgroundRemovalUrl: http://signature-helper:8000/remove-background
+      SignatureStorage__CompressUrl: http://signature-helper:8000/compress
     ports:
       - "${GATEPASS_API_PORT:-5088}:8080"
     volumes:

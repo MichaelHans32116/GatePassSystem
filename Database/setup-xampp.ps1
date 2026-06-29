@@ -209,6 +209,22 @@ if ($databaseExists -eq 0) {
             Write-Host 'Applying database migration 014...' -ForegroundColor Yellow
             Invoke-MySqlSource 'Database\Migrations\014_material_gate_pass_proofs.sql'
         }
+
+        $associatesApplied = Invoke-MySqlScalarInt `
+            "SELECT COUNT(*) FROM gate_pass_system.tbl_schema_versions WHERE version_no='015';"
+
+        if ($associatesApplied -eq 0) {
+            Write-Host 'Applying database migration 015...' -ForegroundColor Yellow
+            Invoke-MySqlSource 'Database\Migrations\015_gate_pass_associates.sql'
+        }
+
+        $cancelStatusApplied = Invoke-MySqlScalarInt `
+            "SELECT COUNT(*) FROM gate_pass_system.tbl_schema_versions WHERE version_no='016';"
+
+        if ($cancelStatusApplied -eq 0) {
+            Write-Host 'Applying database migration 016...' -ForegroundColor Yellow
+            Invoke-MySqlSource 'Database\Migrations\016_gate_pass_cancel_status.sql'
+        }
     }
 }
 

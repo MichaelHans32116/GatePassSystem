@@ -203,6 +203,11 @@ BEGIN
             SET MESSAGE_TEXT = 'The authorized employee is required.';
     END IF;
 
+    -- Phase 11 / Requirement 5: the primary authorized employee remains the
+    -- single authorized_employee_id below (mirrored as line_no=1 in
+    -- tbl_gate_pass_associates). Additional companions (line_no>=2) are
+    -- inserted by GatePassRepository within the same create flow.
+
     IF p_items_json IS NULL OR JSON_VALID(p_items_json) = 0 THEN
         SIGNAL SQLSTATE '45000'
             SET MESSAGE_TEXT = 'A valid material item list is required.';

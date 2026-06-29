@@ -15,13 +15,14 @@ public sealed class GatePassRepository(
         CreateGatePassRequest request,
         bool requiresSuperior,
         bool requiresPresident,
+        IReadOnlyList<AssociateRecord> associates,
         string traceId,
         CancellationToken cancellationToken = default)
     {
         await using var connection =
             await connectionFactory.OpenConnectionAsync(cancellationToken);
 
-        return await connection.QuerySingleAsync<GatePassRecord>(
+        var record = await connection.QuerySingleAsync<GatePassRecord>(
             new CommandDefinition(
                 "SP_CreateGatePass",
                 new
@@ -47,12 +48,22 @@ public sealed class GatePassRepository(
                 },
                 commandType: CommandType.StoredProcedure,
                 cancellationToken: cancellationToken));
+
+        await InsertAssociatesAsync(
+            connection,
+            null,
+            record.GatePassId,
+            associates,
+            cancellationToken);
+
+        return record;
     }
 
     public async Task<GatePassRecord> CreateMaterialDraftAsync(
         RequesterContext requester,
         EmployeeLookupRecord authorizedEmployee,
         CreateMaterialGatePassRequest request,
+        IReadOnlyList<AssociateRecord> associates,
         string traceId,
         CancellationToken cancellationToken = default)
     {
@@ -105,6 +116,13 @@ public sealed class GatePassRepository(
                         cancellationToken: cancellationToken));
                 }
             }
+
+            await InsertAssociatesAsync(
+                connection,
+                transaction,
+                record.GatePassId,
+                associates,
+                cancellationToken);
 
             await transaction.CommitAsync(cancellationToken);
             return record;
@@ -368,6 +386,23 @@ public sealed class GatePassRepository(
                 signature_file_id
             FROM tbl_material_gate_pass_proofs
             WHERE gate_pass_id = @GatePassId;
+
+            SELECT
+                associate.associate_id AS AssociateId,
+                associate.gate_pass_id AS GatePassId,
+                associate.line_no AS LineNo,
+                associate.employee_id AS EmployeeId,
+                employee.employee_id AS EmployeeNo,
+                associate.full_name AS Name,
+                associate.department_id AS DepartmentId,
+                department.department_name AS DepartmentName
+            FROM tbl_gate_pass_associates associate
+            LEFT JOIN tbl_employees employee
+                ON employee.employee_record_id = associate.employee_id
+            LEFT JOIN tbl_departments department
+                ON department.department_id = associate.department_id
+            WHERE associate.gate_pass_id = @GatePassId
+            ORDER BY associate.line_no;
             """;
 
         using var grid = await connection.QueryMultipleAsync(
@@ -387,8 +422,10 @@ public sealed class GatePassRepository(
         var materialItems =
             (await grid.ReadAsync<MaterialGatePassItemRecord>()).AsList();
         var proofFileIds = (await grid.ReadAsync<long>()).AsList();
+        var associates = (await grid.ReadAsync<AssociateRecord>()).AsList();
 
-        return CopyDetail(detail, steps, scans, materialItems, proofFileIds);
+        return CopyDetail(
+            detail, steps, scans, materialItems, proofFileIds, associates);
     }
 
     public async Task EnsureQrTokenAsync(
@@ -656,12 +693,56 @@ public sealed class GatePassRepository(
         }
     }
 
+    private static async Task InsertAssociatesAsync(
+        System.Data.Common.DbConnection connection,
+        System.Data.Common.DbTransaction? transaction,
+        long gatePassId,
+        IReadOnlyList<AssociateRecord> associates,
+        CancellationToken cancellationToken)
+    {
+        if (associates is null || associates.Count == 0)
+        {
+            return;
+        }
+
+        foreach (var associate in associates)
+        {
+            await connection.ExecuteAsync(new CommandDefinition(
+                """
+                INSERT INTO tbl_gate_pass_associates (
+                    gate_pass_id,
+                    line_no,
+                    employee_id,
+                    department_id,
+                    full_name
+                ) VALUES (
+                    @GatePassId,
+                    @LineNo,
+                    @EmployeeId,
+                    @DepartmentId,
+                    @FullName
+                );
+                """,
+                new
+                {
+                    GatePassId = gatePassId,
+                    associate.LineNo,
+                    associate.EmployeeId,
+                    associate.DepartmentId,
+                    FullName = associate.Name
+                },
+                transaction,
+                cancellationToken: cancellationToken));
+        }
+    }
+
     private static GatePassDetail CopyDetail(
         GatePassDetail source,
         IReadOnlyList<ApprovalStepRecord> steps,
         IReadOnlyList<GatePassScanRecord> scans,
         IReadOnlyList<MaterialGatePassItemRecord> materialItems,
-        IReadOnlyList<long> proofFileIds) =>
+        IReadOnlyList<long> proofFileIds,
+        IReadOnlyList<AssociateRecord> associates) =>
         new()
         {
             GatePassId = source.GatePassId,
@@ -723,6 +804,7 @@ public sealed class GatePassRepository(
             ApprovalSteps = steps,
             Scans = scans,
             MaterialItems = materialItems,
-            ProofFileIds = proofFileIds
+            ProofFileIds = proofFileIds,
+            Associates = associates
         };
 }

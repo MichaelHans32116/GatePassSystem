@@ -24,6 +24,7 @@ public sealed class SignaturesController(
         IFormFile file,
         [FromForm] int? widthPercent,
         [FromForm] int? yOffset,
+        [FromForm] bool compress,
         CancellationToken cancellationToken)
     {
         var metadata = await signatureStorage.SaveAsync(
@@ -31,6 +32,7 @@ public sealed class SignaturesController(
             file,
             widthPercent,
             yOffset,
+            compress,
             cancellationToken);
         var record = await signatureService.RegisterAsync(
             CurrentUserId,

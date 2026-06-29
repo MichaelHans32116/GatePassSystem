@@ -17,5 +17,12 @@ public interface IApprovalService
         ApprovalDecisionRequest request,
         string traceId,
         CancellationToken cancellationToken = default);
+
+    Task<ServiceResult<GatePassCancelResult>> CancelAsync(
+        long gatePassId,
+        long actorUserId,
+        GatePassCancelRequest request,
+        string traceId,
+        CancellationToken cancellationToken = default);
 }
 

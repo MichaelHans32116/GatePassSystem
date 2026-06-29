@@ -18,6 +18,118 @@ function getGuardRemarksText(p) {
     return String(p?.status || 'Pending').toUpperCase();
 }
 
+// ----- Decision Remarks / Feedback (rejection reason + per-step comments) -----
+const APPROVAL_STEP_LABELS = {
+    SUPERIOR: 'Immediate Superior',
+    PRESIDENT: 'President',
+    PAS: 'PAS / HR Admin',
+    HRAD_ASSIGN: 'HRAD Assignment'
+};
+
+function approvalStepLabel(code) {
+    return APPROVAL_STEP_LABELS[String(code || '').toUpperCase()] || (code || 'Approver');
+}
+
+function shouldShowDecisionRemarks(p) {
+    const status = normalizeDocumentStatus(p?.status);
+    if (status === 'REJECTED' || status === 'ON HOLD') return true;
+    // Also surface any captured approver comments regardless of label drift.
+    return (p?.approvalSteps || []).some(step => String(step?.comments || '').trim() !== '');
+}
+
+function renderDecisionRemarks(p) {
+    const panel = document.getElementById('decisionRemarksPanel');
+    const body = document.getElementById('decisionRemarksBody');
+    if (!panel || !body) return;
+
+    if (!shouldShowDecisionRemarks(p)) {
+        panel.classList.add('hidden');
+        body.innerHTML = '';
+        return;
+    }
+
+    const steps = (p?.approvalSteps || []).filter(step => String(step?.comments || '').trim() !== '');
+    // Latest decision first (acted_at desc); steps without a timestamp sink to the bottom.
+    steps.sort((a, b) => new Date(b?.actedAt || 0) - new Date(a?.actedAt || 0));
+
+    if (steps.length === 0) {
+        // Status is REJECTED/ON HOLD but no per-step comment was carried; show a neutral note.
+        body.innerHTML = '<div class="italic text-gray-500">No written remarks were recorded for this decision.</div>';
+        panel.classList.remove('hidden');
+        return;
+    }
+
+    body.innerHTML = steps.map((step, index) => {
+        const statusCode = normalizeDocumentStatus(step?.approvalStatusCode);
+        const isReject = statusCode === 'REJECTED';
+        const badgeClass = isReject
+            ? 'bg-red-100 text-red-700'
+            : (statusCode === 'ON HOLD' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-600');
+        const when = step?.actedAt ? formatDateTime(step.actedAt) : '';
+        const latestTag = index === 0
+            ? '<span class="ml-2 rounded bg-red-600 px-1.5 py-0.5 text-[9px] font-bold uppercase text-white">Latest</span>'
+            : '';
+        return `
+            <div class="rounded border border-red-100 bg-white p-2">
+                <div class="flex flex-wrap items-center gap-2 mb-1">
+                    <span class="font-bold text-gray-800">${escapeDocumentText(approvalStepLabel(step?.approvalStepCode))}</span>
+                    <span class="rounded px-1.5 py-0.5 text-[9px] font-bold uppercase ${badgeClass}">${escapeDocumentText(step?.approvalStatusCode || '')}</span>
+                    ${step?.approverName ? `<span class="text-[10px] text-gray-500">by ${escapeDocumentText(step.approverName)}</span>` : ''}
+                    ${when ? `<span class="text-[10px] text-gray-400">${escapeDocumentText(when)}</span>` : ''}
+                    ${latestTag}
+                </div>
+                <div class="whitespace-pre-wrap break-words text-gray-700">${escapeDocumentText(step.comments)}</div>
+            </div>`;
+    }).join('');
+    panel.classList.remove('hidden');
+}
+
+function hideDecisionRemarks() {
+    const panel = document.getElementById('decisionRemarksPanel');
+    const body = document.getElementById('decisionRemarksBody');
+    if (panel) panel.classList.add('hidden');
+    if (body) body.innerHTML = '';
+}
+
+// ----- Inline reason/remarks composer (replaces window.prompt) -----
+function showDecisionReasonComposer(label, { required } = { required: true }) {
+    const composer = document.getElementById('decisionReasonComposer');
+    const labelEl = document.getElementById('decisionReasonLabel');
+    const input = document.getElementById('decisionReasonInput');
+    const error = document.getElementById('decisionReasonError');
+    if (!composer || !input) return;
+    if (labelEl && label) labelEl.innerText = label;
+    input.dataset.required = required ? '1' : '0';
+    error?.classList.add('hidden');
+    composer.classList.remove('hidden');
+    input.focus();
+}
+
+function hideDecisionReasonComposer() {
+    const composer = document.getElementById('decisionReasonComposer');
+    const input = document.getElementById('decisionReasonInput');
+    const error = document.getElementById('decisionReasonError');
+    if (input) input.value = '';
+    error?.classList.add('hidden');
+    composer?.classList.add('hidden');
+}
+
+// Returns the trimmed reason, or null if required-and-empty (and flags the error inline).
+function readDecisionReason() {
+    const input = document.getElementById('decisionReasonInput');
+    const error = document.getElementById('decisionReasonError');
+    if (!input) return '';
+    const value = (input.value || '').trim();
+    const required = input.dataset.required === '1';
+    if (required && !value) {
+        error?.classList.remove('hidden');
+        input.focus();
+        return null;
+    }
+    error?.classList.add('hidden');
+    return value;
+}
+
 function normalizeDocumentStatus(status) {
     return String(status || 'Pending')
         .trim()
@@ -100,6 +212,112 @@ function escapeDocumentText(value) {
         .replace(/>/g, '&gt;')
         .replace(/"/g, '&quot;')
         .replace(/'/g, '&#039;');
+}
+
+// Shows/hides the HRAD-only Cancel Gate Pass controls.
+// Visible only for Miss Joy (GA120) on a non-terminal pass while reviewing.
+function setCancelGatePassControls(pass) {
+    const area = document.getElementById('cancelGatePassArea');
+    const button = document.getElementById('cancelGatePassButton');
+    const remarks = document.getElementById('cancelGatePassRemarks');
+    const result = document.getElementById('decisionRemarksResult');
+    if (result) {
+        result.classList.add('hidden');
+        result.innerHTML = '';
+    }
+    if (remarks) remarks.value = '';
+    const isHradCanceller =
+        typeof currentUser !== 'undefined' &&
+        currentUser && currentUser.id === 'GA120';
+    const cancellable =
+        pass && !isFinishedDocumentStatus(pass.status);
+    const show = Boolean(isHradCanceller && cancellable);
+    if (area) area.classList.toggle('hidden', !show);
+    if (button) button.classList.toggle('hidden', !show);
+}
+
+// ---- Phase 11 Req 4: Digital vs Printable Form view mode ----
+let currentDocumentViewMode = 'digital';
+
+function setDocumentViewMode(mode) {
+    currentDocumentViewMode = (mode === 'form') ? 'form' : 'digital';
+    const digitalArea = document.getElementById('digitalViewArea');
+    const printableArea = document.getElementById('printableArea');
+    const materialPrintableArea = document.getElementById('materialPrintableArea');
+    const proofsGallery = document.getElementById('materialProofsGallery');
+    const digitalBtn = document.getElementById('docViewDigitalBtn');
+    const formBtn = document.getElementById('docViewFormBtn');
+    const printBtn = document.getElementById('modalPrintButton');
+
+    const showForm = currentDocumentViewMode === 'form';
+    const isMaterialDoc = !!(materialPrintableArea && !materialPrintableArea.dataset.docEmpty);
+
+    if (digitalArea) digitalArea.classList.toggle('hidden', showForm);
+    if (printableArea) printableArea.classList.toggle('hidden', showForm ? isMaterialDoc : true);
+    if (materialPrintableArea) materialPrintableArea.classList.toggle('hidden', showForm ? !isMaterialDoc : true);
+    // Material proof gallery (Req 2) belongs to DIGITAL view only.
+    if (proofsGallery && !proofsGallery.dataset.noProofs) {
+        proofsGallery.classList.toggle('hidden', showForm);
+    }
+
+    if (digitalBtn) {
+        digitalBtn.classList.toggle('is-active', !showForm);
+        digitalBtn.setAttribute('aria-pressed', String(!showForm));
+    }
+    if (formBtn) {
+        formBtn.classList.toggle('is-active', showForm);
+        formBtn.setAttribute('aria-pressed', String(showForm));
+    }
+    // Print only enabled in Form view.
+    if (printBtn) {
+        printBtn.disabled = !showForm;
+        printBtn.classList.toggle('opacity-40', !showForm);
+        printBtn.classList.toggle('cursor-not-allowed', !showForm);
+        printBtn.title = showForm ? '' : 'Switch to Printable Form to print';
+    }
+}
+
+function printCurrentDocument() {
+    // Auto-switch to Form view before printing so the printable layout is on screen.
+    if (currentDocumentViewMode !== 'form') {
+        setDocumentViewMode('form');
+    }
+    setTimeout(() => window.print(), 50);
+}
+
+// ----- Associate name rendering for the printable forms (Phase 11 req5) -----
+// Primary associate (index 0) is rendered at normal size; additional companions are
+// rendered compact (smaller font). Max 5 names per printed page; overflow spills onto
+// extra printed sheets handled by buildAssociateNamePages().
+var ASSOCIATE_NAMES_PER_PAGE = 5;
+
+function getAssociateNames(pass) {
+    const list = Array.isArray(pass?.associates) ? pass.associates : [];
+    const names = list.map(a => String(a?.name || '').trim()).filter(Boolean);
+    if (names.length > 0) return names;
+    const fallback = String(pass?.userName || pass?.authorizedEmployeeName || '').trim();
+    return fallback ? [fallback] : [];
+}
+
+// Compact "First Last" markup for the additional companions (index >= 1) on one page.
+function renderCompactAssociateNames(names) {
+    if (!names || names.length === 0) return '';
+    return names
+        .map(name => `<div class="person-associate-compact">${escapeDocumentText(name)}</div>`)
+        .join('');
+}
+
+// Split associate names into pages of ASSOCIATE_NAMES_PER_PAGE; returns an array of
+// { primary, extra[] } page descriptors. Page 0 always carries the primary associate.
+function buildAssociateNamePages(names) {
+    const all = (names || []).slice();
+    if (all.length === 0) return [{ primary: '', extra: [] }];
+    const pages = [];
+    for (let i = 0; i < all.length; i += ASSOCIATE_NAMES_PER_PAGE) {
+        const chunk = all.slice(i, i + ASSOCIATE_NAMES_PER_PAGE);
+        pages.push({ primary: chunk[0], extra: chunk.slice(1) });
+    }
+    return pages;
 }
 
 function formatManualScanId(gpId) {
@@ -227,6 +445,10 @@ function resetDocumentModalLayout() {
                 multiPrint.innerHTML = '';
                 multiPrint.classList.add('hidden');
             }
+            // Reset Phase 11 Req 4 view-mode state so the next opened document defaults to Digital.
+            currentDocumentViewMode = 'digital';
+            const digitalAreaReset = document.getElementById('digitalViewArea');
+            if (digitalAreaReset) digitalAreaReset.innerHTML = '';
         }
 
 function initializeModalDragResize() {
@@ -489,6 +711,7 @@ async function renderMaterialBundle(pass) {
                                         <span class="border-b border-black font-bold flex-grow text-center pb-0.5">${materialEscape(pass.authorizedDepartmentName || pass.userDept || 'N/A')}</span>
                                         <span class="whitespace-nowrap text-gray-500 font-semibold ml-1">to bring out the following items.</span>
                                     </div>
+                                    ${(() => { const extra = getAssociateNames(pass).slice(1); return extra.length ? `<div class="flex items-start w-full"><span class="whitespace-nowrap text-gray-500 font-semibold mr-1">with</span><div class="material-associates-extra flex-grow">${renderCompactAssociateNames(extra)}</div></div>` : ''; })()}
                                 </div>
                             </div>
 
@@ -606,6 +829,143 @@ function syncMaterialSignatureCopies(idPrefix) {
             });
         }
 
+function renderDigitalView(p) {
+            const area = document.getElementById('digitalViewArea');
+            if (!area) return;
+            const isMaterial = p.formTypeCode === 'MATERIAL_GATE_PASS';
+            const esc = escapeDocumentText;
+
+            const fieldRow = (label, value) =>
+                `<div class="digital-field">`
+                + `<div class="digital-field-label">${esc(label)}</div>`
+                + `<div class="digital-field-value">${value === '' || value === null || value === undefined ? '<span class="digital-field-empty">N/A</span>' : esc(value)}</div>`
+                + `</div>`;
+
+            // Vehicle / driver display (mirrors printable population in viewPass).
+            let vehicleString = 'N/A';
+            let driverString = 'N/A';
+            if (p.vehicle) {
+                vehicleString = p.vehicle.id === 'MANUAL'
+                    ? p.vehicle.name
+                    : `${p.vehicle.name} [${p.vehicle.plate}]`;
+                driverString = p.vehicle.driver || 'N/A';
+            }
+
+            // Decision / approval remarks gathered from approval steps (rejection/hold comments).
+            const decisionRemarks = (p.approvalSteps || [])
+                .filter(step => step && step.comments && String(step.comments).trim())
+                .map(step => {
+                    const who = step.approverName || step.approvalStepCode || 'Approver';
+                    const verdict = step.approvalStatusCode === 'REJECTED'
+                        ? 'Rejected'
+                        : (step.approvalStatusCode === 'ON_HOLD' ? 'On Hold' : 'Note');
+                    return `<li><span class="font-semibold">${esc(who)} (${esc(verdict)}):</span> ${esc(step.comments)}</li>`;
+                })
+                .join('');
+            const guardRemarks = (typeof getGuardRemarksText === 'function') ? getGuardRemarksText(p) : '';
+
+            const sections = [];
+
+            // --- Header ---
+            sections.push(
+                `<div class="digital-view-header">`
+                + `<h3 class="digital-view-title">${esc(p.formName || (isMaterial ? 'Material Gate Pass' : 'Person Gate Pass'))}</h3>`
+                + `<span class="digital-view-status">${esc(p.status || '')}</span>`
+                + `</div>`
+            );
+
+            // --- Core details ---
+            const core = [];
+            core.push(fieldRow('Control No.', p.controlNo));
+            core.push(fieldRow('Date Filed', p.dateFiled));
+            core.push(fieldRow('Requested By', p.userName));
+            if (p.userDept) core.push(fieldRow('Department', p.userDept));
+            if (isMaterial) {
+                core.push(fieldRow('Authorized Person', p.authorizedEmployeeName));
+                core.push(fieldRow('Authorized Department', p.authorizedDepartmentName || p.userDept));
+            } else {
+                core.push(fieldRow('Destination', p.destination));
+                core.push(fieldRow('Purpose', p.purpose));
+                core.push(fieldRow('From (Expected Out)', p.expectedOut));
+                core.push(fieldRow('To (Expected In)', p.expectedIn));
+                core.push(fieldRow('Will Return Today', p.willReturn ? 'Yes' : 'No'));
+                core.push(fieldRow('Vehicle & Plate', vehicleString));
+                core.push(fieldRow('Driver', driverString));
+            }
+            sections.push(`<div class="digital-field-grid">${core.join('')}</div>`);
+
+            // --- Material items table ---
+            if (isMaterial) {
+                const items = p.materialItems || [];
+                let itemsHtml;
+                if (items.length) {
+                    const rows = items.map((item, i) => `<tr>`
+                        + `<td class="text-center">${esc(item.itemNo || (i + 1))}</td>`
+                        + `<td>${esc(item.description)}</td>`
+                        + `<td class="text-center">${esc(Number(item.quantity).toLocaleString(undefined, { maximumFractionDigits: 3 }))}</td>`
+                        + `<td class="text-center">${esc(item.unit)}</td>`
+                        + `</tr>`).join('');
+                    itemsHtml = `<table class="digital-items-table"><thead><tr><th>Item No.</th><th>Description</th><th>Qty</th><th>Unit</th></tr></thead><tbody>${rows}</tbody></table>`;
+                } else {
+                    itemsHtml = `<p class="digital-field-empty">No items listed.</p>`;
+                }
+                sections.push(`<div class="digital-subsection"><div class="digital-subsection-title">Material Items</div>${itemsHtml}</div>`);
+                sections.push(`<div class="digital-subsection">${fieldRow('Remarks', p.materialRemarks)}</div>`);
+            }
+
+            // --- Signatures summary ---
+            const sigRows = [];
+            if (p.signatures) {
+                if (p.signatures.imm) sigRows.push(fieldRow(isMaterial ? 'Noted By (Immediate Superior)' : 'Approved By (Immediate Superior)', p.signatures.imm.name));
+                if (p.signatures.pres) sigRows.push(fieldRow('Approved By (President)', p.signatures.pres.name));
+                if (p.signatures.pas) sigRows.push(fieldRow(isMaterial ? 'Approved By (PAS)' : 'Noted By (PAS)', p.signatures.pas.name));
+            }
+            if (sigRows.length) {
+                sections.push(`<div class="digital-subsection"><div class="digital-subsection-title">Approvals</div><div class="digital-field-grid">${sigRows.join('')}</div></div>`);
+            }
+
+            // --- Guard scan summary ---
+            if (p.actualOut || p.actualIn) {
+                const guardRows = [];
+                if (p.actualOut) guardRows.push(fieldRow('Actual Time Out', p.actualOut));
+                if (p.actualIn) guardRows.push(fieldRow('Actual Time In', p.actualIn));
+                if (guardRemarks) guardRows.push(fieldRow('Guard Remarks', guardRemarks));
+                sections.push(`<div class="digital-subsection"><div class="digital-subsection-title">Gate Scan</div><div class="digital-field-grid">${guardRows.join('')}</div></div>`);
+            }
+
+            // --- Decision remarks ---
+            if (decisionRemarks) {
+                sections.push(`<div class="digital-subsection"><div class="digital-subsection-title">Decision Remarks</div><ul class="digital-remarks-list">${decisionRemarks}</ul></div>`);
+            }
+
+            // --- Proof photos placeholder (lazy-loaded after render) ---
+            if (isMaterial && Array.isArray(p.proofFileIds) && p.proofFileIds.length > 0) {
+                sections.push(`<div class="digital-subsection"><div class="digital-subsection-title">Material Release Photo Proof</div><div id="digitalProofPhotos" class="digital-proof-grid"></div></div>`);
+            }
+
+            area.innerHTML = sections.join('');
+
+            // Lazy-load proof photos into the digital view (mirrors materialProofsGallery loader).
+            const proofGrid = document.getElementById('digitalProofPhotos');
+            if (proofGrid && isMaterial && Array.isArray(p.proofFileIds)) {
+                p.proofFileIds.forEach((fileId, i) => {
+                    const cell = document.createElement('div');
+                    cell.className = 'digital-proof-cell';
+                    cell.innerHTML = `<div class="text-xs text-slate-400 font-semibold"><i class="fas fa-spinner fa-spin mr-1"></i>Loading Photo ${i + 1}...</div>`;
+                    proofGrid.appendChild(cell);
+                    ApiClient.blob(`/signatures/${fileId}`).then(blob => {
+                        const reader = new FileReader();
+                        reader.onload = function (e) {
+                            cell.innerHTML = `<img src="${e.target.result}" class="w-full h-full object-cover max-h-[220px]" onclick="viewFullScreenImage('${e.target.result.replace(/'/g, "\\'")}')">`;
+                        };
+                        reader.readAsDataURL(blob);
+                    }).catch(() => {
+                        cell.innerHTML = `<div class="text-xs text-red-500 font-semibold p-4 text-center"><i class="fas fa-exclamation-circle mr-1"></i>Failed to load photo</div>`;
+                    });
+                });
+            }
+        }
+
 async function viewPass(id, isReviewing = false) {
             let p;
             try {
@@ -640,6 +1000,12 @@ async function viewPass(id, isReviewing = false) {
                 !isMaterial
             );
             printableArea?.classList.toggle('person-print-form', !isMaterial);
+            // Mark which printable layout this document uses so the view-mode toggle can restore it.
+            const materialPrintableAreaEl = document.getElementById('materialPrintableArea');
+            if (materialPrintableAreaEl) {
+                if (isMaterial) delete materialPrintableAreaEl.dataset.docEmpty;
+                else materialPrintableAreaEl.dataset.docEmpty = '1';
+            }
 
             const compactPersonDateFiled = (value) => {
                 if (!value) return 'N/A';
@@ -667,7 +1033,10 @@ async function viewPass(id, isReviewing = false) {
 
             setVal('vDateF', isMaterial ? p.dateFiled : compactPersonDateFiled(p.dateFiled));
             setVal('vControlNo', printableControlNo(p.controlNo));
-            setVal('vName', p.userName);
+            const viewAssociateNames = getAssociateNames(p);
+            setVal('vName', viewAssociateNames[0] || p.userName);
+            const vAssocExtra = document.getElementById('vAssociatesExtra');
+            if (vAssocExtra) vAssocExtra.innerHTML = renderCompactAssociateNames(viewAssociateNames.slice(1));
             setVal('vDest', p.destination);
             setVal('vPurp', p.purpose);
             setVal('vExpOut', p.expectedOut);
@@ -898,6 +1267,9 @@ async function viewPass(id, isReviewing = false) {
                 wf.classList.add('hidden');
             }
 
+            // Decision Remarks / Feedback (rejection reason + per-step comments)
+            renderDecisionRemarks(p);
+
             resetDocumentModalLayout();
 
             // Populate Photo Proofs for Material Gate Pass
@@ -929,7 +1301,17 @@ async function viewPass(id, isReviewing = false) {
                         });
                     });
                 }
+                // Track whether this document has proof photos so the view toggle keeps the gallery hidden when empty.
+                if (isMaterial && p.proofFileIds && p.proofFileIds.length > 0) {
+                    delete galleryDiv.dataset.noProofs;
+                } else {
+                    galleryDiv.dataset.noProofs = '1';
+                }
             }
+
+            // Render the read-only Digital view and default to it (Req 4).
+            renderDigitalView(p);
+            setDocumentViewMode('digital');
 
             const modal = document.getElementById('printModal');
             if(modal) {
@@ -1102,6 +1484,10 @@ async function viewPass(id, isReviewing = false) {
                         showSignatureSource('upload');
                     }
 
+                    // HRAD-only Cancel Gate Pass control (Miss Joy = GA120).
+                    // Shown only for the HRAD canceller on a non-terminal pass.
+                    setCancelGatePassControls(p);
+
                     // PRE-FILL USERNAME FOR TRUE LIVE PREVIEW ALIGNMENT
                     let targetContainerId = null;
                     if (currentUser.role === 'Security') {
@@ -1160,6 +1546,8 @@ async function viewPass(id, isReviewing = false) {
                     document.getElementById('printModalContent')?.classList.remove('is-reviewing');
                     actionArea.style.display = 'none';
                     approvalSignatureEditor?.classList.add('hidden');
+                    hideDecisionReasonComposer();
+                    setCancelGatePassControls(null);
                 }
             }
         }
@@ -1175,6 +1563,8 @@ function closeModal() {
                 currentViewedPassId = null;
                 resetApprovalSignatureComposer?.();
                 resetDocumentModalLayout();
+                hideDecisionRemarks();
+                hideDecisionReasonComposer();
             }, 300);
         }
 
@@ -1189,6 +1579,8 @@ function forceCloseModal() {
             currentViewedPassId = null;
             resetApprovalSignatureComposer?.();
             resetDocumentModalLayout();
+            hideDecisionRemarks();
+            hideDecisionReasonComposer();
         }
 
 async function renderPersonGatePassClone(p) {
@@ -1228,7 +1620,15 @@ async function renderPersonGatePassClone(p) {
 
     setVal('#vDateF', p.formTypeCode === 'MATERIAL_GATE_PASS' ? p.dateFiled : compactPersonDateFiled(p.dateFiled));
     setVal('#vControlNo', printableControlNo(p.controlNo));
-    setVal('#vName', p.userName);
+    const cloneAssociateNames = getAssociateNames(p);
+    const clonePages = buildAssociateNamePages(cloneAssociateNames);
+    // p._associatePageIndex (set by the batch builder when emitting overflow sheets)
+    // selects which 5-name page this clone represents; defaults to the first page.
+    const clonePage = clonePages[Number(p._associatePageIndex) || 0] || clonePages[0];
+    setVal('#vName', clonePage.primary || p.userName);
+    const cloneExtra = clone.querySelector('#vAssociatesExtra');
+    if (cloneExtra) cloneExtra.innerHTML = renderCompactAssociateNames(clonePage.extra);
+    clone.dataset.associatePages = String(clonePages.length);
     setVal('#vDest', p.destination);
     setVal('#vPurp', p.purpose);
     setVal('#vExpOut', p.expectedOut);
@@ -1465,6 +1865,7 @@ async function renderMaterialGatePassClone(p) {
                     <span class="border-b border-black font-bold flex-grow text-center pb-0.5">${materialEscape(p.authorizedDepartmentName || p.userDept || 'N/A')}</span>
                     <span class="whitespace-nowrap text-gray-500 font-semibold ml-1">to bring out the following items:</span>
                 </div>
+                ${(() => { const extra = getAssociateNames(p).slice(1); return extra.length ? `<div class="flex items-start w-full"><span class="whitespace-nowrap text-gray-500 font-semibold mr-1">with</span><div class="material-associates-extra flex-grow">${renderCompactAssociateNames(extra)}</div></div>` : ''; })()}
             </div>
 
             <table class="w-full text-[9px] border-collapse border border-gray-900 mt-1 text-left material-items-table material-front-table">
@@ -1809,6 +2210,9 @@ window.syncMaterialSignatureCopies = syncMaterialSignatureCopies;
 window.viewPass = viewPass;
 window.closeModal = closeModal;
 window.forceCloseModal = forceCloseModal;
+window.setDocumentViewMode = setDocumentViewMode;
+window.printCurrentDocument = printCurrentDocument;
+window.renderDigitalView = renderDigitalView;
 window.printSelectedLogs = printSelectedLogs;
 
 function populateHradAssignDrivers(vehicleId = null) {
@@ -1861,3 +2265,8 @@ function viewFullScreenImage(src) {
     }, 10);
 }
 window.viewFullScreenImage = viewFullScreenImage;
+window.renderDecisionRemarks = renderDecisionRemarks;
+window.hideDecisionRemarks = hideDecisionRemarks;
+window.showDecisionReasonComposer = showDecisionReasonComposer;
+window.hideDecisionReasonComposer = hideDecisionReasonComposer;
+window.readDecisionReason = readDecisionReason;

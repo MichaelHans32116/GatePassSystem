@@ -148,3 +148,33 @@ async def remove_background(file: UploadFile = File(...)) -> Response:
         media_type="image/png",
         headers={"X-Signature-Removal-Method": method},
     )
+
+
+@app.post("/compress")
+async def compress(file: UploadFile = File(...)) -> Response:
+    if file.content_type not in {"image/png", "image/jpeg", "image/jpg"}:
+        raise HTTPException(
+            status_code=400,
+            detail="Only PNG and JPEG images are supported.",
+        )
+
+    raw = await file.read()
+    if not raw:
+        raise HTTPException(status_code=400, detail="Uploaded file is empty.")
+
+    try:
+        image = Image.open(BytesIO(raw)).convert("RGB")
+    except UnidentifiedImageError as exc:
+        raise HTTPException(
+            status_code=400,
+            detail="Uploaded file is not a valid image.",
+        ) from exc
+
+    image.thumbnail((1600, 1600))
+    buffer = BytesIO()
+    image.save(buffer, format="JPEG", quality=70, optimize=True)
+
+    return Response(
+        content=buffer.getvalue(),
+        media_type="image/jpeg",
+    )

@@ -60,6 +60,20 @@ public sealed class GatePassService(
                 signatureError);
         }
 
+        var associatesResult = await ResolveAssociatesAsync(
+            request.Associates,
+            requester,
+            primaryEmployee: null,
+            cancellationToken);
+        if (associatesResult.Error is not null)
+        {
+            return ServiceResult<GatePassCreationResult>.Failure(
+                "INVALID_ASSOCIATE",
+                associatesResult.Error);
+        }
+
+        var associates = associatesResult.Associates;
+
         var isImmediateSuperior =
             requester.Roles.Contains(
                 "IMMEDIATE_SUPERIOR",
@@ -116,6 +130,7 @@ public sealed class GatePassService(
             request,
             requiresSuperior,
             requiresPresident,
+            associates,
             traceId,
             cancellationToken);
 
@@ -227,6 +242,20 @@ public sealed class GatePassService(
             };
         }
 
+        var associatesResult = await ResolveAssociatesAsync(
+            request.Associates,
+            requester,
+            primaryEmployee: authorizedEmployee,
+            cancellationToken);
+        if (associatesResult.Error is not null)
+        {
+            return ServiceResult<GatePassCreationResult>.Failure(
+                "INVALID_ASSOCIATE",
+                associatesResult.Error);
+        }
+
+        var associates = associatesResult.Associates;
+
         var signatureError = await ValidatePreparedSignatureAsync(
             requester.UserId,
             request.PreparedBySignatureFileId,
@@ -273,6 +302,7 @@ public sealed class GatePassService(
             requester,
             authorizedEmployee,
             request,
+            associates,
             traceId,
             cancellationToken);
 
@@ -386,6 +416,74 @@ public sealed class GatePassService(
         gatePassRepository.DeleteForTestingAsync(
             gatePassId,
             cancellationToken);
+
+    private async Task<(IReadOnlyList<AssociateRecord> Associates, string? Error)>
+        ResolveAssociatesAsync(
+            IReadOnlyList<AssociateRequest>? requested,
+            RequesterContext requester,
+            EmployeeLookupRecord? primaryEmployee,
+            CancellationToken cancellationToken)
+    {
+        var resolved = new List<AssociateRecord>();
+        var seenEmployeeIds = new HashSet<long>();
+        var lineNo = 1;
+
+        // Material passes seed line_no=1 with the primary authorized employee.
+        if (primaryEmployee is not null)
+        {
+            resolved.Add(new AssociateRecord
+            {
+                LineNo = lineNo++,
+                EmployeeId = primaryEmployee.EmployeeRecordId,
+                Name = primaryEmployee.FullName,
+                DepartmentId = primaryEmployee.DepartmentId
+            });
+            seenEmployeeIds.Add(primaryEmployee.EmployeeRecordId);
+        }
+
+        if (requested is null || requested.Count == 0)
+        {
+            return (resolved, null);
+        }
+
+        if (requested.Count > 20)
+        {
+            return (resolved, "A maximum of 20 associates is allowed.");
+        }
+
+        foreach (var item in requested)
+        {
+            if (item.EmployeeId <= 0)
+            {
+                return (resolved,
+                    "Each associate must be selected from the employee directory.");
+            }
+
+            if (!seenEmployeeIds.Add(item.EmployeeId))
+            {
+                return (resolved, "The same associate was added more than once.");
+            }
+
+            var employee = await employeeRepository.GetActiveEmployeeAsync(
+                item.EmployeeId,
+                cancellationToken);
+            if (employee is null)
+            {
+                return (resolved,
+                    "One of the selected associates is not an active employee.");
+            }
+
+            resolved.Add(new AssociateRecord
+            {
+                LineNo = lineNo++,
+                EmployeeId = employee.EmployeeRecordId,
+                Name = employee.FullName,
+                DepartmentId = employee.DepartmentId ?? requester.DepartmentId
+            });
+        }
+
+        return (resolved, null);
+    }
 
     private static string? Validate(CreateGatePassRequest request)
     {

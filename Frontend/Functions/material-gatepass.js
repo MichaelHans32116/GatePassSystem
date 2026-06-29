@@ -17,6 +17,188 @@ function materialEscape(value) {
         .replaceAll("'", '&#039;');
 }
 
+// ----- Associates / Companions multi-row picker (Phase 11 req5) -----
+// Shared by both the Person form (#personAssociatesBody) and Material form (#materialAssociatesBody).
+// Each row is a self-contained employee typeahead. Selected value is stored on the row as
+// dataset.employeeId / dataset.departmentId / dataset.name. Reuses GET /employees like the
+// authorized-employee picker. Max 19 additional companions per form.
+var associateDirectoryCache = [];
+var associateRowSeq = 0;
+var associateSearchTimers = {};
+
+function associateBodyId(formTypeCode) {
+    return formTypeCode === 'MATERIAL_GATE_PASS' ? 'materialAssociatesBody' : 'personAssociatesBody';
+}
+
+function associateEmptyId(formTypeCode) {
+    return formTypeCode === 'MATERIAL_GATE_PASS' ? 'materialAssociatesEmpty' : 'personAssociatesEmpty';
+}
+
+async function ensureAssociateDirectory() {
+    if (associateDirectoryCache.length > 0 || !isDatabaseSession()) return;
+    try {
+        associateDirectoryCache = await ApiClient.get('/employees?limit=100');
+    } catch {
+        associateDirectoryCache = [];
+    }
+}
+
+function filterAssociateEmployees(term) {
+    const needle = (term || '').trim().toLowerCase();
+    const source = associateDirectoryCache || [];
+    if (!needle) return source.slice(0, 10);
+    return source.filter(employee =>
+        employee.fullName?.toLowerCase().includes(needle) ||
+        employee.employeeId?.toLowerCase().includes(needle) ||
+        employee.departmentName?.toLowerCase().includes(needle)
+    ).slice(0, 10);
+}
+
+function updateAssociatesEmptyHint(formTypeCode) {
+    const body = document.getElementById(associateBodyId(formTypeCode));
+    const hint = document.getElementById(associateEmptyId(formTypeCode));
+    if (hint) hint.classList.toggle('hidden', !!body && body.children.length > 0);
+}
+
+async function addAssociateRow(formTypeCode, values = {}) {
+    const body = document.getElementById(associateBodyId(formTypeCode));
+    if (!body) return;
+    if (body.children.length >= 19) {
+        showToast('Maximum of 19 additional companions reached.', 'error');
+        return;
+    }
+    await ensureAssociateDirectory();
+
+    const rowId = 'assocRow' + (++associateRowSeq);
+    const row = document.createElement('div');
+    row.className = 'associate-row flex items-start gap-2 px-4 py-2';
+    row.id = rowId;
+    row.dataset.employeeId = values.employeeId ? String(values.employeeId) : '';
+    row.dataset.departmentId = values.departmentId ? String(values.departmentId) : '';
+    row.dataset.name = values.name || '';
+    row.innerHTML = `
+        <div class="relative flex-1">
+            <input type="text" autocomplete="off" data-associate-search class="w-full rounded border border-gray-300 bg-white p-2 text-xs focus:border-mpiBlue focus:ring-1 focus:ring-mpiBlue" placeholder="Type employee ID or name..." value="${materialEscape(values.name || '')}" oninput="handleAssociateSearchInput('${rowId}')" onfocus="showAssociateSuggestions('${rowId}')" onkeydown="handleAssociateSearchKeydown(event, '${rowId}')">
+            <div data-associate-suggestions class="absolute z-30 mt-1 hidden max-h-48 w-full overflow-y-auto rounded border border-gray-200 bg-white shadow-lg"></div>
+            <p data-associate-meta class="mt-1 text-[10px] text-gray-400">Select an active employee.</p>
+        </div>
+        <button type="button" onclick="removeAssociateRow('${rowId}', '${formTypeCode}')" class="rounded p-2 text-red-500 hover:bg-red-50" title="Remove companion"><i class="fas fa-trash"></i></button>`;
+    body.appendChild(row);
+    updateAssociatesEmptyHint(formTypeCode);
+}
+
+function removeAssociateRow(rowId, formTypeCode) {
+    document.getElementById(rowId)?.remove();
+    clearTimeout(associateSearchTimers[rowId]);
+    delete associateSearchTimers[rowId];
+    updateAssociatesEmptyHint(formTypeCode);
+}
+
+function renderAssociateSuggestions(rowId) {
+    const row = document.getElementById(rowId);
+    if (!row) return;
+    const search = row.querySelector('[data-associate-search]');
+    const box = row.querySelector('[data-associate-suggestions]');
+    if (!box) return;
+    const list = filterAssociateEmployees(search?.value);
+    box.innerHTML = list.map(employee => `
+        <button type="button" class="block w-full px-3 py-2 text-left hover:bg-blue-50" onclick="selectAssociate('${rowId}', ${employee.employeeRecordId})">
+            <span class="block text-xs font-bold text-gray-800">${materialEscape(employee.fullName)} (${materialEscape(employee.employeeId)})</span>
+            <span class="block text-[10px] text-gray-500">${materialEscape([employee.departmentName, employee.positionName].filter(Boolean).join(' · '))}</span>
+        </button>`).join('') ||
+        '<div class="px-3 py-2 text-xs text-red-500">No active employee found.</div>';
+}
+
+function showAssociateSuggestions(rowId) {
+    const row = document.getElementById(rowId);
+    const box = row?.querySelector('[data-associate-suggestions]');
+    if (!box) return;
+    renderAssociateSuggestions(rowId);
+    box.classList.remove('hidden');
+}
+
+function handleAssociateSearchInput(rowId) {
+    const row = document.getElementById(rowId);
+    if (!row) return;
+    // Editing the text invalidates a prior selection.
+    row.dataset.employeeId = '';
+    row.dataset.departmentId = '';
+    row.dataset.name = '';
+    renderAssociateSuggestions(rowId);
+    showAssociateSuggestions(rowId);
+    const value = row.querySelector('[data-associate-search]')?.value || '';
+    clearTimeout(associateSearchTimers[rowId]);
+    associateSearchTimers[rowId] = setTimeout(() => searchAssociateEmployees(rowId, value), 250);
+}
+
+function handleAssociateSearchKeydown(event, rowId) {
+    if (event.key !== 'Enter') return;
+    event.preventDefault();
+    const search = document.getElementById(rowId)?.querySelector('[data-associate-search]');
+    const first = filterAssociateEmployees(search?.value)[0];
+    if (first) selectAssociate(rowId, first.employeeRecordId);
+}
+
+async function searchAssociateEmployees(rowId, term) {
+    if (!isDatabaseSession()) return;
+    const query = (term || '').trim();
+    if (query.length < 2) { renderAssociateSuggestions(rowId); return; }
+    try {
+        const results = await ApiClient.get(`/employees?search=${encodeURIComponent(query)}&limit=20`);
+        const byId = new Map(associateDirectoryCache.map(e => [String(e.employeeRecordId), e]));
+        results.forEach(e => byId.set(String(e.employeeRecordId), e));
+        associateDirectoryCache = Array.from(byId.values());
+        renderAssociateSuggestions(rowId);
+        showAssociateSuggestions(rowId);
+    } catch {
+        renderAssociateSuggestions(rowId);
+    }
+}
+
+function selectAssociate(rowId, employeeRecordId) {
+    const row = document.getElementById(rowId);
+    if (!row) return;
+    const employee = associateDirectoryCache.find(e => Number(e.employeeRecordId) === Number(employeeRecordId));
+    if (!employee) return;
+    row.dataset.employeeId = String(employee.employeeRecordId);
+    row.dataset.departmentId = employee.departmentId != null ? String(employee.departmentId) : '';
+    row.dataset.name = employee.fullName || '';
+    const search = row.querySelector('[data-associate-search]');
+    const meta = row.querySelector('[data-associate-meta]');
+    const box = row.querySelector('[data-associate-suggestions]');
+    if (search) search.value = `${employee.fullName} (${employee.employeeId})`;
+    if (meta) meta.innerText = [employee.departmentName, employee.positionName].filter(Boolean).join(' · ') || 'Active employee selected.';
+    box?.classList.add('hidden');
+}
+
+// Collect confirmed companion rows as {employeeId, departmentId, name}. Rows without a
+// confirmed selection are skipped (and reported once by the submit caller via validateAssociates).
+function collectAssociates(formTypeCode) {
+    const body = document.getElementById(associateBodyId(formTypeCode));
+    if (!body) return [];
+    return [...body.querySelectorAll('.associate-row')]
+        .filter(row => row.dataset.employeeId && row.dataset.name)
+        .map(row => ({
+            employeeId: Number(row.dataset.employeeId),
+            departmentId: row.dataset.departmentId ? Number(row.dataset.departmentId) : null,
+            name: row.dataset.name
+        }));
+}
+
+function hasUnconfirmedAssociateRows(formTypeCode) {
+    const body = document.getElementById(associateBodyId(formTypeCode));
+    if (!body) return false;
+    return [...body.querySelectorAll('.associate-row')]
+        .some(row => !row.dataset.employeeId &&
+            (row.querySelector('[data-associate-search]')?.value || '').trim() !== '');
+}
+
+function resetAssociateRows(formTypeCode) {
+    const body = document.getElementById(associateBodyId(formTypeCode));
+    if (body) body.innerHTML = '';
+    updateAssociatesEmptyHint(formTypeCode);
+}
+
 function selectRequestFormType(formTypeCode) {
     const isMaterial = formTypeCode === 'MATERIAL_GATE_PASS';
     resetAllSignatureState?.();
@@ -544,6 +726,12 @@ async function submitMaterialGatePass(event) {
         return;
     }
 
+    if (hasUnconfirmedAssociateRows('MATERIAL_GATE_PASS')) {
+        showToast('Pick an employee for every companion row, or remove the empty rows.', 'error');
+        return;
+    }
+    const associates = collectAssociates('MATERIAL_GATE_PASS');
+
     // Photo Proof validation (at least 1 photo proof is required!)
     let hasAnyPhoto = false;
     for (let i = 1; i <= items.length; i++) {
@@ -579,12 +767,14 @@ async function submitMaterialGatePass(event) {
             remarks: document.getElementById('materialRemarks').value.trim() || null,
             preparedBySignatureFileId: signatureFileId,
             proofFileIds,
-            items
+            items,
+            associates
         });
 
         form.reset();
         clearSelectedMaterialEmployee();
         document.getElementById('materialItemsBody').innerHTML = '';
+        resetAssociateRows('MATERIAL_GATE_PASS');
         clearPreparedSignature('MATERIAL_GATE_PASS');
         resetMaterialProofState();
         initializeMaterialGatePassForm();
@@ -720,6 +910,12 @@ document.addEventListener('DOMContentLoaded', () => {
             !event.target.closest('#materialEmployeeSuggestions')) {
             document.getElementById('materialEmployeeSuggestions')?.classList.add('hidden');
         }
+        // Close any open companion-row suggestion box when clicking outside its row.
+        document.querySelectorAll('.associate-row [data-associate-suggestions]').forEach(box => {
+            if (!box.closest('.associate-row').contains(event.target)) {
+                box.classList.add('hidden');
+            }
+        });
     });
 });
 
@@ -740,6 +936,15 @@ window.showMaterialPreparedSignatureSource = showMaterialPreparedSignatureSource
 window.clearMaterialPreparedSignaturePad = clearMaterialPreparedSignaturePad;
 window.useMaterialPreparedDrawnSignature = useMaterialPreparedDrawnSignature;
 window.resetMaterialPreparedSignatureState = resetMaterialPreparedSignatureState;
+window.addAssociateRow = addAssociateRow;
+window.removeAssociateRow = removeAssociateRow;
+window.handleAssociateSearchInput = handleAssociateSearchInput;
+window.handleAssociateSearchKeydown = handleAssociateSearchKeydown;
+window.showAssociateSuggestions = showAssociateSuggestions;
+window.selectAssociate = selectAssociate;
+window.collectAssociates = collectAssociates;
+window.hasUnconfirmedAssociateRows = hasUnconfirmedAssociateRows;
+window.resetAssociateRows = resetAssociateRows;
 
 function previewMaterialProof(idx, input) {
     const file = input.files[0];
@@ -767,6 +972,7 @@ async function uploadMaterialProofFile(file) {
     formData.append('file', file);
     formData.append('widthPercent', '100');
     formData.append('yOffset', '0');
+    formData.append('compress', 'true');
     const uploaded = await ApiClient.post('/signatures', formData);
     return uploaded.signatureFileId;
 }

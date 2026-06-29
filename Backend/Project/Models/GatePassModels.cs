@@ -79,6 +79,7 @@ public sealed class GatePassDetail : GatePassRecord
     public IReadOnlyList<GatePassScanRecord> Scans { get; init; } = [];
     public IReadOnlyList<MaterialGatePassItemRecord> MaterialItems { get; init; } = [];
     public IReadOnlyList<long> ProofFileIds { get; init; } = [];
+    public IReadOnlyList<AssociateRecord> Associates { get; init; } = [];
 }
 
 public sealed class MaterialGatePassItemRecord
@@ -90,6 +91,18 @@ public sealed class MaterialGatePassItemRecord
     public string Description { get; init; } = string.Empty;
     public decimal Quantity { get; init; }
     public string Unit { get; init; } = string.Empty;
+}
+
+public sealed class AssociateRecord
+{
+    public long AssociateId { get; init; }
+    public long GatePassId { get; init; }
+    public int LineNo { get; init; }
+    public long? EmployeeId { get; init; }
+    public string? EmployeeNo { get; init; }
+    public string Name { get; init; } = string.Empty;
+    public long? DepartmentId { get; init; }
+    public string? DepartmentName { get; init; }
 }
 
 public sealed class EmployeeLookupRecord

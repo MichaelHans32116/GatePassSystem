@@ -211,6 +211,9 @@
                 margin: 0 auto !important; /* Override single print margin in batch print */
             }
             .print-hide { display: none !important; }
+            /* Defensive: proof photos must NEVER print, even if .print-hide is removed from the gallery markup. */
+            #materialProofsGallery,
+            #materialProofsList { display: none !important; }
             .person-header-qr { display: none !important; }
             .qr-back-page {
                 display: flex !important;
@@ -314,6 +317,43 @@
             font-size: 8px;
             line-height: 1.05;
             min-height: 10px;
+            white-space: nowrap;
+        }
+        /* Figma req5.1: tighten NAME OF ASSOCIATES label/value spacing so names
+           stay inside the 10mm x 65% cell. */
+        .person-associates-label {
+            margin-bottom: 0;
+            line-height: 1;
+            letter-spacing: 0.1px;
+        }
+        .person-print-form #vName {
+            line-height: 1.02;
+            white-space: normal;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        /* Compact additional-companion names (mirrors .person-date-filed). */
+        .person-associates-extra {
+            margin-top: 0.2mm;
+        }
+        .person-associate-compact {
+            font-size: 6.5px;
+            line-height: 1.05;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            text-transform: capitalize;
+            font-weight: 600;
+        }
+        /* Material statement compact companions. */
+        .material-associates-extra .person-associate-compact,
+        .material-associates-extra {
+            font-size: 6px;
+            line-height: 1.05;
+        }
+        .material-associates-extra .person-associate-compact {
+            display: inline-block;
+            margin-right: 3px;
             white-space: nowrap;
         }
         .person-control-no {
@@ -1198,6 +1238,10 @@
             margin-top: 0.2mm;
             font-size: 5.7px;
         }
+        .a4-wrapper.is-batch-print .person-print-form .person-associate-compact {
+            font-size: 6px;
+            line-height: 1;
+        }
         .a4-wrapper.has-multiple-passes .person-print-form .guard-status-row td {
             padding-top: 0.35mm !important;
             padding-bottom: 0.35mm !important;
@@ -1464,6 +1508,127 @@
             flex: 0 0 auto;
             max-height: min(42vh, 420px);
             overflow-y: auto;
+        }
+        /* Phase 11 Req 4: Digital view + view-mode toggle */
+        .doc-view-toggle-btn {
+            color: #4b5563;
+            background: transparent;
+        }
+        .doc-view-toggle-btn.is-active {
+            background: #ffffff;
+            color: #155CA2;
+            box-shadow: 0 1px 2px rgba(0,0,0,0.08);
+        }
+        .digital-view-area .digital-view-header {
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 0.75rem;
+            border-bottom: 1px solid #e5e7eb;
+            padding-bottom: 0.75rem;
+            margin-bottom: 1rem;
+        }
+        .digital-view-title {
+            font-size: 1rem;
+            font-weight: 800;
+            color: #1f2937;
+        }
+        .digital-view-status {
+            font-size: 0.7rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.04em;
+            color: #155CA2;
+            background: #e8f1fb;
+            padding: 0.2rem 0.6rem;
+            border-radius: 9999px;
+            white-space: nowrap;
+        }
+        .digital-field-grid {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 0.85rem 1.25rem;
+        }
+        @media (min-width: 640px) {
+            .digital-field-grid { grid-template-columns: 1fr 1fr; }
+        }
+        .digital-field-label {
+            font-size: 0.65rem;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #6b7280;
+            margin-bottom: 0.15rem;
+        }
+        .digital-field-value {
+            font-size: 0.875rem;
+            font-weight: 600;
+            color: #1f2937;
+            white-space: pre-wrap;
+            word-break: break-word;
+        }
+        .digital-field-empty { color: #9ca3af; font-weight: 500; font-style: italic; }
+        .digital-subsection {
+            margin-top: 1.25rem;
+            padding-top: 1rem;
+            border-top: 1px solid #f1f5f9;
+        }
+        .digital-subsection-title {
+            font-size: 0.7rem;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: 0.05em;
+            color: #155CA2;
+            margin-bottom: 0.6rem;
+        }
+        .digital-items-table {
+            width: 100%;
+            border-collapse: collapse;
+            font-size: 0.8rem;
+        }
+        .digital-items-table th,
+        .digital-items-table td {
+            border: 1px solid #e5e7eb;
+            padding: 0.4rem 0.55rem;
+            text-align: left;
+        }
+        .digital-items-table th {
+            background: #f8fafc;
+            font-weight: 700;
+            color: #475569;
+            text-transform: uppercase;
+            font-size: 0.65rem;
+            letter-spacing: 0.03em;
+        }
+        .digital-items-table .text-center { text-align: center; }
+        .digital-remarks-list {
+            list-style: disc;
+            padding-left: 1.25rem;
+            font-size: 0.8rem;
+            color: #374151;
+            display: flex;
+            flex-direction: column;
+            gap: 0.35rem;
+        }
+        .digital-proof-grid {
+            display: grid;
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+            gap: 0.75rem;
+        }
+        .digital-proof-cell {
+            position: relative;
+            min-height: 140px;
+            border: 1px solid #e2e8f0;
+            border-radius: 0.5rem;
+            overflow: hidden;
+            background: #f8fafc;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+        }
+        @media print {
+            #digitalViewArea { display: none !important; }
         }
         .modal-no-select {
             user-select: none;

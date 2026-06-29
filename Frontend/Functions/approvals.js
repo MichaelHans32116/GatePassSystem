@@ -66,9 +66,10 @@ async function approveCurrentPass() {
         }
 
         const signature = await uploadCurrentSignature();
+        const approveComment = (document.getElementById('decisionReasonInput')?.value || '').trim();
         await ApiClient.post(`/approvals/${pass.dbId}/approve`, {
             signatureFileId: signature?.signatureFileId || null,
-            comment: null,
+            comment: approveComment || null,
             vehicleId,
             driverId,
             tripType,
@@ -96,8 +97,15 @@ async function approveCurrentPass() {
 async function holdCurrentPass() {
     const pass = findGatePassRecord();
     if (!pass) return;
-    const comment = window.prompt('Please enter a reason/remarks for putting this request on hold:');
-    if (comment === null) return;
+
+    const composer = document.getElementById('decisionReasonComposer');
+    // First click: reveal the inline composer and wait for the user to type a reason.
+    if (composer && composer.classList.contains('hidden')) {
+        showDecisionReasonComposer('Reason / Remarks for placing on hold', { required: true });
+        return;
+    }
+    const comment = readDecisionReason();
+    if (comment === null) return; // required-but-empty; inline error already shown
 
     const holdButton = document.getElementById('holdRequestButton');
     if (holdButton) holdButton.disabled = true;
@@ -105,7 +113,7 @@ async function holdCurrentPass() {
     try {
         await ApiClient.post(`/approvals/${pass.dbId}/approve`, {
             signatureFileId: null,
-            comment: comment.trim() || 'Put on hold by HR.',
+            comment: comment || 'Put on hold by HR.',
             putOnHold: true
         });
         showToast('Request put on hold.');
@@ -119,11 +127,19 @@ async function holdCurrentPass() {
 }
 
 async function rejectCurrentPass() {
+    const pass = findGatePassRecord();
+    if (!pass) return;
+
+    const composer = document.getElementById('decisionReasonComposer');
+    // First click: reveal the inline composer; rejection reason is required.
+    if (composer && composer.classList.contains('hidden')) {
+        showDecisionReasonComposer('Reason for rejection', { required: true });
+        return;
+    }
+    const reason = readDecisionReason();
+    if (!reason) return; // null (empty+required) or blank -> inline error already shown
+
     if (!isDatabaseSession()) {
-        const pass = findGatePassRecord();
-        if (!pass) return;
-        const reason = window.prompt('Reason for rejection:');
-        if (!reason?.trim()) return;
         pass.status = 'Rejected';
         showToast('Form request rejected.', 'error');
         closeModal();
@@ -131,21 +147,56 @@ async function rejectCurrentPass() {
         return;
     }
 
-    const pass = findGatePassRecord();
-    if (!pass) return;
-    const reason = window.prompt('Reason for rejection:');
-    if (!reason?.trim()) return;
-
     try {
         await ApiClient.post(`/approvals/${pass.dbId}/reject`, {
             signatureFileId: null,
-            comment: reason.trim()
+            comment: reason
         });
         showToast('Form request rejected.', 'error');
         closeModal();
         await refreshApplicationState('reject-request');
     } catch (error) {
         showToast(error instanceof ApiError ? error.message : 'Unable to reject document.', 'error');
+    }
+}
+
+async function cancelCurrentPass() {
+    const pass = findGatePassRecord();
+    if (!pass) return;
+
+    const remarksInput = document.getElementById('cancelGatePassRemarks');
+    const resultBox = document.getElementById('decisionRemarksResult');
+    const remarks = (remarksInput?.value || '').trim();
+    if (!remarks) {
+        showToast('A cancellation remark is required.', 'error');
+        remarksInput?.focus();
+        return;
+    }
+
+    if (!window.confirm('Cancel this gate pass? This action cannot be undone.')) {
+        return;
+    }
+
+    const cancelButton = document.getElementById('cancelGatePassButton');
+    if (cancelButton) cancelButton.disabled = true;
+    try {
+        await ApiClient.post(`/approvals/${pass.dbId}/cancel`, {
+            remarks
+        });
+        if (resultBox) {
+            resultBox.className =
+                'text-xs rounded-lg border p-3 border-rose-200 bg-rose-50 text-rose-800';
+            resultBox.innerHTML =
+                `<i class="fas fa-ban mr-1"></i> Gate pass cancelled. Remarks: <strong>${escapeDocumentText(remarks)}</strong>`;
+            resultBox.classList.remove('hidden');
+        }
+        showToast('Gate pass cancelled.', 'error');
+        closeModal();
+        await refreshApplicationState('cancel-request');
+    } catch (error) {
+        showToast(error instanceof ApiError ? error.message : 'Unable to cancel gate pass.', 'error');
+    } finally {
+        if (cancelButton) cancelButton.disabled = false;
     }
 }
 
@@ -278,5 +329,6 @@ function updateApprovalQueueDisplay(toApprove) {
 window.approveCurrentPass = approveCurrentPass;
 window.rejectCurrentPass = rejectCurrentPass;
 window.holdCurrentPass = holdCurrentPass;
+window.cancelCurrentPass = cancelCurrentPass;
 window.renderApprovalQueue = renderApprovalQueue;
 window.uploadCurrentSignature = uploadCurrentSignature;

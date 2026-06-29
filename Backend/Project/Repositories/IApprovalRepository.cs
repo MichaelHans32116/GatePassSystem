@@ -22,5 +22,12 @@ public interface IApprovalRepository
         string? tripType,
         string traceId,
         CancellationToken cancellationToken = default);
+
+    Task<ApprovalMutation?> CancelAsync(
+        long gatePassId,
+        long actorUserId,
+        string remarks,
+        string traceId,
+        CancellationToken cancellationToken = default);
 }
 
