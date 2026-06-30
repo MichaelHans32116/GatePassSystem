@@ -116,18 +116,6 @@ function schedFilteredData() {
             const haystack = [entry.requesterName, entry.title, entry.destination, entry.controlNo, entry.vehicleName, entry.driverName]
                 .filter(Boolean).join(' ').toLowerCase();
             if (!haystack.includes(q)) return false;
-        } else {
-            // Hide past schedules if no search is active.
-            // Treat "00:00:00" (default TimeSpan for unassigned reservations) the same as
-            // null so events without an assigned end-time stay visible until midnight.
-            if (entry.scheduleDate) {
-                const datePart = entry.scheduleDate.split('T')[0];
-                const endPart = (entry.endTime && entry.endTime !== '00:00:00') ? entry.endTime : '23:59:59';
-                const [yr, mo, dy] = datePart.split('-').map(Number);
-                const [hh, mm, ss] = endPart.split(':').map(Number);
-                const eventEnd = new Date(yr, mo - 1, dy, hh || 0, mm || 0, ss || 0);
-                if (eventEnd < new Date()) return false;
-            }
         }
         return true;
     });
@@ -340,9 +328,16 @@ function navigateScheduleMonth(dir) {
 // Day-view mode: 'grid' renders the Excel-style per-day layout (vehicles as columns,
 // time slots as rows); 'list' keeps the compact card list. Defaults to grid.
 var scheduleDayView = 'grid';
+// Grid section toggle: 'vehicle' shows regular cars, 'truck' shows trucks/commercial.
+var schedDayGridType = 'vehicle';
 
 function setScheduleDayView(mode) {
     scheduleDayView = mode === 'list' ? 'list' : 'grid';
+    if (scheduleSelectedDay) openScheduleDayModal(scheduleSelectedDay);
+}
+
+function setScheduleDayGridType(type) {
+    schedDayGridType = (type === 'truck') ? 'truck' : 'vehicle';
     if (scheduleSelectedDay) openScheduleDayModal(scheduleSelectedDay);
 }
 
@@ -580,23 +575,36 @@ function openScheduleDayModal(dateStr) {
         const vehicleSlots = schedBuildTimeSlots('vehicle');
         const trucks = schedTruckVehicles();
         const truckSlots = schedBuildTimeSlots('truck');
-        const hasTruckEvents = events.some(ev => trucks.some(t => schedEventMatchesVehicle(ev, t)));
 
         const dayLabel = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+
+        const gridTypeTabs = `
+            <div class="flex gap-1.5 mb-3">
+                <button onclick="setScheduleDayGridType('vehicle')" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded transition ${schedDayGridType === 'vehicle' ? 'bg-mpiBlue text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}">
+                    <i class="fas fa-car-side"></i> Vehicles
+                </button>
+                <button onclick="setScheduleDayGridType('truck')" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded transition ${schedDayGridType === 'truck' ? 'bg-mpiBlue text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}">
+                    <i class="fas fa-truck"></i> Trucks
+                </button>
+            </div>`;
+
         let gridHtml = '';
-        if (vehicles.length) {
-            gridHtml += schedRenderScheduleGrid(
-                `<i class="fas fa-car-side text-mpiBlue"></i> Vehicle Monitoring — ${schedEscape(dayLabel)}`,
-                vehicles, vehicleSlots, events);
-        }
-        if (hasTruckEvents && trucks.length) {
-            gridHtml += schedRenderScheduleGrid(
-                `<i class="fas fa-truck text-mpiBlue"></i> Truck Schedule — ${schedEscape(dayLabel)}`,
-                trucks, truckSlots, events);
+        if (schedDayGridType === 'truck') {
+            if (trucks.length) {
+                gridHtml = schedRenderScheduleGrid(
+                    `<i class="fas fa-truck text-mpiBlue"></i> Truck Schedule — ${schedEscape(dayLabel)}`,
+                    trucks, truckSlots, events);
+            }
+        } else {
+            if (vehicles.length) {
+                gridHtml = schedRenderScheduleGrid(
+                    `<i class="fas fa-car-side text-mpiBlue"></i> Vehicle Monitoring — ${schedEscape(dayLabel)}`,
+                    vehicles, vehicleSlots, events);
+            }
         }
 
         // Fall back to the list when there are no vehicle columns to render a grid into.
-        bodyEl.innerHTML = toggle + (gridHtml || schedRenderDayList(events));
+        bodyEl.innerHTML = toggle + gridTypeTabs + (gridHtml || schedRenderDayList(events));
     }
 
     modal.classList.remove('hidden');
@@ -1494,6 +1502,7 @@ window.applyScheduleFilters = applyScheduleFilters;
 window.clearScheduleFilters = clearScheduleFilters;
 window.openScheduleDayModal = openScheduleDayModal;
 window.setScheduleDayView = setScheduleDayView;
+window.setScheduleDayGridType = setScheduleDayGridType;
 window.closeScheduleDayModal = closeScheduleDayModal;
 window.exportScheduleExcel = exportScheduleExcel;
 window.populateScheduleFilterDropdowns = populateScheduleFilterDropdowns;
