@@ -116,6 +116,14 @@ function schedFilteredData() {
             const haystack = [entry.requesterName, entry.title, entry.destination, entry.controlNo, entry.vehicleName, entry.driverName]
                 .filter(Boolean).join(' ').toLowerCase();
             if (!haystack.includes(q)) return false;
+        } else {
+            // Hide past schedules if no search is active
+            if (entry.scheduleDate) {
+                const datePart = entry.scheduleDate.split('T')[0];
+                const endPart = entry.endTime ? entry.endTime : '23:59:59';
+                const eventEnd = new Date(`${datePart}T${endPart}`);
+                if (eventEnd < new Date()) return false;
+            }
         }
         return true;
     });
