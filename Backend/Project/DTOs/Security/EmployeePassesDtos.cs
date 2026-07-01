@@ -1,4 +1,4 @@
-namespace GatePassSystem.Project.DTOs.Security;
+﻿namespace FormRequestSystem.Project.DTOs.Security;
 
 public sealed record EmployeePassItem(
     long GatePassId,
@@ -17,3 +17,4 @@ public sealed record EmployeePassesResult(
     string EmployeeName,
     IReadOnlyList<EmployeePassItem> Active,
     IReadOnlyList<EmployeePassItem> Recent);
+

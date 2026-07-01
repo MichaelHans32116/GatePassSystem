@@ -1,7 +1,7 @@
-using Dapper;
-using GatePassSystem.Project.Models;
+﻿using Dapper;
+using FormRequestSystem.Project.Models;
 
-namespace GatePassSystem.Project.Repositories;
+namespace FormRequestSystem.Project.Repositories;
 
 public sealed class EmployeeRepository(
     IDatabaseConnectionFactory connectionFactory) : IEmployeeRepository
@@ -187,3 +187,4 @@ public sealed class EmployeeRepository(
         public string FullName { get; init; } = string.Empty;
     }
 }
+

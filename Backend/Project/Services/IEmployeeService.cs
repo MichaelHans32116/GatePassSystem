@@ -1,6 +1,6 @@
-using GatePassSystem.Project.DTOs.GatePass;
+﻿using FormRequestSystem.Project.DTOs.GatePass;
 
-namespace GatePassSystem.Project.Services;
+namespace FormRequestSystem.Project.Services;
 
 public interface IEmployeeService
 {
@@ -9,3 +9,4 @@ public interface IEmployeeService
         int limit,
         CancellationToken cancellationToken = default);
 }
+

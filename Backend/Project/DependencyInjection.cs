@@ -1,11 +1,11 @@
-using Dapper;
-using GatePassSystem.Project.Models;
-using GatePassSystem.Project.Repositories;
-using GatePassSystem.Project.Services;
+﻿using Dapper;
+using FormRequestSystem.Project.Models;
+using FormRequestSystem.Project.Repositories;
+using FormRequestSystem.Project.Services;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.Options;
 
-namespace GatePassSystem.Project;
+namespace FormRequestSystem.Project;
 
 public static class DependencyInjection
 {
@@ -49,3 +49,4 @@ public static class DependencyInjection
         return services;
     }
 }
+

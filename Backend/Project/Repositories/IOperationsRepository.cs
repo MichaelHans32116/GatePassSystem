@@ -1,6 +1,6 @@
-using GatePassSystem.Project.Models;
+﻿using FormRequestSystem.Project.Models;
 
-namespace GatePassSystem.Project.Repositories;
+namespace FormRequestSystem.Project.Repositories;
 
 public interface IOperationsRepository
 {
@@ -21,4 +21,5 @@ public interface IOperationsRepository
         string traceId,
         CancellationToken cancellationToken = default);
 }
+
 

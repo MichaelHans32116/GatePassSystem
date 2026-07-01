@@ -1,11 +1,11 @@
-using System.Data;
+﻿using System.Data;
 using System.Text.Json;
 using Dapper;
-using GatePassSystem.Project.DTOs.Common;
-using GatePassSystem.Project.DTOs.GatePass;
-using GatePassSystem.Project.Models;
+using FormRequestSystem.Project.DTOs.Common;
+using FormRequestSystem.Project.DTOs.GatePass;
+using FormRequestSystem.Project.Models;
 
-namespace GatePassSystem.Project.Repositories;
+namespace FormRequestSystem.Project.Repositories;
 
 public sealed class GatePassRepository(
     IDatabaseConnectionFactory connectionFactory) : IGatePassRepository
@@ -810,3 +810,4 @@ public sealed class GatePassRepository(
             Associates = associates
         };
 }
+

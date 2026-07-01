@@ -1,4 +1,4 @@
-namespace GatePassSystem.Api.Infrastructure;
+﻿namespace FormRequestSystem.Api.Infrastructure;
 
 public sealed record ApiResponse<T>(
     T Data,
@@ -18,4 +18,5 @@ public sealed record PagedApiResponse<T>(
     long TotalCount,
     long TotalPages,
     string TraceId);
+
 

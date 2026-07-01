@@ -1,7 +1,7 @@
-using GatePassSystem.Project.Models;
+﻿using FormRequestSystem.Project.Models;
 using Microsoft.Extensions.Options;
 
-namespace GatePassSystem.Project.Services;
+namespace FormRequestSystem.Project.Services;
 
 public sealed class JwtOptionsValidator : IValidateOptions<JwtOptions>
 {
@@ -25,3 +25,4 @@ public sealed class JwtOptionsValidator : IValidateOptions<JwtOptions>
         return ValidateOptionsResult.Success;
     }
 }
+

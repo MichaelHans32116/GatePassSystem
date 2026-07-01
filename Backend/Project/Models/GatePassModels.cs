@@ -1,4 +1,4 @@
-namespace GatePassSystem.Project.Models;
+﻿namespace FormRequestSystem.Project.Models;
 
 public sealed class RequesterContext
 {
@@ -173,3 +173,4 @@ public sealed record ApprovalMutation(
     string PreviousStatus,
     string NewStatus,
     string? NextApprovalStep);
+

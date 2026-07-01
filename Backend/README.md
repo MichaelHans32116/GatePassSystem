@@ -1,12 +1,12 @@
-# Backend
+﻿# Backend
 
 ASP.NET Core Web API targeting .NET 8 with MariaDB/MySQL.
 
 ## Projects
 
-- `GatePassSystem.Api.csproj`: HTTP API, controllers, authentication, CORS,
+- `FormRequestSystem.Api.csproj`: HTTP API, controllers, authentication, CORS,
   rate limiting, exception handling, and Swagger.
-- `Project/GatePassSystem.Project.csproj`: models, DTOs, repositories, and
+- `Project/FormRequestSystem.Project.csproj`: models, DTOs, repositories, and
   business services.
 - `Tools/EmployeeImporter`: local workbook importer that reads only the six
   approved employee fields.
@@ -33,7 +33,7 @@ error, validation, and trace-ID contracts.
 6. Start the API:
 
 ```powershell
-dotnet run --project Backend/GatePassSystem.Api.csproj
+dotnet run --project Backend/FormRequestSystem.Api.csproj
 ```
 
 Swagger is available at `http://127.0.0.1:5087/swagger` in Development.
@@ -41,7 +41,7 @@ Swagger is available at `http://127.0.0.1:5087/swagger` in Development.
 Build the complete solution with:
 
 ```powershell
-dotnet build Backend/GatePassSystem.sln -maxcpucount:1
+dotnet build Backend/FormRequestSystem.sln -maxcpucount:1
 ```
 
 The single-worker option avoids concurrent writes to the shared Project
@@ -49,3 +49,4 @@ library when the API and importer are built together.
 
 The local XAMPP connection in `appsettings.json` is Development-only.
 Production requires `GATEPASS_DB_CONNECTION` and a non-development JWT key.
+

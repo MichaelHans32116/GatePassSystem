@@ -1,4 +1,4 @@
-namespace GatePassSystem.Project.Services;
+﻿namespace FormRequestSystem.Project.Services;
 
 public interface IQrTokenService
 {
@@ -7,4 +7,5 @@ public interface IQrTokenService
     bool TryGetEmployeeRecordId(string token, out long employeeRecordId);
     string HashToken(string token);
 }
+
 

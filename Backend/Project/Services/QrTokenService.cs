@@ -1,10 +1,10 @@
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 using System.Text;
-using GatePassSystem.Project.Models;
+using FormRequestSystem.Project.Models;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
-namespace GatePassSystem.Project.Services;
+namespace FormRequestSystem.Project.Services;
 
 public sealed class QrTokenService(IOptions<JwtOptions> options) : IQrTokenService
 {
@@ -52,4 +52,5 @@ public sealed class QrTokenService(IOptions<JwtOptions> options) : IQrTokenServi
         Convert.ToHexString(
             SHA256.HashData(Encoding.UTF8.GetBytes(token)));
 }
+
 

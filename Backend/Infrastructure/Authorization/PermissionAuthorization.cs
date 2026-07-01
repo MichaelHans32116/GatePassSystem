@@ -1,6 +1,6 @@
-using Microsoft.AspNetCore.Authorization;
+﻿using Microsoft.AspNetCore.Authorization;
 
-namespace GatePassSystem.Api.Infrastructure.Authorization;
+namespace FormRequestSystem.Api.Infrastructure.Authorization;
 
 public sealed class PermissionRequirement(string permission)
     : IAuthorizationRequirement
@@ -23,4 +23,5 @@ public sealed class PermissionAuthorizationHandler
         return Task.CompletedTask;
     }
 }
+
 

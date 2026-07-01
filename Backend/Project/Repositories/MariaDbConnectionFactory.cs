@@ -1,8 +1,8 @@
-using System.Data.Common;
+﻿using System.Data.Common;
 using Dapper;
 using MySqlConnector;
 
-namespace GatePassSystem.Project.Repositories;
+namespace FormRequestSystem.Project.Repositories;
 
 public sealed class MariaDbConnectionFactory(string connectionString) : IDatabaseConnectionFactory
 {
@@ -25,3 +25,4 @@ public sealed class MariaDbConnectionFactory(string connectionString) : IDatabas
         }
     }
 }
+

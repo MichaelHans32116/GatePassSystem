@@ -1,4 +1,4 @@
-# Form Request System
+﻿# Form Request System
 
 Internal workflow system for requesting, approving, printing, and tracking
 Moriroku forms. The current release supports:
@@ -47,11 +47,11 @@ Double-click `deploy-xampp.bat`, or run:
 ```
 
 This builds and starts the ASP.NET API, uses XAMPP MariaDB, copies only the
-frontend assets to `C:\xampp\htdocs\GatePassSystem`, starts Apache when needed,
+frontend assets to `C:\xampp\htdocs\FormRequestSystem`, starts Apache when needed,
 and opens:
 
 ```text
-http://127.0.0.1/GatePassSystem/
+http://127.0.0.1/FormRequestSystem/
 ```
 
 The API remains on port `5087`. Development CORS is enabled only by the local
@@ -64,7 +64,7 @@ After running `deploy-xampp.ps1` or `start-local.ps1`, use the LAN URL printed
 by the launcher. Example:
 
 ```text
-http://192.168.100.46/GatePassSystem/
+http://192.168.100.46/FormRequestSystem/
 ```
 
 The IP address can change after reconnecting to Wi-Fi, so use the current
@@ -230,4 +230,5 @@ The repository now contains:
 
 ## Repository
 
-GitHub: https://github.com/MichaelHans32116/GatePassSystem
+GitHub: https://github.com/MichaelHans32116/FormRequestSystem
+

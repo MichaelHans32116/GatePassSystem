@@ -1,8 +1,8 @@
-using System.Data;
+﻿using System.Data;
 using Dapper;
-using GatePassSystem.Project.Models;
+using FormRequestSystem.Project.Models;
 
-namespace GatePassSystem.Project.Repositories;
+namespace FormRequestSystem.Project.Repositories;
 
 public sealed class OperationsRepository(
     IDatabaseConnectionFactory connectionFactory) : IOperationsRepository
@@ -90,3 +90,4 @@ public sealed class OperationsRepository(
             cancellationToken: cancellationToken));
     }
 }
+

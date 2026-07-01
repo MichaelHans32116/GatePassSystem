@@ -1,4 +1,4 @@
-SERVER ACCESS DOCUMENTATION
+﻿SERVER ACCESS DOCUMENTATION
 192.168.9.7 (Centralized System / XAMPP Server)
 ================================================
 
@@ -6,7 +6,7 @@ PURPOSE
 -------
 SSH access was set up on 192.168.9.7 so files can be deployed remotely
 (via command line) instead of manually copying files on the physical
-machine. This was done to prepare for integrating GatePassSystem into
+machine. This was done to prepare for integrating FormRequestSystem into
 the centralized-system dashboard.
 
 
@@ -34,19 +34,19 @@ server work can be reviewed later without relying on chat history.
   `centralized-system` folder.
 - Created a timestamped backup of the live dashboard folder at
   `C:\xampp\htdocs\centralized-system-backup\20260701-075813`.
-- Added a new `Gate Pass System` tile to the centralized dashboard.
-- Changed the Gate Pass tile action to redirect to
-  `http://192.168.9.7/GatePassSystem/`.
-- Staged the Gate Pass frontend files in
-  `C:\xampp\htdocs\GatePassSystem`.
-- Verified that `http://192.168.9.7/GatePassSystem/` returns HTTP 200
+- Added a new `Form Request System` tile to the centralized dashboard.
+- Changed the Form Request tile action to redirect to
+  `http://192.168.9.7/FormRequestSystem/`.
+- Staged the Form Request frontend files in
+  `C:\xampp\htdocs\FormRequestSystem`.
+- Verified that `http://192.168.9.7/FormRequestSystem/` returns HTTP 200
   after staging.
 - Confirmed that the server does not currently have `dotnet` installed
   in PATH or under `C:\Program Files\dotnet`.
 - Kept all router, Wi-Fi, firewall, and service network settings
   unchanged.
-- Confirmed the Gate Pass API targets `net8.0` in
-  `Backend/GatePassSystem.Api.csproj`.
+- Confirmed the Form Request API targets `net8.0` in
+  `Backend/FormRequestSystem.Api.csproj`.
 - Confirmed the Windows SSH service (`sshd`) is running on the server.
 - Confirmed the Windows Remote Desktop service (`TermService`) is also
   running, but RDP firewall access was not tested.
@@ -58,7 +58,7 @@ server work can be reviewed later without relying on chat history.
   - `Microsoft.NETCore.App 8.0.28`
   - `Microsoft.WindowsDesktop.App 8.0.28`
   - `.NET SDK 8.0.422`
-- Published the Gate Pass API to `C:\GatePassSystem\Api` and started it
+- Published the Form Request API to `C:\FormRequestSystem\Api` and started it
   on `http://0.0.0.0:5087`.
 - Registered a startup task named `GatePassApi` that runs the API as
   `SYSTEM` on boot.
@@ -69,19 +69,19 @@ server work can be reviewed later without relying on chat history.
 - Confirmed the server database had no user or employee rows before the
   login fix (`tbl_user_accounts = 0`, `tbl_employees = 0`).
 - Created a database backup before changing login data:
-  `C:\GatePassSystem\backups\gate_pass_system-before-login-bootstrap-20260701-090629.sql`.
+  `C:\FormRequestSystem\backups\gate_pass_system-before-login-bootstrap-20260701-090629.sql`.
 - Seeded a temporary `GPADMIN` system account with the
-  `SYSTEM_ADMIN` role so the Gate Pass UI can authenticate again.
+  `SYSTEM_ADMIN` role so the Form Request UI can authenticate again.
 - Verified the server login endpoint now returns HTTP 200 for the
   temporary admin account at `http://192.168.9.7:5087/api/auth/login`.
 - Created a fresh backup before removing the temporary login account:
-  `C:\GatePassSystem\backups\gate_pass_system-before-gpadmin-removal-20260701-103227.sql`.
+  `C:\FormRequestSystem\backups\gate_pass_system-before-gpadmin-removal-20260701-103227.sql`.
 - Removed the temporary `GPADMIN` account after confirming the row
   count returned `0`.
 - Left the local `127.0.0.1:5087` dev login instance unchanged; it is a
   separate environment from the server deployment.
 - Verified the XAMPP frontend at
-  `http://192.168.9.7/GatePassSystem/` still returns HTTP 200.
+  `http://192.168.9.7/FormRequestSystem/` still returns HTTP 200.
 - Confirmed CORS allows the XAMPP origin for API access.
 - Removed temporary installer bundles, upload zips, and one-off setup
   helper scripts from the server after deployment.
@@ -93,8 +93,8 @@ server work can be reviewed later without relying on chat history.
 - Verified login on the merged server with an imported employee account:
   `GA108` with the default `MMDDYYYY` password pattern.
 - Confirmed the merged server API is healthy again after the import.
-- Verified the centralized dashboard Gate Pass tile opens the live
-  Gate Pass app on `http://192.168.9.7/GatePassSystem/` after entering
+- Verified the centralized dashboard Form Request tile opens the live
+  Form Request app on `http://192.168.9.7/FormRequestSystem/` after entering
   the internal dashboard password.
 - Removed the local `.codex-tmp` staging folder from this workspace
   after deployment work was complete.
@@ -209,3 +209,4 @@ To copy a file to the server:
 
 
 Last updated: 2026-07-01
+

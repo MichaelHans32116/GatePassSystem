@@ -1,4 +1,4 @@
-Codex Plan: QR-Based Gate Pass and Vehicle Monitoring System
+﻿Codex Plan: QR-Based Gate Pass and Vehicle Monitoring System
 
 #Project Context
 
@@ -25,7 +25,7 @@ Core idea:
 - If a company vehicle is used, the vehicle status changes based on the gate pass and scan events.
 
 Suggested project title:
-QR-Based Gate Pass Management System with Vehicle Availability and Return Tracking
+QR-Based Form Request System with Vehicle Availability and Return Tracking
 
 ---
 
@@ -1003,3 +1003,4 @@ Important:
 - QR codes should not expose full employee information.
 - All approval, scan, and status-changing actions should be auditable.
 - Build incrementally by module.
+

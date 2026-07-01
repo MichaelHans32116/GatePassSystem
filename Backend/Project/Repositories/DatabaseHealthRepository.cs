@@ -1,6 +1,6 @@
-using Dapper;
+﻿using Dapper;
 
-namespace GatePassSystem.Project.Repositories;
+namespace FormRequestSystem.Project.Repositories;
 
 public sealed class DatabaseHealthRepository(
     IDatabaseConnectionFactory connectionFactory) : IDatabaseHealthRepository
@@ -19,3 +19,4 @@ public sealed class DatabaseHealthRepository(
         }
     }
 }
+

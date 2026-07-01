@@ -1,6 +1,6 @@
-using GatePassSystem.Project.DTOs.Auth;
+﻿using FormRequestSystem.Project.DTOs.Auth;
 
-namespace GatePassSystem.Project.Services;
+namespace FormRequestSystem.Project.Services;
 
 public interface IAuthService
 {
@@ -12,3 +12,4 @@ public interface IAuthService
         long accountId,
         CancellationToken cancellationToken = default);
 }
+

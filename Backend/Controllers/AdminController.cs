@@ -1,12 +1,12 @@
-using GatePassSystem.Api.Infrastructure;
-using GatePassSystem.Api.Infrastructure.Authorization;
-using GatePassSystem.Project.DTOs.Admin;
-using GatePassSystem.Project.Models;
-using GatePassSystem.Project.Services;
+﻿using FormRequestSystem.Api.Infrastructure;
+using FormRequestSystem.Api.Infrastructure.Authorization;
+using FormRequestSystem.Project.DTOs.Admin;
+using FormRequestSystem.Project.Models;
+using FormRequestSystem.Project.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace GatePassSystem.Api.Controllers;
+namespace FormRequestSystem.Api.Controllers;
 
 [ApiController]
 [Authorize]
@@ -147,3 +147,4 @@ public sealed class AdminController(IAdminService adminService) : ApiControllerB
         CancellationToken cancellationToken) =>
         Success(await adminService.GetPermissionsAsync(cancellationToken));
 }
+

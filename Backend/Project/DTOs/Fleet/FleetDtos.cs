@@ -1,4 +1,4 @@
-namespace GatePassSystem.Project.DTOs.Fleet;
+﻿namespace FormRequestSystem.Project.DTOs.Fleet;
 
 public sealed record SaveVehicleRequest(
     string VehicleName,
@@ -33,3 +33,4 @@ public sealed record SaveFixedScheduleRequest(
     string Title,
     string? Description,
     string ScheduleType);
+

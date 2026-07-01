@@ -1,6 +1,6 @@
-using GatePassSystem.Project.Models;
+﻿using FormRequestSystem.Project.Models;
 
-namespace GatePassSystem.Project.DTOs.Auth;
+namespace FormRequestSystem.Project.DTOs.Auth;
 
 public sealed class AuthUserResponse
 {
@@ -55,3 +55,4 @@ public sealed record DepartmentAccessResponse(
             department.DepartmentCode,
             department.DepartmentName);
 }
+

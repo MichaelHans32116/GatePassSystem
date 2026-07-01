@@ -1,14 +1,14 @@
-using GatePassSystem.Api.Infrastructure;
-using GatePassSystem.Api.Infrastructure.Authorization;
-using GatePassSystem.Project.DTOs.Common;
-using GatePassSystem.Project.DTOs.GatePass;
-using GatePassSystem.Project.DTOs.Security;
-using GatePassSystem.Project.Models;
-using GatePassSystem.Project.Services;
+﻿using FormRequestSystem.Api.Infrastructure;
+using FormRequestSystem.Api.Infrastructure.Authorization;
+using FormRequestSystem.Project.DTOs.Common;
+using FormRequestSystem.Project.DTOs.GatePass;
+using FormRequestSystem.Project.DTOs.Security;
+using FormRequestSystem.Project.Models;
+using FormRequestSystem.Project.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace GatePassSystem.Api.Controllers;
+namespace FormRequestSystem.Api.Controllers;
 
 [ApiController]
 [Authorize(Roles = "SECURITY")]
@@ -70,3 +70,4 @@ public sealed class SecurityController(
         return Success(dbId.Value);
     }
 }
+

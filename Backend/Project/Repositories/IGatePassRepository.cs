@@ -1,8 +1,8 @@
-using GatePassSystem.Project.DTOs.Common;
-using GatePassSystem.Project.DTOs.GatePass;
-using GatePassSystem.Project.Models;
+﻿using FormRequestSystem.Project.DTOs.Common;
+using FormRequestSystem.Project.DTOs.GatePass;
+using FormRequestSystem.Project.Models;
 
-namespace GatePassSystem.Project.Repositories;
+namespace FormRequestSystem.Project.Repositories;
 
 public interface IGatePassRepository
 {
@@ -63,3 +63,4 @@ public interface IGatePassRepository
         long gatePassId,
         CancellationToken cancellationToken = default);
 }
+

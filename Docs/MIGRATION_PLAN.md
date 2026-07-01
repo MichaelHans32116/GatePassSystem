@@ -1,11 +1,11 @@
-# Migration Plan
+﻿# Migration Plan
 
-Goal: convert the current `index.html` prototype into a maintainable internal Gate Pass System with separate frontend modules, backend API, database schema, and role-based authorization.
+Goal: convert the current `index.html` prototype into a maintainable internal Form Request System with separate frontend modules, backend API, database schema, and role-based authorization.
 
 ## Target Architecture
 
 ```text
-GatePassSystem/
+FormRequestSystem/
   Backend/
     Controllers/
     Project/
@@ -289,3 +289,4 @@ Implication for the merge:
 - Reference rows should be synchronized before account import.
 - Role normalization may be needed if the server still expects the
   later `HRAD` naming rather than the legacy `HR_ADMIN` row.
+

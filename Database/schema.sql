@@ -1,4 +1,4 @@
--- Gate Pass System canonical database schema
+﻿-- Form Request System canonical database schema
 -- Target: MariaDB 10.4+ / MySQL-compatible server
 --
 -- Naming follows the established HowConnect repository pattern:
@@ -898,3 +898,4 @@ LEFT JOIN tbl_employees authorized_employee
     ON authorized_employee.employee_record_id = gpr.authorized_employee_id
 LEFT JOIN tbl_departments authorized_department
     ON authorized_department.department_id = gpr.authorized_department_id;
+

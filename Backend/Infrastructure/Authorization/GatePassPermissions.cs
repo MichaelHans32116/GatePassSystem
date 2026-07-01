@@ -1,4 +1,4 @@
-namespace GatePassSystem.Api.Infrastructure.Authorization;
+﻿namespace FormRequestSystem.Api.Infrastructure.Authorization;
 
 public static class GatePassPermissions
 {
@@ -37,4 +37,5 @@ public static class GatePassPermissions
         AuditView
     ];
 }
+
 

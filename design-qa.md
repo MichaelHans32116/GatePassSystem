@@ -1,11 +1,11 @@
-# Material Gate Pass Design QA
+﻿# Material Gate Pass Design QA
 
 - Source visual truth:
   `C:\Users\IVANLA~1\AppData\Local\Temp\codex-clipboard-6f1e70da-58bc-4b47-a4cc-0f8f7a30eefc.png`
 - Implementation screenshot:
-  `C:\Users\ivanlaurente\Desktop\Hans Files\GatePassSystem\LocalData\design-qa\material-form-desktop-centered.png`
+  `C:\Users\ivanlaurente\Desktop\Hans Files\FormRequestSystem\LocalData\design-qa\material-form-desktop-centered.png`
 - Combined comparison:
-  `C:\Users\ivanlaurente\Desktop\Hans Files\GatePassSystem\LocalData\design-qa\material-form-comparison.png`
+  `C:\Users\ivanlaurente\Desktop\Hans Files\FormRequestSystem\LocalData\design-qa\material-form-comparison.png`
 - Additional states:
   `material-form-signatures.png` and `material-form-mobile.png`
 - Viewport: desktop 1280 x 720; responsive mobile form state also checked.
@@ -64,3 +64,4 @@ grid scrolls horizontally when required.
 - Form-type behavior and QR exclusion: passed.
 
 final result: passed
+

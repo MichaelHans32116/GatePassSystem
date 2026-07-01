@@ -1,4 +1,4 @@
-Okay bro, UI/UX muna tayo. I’ll treat your notes as the source of truth: employee/associate gate pass, role-based approval, QR/manual time-out/time-in, vehicle availability, drivers as selectable records, guards as kiosk/security users, and IT/admin as system managers. Your uploaded notes also say the normal user requests only for themselves, company vehicle requests may need President approval, HR/PAS notes after approvals, guards scan QR/manual ID, and IT/admin manages users, roles, departments, vehicles, drivers, logs, and configuration.
+﻿Okay bro, UI/UX muna tayo. Iâ€™ll treat your notes as the source of truth: employee/associate gate pass, role-based approval, QR/manual time-out/time-in, vehicle availability, drivers as selectable records, guards as kiosk/security users, and IT/admin as system managers. Your uploaded notes also say the normal user requests only for themselves, company vehicle requests may need President approval, HR/PAS notes after approvals, guards scan QR/manual ID, and IT/admin manages users, roles, departments, vehicles, drivers, logs, and configuration.
 
 Big decision muna: design direction
 
@@ -22,7 +22,7 @@ App name sa UI
 
 Use this sa design:
 
-Gate Pass Management System
+Form Request System
 MORIROKU PHILIPPINES, INC.
 
 Alternative title:
@@ -31,7 +31,7 @@ Employee Gate Pass & Vehicle Monitoring System
 
 Para hindi masyadong mahaba sa navbar, I suggest:
 
-Gate Pass System
+Form Request System
 
 Then subtitle sa login:
 
@@ -147,9 +147,9 @@ Master Figma AI prompt
 
 Copy-paste mo ito sa Figma AI / First Draft. This is the main prompt.
 
-Create a modern low-fidelity to mid-fidelity web application UI for a company Gate Pass Management System for MORIROKU PHILIPPINES, INC.
+Create a modern low-fidelity to mid-fidelity web application UI for a company Form Request System for MORIROKU PHILIPPINES, INC.
 
-The system digitizes a manual paper-based “Gate Pass for Associates” process. The paper form includes: Name of Associate, Date Filed, Destination, Vehicle, Purpose, From Time, To Time, Approved by Immediate Superior, Approved by President, and Noted by PAS / HR.
+The system digitizes a manual paper-based â€œGate Pass for Associatesâ€ process. The paper form includes: Name of Associate, Date Filed, Destination, Vehicle, Purpose, From Time, To Time, Approved by Immediate Superior, Approved by President, and Noted by PAS / HR.
 
 Design goal:
 Create a clean, noob-friendly, corporate, role-based web app that works on desktop, laptop, tablet, and mobile. The design should look professional, readable, and aligned with a blue-and-white Moriroku corporate style.
@@ -219,18 +219,18 @@ Screen-by-screen Figma prompt
 
 Use this after the master prompt kung gusto mong ipa-generate per section.
 
-Design the following screens for the Moriroku Gate Pass Management System using a consistent corporate blue-and-white UI style.
+Design the following screens for the Moriroku Form Request System using a consistent corporate blue-and-white UI style.
 
 Login Screen
 Left side: full-height company building photo with dark overlay
-Large title: “Gate Pass Management System”
-Subtitle: “MORIROKU PHILIPPINES, INC.”
+Large title: â€œForm Request Systemâ€
+Subtitle: â€œMORIROKU PHILIPPINES, INC.â€
 Right side: white login card
 Logo placeholder
-Username field with hint: “Employee ID or assigned username”
-Password field with hint: “Default password uses Date Hired format: MMDDYYYY”
+Username field with hint: â€œEmployee ID or assigned usernameâ€
+Password field with hint: â€œDefault password uses Date Hired format: MMDDYYYYâ€
 Sign In button
-Small helper text: “For account concerns, contact IT Administrator.”
+Small helper text: â€œFor account concerns, contact IT Administrator.â€
 Associate Dashboard
 Welcome card
 Quick action: Apply for Gate Pass
@@ -288,7 +288,7 @@ Design system / component prompt
 
 Use this para consistent lahat ng components.
 
-Create a design system for the Moriroku Gate Pass Management System.
+Create a design system for the Moriroku Form Request System.
 
 Brand style:
 
@@ -457,9 +457,9 @@ Security scanner UX logic
 Dapat sobrang simple:
 
 Scan QR or Enter Employee ID
-↓
+â†“
 System checks latest approved active gate pass
-↓
+â†“
 If valid and not yet timed out:
     Show Record Time Out
 If already timed out and return is required:
@@ -517,9 +517,9 @@ If company vehicle:
     Show Driver, Vehicle, Plate Number
 
 If no president approval required:
-    Show “Not Required” or hide President section depending on company preference
+    Show â€œNot Requiredâ€ or hide President section depending on company preference
 
-For Figma, mas okay show section but mark “Not Required” para consistent sa layout.
+For Figma, mas okay show section but mark â€œNot Requiredâ€ para consistent sa layout.
 
 Dashboard card labels
 
@@ -580,24 +580,24 @@ Best first Figma flow
 Gawin mo prototype flow like this:
 
 Login
-→ Associate Dashboard
-→ Apply Gate Pass
-→ Submit
-→ My Requests: Pending Superior Approval
-→ Immediate Superior Approval Queue
-→ Approve
-→ President Approval Queue, only if required
-→ HR/PAS Pending Noting
-→ Note / Validate
-→ QR Gate Pass Generated
-→ Security Scanner
-→ Record Time Out
-→ Currently Outside
-→ Record Time In
-→ Returned / Completed
+â†’ Associate Dashboard
+â†’ Apply Gate Pass
+â†’ Submit
+â†’ My Requests: Pending Superior Approval
+â†’ Immediate Superior Approval Queue
+â†’ Approve
+â†’ President Approval Queue, only if required
+â†’ HR/PAS Pending Noting
+â†’ Note / Validate
+â†’ QR Gate Pass Generated
+â†’ Security Scanner
+â†’ Record Time Out
+â†’ Currently Outside
+â†’ Record Time In
+â†’ Returned / Completed
 One important correction sa UI wording
 
-Huwag gamitin masyado yung “leave” kasi baka malito sa HR leave system. Use:
+Huwag gamitin masyado yung â€œleaveâ€ kasi baka malito sa HR leave system. Use:
 
 Gate Pass Request
 Exit Authorization
@@ -614,7 +614,7 @@ Ganito gawin mo ngayon:
 
 Step 1:
 Create Figma file named:
-Moriroku Gate Pass Management System - UI UX
+Moriroku Form Request System - UI UX
 
 Step 2:
 Paste Master Prompt sa Figma AI / First Draft.
@@ -642,3 +642,4 @@ I-audit natin:
 - bagay ba sa Moriroku
 
 My strong advice: unang ipagawa mo sa Figma AI yung desktop web app, then ikaw manually gumawa ng print preview kasi kailangan kamukha talaga ng actual paper gatepass.
+

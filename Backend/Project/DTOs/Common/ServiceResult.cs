@@ -1,4 +1,4 @@
-namespace GatePassSystem.Project.DTOs.Common;
+﻿namespace FormRequestSystem.Project.DTOs.Common;
 
 public sealed record ServiceResult<T>(
     bool IsSuccess,
@@ -18,4 +18,5 @@ public sealed record PagedResult<T>(
     long TotalCount,
     int Page,
     int PageSize);
+
 

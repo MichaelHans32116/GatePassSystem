@@ -1,7 +1,7 @@
-using System.ComponentModel.DataAnnotations;
-using GatePassSystem.Project.Models;
+﻿using System.ComponentModel.DataAnnotations;
+using FormRequestSystem.Project.Models;
 
-namespace GatePassSystem.Project.DTOs.GatePass;
+namespace FormRequestSystem.Project.DTOs.GatePass;
 
 public sealed class CreateGatePassRequest
 {
@@ -155,3 +155,4 @@ public sealed record EmployeeLookupResponse(
     long? DepartmentId,
     string? DepartmentName,
     string PositionName);
+

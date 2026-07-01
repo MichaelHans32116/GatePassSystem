@@ -1,4 +1,4 @@
-namespace GatePassSystem.Project.DTOs.Auth;
+﻿namespace FormRequestSystem.Project.DTOs.Auth;
 
 public sealed class LoginResponse
 {
@@ -6,3 +6,4 @@ public sealed class LoginResponse
     public DateTimeOffset ExpiresAt { get; init; }
     public AuthUserResponse User { get; init; } = new();
 }
+

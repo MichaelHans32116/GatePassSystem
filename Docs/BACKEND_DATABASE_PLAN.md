@@ -1,4 +1,4 @@
-# MPI Gate Pass System Backend and Database Plan
+﻿# MPI Form Request System Backend and Database Plan
 
 Planning phase only. No backend implementation is included in this document.
 
@@ -7,7 +7,7 @@ Planning phase only. No backend implementation is included in this document.
 This plan is based on:
 
 - `hans32116/HoWConnect`, branch `main`, commit `2d6f99f`.
-- The current local `GatePassSystem` repository.
+- The current local `FormRequestSystem` repository.
 - `CODEX_GATEPASS_SYSTEM_PLAN.txt`.
 - `to codex.txt`.
 - `gatepass planning.txt`.
@@ -17,7 +17,7 @@ This plan is based on:
   - XAMPP 8.1.25.
   - MariaDB 10.4.32 on port 3306.
 
-The HowConnect architecture is the reference pattern. Its SQL Server syntax and legacy weaknesses must not be copied directly into GatePassSystem.
+The HowConnect architecture is the reference pattern. Its SQL Server syntax and legacy weaknesses must not be copied directly into FormRequestSystem.
 
 ---
 
@@ -75,7 +75,7 @@ HowConnect uses two .NET projects:
    - Middleware/infrastructure.
    - `Program.cs`.
 
-This separation is appropriate for GatePassSystem.
+This separation is appropriate for FormRequestSystem.
 
 ### 3.2 Controllers
 
@@ -92,7 +92,7 @@ Observed pattern:
   - `NoContent()`;
   - anonymous `{ message, error }` objects.
 
-GatePassSystem should retain thin controllers but use explicit routes and consistent response/error contracts.
+FormRequestSystem should retain thin controllers but use explicit routes and consistent response/error contracts.
 
 ### 3.3 DTOs and Contracts
 
@@ -105,7 +105,7 @@ Observed pattern:
   - change-password request.
 - Many CRUD controllers still expose database models directly.
 
-GatePassSystem should improve this by requiring DTOs for every external API boundary. Database models must not be accepted directly from the frontend.
+FormRequestSystem should improve this by requiring DTOs for every external API boundary. Database models must not be accepted directly from the frontend.
 
 ### 3.4 Models and Entities
 
@@ -120,7 +120,7 @@ Observed pattern:
 - Database columns use snake case.
 - Separate model folders exist for views, aggregates, and subquery results.
 
-GatePassSystem should keep this recognizable naming style:
+FormRequestSystem should keep this recognizable naming style:
 
 - `GatePassRequestModel`.
 - `GatePassApprovalStepModel`.
@@ -142,13 +142,13 @@ Observed pattern:
   - multi-result stored procedures through Dapper `QueryMultiple`.
 - The database connection comes from an environment variable.
 
-GatePassSystem should retain:
+FormRequestSystem should retain:
 
 - Generic repository for simple master-data CRUD.
 - Specific repositories for workflow, scan, reservation, import, dashboards, and reports.
 - Dapper multi-result calls for dashboard and paginated report bundles.
 
-GatePassSystem should improve:
+FormRequestSystem should improve:
 
 - Use constructor dependency injection instead of `new Repository()` inside services.
 - Use asynchronous database operations.
@@ -165,7 +165,7 @@ Observed pattern:
 - Some services auto-provision related records.
 - Specialized aggregate/view services are mostly repository pass-throughs.
 
-GatePassSystem services should contain the authoritative rules for:
+FormRequestSystem services should contain the authoritative rules for:
 
 - approval route selection;
 - self-approval prevention;
@@ -192,7 +192,7 @@ HowConnect uses:
 - security headers.
 - Swagger bearer-token support.
 
-GatePassSystem should retain these security ideas, with two improvements:
+FormRequestSystem should retain these security ideas, with two improvements:
 
 - Use ASP.NET's versioned password hasher or an equivalently versioned PBKDF2 format.
 - Add refresh-token rotation and revocation so access tokens can remain short-lived.
@@ -218,9 +218,9 @@ Its active database pattern includes:
 - performance-tuning migrations;
 - query caching/ETags for dashboards.
 
-No active temporary-table implementation was found in the inspected HowConnect SQL scripts. HowConnect mainly uses CTEs, views, stored procedures, and multi-result queries. GatePassSystem will add temporary tables only where import/report reuse justifies them.
+No active temporary-table implementation was found in the inspected HowConnect SQL scripts. HowConnect mainly uses CTEs, views, stored procedures, and multi-result queries. FormRequestSystem will add temporary tables only where import/report reuse justifies them.
 
-GatePassSystem should copy the organizational pattern, not SQL Server syntax.
+FormRequestSystem should copy the organizational pattern, not SQL Server syntax.
 
 ### 3.9 API Response Style
 
@@ -232,11 +232,11 @@ HowConnect's response style is currently mixed. The useful patterns are:
 - global `{ error, traceId }` for unhandled exceptions;
 - paginated/report results containing rows plus totals.
 
-GatePassSystem should standardize this before implementation.
+FormRequestSystem should standardize this before implementation.
 
 ---
 
-## 4. Current GatePassSystem Backend Assessment
+## 4. Current FormRequestSystem Backend Assessment
 
 ### 4.1 Existing Structure
 
@@ -337,7 +337,7 @@ All of these become backend-authoritative. The frontend should only render retur
 
 ### 4.5 Gap Comparison
 
-| Area | HowConnect reference | Current GatePassSystem | Required GatePass direction |
+| Area | HowConnect reference | Current FormRequestSystem | Required GatePass direction |
 | --- | --- | --- | --- |
 | Solution | Two .NET projects | No `.sln` or `.csproj` | Add class library plus Web API project |
 | Controllers | Many working API controllers | Empty folder | Thin explicit-route controllers |
@@ -360,10 +360,10 @@ All of these become backend-authoritative. The frontend should only render retur
 
 ```text
 Backend/
-  GatePassSystem.slnx
+  FormRequestSystem.slnx
 
   Project/
-    GatePassSystem.Project.csproj
+    FormRequestSystem.Project.csproj
 
     Common/
       ApiResult.cs
@@ -424,8 +424,8 @@ Backend/
       TokenSecurity.cs
       QrTokenSecurity.cs
 
-  GatePassSystemAPI/
-    GatePassSystemAPI.csproj
+  FormRequestSystemAPI/
+    FormRequestSystemAPI.csproj
     Program.cs
     appsettings.json
     appsettings.Development.json
@@ -671,12 +671,12 @@ Only token hashes are stored.
 - `employment_status_code`
 - `classification`
 - `date_hired`
-- minimal fields required by GatePassSystem
+- minimal fields required by FormRequestSystem
 - `source_import_batch_id`
 - timestamps
 - `version_no`
 
-Do not import every sensitive HR field into GatePassSystem. TIN, SSS, PhilHealth, Pag-IBIG, home addresses, religion, blood type, and emergency details are not needed for gate pass processing.
+Do not import every sensitive HR field into FormRequestSystem. TIN, SSS, PhilHealth, Pag-IBIG, home addresses, religion, blood type, and emergency details are not needed for gate pass processing.
 
 #### `tbl_departments`
 
@@ -823,7 +823,7 @@ The inspected workbook has:
 The import process must:
 
 1. Ignore department-title rows and repeated header rows.
-2. Import only fields needed by GatePassSystem.
+2. Import only fields needed by FormRequestSystem.
 3. Normalize department and position names through verified alias tables.
 4. Default to provisioning Active employees only.
 5. Treat Inactive rows as archive candidates, never hard deletes.
@@ -1926,7 +1926,7 @@ Decision:
 
 ### 18.5 Employee Data Scope
 
-The export contains sensitive HR/PII fields that GatePassSystem does not need.
+The export contains sensitive HR/PII fields that FormRequestSystem does not need.
 
 Decision:
 
@@ -1997,7 +1997,7 @@ Do not share tables or perform cross-database writes during the first release.
 
 Recommended:
 
-- deploy GatePassSystem as an independent database and API;
+- deploy FormRequestSystem as an independent database and API;
 - integrate later through versioned APIs or controlled read-only views.
 
 ---
@@ -2022,3 +2022,4 @@ The recommended first coding baseline is:
 - Same-origin Apache-to-Kestrel deployment for the vanilla frontend.
 
 No backend code should be written until the decisions in Section 18 are resolved or explicitly accepted as implementation assumptions.
+
