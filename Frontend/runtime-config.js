@@ -4,7 +4,7 @@
         ? path
         : path.slice(0, path.lastIndexOf('/') + 1);
     const isXamppWorkspace =
-        basePath.toLowerCase().includes('/gatepasssystem/');
+        basePath.toLowerCase().includes('/formrequestsystem/');
     const isProtectedPublicGateway =
         window.location.port === '8090' ||
         window.location.hostname === 'gatepass-practice.local' ||
