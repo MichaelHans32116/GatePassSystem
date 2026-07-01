@@ -109,7 +109,8 @@ if ((Test-LocalPort 5087) -and -not $SkipBuild) {
     }
 
     if ($listenerProcess -and
-        $listenerProcess.Path -like '*FormRequestSystem.Api*') {
+        ($listenerProcess.Path -like '*FormRequestSystem.Api*' -or
+         $listenerProcess.Path -like '*GatePassSystem.Api*')) {
         Stop-Process -Id $listenerProcess.Id -Force
         for ($attempt = 0; $attempt -lt 20; $attempt++) {
             if (-not (Test-LocalPort 5087)) {
@@ -118,7 +119,7 @@ if ((Test-LocalPort 5087) -and -not $SkipBuild) {
             Start-Sleep -Milliseconds 250
         }
     } else {
-        throw 'Port 5087 is already used by a process that is not FormRequestSystem.Api.'
+        throw 'Port 5087 is already used by a process that is not FormRequestSystem.Api or the legacy GatePassSystem.Api.'
     }
 }
 
@@ -135,7 +136,12 @@ if (-not (Test-LocalPort 5087)) {
 
     $apiDirectory = "$repo\Backend\bin\Release\net8.0"
     $apiExe = Join-Path $apiDirectory 'FormRequestSystem.Api.exe'
-    if (-not (Test-Path $apiExe)) {
+    $legacyApiExe = Join-Path $apiDirectory 'GatePassSystem.Api.exe'
+    $apiExeToRun = if (Test-Path $apiExe) {
+        $apiExe
+    } elseif (Test-Path $legacyApiExe) {
+        $legacyApiExe
+    } else {
         throw 'FormRequestSystem.Api.exe was not produced by the build.'
     }
     $apiLogDirectory = Join-Path $repo 'LocalData\logs'
@@ -150,7 +156,7 @@ if (-not (Test-LocalPort 5087)) {
 `$env:GATEPASS_DB_CONNECTION='Server=127.0.0.1;Port=3306;Database=gate_pass_system;User ID=root;Password=;Allow User Variables=True;SslMode=None'
 `$env:Cors__AllowAnyOrigin='$($ExposeLan.ToString().ToLowerInvariant())'
 Set-Location '$apiDirectory'
-& '$apiExe'
+& '$apiExeToRun'
 "@
     Start-Process powershell.exe `
         -ArgumentList @('-NoProfile', '-WindowStyle', 'Hidden', '-Command', $apiCommand) `
