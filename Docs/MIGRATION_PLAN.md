@@ -215,3 +215,77 @@ Best first implementation slice:
    - Security Scanner
 
 Admin management screens can follow after the workflow is working end to end.
+
+## Server Merge Runbook
+
+This runbook is the preferred path for moving the local working database to
+the live XAMPP server at `192.168.9.7`.
+
+Scope:
+
+- Target database only: `gate_pass_system`
+- Do not touch:
+  - other XAMPP databases
+  - Apache config
+  - Wi-Fi/router/firewall settings
+  - unrelated files outside the Gate Pass deployment folders
+
+Order of operations:
+
+1. Export the local source database from this PC.
+2. Take a fresh server backup immediately before any write step.
+3. Compare local schema against server schema.
+4. Apply schema migrations only to `gate_pass_system`.
+5. Import safe reference data required by the application.
+6. Import actual employee/account rows from the local database.
+7. Rebuild dependent role and approval-assignment rows if needed.
+8. Verify login, dashboard, calendar, approvals, and audit views.
+9. Remove any temporary bootstrap accounts used during setup.
+
+Safety rules:
+
+- Use backups before every destructive step.
+- Prefer merge/insert logic over full replace when the server already has data.
+- If a step would drop, truncate, or overwrite live data, stop and ask for
+  approval first.
+- If server data and local data conflict, preserve the live server rows unless
+  the user explicitly approves replacement.
+
+Rollback approach:
+
+- Restore the latest backup if a migration step causes breakage.
+- Keep export files and backups until the final verification passes.
+- Do not delete recovery artifacts until the new state is confirmed stable.
+
+Suggested implementation sequence:
+
+1. Schema comparison report.
+2. Reference-data synchronization report.
+3. Account/import report for actual login rows.
+4. Live verification checklist.
+
+This document intentionally separates planning from execution so the migration
+can be reviewed step by step before any server write happens.
+
+## Known Source Snapshot
+
+Current local source database observations:
+
+- `tbl_employees`: 95 rows
+- `tbl_user_accounts`: 96 rows
+- `tbl_roles`: 8 rows
+- `tbl_account_types`: 3 rows
+- `tbl_account_statuses`: 3 rows
+
+Observed source-data notes:
+
+- The local database contains one inactive `HR_ADMIN` role row.
+- The local database contains one system account without an employee link.
+- Employee-linked accounts dominate the source data, so employee import
+  should be treated as the primary account source.
+
+Implication for the merge:
+
+- Reference rows should be synchronized before account import.
+- Role normalization may be needed if the server still expects the
+  later `HRAD` naming rather than the legacy `HR_ADMIN` row.
