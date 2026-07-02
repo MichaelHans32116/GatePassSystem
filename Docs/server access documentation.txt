@@ -101,6 +101,23 @@ server work can be reviewed later without relying on chat history.
 - Confirmed the server root now contains only `Api`, `backups`, and
   `Database`.
 
+2026-07-02
+
+- Created a pre-deploy safety backup at
+  `C:\GatePassSystem\backups\20260702-161014` containing the live
+  frontend, the live API folder, and a `gate_pass_system` MariaDB dump.
+- Applied database migration 018 on the server while MariaDB stayed up.
+- Copied the updated `FormRequestSystem` frontend files to
+  `C:\xampp\htdocs\FormRequestSystem`.
+- Staged the rebuilt API artifacts, then used the existing
+  `GatePassApi` scheduled task to restart the service without shutting
+  down the whole server.
+- Verified `http://192.168.9.7:5087/api/health` returns HTTP 200 and
+  the database reports `Connected`.
+- Verified `http://192.168.9.7/FormRequestSystem/` returns HTTP 200.
+- Removed the temporary `ApiUpdate` staging folder and the one-off
+  manual start logs after verification.
+
 MIGRATION PLAN / MAX-PRECAUTION NOTES
 -------------------------------------
 
@@ -213,5 +230,5 @@ DEPLOYMENT UPDATE
 - Deployed the static Form Request System frontend to `C:\xampp\htdocs\FormRequestSystem`.
 - Verified `http://192.168.9.7/FormRequestSystem/` returns HTTP 200.
 - Verified `http://192.168.9.7/FormRequestSystem/index.html` returns HTTP 200.
-Last updated: 2026-07-01
+Last updated: 2026-07-02
 
