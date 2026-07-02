@@ -51,6 +51,28 @@ public sealed class ApprovalService(
             }
 
             var tripType = request.TripType?.Trim().ToUpperInvariant();
+            var formTypeCode = request.FormTypeCode?.Trim().ToUpperInvariant();
+            var willReturn = request.WillReturn == true;
+            var allowedTripType = string.Equals(formTypeCode, "MATERIAL_GATE_PASS", StringComparison.OrdinalIgnoreCase) || !willReturn
+                ? "HATID"
+                : "BOTH";
+
+            if (string.IsNullOrWhiteSpace(tripType))
+            {
+                return ServiceResult<ApprovalDecisionResult>.Failure(
+                    "TRIP_TYPE_REQUIRED",
+                    "Select the trip type before forwarding.");
+            }
+
+            if (!string.Equals(tripType, allowedTripType, StringComparison.OrdinalIgnoreCase))
+            {
+                return ServiceResult<ApprovalDecisionResult>.Failure(
+                    "INVALID_TRIP_TYPE",
+                    allowedTripType == "HATID"
+                        ? "This request only allows Hatid lang."
+                        : "This request only allows Hatid at Sundo.");
+            }
+
             var hasSecondaryWindow =
                 request.SecondaryExpectedOutAt.HasValue ||
                 request.SecondaryExpectedInAt.HasValue;
@@ -60,7 +82,7 @@ public sealed class ApprovalService(
             {
                 return ServiceResult<ApprovalDecisionResult>.Failure(
                     "SECONDARY_WINDOW_NOT_ALLOWED",
-                    "Split schedule windows are only allowed for BOTH trips.");
+                    "Split schedule windows are only allowed for Hatid at Sundo.");
             }
 
             if (request.SecondaryExpectedOutAt.HasValue != request.SecondaryExpectedInAt.HasValue)
@@ -84,14 +106,6 @@ public sealed class ApprovalService(
                 return ServiceResult<ApprovalDecisionResult>.Failure(
                     "INVALID_SCHEDULE_RANGE",
                     "Split schedule windows must leave a gap between the primary and secondary trips.");
-            }
-
-            if (!string.IsNullOrWhiteSpace(tripType) &&
-                tripType is not ("HATID" or "SUNDO" or "BOTH"))
-            {
-                return ServiceResult<ApprovalDecisionResult>.Failure(
-                    "INVALID_TRIP_TYPE",
-                    "Select a valid trip type before forwarding.");
             }
         }
 

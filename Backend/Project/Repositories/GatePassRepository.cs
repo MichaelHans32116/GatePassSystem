@@ -303,6 +303,7 @@ public sealed class GatePassRepository(
                 request_row.will_return AS WillReturn,
                 request_row.vehicle_usage_code AS VehicleUsageCode,
                 request_row.private_vehicle_details AS PrivateVehicleDetails,
+                request_row.vehicle_trip_type_code AS VehicleTripTypeCode,
                 request_row.vehicle_id AS VehicleId,
                 vehicle.vehicle_name AS VehicleName,
                 vehicle.plate_number AS PlateNumber,

@@ -266,30 +266,59 @@ function normalizeHradTripTypeCode(value) {
     if (upper === 'HATID' || upper.includes('HATID LANG')) {
         return 'HATID';
     }
-    if (upper === 'SUNDO') {
-        return 'SUNDO';
-    }
     return upper;
 }
 
 function hradTripTypeLabel(code) {
     const normalized = normalizeHradTripTypeCode(code);
     const labels = {
-        HATID: 'Hatid',
-        SUNDO: 'Sundo',
-        BOTH: 'Both'
+        HATID: 'Hatid lang',
+        BOTH: 'Hatid at Sundo'
     };
     return labels[normalized] || (code ? String(code) : 'Company Vehicle Needed');
+}
+
+function getAllowedHradTripTypes(pass) {
+    const formType = String(pass?.formTypeCode || '').trim().toUpperCase();
+    const willReturn = pass?.willReturn !== false;
+    if (!formType) {
+        return ['HATID'];
+    }
+    if (formType === 'MATERIAL_GATE_PASS') {
+        return ['HATID'];
+    }
+    if (!willReturn) {
+        return ['HATID'];
+    }
+    return ['BOTH'];
+}
+
+function setHradTripTypeOptions(pass) {
+    const select = document.getElementById('hradTripType');
+    if (!select) return;
+    const allowed = getAllowedHradTripTypes(pass);
+    const currentValue = normalizeHradTripTypeCode(
+        select.value ||
+        pass?.vehicleTripTypeCode ||
+        pass?.tripTypeCode ||
+        ''
+    );
+    select.innerHTML = allowed.map(code => `
+        <option value="${code}">${code === 'HATID' ? 'Hatid lang' : 'Hatid at Sundo'}</option>
+    `).join('');
+    select.value = allowed.includes(currentValue) ? currentValue : allowed[0];
+    select.disabled = allowed.length === 1;
 }
 
 function getHradTripTypeCode(pass) {
     const selectValue = normalizeHradTripTypeCode(document.getElementById('hradTripType')?.value);
     if (selectValue) return selectValue;
-    return normalizeHradTripTypeCode(
+    const fallbackValue = normalizeHradTripTypeCode(
         pass?.vehicleTripTypeCode ||
-        pass?.tripTypeCode ||
-        pass?.privateVehicleDetails
+        pass?.tripTypeCode
     );
+    if (fallbackValue) return fallbackValue;
+    return getAllowedHradTripTypes(pass)[0] || '';
 }
 
 function getHradScheduleModeCode() {
@@ -299,12 +328,13 @@ function getHradScheduleModeCode() {
 }
 
 function setHradScheduleControls(pass) {
-    const tripType = getHradTripTypeCode(pass);
     const modeRow = document.getElementById('hradScheduleModeRow');
     const modeSelect = document.getElementById('hradScheduleMode');
     const secondaryRow = document.getElementById('hradSecondaryScheduleRow');
     const secondaryStart = document.getElementById('hradScheduleStartSecondary');
     const secondaryEnd = document.getElementById('hradScheduleEndSecondary');
+    setHradTripTypeOptions(pass);
+    const tripType = getHradTripTypeCode(pass);
     const isBothTrip = tripType === 'BOTH';
     const splitMode = isBothTrip && getHradScheduleModeCode() === 'SPLIT';
 
@@ -524,7 +554,7 @@ function updateHradAssignmentSummary(pass) {
             document.getElementById('hradTripType')?.value
             || pass?.vehicleTripTypeCode
             || pass?.tripTypeCode
-            || pass?.privateVehicleDetails
+            || getAllowedHradTripTypes(pass)[0]
         );
     }
     if (vehicleAvailabilityEl && vehicleSelect) {
@@ -1760,19 +1790,8 @@ async function viewPass(id, isReviewing = false) {
                                     tripTypeSpan.innerText = hradTripTypeLabel(
                                         p.vehicleTripTypeCode ||
                                         p.tripTypeCode ||
-                                        p.privateVehicleDetails
+                                        getAllowedHradTripTypes(p)[0]
                                     );
-                                }
-                                const tripTypeSelect = document.getElementById('hradTripType');
-                                if (tripTypeSelect) {
-                                    const normalizedTripType = normalizeHradTripTypeCode(
-                                        p.vehicleTripTypeCode ||
-                                        p.tripTypeCode ||
-                                        p.privateVehicleDetails
-                                    );
-                                    tripTypeSelect.value = ['HATID', 'SUNDO', 'BOTH'].includes(normalizedTripType)
-                                        ? normalizedTripType
-                                        : '';
                                 }
                                 setHradScheduleInputsFromPass(p);
 

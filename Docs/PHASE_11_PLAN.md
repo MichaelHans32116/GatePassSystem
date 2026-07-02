@@ -37,6 +37,11 @@ HttpClient timeout.
 - Database migration 018 adds `vehicle_trip_type_code` and removes the single-row reservation constraint so the calendar can reflect gaps between trips.
 - Validation/build pass completed locally after the change set.
 
+### Follow-up progress (2026-07-02, later pass)
+- Approval queue now carries the real `willReturn` flag from the backend instead of inferring it from `expectedInAt`.
+- HRAD trip selection no longer falls back to `privateVehicleDetails`; it now resolves from the assigned trip code or the allowed default for the form type.
+- Local verification re-ran clean: `node --check` passed for the updated frontend files, `dotnet build Backend/FormRequestSystem.sln` succeeded, and `git diff --check` returned only line-ending warnings.
+
 ---
 
 

@@ -22,6 +22,7 @@ public sealed class ApprovalRepository(
                     request_row.control_no AS ControlNo,
                     request_row.form_type_code AS FormTypeCode,
                     form_type.form_name AS FormName,
+                    request_row.will_return AS WillReturn,
                     step.approval_step_id AS ApprovalStepId,
                     step.approval_step_code AS ApprovalStepCode,
                     employee.employee_id AS EmployeeId,

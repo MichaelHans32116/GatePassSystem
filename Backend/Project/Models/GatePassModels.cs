@@ -139,6 +139,7 @@ public sealed class ApprovalQueueItem
     public string ControlNo { get; init; } = string.Empty;
     public string FormTypeCode { get; init; } = "PERSON_GATE_PASS";
     public string FormName { get; init; } = "Person Gate Pass";
+    public bool WillReturn { get; init; }
     public long ApprovalStepId { get; init; }
     public string ApprovalStepCode { get; init; } = string.Empty;
     public string EmployeeId { get; init; } = string.Empty;

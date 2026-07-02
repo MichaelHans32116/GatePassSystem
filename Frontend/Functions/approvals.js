@@ -79,10 +79,10 @@ async function approveCurrentPass() {
                 showToast('Set both split schedule windows before forwarding.', 'error');
                 return;
             }
-            expectedOutAt = scheduleWindow.start?.toISOString() || null;
-            expectedInAt = scheduleWindow.end?.toISOString() || null;
-            secondaryExpectedOutAt = scheduleWindow.windows?.[1]?.start?.toISOString() || null;
-            secondaryExpectedInAt = scheduleWindow.windows?.[1]?.end?.toISOString() || null;
+            expectedOutAt = scheduleWindow.primaryWindow?.start?.toISOString() || null;
+            expectedInAt = scheduleWindow.primaryWindow?.end?.toISOString() || null;
+            secondaryExpectedOutAt = scheduleWindow.secondaryWindow?.start?.toISOString() || null;
+            secondaryExpectedInAt = scheduleWindow.secondaryWindow?.end?.toISOString() || null;
             if (!vehicleId) {
                 showToast('Select an available company vehicle before forwarding.', 'error');
                 return;
@@ -106,6 +106,8 @@ async function approveCurrentPass() {
             driverId,
             tripType,
             putOnHold,
+            formTypeCode: pass.formTypeCode || null,
+            willReturn: pass.willReturn !== false,
             expectedOutAt,
             expectedInAt,
             secondaryExpectedOutAt,
@@ -269,6 +271,7 @@ async function renderApprovalQueue() {
                 controlNo: item.controlNo || item.gatePassNo,
                 formTypeCode: item.formTypeCode || 'PERSON_GATE_PASS',
                 formName: item.formName || 'Person Gate Pass',
+                willReturn: item.willReturn,
                 userName: item.fullName,
                 userDept: item.departmentName,
                 destination: item.destination,
@@ -282,7 +285,7 @@ async function renderApprovalQueue() {
                 status: gatePassStatusLabels[`PENDING_${item.approvalStepCode}`],
                 vehicle: null,
                 signatures: { imm: null, pres: null, pas: null },
-                willReturn: Boolean(item.expectedInAt)
+                willReturn: item.willReturn
             }));
             updateApprovalQueueDisplay(queuePasses);
         } catch (error) {

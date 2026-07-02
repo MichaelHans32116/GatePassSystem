@@ -112,6 +112,8 @@ public sealed record ApprovalDecisionRequest(
     long? VehicleId = null,
     long? DriverId = null,
     bool? PutOnHold = null,
+    string? FormTypeCode = null,
+    bool? WillReturn = null,
     string? TripType = null,
     DateTimeOffset? ExpectedOutAt = null,
     DateTimeOffset? ExpectedInAt = null,
