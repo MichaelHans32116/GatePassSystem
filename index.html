@@ -1132,7 +1132,66 @@
                 <!-- HRAD Assignment Selectors (Visible only during HRAD Assignment step) -->
                 <div id="hradAssignmentArea" class="bg-amber-50 border border-amber-200 p-4 rounded-xl hidden flex-col space-y-3">
                     <h3 class="font-extrabold text-amber-800 text-sm mb-1"><i class="fas fa-truck mr-1"></i> Assign Vehicle & Driver</h3>
-                    <p class="text-xs text-gray-600 mb-2">Requested Trip Type: <span id="hradRequestedTripType" class="font-bold text-gray-800"></span></p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                        <p class="text-gray-600">Requested Schedule: <span id="hradRequestedSchedule" class="font-bold text-gray-800"></span></p>
+                        <p class="text-gray-600">Requested Trip Type: <span id="hradRequestedTripType" class="font-bold text-gray-800"></span></p>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                        <p class="text-gray-600">Assigned Schedule: <span id="hradAssignedSchedule" class="font-bold text-gray-800"></span></p>
+                        <p class="text-gray-600">Calendar Basis: <span class="font-bold text-gray-800">HRAD-set time window</span></p>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Schedule Start</label>
+                            <input type="time" id="hradScheduleStart" class="w-full bg-white border border-gray-300 p-2 rounded text-xs focus:outline-none focus:border-mpiBlue" oninput="updateHradAssignmentSummary(findGatePassRecord())" onchange="updateHradAssignmentSummary(findGatePassRecord())">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Schedule End</label>
+                            <input type="time" id="hradScheduleEnd" class="w-full bg-white border border-gray-300 p-2 rounded text-xs focus:outline-none focus:border-mpiBlue" oninput="updateHradAssignmentSummary(findGatePassRecord())" onchange="updateHradAssignmentSummary(findGatePassRecord())">
+                        </div>
+                    </div>
+                    <div id="hradScheduleModeRow" class="hidden grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Schedule Style</label>
+                            <select id="hradScheduleMode" class="w-full bg-white border border-gray-300 p-2 rounded text-xs focus:outline-none focus:border-mpiBlue" onchange="handleHradScheduleModeChange(findGatePassRecord())">
+                                <option value="STRAIGHT">Straight window</option>
+                                <option value="SPLIT">Split windows</option>
+                            </select>
+                        </div>
+                        <div class="rounded border border-dashed border-amber-200 bg-amber-100/60 p-3 text-[11px] text-amber-900 leading-relaxed">
+                            Use split windows when the same vehicle and driver need a gap between hatid and sundo. The calendar will reflect the gap as availability.
+                        </div>
+                    </div>
+                    <div id="hradSecondaryScheduleRow" class="hidden grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Secondary Schedule Start</label>
+                            <input type="time" id="hradScheduleStartSecondary" class="w-full bg-white border border-gray-300 p-2 rounded text-xs focus:outline-none focus:border-mpiBlue" oninput="updateHradAssignmentSummary(findGatePassRecord())" onchange="updateHradAssignmentSummary(findGatePassRecord())">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Secondary Schedule End</label>
+                            <input type="time" id="hradScheduleEndSecondary" class="w-full bg-white border border-gray-300 p-2 rounded text-xs focus:outline-none focus:border-mpiBlue" oninput="updateHradAssignmentSummary(findGatePassRecord())" onchange="updateHradAssignmentSummary(findGatePassRecord())">
+                        </div>
+                    </div>
+                    <p class="text-[11px] text-gray-500 -mt-1">These times drive the driver and vehicle calendar. Adjust them here for hatid, sundo, or both.</p>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Trip Type</label>
+                            <select id="hradTripType" class="w-full bg-white border border-gray-300 p-2 rounded text-xs focus:outline-none focus:border-mpiBlue" onchange="handleHradTripTypeChange(findGatePassRecord())">
+                                <option value="">Use request default</option>
+                                <option value="HATID">Hatid</option>
+                                <option value="SUNDO">Sundo</option>
+                                <option value="BOTH">Both</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Vehicle Availability</label>
+                            <div id="hradVehicleAvailability" class="w-full bg-white border border-gray-300 p-2 rounded text-xs font-semibold text-gray-700">Select a vehicle</div>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Driver Availability</label>
+                            <div id="hradDriverAvailability" class="w-full bg-white border border-gray-300 p-2 rounded text-xs font-semibold text-gray-700">Select a driver</div>
+                        </div>
+                    </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div>
                             <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Select Vehicle</label>
@@ -1142,7 +1201,7 @@
                         </div>
                         <div>
                             <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Select Driver</label>
-                            <select id="hradAssignDriver" class="w-full bg-white border border-gray-300 p-2 rounded text-xs focus:outline-none focus:border-mpiBlue">
+                            <select id="hradAssignDriver" class="w-full bg-white border border-gray-300 p-2 rounded text-xs focus:outline-none focus:border-mpiBlue" onchange="updateHradAssignmentSummary(findGatePassRecord())">
                                 <!-- Dynamically populated -->
                             </select>
                         </div>
@@ -1155,20 +1214,13 @@
                     <textarea id="decisionReasonInput" rows="3" maxlength="1000" class="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none focus:border-mpiBlue" placeholder="Enter your reason or remarks..."></textarea>
                     <p id="decisionReasonError" class="hidden text-[11px] font-semibold text-red-600 mt-1">A reason is required.</p>
                 </div>
-                <!-- HRAD Cancel Gate Pass (remarks REQUIRED) + shared decision-remarks result container -->
-                <div id="cancelGatePassArea" class="bg-red-50 border border-red-200 p-4 rounded-xl hidden flex-col space-y-2">
-                    <h3 class="font-extrabold text-red-800 text-sm mb-1"><i class="fas fa-ban mr-1"></i> Cancel Gate Pass</h3>
-                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1" for="cancelGatePassRemarks">Cancellation Remarks <span class="text-red-600">*</span></label>
-                    <textarea id="cancelGatePassRemarks" rows="2" maxlength="1000" class="w-full bg-white border border-gray-300 p-2 rounded text-xs focus:outline-none focus:border-red-500" placeholder="Required: reason for cancelling this gate pass"></textarea>
-                </div>
                 <div id="decisionRemarksResult" class="hidden text-xs rounded-lg border p-3"></div>
 
                 <div id="approvalActionButtons" class="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2 w-full mt-auto pt-3 border-t border-gray-100">
-                    <button onclick="closeModal()" class="px-4 py-2 rounded border border-gray-300 text-sm font-medium hover:bg-gray-200 transition">Cancel</button>
                     <button id="holdRequestButton" onclick="holdCurrentPass()" class="bg-amber-600 hover:bg-amber-700 text-white px-5 py-2 rounded shadow text-sm font-bold transition hidden"><i class="fas fa-pause-circle mr-1"></i> Put on Hold</button>
-                    <button id="cancelGatePassButton" onclick="cancelCurrentPass()" class="bg-rose-700 hover:bg-rose-800 text-white px-5 py-2 rounded shadow text-sm font-bold transition hidden"><i class="fas fa-ban mr-1"></i> Cancel Gate Pass</button>
                     <button onclick="rejectCurrentPass()" class="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded shadow text-sm font-bold transition"><i class="fas fa-times-circle mr-1"></i> Reject</button>
                     <button id="approveRequestButton" onclick="approveCurrentPass()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded shadow text-sm font-bold transition"><i class="fas fa-check-circle mr-1"></i> Approve Request</button>
+                    <button onclick="closeModal()" class="px-4 py-2 rounded border border-gray-300 text-sm font-medium hover:bg-gray-200 transition">Close</button>
                 </div>
             </div>
         </div>

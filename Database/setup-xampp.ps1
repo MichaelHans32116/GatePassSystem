@@ -233,6 +233,14 @@ if ($databaseExists -eq 0) {
             Write-Host 'Applying database migration 017...' -ForegroundColor Yellow
             Invoke-MySqlSource 'Database\Migrations\017_material_gate_pass_vehicle.sql'
         }
+
+        $splitReservationsApplied = Invoke-MySqlScalarInt `
+            "SELECT COUNT(*) FROM gate_pass_system.tbl_schema_versions WHERE version_no='018';"
+
+        if ($splitReservationsApplied -eq 0) {
+            Write-Host 'Applying database migration 018...' -ForegroundColor Yellow
+            Invoke-MySqlSource 'Database\Migrations\018_vehicle_trip_type_and_split_reservations.sql'
+        }
     }
 }
 

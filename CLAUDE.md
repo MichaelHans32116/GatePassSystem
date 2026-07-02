@@ -54,6 +54,9 @@ release). Vanilla JS frontend, ASP.NET Core 8 API, MariaDB via XAMPP.
   can pick up the latest work next time.
 - **Commit iteratively**: commit and push as work completes, not one giant
   commit at the end.
+- **Document progress continuously**: before and after substantial edits,
+  add a short progress note to the relevant phase doc or handoff doc so the
+  next turn can see what changed, what was verified, and what remains.
 - **Phase numbering in commit messages** (`Phase X.Y: <description>`):
   before naming a phase, check the latest commit across **all branches**
   (not just the current one) so the number is never reused. Given a prior
@@ -62,6 +65,8 @@ release). Vanilla JS frontend, ASP.NET Core 8 API, MariaDB via XAMPP.
     `Phase 11.4`.
   - Major new feature â†’ start a new sprint: `Phase 12.1`, and note what the
     new phase covers.
+- **Keep phase numbers consistent**: every commit and push on this branch
+  should use the next phase number in sequence, never an ad hoc message.
 - **Never add Claude attribution**: no `Co-Authored-By: Claude`, no
   "Generated with Claude Code", nothing referencing Claude/Anthropic in
   commit messages, PR bodies, or committed files.
@@ -72,4 +77,11 @@ This repo spans frontend, API, and DB migrations at once â€” non-trivial
 changes benefit from planning before editing. Run `/model opusplan` to use
 Opus for the plan and Sonnet for the actual file edits: better plan quality,
 lower cost than Opus for everything.
+
+## Current branch notes
+
+- Office branch removes the live `Cancel` approval action; `Reject` stays
+  universal.
+- HRAD assignment now shows the requested schedule window plus vehicle and
+  driver availability hints in the modal.
 

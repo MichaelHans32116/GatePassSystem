@@ -20,13 +20,10 @@ public interface IApprovalRepository
         long? driverId,
         bool? putOnHold,
         string? tripType,
-        string traceId,
-        CancellationToken cancellationToken = default);
-
-    Task<ApprovalMutation?> CancelAsync(
-        long gatePassId,
-        long actorUserId,
-        string remarks,
+        DateTime? expectedOutAt,
+        DateTime? expectedInAt,
+        DateTime? secondaryExpectedOutAt,
+        DateTime? secondaryExpectedInAt,
         string traceId,
         CancellationToken cancellationToken = default);
 }

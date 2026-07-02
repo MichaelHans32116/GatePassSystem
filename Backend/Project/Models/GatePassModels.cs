@@ -47,6 +47,7 @@ public class GatePassRecord
     public DateTime? ExpiredAt { get; init; }
     public DateTime ExpectedOutAt { get; init; }
     public DateTime? ExpectedInAt { get; init; }
+    public string? VehicleTripTypeCode { get; init; }
     public DateTime? ActualOutAt { get; init; }
     public long? ActualOutSignatureFileId { get; init; }
     public DateTime? ActualInAt { get; init; }

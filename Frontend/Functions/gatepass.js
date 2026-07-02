@@ -181,10 +181,13 @@ function mapApiGatePass(record) {
         proofFileIds: record.proofFileIds || [],
         dateFiled: formatDateTime(record.appliedAt || record.createdAt),
         destination: record.destination,
+        expectedOutAtRaw: record.expectedOutAt || null,
+        expectedInAtRaw: record.expectedInAt || null,
         expectedOut: formatDateTime(record.expectedOutAt, false),
         expectedIn: record.expectedInAt ? formatDateTime(record.expectedInAt, false) : 'N/A',
         purpose: record.purpose,
         privateVehicleDetails: record.privateVehicleDetails || '',
+        vehicleTripTypeCode: record.vehicleTripTypeCode || '',
         vehicle,
         status,
         statusCode: record.gatePassStatusCode,
@@ -232,7 +235,7 @@ function populateDriverOptions(selectedDriverId = null) {
     driverSelect.innerHTML =
         '<option value="">Unassigned</option>' +
         databaseDrivers.map(driver =>
-            `<option value="${driver.driverId}" ${driver.driverId === selectedDriverId ? 'selected' : ''}>${adminEscape(driver.fullName)}</option>`
+            `<option value="${driver.driverId}" ${driver.driverId === selectedDriverId ? 'selected' : ''}>${adminEscape(driver.fullName)} — Available</option>`
         ).join('');
     driverSelect.disabled = false;
 }

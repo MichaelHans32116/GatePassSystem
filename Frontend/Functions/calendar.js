@@ -1448,13 +1448,14 @@ function populateFixedScheduleFormDropdowns() {
     // Populate Vehicles
     vSelect.innerHTML = '<option value="">Select Vehicle</option>';
     (databaseVehicles || []).forEach(v => {
-        vSelect.innerHTML += `<option value="${schedEscape(v.id)}">${schedEscape(v.name)} (${schedEscape(v.plate)})</option>`;
+        const availability = String(v.status || v.availabilityStatusCode || 'Available');
+        vSelect.innerHTML += `<option value="${schedEscape(v.id)}">${schedEscape(v.name)} (${schedEscape(v.plate)}) — ${schedEscape(availability)}</option>`;
     });
 
     // Populate Drivers
     dSelect.innerHTML = '<option value="">Select Driver (Optional)</option>';
     (databaseDrivers || []).forEach(d => {
-        dSelect.innerHTML += `<option value="${schedEscape(d.driverId)}">${schedEscape(d.fullName)}</option>`;
+        dSelect.innerHTML += `<option value="${schedEscape(d.driverId)}">${schedEscape(d.fullName)} — Available</option>`;
     });
 }
 
@@ -1542,7 +1543,7 @@ function openServiceScheduleRequestModal() {
         (databaseVehicles || []).forEach(v => {
             const opt = document.createElement('option');
             opt.value = v.id;
-            opt.textContent = `${v.name} (${v.plate})`;
+            opt.textContent = `${v.name} (${v.plate}) — ${v.status || v.availabilityStatusCode || 'Available'}`;
             vehicleSelect.appendChild(opt);
         });
         const crv = (databaseVehicles || []).find(v => v.name?.toUpperCase().includes('CRV'));
@@ -1557,7 +1558,7 @@ function openServiceScheduleRequestModal() {
         (databaseDrivers || []).forEach(d => {
             const opt = document.createElement('option');
             opt.value = d.driverId;
-            opt.textContent = d.fullName;
+            opt.textContent = `${d.fullName} — Available`;
             driverSelect.appendChild(opt);
         });
         const jt = (databaseDrivers || []).find(d => d.fullName?.toUpperCase().includes('TURRECHA'));

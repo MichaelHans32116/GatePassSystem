@@ -49,32 +49,6 @@ public sealed class ApprovalsController(
         CancellationToken cancellationToken) =>
         Decide(requestId, false, request, cancellationToken);
 
-    // HRAD-only (Miss Joy GA120 & Miss Rox GA139) hard-cancel with mandatory remarks.
-    private bool IsHradCanceller =>
-        User.FindFirst("username")?.Value == "GA120" || User.FindFirst("username")?.Value == "GA139";
-
-    [HttpPost("{requestId:long}/cancel")]
-    public async Task<ActionResult<ApiResponse<GatePassCancelResult>>> Cancel(
-        long requestId,
-        [FromBody] GatePassCancelRequest request,
-        CancellationToken cancellationToken)
-    {
-        if (!IsHradCanceller)
-        {
-            return Forbid();
-        }
-
-        var result = await approvalService.CancelAsync(
-            requestId,
-            CurrentUserId,
-            request,
-            HttpContext.TraceIdentifier,
-            cancellationToken);
-        return result.IsSuccess
-            ? Success(result.Value!, "Gate pass cancelled.")
-            : ServiceFailure(result);
-    }
-
     private async Task<ActionResult<ApiResponse<ApprovalDecisionResult>>> Decide(
         long requestId,
         bool approve,

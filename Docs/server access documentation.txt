@@ -1,4 +1,4 @@
-﻿SERVER ACCESS DOCUMENTATION
+SERVER ACCESS DOCUMENTATION
 192.168.9.7 (Centralized System / XAMPP Server)
 ================================================
 
@@ -208,5 +208,10 @@ To copy a file to the server:
    scp -i ~/.ssh/id_ed25519_gatepass "local-file-path" "User@192.168.9.7:C:/xampp/htdocs/destination-path"
 
 
+DEPLOYMENT UPDATE
+-----------------
+- Deployed the static Form Request System frontend to `C:\xampp\htdocs\FormRequestSystem`.
+- Verified `http://192.168.9.7/FormRequestSystem/` returns HTTP 200.
+- Verified `http://192.168.9.7/FormRequestSystem/index.html` returns HTTP 200.
 Last updated: 2026-07-01
 

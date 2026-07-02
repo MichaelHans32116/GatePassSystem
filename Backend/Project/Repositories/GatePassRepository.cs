@@ -790,6 +790,7 @@ public sealed class GatePassRepository(
             WillReturn = source.WillReturn,
             VehicleUsageCode = source.VehicleUsageCode,
             PrivateVehicleDetails = source.PrivateVehicleDetails,
+            VehicleTripTypeCode = source.VehicleTripTypeCode,
             VehicleId = source.VehicleId,
             VehicleName = source.VehicleName,
             PlateNumber = source.PlateNumber,

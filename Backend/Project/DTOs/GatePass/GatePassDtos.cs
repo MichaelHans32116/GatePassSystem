@@ -112,7 +112,11 @@ public sealed record ApprovalDecisionRequest(
     long? VehicleId = null,
     long? DriverId = null,
     bool? PutOnHold = null,
-    string? TripType = null);
+    string? TripType = null,
+    DateTimeOffset? ExpectedOutAt = null,
+    DateTimeOffset? ExpectedInAt = null,
+    DateTimeOffset? SecondaryExpectedOutAt = null,
+    DateTimeOffset? SecondaryExpectedInAt = null);
 
 public sealed record ApprovalDecisionResult(
     long GatePassId,
@@ -120,14 +124,6 @@ public sealed record ApprovalDecisionResult(
     string NewStatus,
     string? NextApprovalStep,
     string? QrToken);
-
-public sealed record GatePassCancelRequest(
-    string? Remarks);
-
-public sealed record GatePassCancelResult(
-    long GatePassId,
-    string PreviousStatus,
-    string NewStatus);
 
 public sealed record SecurityScanRequest(
     string? QrToken,

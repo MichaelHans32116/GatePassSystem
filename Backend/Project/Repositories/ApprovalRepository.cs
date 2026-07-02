@@ -110,6 +110,10 @@ public sealed class ApprovalRepository(
         long? driverId,
         bool? putOnHold,
         string? tripType,
+        DateTime? expectedOutAt,
+        DateTime? expectedInAt,
+        DateTime? secondaryExpectedOutAt,
+        DateTime? secondaryExpectedInAt,
         string traceId,
         CancellationToken cancellationToken = default)
     {
@@ -127,6 +131,8 @@ public sealed class ApprovalRepository(
                         request_row.gate_pass_id AS GatePassId,
                         request_row.form_type_code AS FormTypeCode,
                         request_row.gate_pass_status_code AS CurrentStatus,
+                        request_row.expected_out_at AS ExpectedOutAt,
+                        request_row.expected_in_at AS ExpectedInAt,
                         request_row.requester_user_id AS RequesterUserId,
                         step.approval_step_id AS ApprovalStepId,
                         step.sequence_no AS SequenceNo,
@@ -289,18 +295,46 @@ public sealed class ApprovalRepository(
             // 2. Handle Vehicle/Driver assignment on HR approval
             if (current.ApprovalStepCode == "HRAD_ASSIGN" && approve)
             {
+                var resolvedExpectedOutAt = expectedOutAt ?? current.ExpectedOutAt;
+                var resolvedExpectedInAt = expectedInAt ?? current.ExpectedInAt;
+                var resolvedSecondaryExpectedOutAt = secondaryExpectedOutAt;
+                var resolvedSecondaryExpectedInAt = secondaryExpectedInAt;
+                var hasSecondaryWindow =
+                    resolvedSecondaryExpectedOutAt.HasValue &&
+                    resolvedSecondaryExpectedInAt.HasValue;
+
+                if (hasSecondaryWindow)
+                {
+                    if (!resolvedExpectedOutAt.HasValue ||
+                        !resolvedExpectedInAt.HasValue)
+                    {
+                        throw new InvalidOperationException(
+                            "Primary HRAD schedule window is required.");
+                    }
+
+                    if (resolvedSecondaryExpectedOutAt < resolvedExpectedOutAt)
+                    {
+                        resolvedExpectedOutAt = resolvedSecondaryExpectedOutAt;
+                    }
+
+                    if (resolvedSecondaryExpectedInAt > resolvedExpectedInAt)
+                    {
+                        resolvedExpectedInAt = resolvedSecondaryExpectedInAt;
+                    }
+                }
+
                 await connection.ExecuteAsync(new CommandDefinition(
                     """
                     UPDATE tbl_gate_pass_requests
                     SET vehicle_id = @VehicleId,
                         driver_id = @DriverId,
-                        private_vehicle_details = CASE 
-                            WHEN @VehicleId IS NULL THEN @TripType 
-                            ELSE NULL
-                        END,
+                        expected_out_at = @ExpectedOutAt,
+                        expected_in_at = @ExpectedInAt,
+                        vehicle_trip_type_code = NULLIF(TRIM(@TripType), ''),
                         vehicle_usage_code = CASE
-                            WHEN @VehicleId IS NULL AND @TripType IS NOT NULL THEN 'PRIVATE'
-                            ELSE 'COMPANY'
+                            WHEN @VehicleId IS NULL AND NULLIF(TRIM(@TripType), '') IS NOT NULL THEN 'PRIVATE'
+                            WHEN @VehicleId IS NOT NULL THEN 'COMPANY'
+                            ELSE vehicle_usage_code
                         END
                     WHERE gate_pass_id = @GatePassId;
                     """,
@@ -309,7 +343,9 @@ public sealed class ApprovalRepository(
                         GatePassId = gatePassId,
                         VehicleId = vehicleId,
                         DriverId = driverId,
-                        TripType = tripType
+                        TripType = tripType,
+                        ExpectedOutAt = resolvedExpectedOutAt,
+                        ExpectedInAt = resolvedExpectedInAt
                     },
                     transaction,
                     cancellationToken: cancellationToken));
@@ -323,32 +359,55 @@ public sealed class ApprovalRepository(
                         transaction,
                         cancellationToken: cancellationToken));
 
-                    await connection.ExecuteAsync(new CommandDefinition(
-                        """
-                        INSERT INTO tbl_vehicle_reservations (
-                            gate_pass_id,
-                            vehicle_id,
-                            driver_id,
-                            reserved_from,
-                            reserved_until,
-                            reservation_status_code
-                        ) VALUES (
-                            @GatePassId,
-                            @VehicleId,
-                            @DriverId,
-                            (SELECT expected_out_at FROM tbl_gate_pass_requests WHERE gate_pass_id = @GatePassId),
-                            (SELECT expected_in_at FROM tbl_gate_pass_requests WHERE gate_pass_id = @GatePassId),
-                            'PENDING'
-                        );
-                        """,
-                        new
-                        {
-                            GatePassId = gatePassId,
-                            VehicleId = vehicleId.Value,
-                            DriverId = driverId
-                        },
-                        transaction,
-                        cancellationToken: cancellationToken));
+                    var reservationWindows = new List<(DateTime ReservedFrom, DateTime? ReservedUntil)>
+                    {
+                        (
+                            resolvedExpectedOutAt ?? throw new InvalidOperationException(
+                                "Primary HRAD schedule window is required."),
+                            resolvedExpectedInAt
+                        )
+                    };
+
+                    if (hasSecondaryWindow)
+                    {
+                        reservationWindows.Add(
+                            (
+                                resolvedSecondaryExpectedOutAt!.Value,
+                                resolvedSecondaryExpectedInAt
+                            ));
+                    }
+
+                    foreach (var reservationWindow in reservationWindows)
+                    {
+                        await connection.ExecuteAsync(new CommandDefinition(
+                            """
+                            INSERT INTO tbl_vehicle_reservations (
+                                gate_pass_id,
+                                vehicle_id,
+                                driver_id,
+                                reserved_from,
+                                reserved_until,
+                                reservation_status_code
+                            ) VALUES (
+                                @GatePassId,
+                                @VehicleId,
+                                @DriverId,
+                                @ReservedFrom,
+                                @ReservedUntil,
+                                'PENDING'
+                            );
+                            """,
+                            new
+                            {
+                                GatePassId = gatePassId,
+                                VehicleId = vehicleId.Value,
+                                DriverId = driverId,
+                                ReservedFrom = reservationWindow.ReservedFrom,
+                                ReservedUntil = reservationWindow.ReservedUntil
+                            },
+                            transaction,
+                            cancellationToken: cancellationToken));
+                    }
                 }
             }
 
@@ -542,134 +601,13 @@ public sealed class ApprovalRepository(
         }
     }
 
-    public async Task<ApprovalMutation?> CancelAsync(
-        long gatePassId,
-        long actorUserId,
-        string remarks,
-        string traceId,
-        CancellationToken cancellationToken = default)
-    {
-        await using var connection =
-            await connectionFactory.OpenConnectionAsync(cancellationToken);
-        await using var transaction =
-            await connection.BeginTransactionAsync(cancellationToken);
-
-        try
-        {
-            // Lock the request row and read its current status + form type. Only
-            // non-terminal passes may be cancelled (terminal statuses already
-            // carry is_terminal = TRUE in tbl_gate_pass_statuses).
-            var current = await connection.QueryFirstOrDefaultAsync<CancelTarget>(
-                new CommandDefinition(
-                    """
-                    SELECT
-                        request_row.gate_pass_id AS GatePassId,
-                        request_row.form_type_code AS FormTypeCode,
-                        request_row.gate_pass_status_code AS CurrentStatus,
-                        status_row.is_terminal AS IsTerminal
-                    FROM tbl_gate_pass_requests request_row
-                    JOIN tbl_gate_pass_statuses status_row
-                        ON status_row.gate_pass_status_code =
-                           request_row.gate_pass_status_code
-                    WHERE request_row.gate_pass_id = @GatePassId
-                    FOR UPDATE;
-                    """,
-                    new { GatePassId = gatePassId },
-                    transaction,
-                    cancellationToken: cancellationToken));
-
-            if (current is null || current.IsTerminal)
-            {
-                await transaction.RollbackAsync(cancellationToken);
-                return null;
-            }
-
-            var cancelledAt = DateTime.UtcNow;
-
-            // 1. Move the request to the terminal CANCELLED status and record
-            //    the transition in the status history (remarks idiom matches
-            //    DecideAsync: NULLIF(TRIM(@Remarks), '')).
-            await connection.ExecuteAsync(new CommandDefinition(
-                """
-                UPDATE tbl_gate_pass_requests
-                SET gate_pass_status_code = 'CANCELLED',
-                    cancelled_at = @CancelledAt,
-                    version_no = version_no + 1
-                WHERE gate_pass_id = @GatePassId;
-
-                INSERT INTO tbl_gate_pass_status_history (
-                    gate_pass_id,
-                    from_status_code,
-                    to_status_code,
-                    changed_by_user_id,
-                    remarks,
-                    trace_id
-                ) VALUES (
-                    @GatePassId,
-                    @PreviousStatus,
-                    'CANCELLED',
-                    @ActorUserId,
-                    NULLIF(TRIM(@Remarks), ''),
-                    @TraceId
-                );
-                """,
-                new
-                {
-                    GatePassId = gatePassId,
-                    CancelledAt = cancelledAt,
-                    PreviousStatus = current.CurrentStatus,
-                    ActorUserId = actorUserId,
-                    Remarks = remarks,
-                    TraceId = traceId
-                },
-                transaction,
-                cancellationToken: cancellationToken));
-
-            // 2. Cancel any still-active vehicle reservation linked to this pass
-            //    so the vehicle is freed up (terminal reservation statuses are
-            //    left untouched).
-            await connection.ExecuteAsync(new CommandDefinition(
-                """
-                UPDATE tbl_vehicle_reservations reservation_row
-                JOIN tbl_reservation_statuses reservation_status
-                    ON reservation_status.reservation_status_code =
-                       reservation_row.reservation_status_code
-                SET reservation_row.reservation_status_code = 'CANCELLED'
-                WHERE reservation_row.gate_pass_id = @GatePassId
-                  AND reservation_status.is_terminal = FALSE;
-                """,
-                new { GatePassId = gatePassId },
-                transaction,
-                cancellationToken: cancellationToken));
-
-            await transaction.CommitAsync(cancellationToken);
-            return new ApprovalMutation(
-                gatePassId,
-                current.FormTypeCode,
-                current.CurrentStatus,
-                "CANCELLED",
-                null);
-        }
-        catch
-        {
-            await transaction.RollbackAsync(cancellationToken);
-            throw;
-        }
-    }
-
-    private sealed class CancelTarget
-    {
-        public long GatePassId { get; init; }
-        public string FormTypeCode { get; init; } = "PERSON_GATE_PASS";
-        public string CurrentStatus { get; init; } = string.Empty;
-        public bool IsTerminal { get; init; }
-    }
-
     private sealed class CurrentStep
     {
         public long GatePassId { get; init; }
         public string FormTypeCode { get; init; } = "PERSON_GATE_PASS";
         public string CurrentStatus { get; init; } = string.Empty;
+        public DateTime? ExpectedOutAt { get; init; }
+        public DateTime? ExpectedInAt { get; init; }
         public long RequesterUserId { get; init; }
         public long ApprovalStepId { get; init; }
         public int SequenceNo { get; init; }
