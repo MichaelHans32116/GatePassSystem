@@ -189,6 +189,23 @@ server work can be reviewed later without relying on chat history.
   without the generic "Unable to connect to the Form Request API" browser
   error.
 
+- Backed up the live frontend, live API folder, and `gate_pass_system`
+  database again at
+  `C:\GatePassSystem\backups\20260703-150913` before the request-trip-type
+  rollout.
+- Copied the updated frontend files to
+  `C:\xampp\htdocs\FormRequestSystem` and refreshed the live API folder at
+  `C:\GatePassSystem\Api` without touching Apache or MariaDB.
+- Applied the updated `SP_CreateGatePass` procedure from
+  `C:\GatePassSystem\Database\procedures.sql` so the server accepts the new
+  `vehicle_trip_type_code` parameter.
+- Verified the live API health endpoint still returns `Healthy` and
+  `Connected`.
+- Verified the deployed browser flow on
+  `http://192.168.9.7/FormRequestSystem/` logs in successfully, shows the
+  request form, and submits a payload containing
+  `vehicleTripTypeCode: BOTH` for the `willReturn = true` path.
+
 MIGRATION PLAN / MAX-PRECAUTION NOTES
 -------------------------------------
 
