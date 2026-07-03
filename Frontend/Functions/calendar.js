@@ -636,6 +636,12 @@ function openScheduleDayModal(dateStr) {
         bodyEl.innerHTML = toggle + gridTypeTabs + (gridHtml || schedRenderDayList(events));
     }
 
+    if (events.length > 0 && scheduleDayView === 'grid' && ((schedDayGridType === 'truck' && schedTruckVehicles().length) || (schedDayGridType === 'vehicle' && schedMonitoringVehicles().length))) {
+        bodyEl.classList.add('sched-grid-active');
+    } else {
+        bodyEl.classList.remove('sched-grid-active');
+    }
+
     modal.classList.remove('hidden');
     modal.classList.add('flex');
 }
@@ -645,6 +651,10 @@ function closeScheduleDayModal() {
     if (modal) {
         modal.classList.add('hidden');
         modal.classList.remove('flex');
+    }
+    const bodyEl = document.getElementById('scheduleDayModalBody');
+    if (bodyEl) {
+        bodyEl.classList.remove('sched-grid-active');
     }
 }
 

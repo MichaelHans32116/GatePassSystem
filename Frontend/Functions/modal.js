@@ -789,6 +789,7 @@ function initializeModalDragResize() {
             if (!modal || !dragHandle || !resizeHandle) return;
 
             dragHandle.addEventListener('pointerdown', (e) => {
+                if (window.innerWidth <= 768) return; // Disable dragging on mobile
                 if (isMaximized) return;
                 if (e.target.closest('button, input, select, textarea, a, label')) return;
 
@@ -810,6 +811,7 @@ function initializeModalDragResize() {
             });
 
             resizeHandle.addEventListener('pointerdown', (e) => {
+                if (window.innerWidth <= 768) return; // Disable resizing on mobile
                 if (isMaximized) return;
 
                 e.preventDefault();
