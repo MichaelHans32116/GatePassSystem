@@ -1,4 +1,4 @@
-﻿using System.Data;
+using System.Data;
 using System.Text.Json;
 using Dapper;
 using FormRequestSystem.Project.DTOs.Common;
@@ -39,6 +39,7 @@ public sealed class GatePassRepository(
                     p_expected_in_at = request.ExpectedInAt?.UtcDateTime,
                     p_will_return = request.WillReturn,
                     p_vehicle_usage_code = request.VehicleUsageCode,
+                    p_vehicle_trip_type_code = request.VehicleTripTypeCode,
                     p_vehicle_id = request.VehicleId,
                     p_private_vehicle_details = request.PrivateVehicleDetails,
                     p_driver_id = request.DriverId,
@@ -484,7 +485,9 @@ public sealed class GatePassRepository(
             WHERE (@RequesterUserId IS NULL
                    OR records.requester_user_id = @RequesterUserId)
               AND (@StatusCode IS NULL
-                   OR records.gate_pass_status_code = @StatusCode)
+                   OR (@StatusCode = 'GENERAL_OPEN' AND records.gate_pass_status_code NOT IN ('CLOSED', 'CANCELLED', 'REJECTED'))
+                   OR (@StatusCode = 'GENERAL_CLOSED' AND records.gate_pass_status_code IN ('CLOSED', 'CANCELLED', 'REJECTED'))
+                   OR (@StatusCode NOT IN ('GENERAL_OPEN', 'GENERAL_CLOSED') AND records.gate_pass_status_code = @StatusCode))
               AND (@FormTypeCode IS NULL
                    OR records.form_type_code = @FormTypeCode)
               AND (@DepartmentId IS NULL

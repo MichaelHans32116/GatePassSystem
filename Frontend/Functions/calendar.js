@@ -137,14 +137,13 @@ function schedFilteredData() {
             const haystack = [entry.requesterName, entry.title, entry.destination, entry.controlNo, entry.vehicleName, entry.driverName]
                 .filter(Boolean).join(' ').toLowerCase();
             if (!haystack.includes(q)) return false;
-        } else {
-            // Hide past schedules if no search is active
-            if (entry.scheduleDate) {
-                const datePart = entry.scheduleDate.split('T')[0];
-                const endPart = entry.endTime ? entry.endTime : '23:59:59';
-                const eventEnd = new Date(`${datePart}T${endPart}`);
-                if (entry.scheduleSource !== 'FIXED' && eventEnd < new Date()) return false;
-            }
+        }
+        // Hide past schedules if archived checkbox is not checked
+        if (!f.showArchived && entry.scheduleDate) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const eventDate = schedParseDateLocal(entry.scheduleDate);
+            if (entry.scheduleSource !== 'FIXED' && eventDate < today) return false;
         }
         return true;
     });
@@ -164,6 +163,7 @@ function applyScheduleFilters() {
     scheduleFilters.vehicleId = document.getElementById('schedFilterVehicle')?.value || '';
     scheduleFilters.status = document.getElementById('schedFilterStatus')?.value || '';
     scheduleFilters.search = document.getElementById('schedFilterSearch')?.value || '';
+    scheduleFilters.showArchived = document.getElementById('schedShowArchived')?.checked || false;
 
     // Jump to date if specified
     if (scheduleFilters.date) {
@@ -182,9 +182,11 @@ function applyScheduleFilters() {
 }
 
 function clearScheduleFilters() {
-    scheduleFilters = { date: '', driverId: '', vehicleId: '', status: '', search: '' };
+    scheduleFilters = { date: '', driverId: '', vehicleId: '', status: '', search: '', showArchived: false };
     const ids = ['schedFilterDate','schedFilterDriver','schedFilterVehicle','schedFilterStatus','schedFilterSearch'];
     ids.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    const archivedCheckbox = document.getElementById('schedShowArchived');
+    if (archivedCheckbox) archivedCheckbox.checked = false;
     renderScheduleCalendar();
 }
 
@@ -1334,6 +1336,10 @@ async function showPublicDriverCalendar() {
         if (logoutButton) {
             logoutButton.style.display = 'none';
         }
+
+        // Hide archived checkbox on public view
+        const archivedContainer = document.getElementById('schedArchivedContainer');
+        if (archivedContainer) archivedContainer.style.display = 'none';
 
         // Hide login view and show main app
         const loginView = document.getElementById('loginView');

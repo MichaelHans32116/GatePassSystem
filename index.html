@@ -227,7 +227,7 @@
                                 <table class="w-full text-left border-collapse min-w-max">
                                     <thead>
                                         <tr class="bg-gray-50 text-gray-500 text-[11px] uppercase tracking-wider border-b border-t">
-                                            <th class="px-4 py-3 font-semibold">GP-ID / Control No.</th>
+                                            <th class="px-4 py-3 font-semibold">Control No.</th>
                                             <th class="px-4 py-3 font-semibold">Associate Name</th>
                                             <th class="px-4 py-3 font-semibold">Will Return?</th>
                                             <th class="px-4 py-3 font-semibold">Current Queue Status</th>
@@ -370,6 +370,12 @@
                                     <option value="RETURNED">Returned</option>
                                     <option value="CANCELLED">Cancelled</option>
                                 </select>
+                            </div>
+                            <div class="flex-shrink-0" id="schedArchivedContainer">
+                                <label class="flex items-center gap-1.5 cursor-pointer mt-4">
+                                    <input type="checkbox" id="schedShowArchived" class="rounded border-gray-300 text-mpiBlue focus:ring-mpiBlue" onchange="applyScheduleFilters()">
+                                    <span class="text-[10px] font-bold uppercase tracking-wider text-gray-500">See Archived Schedule</span>
+                                </label>
                             </div>
                             <div class="flex-grow min-w-[180px]">
                                 <label class="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Search</label>
@@ -758,7 +764,7 @@
                         <div class="text-left bg-gray-50 p-3 rounded border">
                             <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Manual Entry</label>
                             <div class="flex space-x-2">
-                                <input type="text" id="manualQrInput" placeholder="Scan QR or enter GP-ID" class="w-full flex-grow border border-gray-300 p-2 rounded text-sm focus:outline-none focus:border-mpiBlue min-w-0">
+                                <input type="text" id="manualQrInput" placeholder="Scan QR or enter Control No." class="w-full flex-grow border border-gray-300 p-2 rounded text-sm focus:outline-none focus:border-mpiBlue min-w-0" onkeydown="if(event.key==='Enter'){event.preventDefault();simulateQrScan();}">
                                 <button onclick="simulateQrScan()" class="w-auto flex-shrink-0 whitespace-nowrap bg-gray-800 text-white px-4 py-2 rounded text-sm font-bold hover:bg-black transition">Scan</button>
                             </div>
                         </div>
@@ -779,10 +785,11 @@
                     <div id="admin-logs" class="admin-tab-content bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden relative">
                         <div class="p-4 md:p-5 border-b bg-gray-50 flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-end gap-4">
                             <div class="w-full sm:w-auto"><label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Search ID/Name</label><input type="text" id="logFilterName" placeholder="Enter keyword..." class="w-full border border-gray-300 p-2 rounded text-sm sm:w-48 md:w-56 focus:outline-none focus:border-mpiBlue"></div>
-                            <div class="w-full sm:w-auto"><label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Filter by Date</label><input type="date" id="logFilterDate" class="w-full border border-gray-300 p-2 rounded text-sm text-gray-700 focus:outline-none focus:border-mpiBlue"></div>
+                            <div class="w-full sm:w-auto"><label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">From Date</label><input type="date" id="logFilterFromDate" class="w-full border border-gray-300 p-2 rounded text-sm text-gray-700 focus:outline-none focus:border-mpiBlue"></div>
+                            <div class="w-full sm:w-auto"><label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">To Date</label><input type="date" id="logFilterToDate" class="w-full border border-gray-300 p-2 rounded text-sm text-gray-700 focus:outline-none focus:border-mpiBlue"></div>
                             <div class="w-full sm:w-auto" id="filterDeptContainer"><label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Department</label><select id="logFilterDept" class="w-full border border-gray-300 p-2 rounded text-sm text-gray-700 focus:outline-none focus:border-mpiBlue"><option value="">All Departments</option></select></div>
                             <div class="w-full sm:w-auto"><label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Form Type</label><select id="logFilterFormType" class="w-full border border-gray-300 p-2 rounded text-sm"><option value="">All Forms</option><option value="PERSON_GATE_PASS">Person Gate Pass</option><option value="MATERIAL_GATE_PASS">Material Gate Pass</option></select></div>
-                            <div class="w-full sm:w-auto"><label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Status</label><select id="logFilterStatus" class="w-full border border-gray-300 p-2 rounded text-sm"><option value="">All Statuses</option><option value="PENDING_SUPERIOR">Pending Superior</option><option value="PENDING_PRESIDENT">Pending President</option><option value="PENDING_PAS">Pending PAS</option><option value="APPROVED">Approved</option><option value="OUTSIDE">Outside</option><option value="RETURNED">Returned</option><option value="REJECTED">Rejected</option><option value="CANCELLED">Cancelled</option></select></div>
+                            <div class="w-full sm:w-auto"><label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Status</label><select id="logFilterStatus" class="w-full border border-gray-300 p-2 rounded text-sm"><option value="">All Statuses</option><option value="GENERAL_OPEN">📂 Open (Active)</option><option value="GENERAL_CLOSED">📁 Closed / Done</option><optgroup label="──────────"></optgroup><option value="PENDING_SUPERIOR">Pending Superior</option><option value="PENDING_PRESIDENT">Pending President</option><option value="PENDING_PAS">Pending PAS</option><option value="APPROVED">Approved</option><option value="OUTSIDE">Outside</option><option value="OVERDUE">Overdue</option><option value="RETURNED">Returned</option><option value="CLOSED">Closed</option><option value="REJECTED">Rejected</option><option value="CANCELLED">Cancelled</option><option value="EXPIRED">Expired</option></select></div>
                             <div class="w-full sm:w-auto"><button onclick="renderAdminLogs(1)" class="w-full bg-mpiBlue text-white px-5 py-2 rounded shadow text-sm font-bold hover:bg-mpiDark transition"><i class="fas fa-filter mr-2"></i>Apply Filters</button></div>
                             <div class="w-full sm:w-auto"><button id="btnPrintSelected" onclick="printSelectedLogs()" class="w-full hidden bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded shadow text-sm font-bold transition"><i class="fas fa-print mr-2"></i>Print Selected (<span id="selectedLogsCount">0</span>)</button></div>
                         </div>
@@ -952,30 +959,30 @@
                                 <table class="nested-print-table w-full h-full" style="margin: 0 !important; width: 100% !important; height: 100% !important; table-layout: fixed;">
                                     <!-- Row 1: Name & Date -->
                                     <tr class="border-b-nested">
-                                        <td class="align-top border-r-nested" style="width: 65%; height: 10mm;">
+                                        <td class="align-top border-r-nested" style="width: 65%; height: 20mm;">
                                             <div class="text-[7px] uppercase text-gray-500 font-semibold person-associates-label">NAME OF ASSOCIATES</div>
                                             <div id="vName" class="font-bold text-xs uppercase pl-1 pt-0.5"></div>
                                             <div id="vAssociatesExtra" class="person-associates-extra pl-1"></div>
                                         </td>
-                                        <td class="align-top" style="width: 35%; height: 10mm;">
+                                        <td class="align-top" style="width: 35%; height: 20mm;">
                                             <div class="text-[7px] uppercase text-gray-500 font-semibold">DATE FILED</div>
                                             <div id="vDateF" class="person-date-filed font-bold pl-1 pt-0.5"></div>
                                         </td>
                                     </tr>
                                     <!-- Row 2: Purpose & Driver -->
                                     <tr class="border-b-nested">
-                                        <td rowspan="2" class="align-top border-r-nested" style="width: 65%; height: 22mm;">
+                                        <td rowspan="2" class="align-top border-r-nested" style="width: 65%; height: 12mm;">
                                             <div class="text-[7px] uppercase text-gray-500 font-semibold">PURPOSE</div>
                                             <div id="vPurp" class="font-bold text-xs pl-1 pt-0.5 leading-tight"></div>
                                         </td>
-                                        <td class="align-top border-b-nested" style="width: 35%; height: 11mm;">
+                                        <td class="align-top border-b-nested" style="width: 35%; height: 6mm;">
                                             <div class="text-[7px] uppercase text-gray-500 font-semibold">DRIVER:</div>
                                             <div id="vDriver" class="font-bold text-[9px] pl-1 pt-0.5"></div>
                                         </td>
                                     </tr>
                                     <!-- Row 3: Vehicle -->
                                     <tr>
-                                        <td class="align-top" style="width: 35%; height: 11mm;">
+                                        <td class="align-top" style="width: 35%; height: 6mm;">
                                             <div class="text-[7px] uppercase text-gray-500 font-semibold">VEHICLE & PLATE</div>
                                             <div id="vPlate" class="font-bold text-[8px] pl-1 pt-0.5"></div>
                                         </td>

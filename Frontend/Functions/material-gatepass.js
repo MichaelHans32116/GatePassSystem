@@ -160,6 +160,32 @@ function selectAssociate(rowId, employeeRecordId) {
     if (!row) return;
     const employee = associateDirectoryCache.find(e => Number(e.employeeRecordId) === Number(employeeRecordId));
     if (!employee) return;
+
+    // Prevent adding yourself as a companion
+    const activeUser = typeof currentUser !== 'undefined' ? currentUser : null;
+    if (activeUser && employee.employeeId && employee.employeeId === activeUser.id) {
+        alert('You cannot add yourself as a companion.');
+        const search = row.querySelector('[data-associate-search]');
+        if (search) search.value = '';
+        return;
+    }
+
+    // Prevent duplicate companions
+    const body = row.parentElement;
+    if (body) {
+        const siblingRows = [...body.querySelectorAll('.associate-row')];
+        const isDuplicate = siblingRows.some(sibling =>
+            sibling.id !== rowId &&
+            sibling.dataset.employeeId &&
+            String(sibling.dataset.employeeId) === String(employee.employeeRecordId)
+        );
+        if (isDuplicate) {
+            alert('This companion has already been added.');
+            const search = row.querySelector('[data-associate-search]');
+            if (search) search.value = '';
+            return;
+        }
+    }
     row.dataset.employeeId = String(employee.employeeRecordId);
     row.dataset.departmentId = employee.departmentId != null ? String(employee.departmentId) : '';
     row.dataset.name = employee.fullName || '';

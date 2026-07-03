@@ -1,4 +1,4 @@
-﻿using Dapper;
+using Dapper;
 using FormRequestSystem.Project.Models;
 
 namespace FormRequestSystem.Project.Repositories;
@@ -583,6 +583,26 @@ public sealed class ApprovalRepository(
                     ActorUserId = actorUserId,
                     Comment = comment,
                     TraceId = traceId
+                },
+                transaction,
+                cancellationToken: cancellationToken));
+
+            // Update associated vehicle reservation status
+            await connection.ExecuteAsync(new CommandDefinition(
+                """
+                UPDATE tbl_vehicle_reservations
+                SET reservation_status_code = CASE
+                    WHEN @NewStatusCode IN ('APPROVED', 'PENDING_PAS') THEN 'RESERVED'
+                    WHEN @NewStatusCode IN ('REJECTED', 'CANCELLED') THEN 'CANCELLED'
+                    ELSE reservation_status_code
+                END
+                WHERE gate_pass_id = @RecordId
+                  AND reservation_status_code = 'PENDING';
+                """,
+                new
+                {
+                    NewStatusCode = newStatus,
+                    RecordId = gatePassId
                 },
                 transaction,
                 cancellationToken: cancellationToken));

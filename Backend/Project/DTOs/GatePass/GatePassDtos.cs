@@ -1,4 +1,4 @@
-﻿using System.ComponentModel.DataAnnotations;
+using System.ComponentModel.DataAnnotations;
 using FormRequestSystem.Project.Models;
 
 namespace FormRequestSystem.Project.DTOs.GatePass;
@@ -27,6 +27,9 @@ public sealed class CreateGatePassRequest
     public string? PrivateVehicleDetails { get; init; }
 
     public long? DriverId { get; init; }
+
+    [StringLength(20)]
+    public string? VehicleTripTypeCode { get; init; }
 
     // Phase 11 / Requirement 5: optional additional associates/companions.
     // The directory-selected companions who accompany the requester. These

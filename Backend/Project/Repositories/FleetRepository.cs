@@ -1,4 +1,4 @@
-﻿using Dapper;
+using Dapper;
 using FormRequestSystem.Project.DTOs.Fleet;
 using FormRequestSystem.Project.Models;
 
@@ -519,10 +519,10 @@ public sealed class FleetRepository(
                     vehicle.vehicle_type AS VehicleType,
                     reservation.driver_id AS DriverId,
                     driver.full_name AS DriverName,
-                    DATE(reservation.reserved_from) AS ScheduleDate,
-                    TIME(reservation.reserved_from) AS StartTime,
-                    TIME(COALESCE(reservation.reserved_until,
-                         ADDTIME(reservation.reserved_from, '01:00:00'))) AS EndTime,
+                    DATE(DATE_ADD(reservation.reserved_from, INTERVAL 8 HOUR)) AS ScheduleDate,
+                    TIME(DATE_ADD(reservation.reserved_from, INTERVAL 8 HOUR)) AS StartTime,
+                    TIME(COALESCE(DATE_ADD(reservation.reserved_until, INTERVAL 8 HOUR),
+                         ADDTIME(DATE_ADD(reservation.reserved_from, INTERVAL 8 HOUR), '01:00:00'))) AS EndTime,
                     CONCAT(
                         requester.full_name,
                         COALESCE(CONCAT(' - ', gpr.destination), '')
@@ -544,8 +544,8 @@ public sealed class FleetRepository(
                     ON requester.employee_record_id = gpr.requester_employee_id
                 WHERE reservation.reservation_status_code NOT IN
                       ('CANCELLED', 'REJECTED', 'EXPIRED')
-                  AND DATE(reservation.reserved_from) >= @From
-                  AND DATE(reservation.reserved_from) <= @To
+                  AND DATE(DATE_ADD(reservation.reserved_from, INTERVAL 8 HOUR)) >= @From
+                  AND DATE(DATE_ADD(reservation.reserved_from, INTERVAL 8 HOUR)) <= @To
 
                 UNION ALL
 

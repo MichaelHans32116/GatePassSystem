@@ -112,3 +112,4 @@ The plan also keeps the form request naming and navigation changes aligned with 
 
 - 2026-07-03: cleaned the pasted Gemini draft into a single Markdown plan, removed the garbled encoding, and aligned the wording with the current repo history and naming.
 - 2026-07-03: verified the markdown with `git diff --check`; `gh auth status` is healthy for the later push.
+- 2026-07-03: implemented and smoke-tested the request-form trip type guardrails locally; login succeeded against the API, the form now locks `Hatid Lang` for `willReturn = no` and `Hatid at Sundo` for `willReturn = yes`, and the submit payload now carries `vehicleTripTypeCode`.

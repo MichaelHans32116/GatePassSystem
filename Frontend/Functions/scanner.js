@@ -62,7 +62,7 @@ async function simulateQrScan(identifierOverride = null, fromCamera = false) {
     const input = document.getElementById('manualQrInput');
     const identifier = (identifierOverride || input.value).trim();
     if (!identifier) {
-        showToast('Enter a QR or GP-ID.', 'error');
+        showToast('Enter a QR or Control No.', 'error');
         return;
     }
 
