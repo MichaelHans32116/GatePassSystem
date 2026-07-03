@@ -1,6 +1,5 @@
-SERVER ACCESS DOCUMENTATION
+# Server Access Documentation
 192.168.9.7 (Centralized System / XAMPP Server)
-================================================
 
 PURPOSE
 -------
@@ -18,6 +17,49 @@ Windows User       : User  (member of Administrators group)
 XAMPP htdocs path  : C:\xampp\htdocs
 Centralized system : C:\xampp\htdocs\centralized-system
 Backup location     : C:\xampp\htdocs\centralized-system-backup
+
+CANONICAL USE
+-------------
+This is the single server handoff document for the live Moriroku XAMPP
+machine. Update this file instead of scattering notes in new docs.
+
+SAFE ACCESS RUNBOOK
+-------------------
+
+1. Connect by SSH, not by manually editing files on the server:
+
+   `ssh -i ~/.ssh/id_ed25519_gatepass User@192.168.9.7`
+
+2. Check the live health before touching anything:
+
+   `Invoke-WebRequest -UseBasicParsing 'http://192.168.9.7:5087/api/health'`
+
+3. Back up first, every time:
+
+   - Frontend: `C:\xampp\htdocs\FormRequestSystem`
+   - API: `C:\GatePassSystem\Api`
+   - Database: `gate_pass_system` dump with `mysqldump`
+   - Backup folder format: `C:\GatePassSystem\backups\YYYYMMDD-HHMMSS`
+
+4. Stage changes in a separate folder when possible, then mirror them into
+   the live path.
+
+5. If the API must be refreshed, stop or start only the `GatePassApi`
+   scheduled task. Do not stop Apache, MariaDB, Wi-Fi, router, or firewall
+   services.
+
+6. If you are changing the database, use a migration file plus
+   `Database/setup-xampp.ps1` when possible, and keep the scope limited to
+   `gate_pass_system` only.
+
+7. After every change, verify:
+
+   - `http://192.168.9.7/FormRequestSystem/`
+   - `http://192.168.9.7:5087/api/health`
+   - the affected browser flow
+
+8. If the browser says the API cannot connect, check CORS and the live
+   endpoint first before changing frontend code.
 
 
 RUNNING CHANGE LOG

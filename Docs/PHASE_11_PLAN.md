@@ -289,7 +289,7 @@ Make the vehicle and driver calendar reflect the actual workbook schedule window
    - Keep the HRAD schedule controls visible in the assignment block.
    - Keep `Close` at the bottom of the modal action stack.
    - Keep the layout readable on narrower screens while the new time controls are added.
-11. `Docs/PHASE_11_PLAN.md` and `Docs/server access documentation.txt`
+11. `Docs/PHASE_11_PLAN.md` and `Docs/server access documentation.md`
    - Record what was changed, what was verified, and what remains.
    - Add short notes after each successful pass so the next review starts with fresh context.
 
