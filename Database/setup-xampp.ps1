@@ -242,10 +242,10 @@ if ($databaseExists -eq 0) {
             Invoke-MySqlSource 'Database\Migrations\018_vehicle_trip_type_and_split_reservations.sql'
         }
 
-        $fixedScheduleSyncApplied = Invoke-MySqlScalarInt `
+        $syncSchedulesApplied = Invoke-MySqlScalarInt `
             "SELECT COUNT(*) FROM gate_pass_system.tbl_schema_versions WHERE version_no='019';"
 
-        if ($fixedScheduleSyncApplied -eq 0) {
+        if ($syncSchedulesApplied -eq 0) {
             Write-Host 'Applying database migration 019...' -ForegroundColor Yellow
             Invoke-MySqlSource 'Database\Migrations\019_sync_fixed_vehicle_schedule_with_workbook.sql'
         }
@@ -256,6 +256,14 @@ if ($databaseExists -eq 0) {
         if ($securityQueueHardeningApplied -eq 0) {
             Write-Host 'Applying database migration 020...' -ForegroundColor Yellow
             Invoke-MySqlSource 'Database\Migrations\020_harden_security_queue_active_states.sql'
+        }
+
+        $addOutSchedulesApplied = Invoke-MySqlScalarInt `
+            "SELECT COUNT(*) FROM gate_pass_system.tbl_schema_versions WHERE version_no='021';"
+
+        if ($addOutSchedulesApplied -eq 0) {
+            Write-Host 'Applying database migration 021...' -ForegroundColor Yellow
+            Invoke-MySqlSource 'Database\Migrations\021_add_missing_fixed_vehicle_schedules.sql'
         }
     }
 }
