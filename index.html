@@ -737,10 +737,13 @@
                         </div>
 
                         <div class="text-left bg-blue-50 p-3 rounded border border-blue-100 mb-3 space-y-2">
-                            <label class="block text-[10px] font-bold text-gray-500 uppercase">Camera</label>
-                            <select id="qrCameraSelect" class="w-full border border-gray-300 p-2 rounded text-sm bg-white">
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase">Select Camera</label>
+                            <select id="qrCameraSelect" class="hidden">
                                 <option value="">Detect cameras...</option>
                             </select>
+                            <div id="qrCameraButtonsContainer" class="flex flex-wrap gap-2 py-1">
+                                <span class="text-xs text-gray-400">Loading cameras...</span>
+                            </div>
                             <div class="grid grid-cols-2 gap-2">
                                 <button id="startQrCameraButton" type="button" onclick="startQrCamera()" class="bg-mpiBlue text-white px-3 py-2 rounded text-xs font-bold hover:bg-mpiDark">
                                     <i class="fas fa-camera mr-1"></i> Start Camera

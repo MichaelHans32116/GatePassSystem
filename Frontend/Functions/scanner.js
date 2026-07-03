@@ -397,6 +397,55 @@ function setQrCameraStatus(message, type = 'muted') {
     status.innerText = message;
 }
 
+function renderCameraButtons(devices, activeDeviceId) {
+    const container = document.getElementById('qrCameraButtonsContainer');
+    if (!container) return;
+
+    if (!devices.length) {
+        container.innerHTML = `<span class="text-xs text-gray-500"><i class="fas fa-info-circle mr-1"></i>No camera detected</span>`;
+        return;
+    }
+
+    container.innerHTML = devices.map((device, index) => {
+        const label = device.label || `Camera ${index + 1}`;
+        const isSelected = device.deviceId === activeDeviceId;
+        const isBack = /back|rear|environment/i.test(label);
+        const isFront = /front|user/i.test(label);
+
+        let iconClass = 'fa-camera';
+        if (isBack) iconClass = 'fa-redo-alt'; // flip indicator
+        if (isFront) iconClass = 'fa-user-circle'; // selfie indicator
+
+        const btnClass = isSelected
+            ? 'bg-mpiBlue text-white border-mpiBlue ring-2 ring-blue-200'
+            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50';
+
+        return `
+            <button type="button"
+                onclick="switchCameraDevice('${materialEscape(device.deviceId)}')"
+                class="border rounded-lg px-3 py-2 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer ${btnClass}"
+                title="${materialEscape(label)}">
+                <i class="fas ${iconClass}"></i>
+                <span>${materialEscape(label)}</span>
+            </button>
+        `;
+    }).join('');
+}
+
+async function switchCameraDevice(deviceId) {
+    const select = document.getElementById('qrCameraSelect');
+    if (!select) return;
+    select.value = deviceId;
+
+    const devices = (await navigator.mediaDevices.enumerateDevices())
+        .filter(device => device.kind === 'videoinput');
+    renderCameraButtons(devices, deviceId);
+
+    if (qrCameraScanning) {
+        await startQrCamera();
+    }
+}
+
 async function initializeQrCameras() {
     const select = document.getElementById('qrCameraSelect');
     if (!select || !navigator.mediaDevices?.enumerateDevices) {
@@ -428,14 +477,24 @@ async function initializeQrCameras() {
         const devices = (await navigator.mediaDevices.enumerateDevices())
             .filter(device => device.kind === 'videoinput');
         const previous = select.value;
+        let activeId = previous || (devices.length ? devices[0].deviceId : '');
+
         select.innerHTML = devices.length
             ? devices.map((device, index) =>
                 `<option value="${materialEscape(device.deviceId)}">${materialEscape(device.label || `Camera ${index + 1}`)}</option>`
             ).join('')
             : '<option value="">No camera detected</option>';
+
         if (devices.some(device => device.deviceId === previous)) {
             select.value = previous;
+            activeId = previous;
+        } else if (devices.length) {
+            select.value = devices[0].deviceId;
+            activeId = devices[0].deviceId;
         }
+
+        renderCameraButtons(devices, activeId);
+
         setQrCameraStatus(
             devices.length
                 ? `${devices.length} camera${devices.length === 1 ? '' : 's'} detected.`
@@ -665,6 +724,7 @@ window.initializeQrCameras = initializeQrCameras;
 window.startQrCamera = startQrCamera;
 window.stopQrCamera = stopQrCamera;
 window.resumeQrScanning = resumeQrScanning;
+window.switchCameraDevice = switchCameraDevice;
 window.selectGlobalQrPass = selectGlobalQrPass;
 window.closeGlobalQrSelectionModal = closeGlobalQrSelectionModal;
 window.viewHistoryPass = viewHistoryPass;
