@@ -49,4 +49,6 @@ library when the API and importer are built together.
 
 The local XAMPP connection in `appsettings.json` is Development-only.
 Production requires `GATEPASS_DB_CONNECTION` and a non-development JWT key.
+For the live Moriroku XAMPP host, the API also allows browser requests from
+`http://192.168.9.7` so the Apache-served frontend can talk to port 5087.
 

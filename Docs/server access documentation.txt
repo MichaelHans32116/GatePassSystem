@@ -142,6 +142,10 @@ server work can be reviewed later without relying on chat history.
 - Restored the API boot launcher at `C:\GatePassSystem\Api\start-api.ps1` so
   the scheduled task can start the server in Development mode with the
   explicit `http://0.0.0.0:5087` bind that the live endpoint expects.
+- Added the live XAMPP origin `http://192.168.9.7` to the API CORS allow-list
+  so the Apache-served browser can call `/api/auth/login` and other endpoints
+  without the generic "Unable to connect to the Form Request API" browser
+  error.
 
 MIGRATION PLAN / MAX-PRECAUTION NOTES
 -------------------------------------

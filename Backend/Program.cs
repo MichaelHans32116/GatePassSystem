@@ -94,10 +94,13 @@ var defaultOrigins = new[]
 {
     "http://localhost",
     "http://127.0.0.1",
+    "http://192.168.9.7",
     "http://localhost:5500",
     "http://127.0.0.1:5500",
+    "http://192.168.9.7:5500",
     "http://localhost:8080",
-    "http://127.0.0.1:8080"
+    "http://127.0.0.1:8080",
+    "http://192.168.9.7:8080"
 };
 
 var configuredOrigins = builder.Configuration
