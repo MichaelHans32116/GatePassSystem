@@ -241,6 +241,14 @@ if ($databaseExists -eq 0) {
             Write-Host 'Applying database migration 018...' -ForegroundColor Yellow
             Invoke-MySqlSource 'Database\Migrations\018_vehicle_trip_type_and_split_reservations.sql'
         }
+
+        $fixedScheduleSyncApplied = Invoke-MySqlScalarInt `
+            "SELECT COUNT(*) FROM gate_pass_system.tbl_schema_versions WHERE version_no='019';"
+
+        if ($fixedScheduleSyncApplied -eq 0) {
+            Write-Host 'Applying database migration 019...' -ForegroundColor Yellow
+            Invoke-MySqlSource 'Database\Migrations\019_sync_fixed_vehicle_schedule_with_workbook.sql'
+        }
     }
 }
 

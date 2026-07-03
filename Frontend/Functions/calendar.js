@@ -97,6 +97,27 @@ function schedStatusBadge(code) {
     return `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${cls}">${label}</span>`;
 }
 
+function schedEventDisplayPriority(entry) {
+    if (entry.scheduleSource === 'FIXED') return 0;
+    if (entry.statusCode === 'PENDING' || entry.statusCode === 'PENDING_SUPERIOR' || entry.statusCode === 'PENDING_PRESIDENT' || entry.statusCode === 'PENDING_PAS') {
+        return 1;
+    }
+    return 2;
+}
+
+function schedCompareEvents(a, b) {
+    const priorityDiff = schedEventDisplayPriority(a) - schedEventDisplayPriority(b);
+    if (priorityDiff !== 0) return priorityDiff;
+
+    const startDiff = String(a.startTime || '').localeCompare(String(b.startTime || ''));
+    if (startDiff !== 0) return startDiff;
+
+    const labelDiff = String(schedEventLabel(a)).localeCompare(String(schedEventLabel(b)));
+    if (labelDiff !== 0) return labelDiff;
+
+    return String(a.vehicleName || '').localeCompare(String(b.vehicleName || ''));
+}
+
 // ─── Filtering ───────────────────────────────────────────────────────
 function schedFilteredData() {
     const f = scheduleFilters;
@@ -122,7 +143,7 @@ function schedFilteredData() {
                 const datePart = entry.scheduleDate.split('T')[0];
                 const endPart = entry.endTime ? entry.endTime : '23:59:59';
                 const eventEnd = new Date(`${datePart}T${endPart}`);
-                if (eventEnd < new Date()) return false;
+                if (entry.scheduleSource !== 'FIXED' && eventEnd < new Date()) return false;
             }
         }
         return true;
@@ -133,7 +154,7 @@ function schedEventsForDate(dateStr) {
     return schedFilteredData().filter(e => {
         const d = e.scheduleDate ? e.scheduleDate.split('T')[0] : '';
         return d === dateStr;
-    });
+    }).sort(schedCompareEvents);
 }
 
 // ─── Public filter actions ───────────────────────────────────────────
@@ -513,7 +534,7 @@ function schedRenderScheduleGrid(heading, vehicles, timeSlots, dayEvents) {
 }
 
 function schedRenderDayList(events) {
-    const sorted = [...events].sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
+    const sorted = [...events].sort(schedCompareEvents);
     let listHtml = '<div class="grid grid-cols-1 md:grid-cols-2 gap-3">';
     sorted.forEach(ev => {
         const timeRange = ev.startTime && ev.endTime

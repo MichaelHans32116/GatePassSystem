@@ -23,6 +23,13 @@ Current migrations:
   form-aware reporting views and indexes.
 - `007_department_access_shared_pas.sql`: separate Finance, HR, and IT
   departments, manager department access, and shared PAS approval.
+- `008` to `018`: material gate pass restrictions, guard signatures, control
+  number/view cleanup, vehicle schedule seed, HRAD assignment naming, material
+  proof uploads, associates, cancel status, material vehicle handling, and
+  split vehicle reservations.
+- `019_sync_fixed_vehicle_schedule_with_workbook.sql`: workbook-driven fixed
+  vehicle schedule correction for the recurring OUT window and Saturday
+  Accord row.
 
 Gate pass lifecycle timestamps:
 

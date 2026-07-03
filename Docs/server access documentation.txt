@@ -118,6 +118,23 @@ server work can be reviewed later without relying on chat history.
 - Removed the temporary `ApiUpdate` staging folder and the one-off
   manual start logs after verification.
 
+2026-07-03
+
+- Backed up the live frontend file and a fresh `gate_pass_system` MariaDB
+  dump before schedule synchronization.
+- Copied the updated calendar frontend to
+  `C:\xampp\htdocs\FormRequestSystem\Frontend\Functions\calendar.js`.
+- Applied database migration 019 to sync the recurring fixed vehicle
+  schedule with the workbook reference.
+- Verified the workbook-aligned Saturday rows now exist in the live
+  database:
+  - `HONDA ACCORD / DAH-7724 / 06:00:00-06:30:00 / IN of Ms. N. Rodulfo`
+  - `HONDA BRV / DAZ-7569 / 17:30:00-18:00:00 / OUT of Ms. L. Solas`
+- Kept the database and API online during the update.
+- Verified `http://192.168.9.7/FormRequestSystem/` still returns HTTP 200.
+- Verified `http://192.168.9.7:5087/api/health` still reports
+  `Healthy` and `Connected`.
+
 MIGRATION PLAN / MAX-PRECAUTION NOTES
 -------------------------------------
 
@@ -230,5 +247,5 @@ DEPLOYMENT UPDATE
 - Deployed the static Form Request System frontend to `C:\xampp\htdocs\FormRequestSystem`.
 - Verified `http://192.168.9.7/FormRequestSystem/` returns HTTP 200.
 - Verified `http://192.168.9.7/FormRequestSystem/index.html` returns HTTP 200.
-Last updated: 2026-07-02
+Last updated: 2026-07-03
 
