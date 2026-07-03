@@ -134,6 +134,14 @@ server work can be reviewed later without relying on chat history.
 - Verified `http://192.168.9.7/FormRequestSystem/` still returns HTTP 200.
 - Verified `http://192.168.9.7:5087/api/health` still reports
   `Healthy` and `Connected`.
+- Prepared a security queue hardening pass in the repository so only active
+  scan states remain visible to guards, with live auto-refresh for the guard
+  screen to reduce stale queue entries.
+- Added a new migration plan entry (`020`) for the live server rollout of the
+  security queue filter, but did not deploy it yet during this note.
+- Restored the API boot launcher at `C:\GatePassSystem\Api\start-api.ps1` so
+  the scheduled task can start the server in Development mode with the
+  explicit `http://0.0.0.0:5087` bind that the live endpoint expects.
 
 MIGRATION PLAN / MAX-PRECAUTION NOTES
 -------------------------------------

@@ -7,6 +7,24 @@ var qrCameraDetector = null;
 var qrCameraLastDetectionAt = 0;
 var qrCameraScanning = false;
 var qrClientCooldowns = new Map();
+const activeGuardQueueStatusCodes = new Set(['APPROVED', 'OUTSIDE', 'OVERDUE']);
+
+function isActiveGuardQueueItem(pass) {
+    const statusCode = String(pass?.statusCode || '').trim().toUpperCase();
+    const statusLabel = String(pass?.status || '').trim().toUpperCase();
+    return activeGuardQueueStatusCodes.has(statusCode) ||
+        statusLabel === 'WAITING OUT' ||
+        statusLabel === 'WAITING IN';
+}
+
+function isWaitingOutGuardQueueItem(pass) {
+    const statusCode = String(pass?.statusCode || '').trim().toUpperCase();
+    const statusLabel = String(pass?.status || '').trim().toUpperCase();
+    if (statusCode) {
+        return statusCode === 'APPROVED';
+    }
+    return statusLabel === 'APPROVED' || statusLabel === 'WAITING OUT';
+}
 
 async function executeSecurityScan(identifier, signatureFileId = null) {
     if (!isDatabaseSession()) {
@@ -599,32 +617,33 @@ async function renderGuardDashboard() {
     if (isDatabaseSession()) {
         try {
             const queue = await ApiClient.get('/security/queue');
-            queueItems = queue.map(item => ({
-                id: item.gatePassNo,
-                dbId: item.gatePassId,
-                controlNo: item.controlNo,
-                userName: item.fullName,
-                willReturn: item.willReturn,
-                employeeRecordId: item.employeeRecordId,
-                status: gatePassStatusLabels[item.gatePassStatusCode] || item.statusName,
-                vehicle: item.vehicleName ? {
-                    name: item.vehicleName,
-                    plate: item.plateNumber,
-                    driver: item.driverName
-                } : null
-            }));
+            queueItems = queue
+                .map(item => ({
+                    id: item.gatePassNo,
+                    dbId: item.gatePassId,
+                    controlNo: item.controlNo,
+                    userName: item.fullName,
+                    willReturn: item.willReturn,
+                    employeeRecordId: item.employeeRecordId,
+                    statusCode: item.gatePassStatusCode,
+                    status: gatePassStatusLabels[item.gatePassStatusCode] || item.statusName,
+                    vehicle: item.vehicleName ? {
+                        name: item.vehicleName,
+                        plate: item.plateNumber,
+                        driver: item.driverName
+                    } : null
+                }))
+                .filter(isActiveGuardQueueItem);
         } catch (error) {
             queueItems = [];
             showToast(error instanceof ApiError ? error.message : 'Unable to load security queue.', 'error');
         }
     } else {
-        queueItems = gatePasses.filter(pass =>
-            pass.status === 'Approved' || pass.status === 'Outside'
-        );
+        queueItems = gatePasses.filter(isActiveGuardQueueItem);
     }
 
     document.getElementById('guardQueueList').innerHTML = queueItems.map(pass => {
-        const waitingOut = pass.status === 'Approved' || pass.status === 'Waiting OUT';
+        const waitingOut = isWaitingOutGuardQueueItem(pass);
         return `
             <tr class="border-b hover:bg-gray-50">
                 <td class="px-4 py-2 text-xs font-mono font-bold text-mpiBlue">

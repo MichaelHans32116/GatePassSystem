@@ -32,6 +32,7 @@ function showToast(message, type = 'success') {
 // so the 10-second poll never shows the same alert twice.
 const seenNotificationIds = new Set();
 let isInitialNotificationLoad = true;
+let isGuardDashboardRefreshRunning = false;
 
 function clearTransientApplicationState() {
     gatePasses = [];
@@ -180,6 +181,26 @@ document.addEventListener('DOMContentLoaded', () => {
             checkUnreadNotifications();
         }
     }, 10000);
+
+    window.setInterval(async () => {
+        if (
+            !currentUser ||
+            currentUser.role !== 'Security' ||
+            getVisibleSectionId() !== 'sec-guardScan' ||
+            isGuardDashboardRefreshRunning
+        ) {
+            return;
+        }
+
+        isGuardDashboardRefreshRunning = true;
+        try {
+            await renderGuardDashboard();
+        } catch (error) {
+            console.error('Failed to refresh security queue.', error);
+        } finally {
+            isGuardDashboardRefreshRunning = false;
+        }
+    }, 15000);
 
     // Close notification dropdown when clicking outside
     document.addEventListener('click', (e) => {

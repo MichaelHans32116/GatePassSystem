@@ -778,7 +778,8 @@ LEFT JOIN tbl_vehicles v
     ON v.vehicle_id = gpr.vehicle_id
 LEFT JOIN tbl_drivers dr
     ON dr.driver_id = gpr.driver_id
-WHERE gps.allows_qr_scan = TRUE;
+WHERE gps.allows_qr_scan = TRUE
+  AND gps.is_terminal = FALSE;
 
 CREATE OR REPLACE VIEW view_vehicle_availability AS
 SELECT

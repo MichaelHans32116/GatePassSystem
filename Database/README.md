@@ -30,6 +30,9 @@ Current migrations:
 - `019_sync_fixed_vehicle_schedule_with_workbook.sql`: workbook-driven fixed
   vehicle schedule correction for the recurring OUT window and Saturday
   Accord row.
+- `020_harden_security_queue_active_states.sql`: terminal-state guard queue
+  hardening so rejected/cancelled/expired requests do not linger in the live
+  security list.
 
 Gate pass lifecycle timestamps:
 

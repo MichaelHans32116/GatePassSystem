@@ -22,6 +22,7 @@ public sealed class SecurityRepository(
                 """
                 SELECT *
                 FROM view_security_gate_queue
+                WHERE gate_pass_status_code IN ('APPROVED', 'OUTSIDE', 'OVERDUE')
                 ORDER BY expected_out_at, gate_pass_id;
                 """,
                 cancellationToken: cancellationToken));

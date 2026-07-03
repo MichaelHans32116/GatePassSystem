@@ -249,6 +249,14 @@ if ($databaseExists -eq 0) {
             Write-Host 'Applying database migration 019...' -ForegroundColor Yellow
             Invoke-MySqlSource 'Database\Migrations\019_sync_fixed_vehicle_schedule_with_workbook.sql'
         }
+
+        $securityQueueHardeningApplied = Invoke-MySqlScalarInt `
+            "SELECT COUNT(*) FROM gate_pass_system.tbl_schema_versions WHERE version_no='020';"
+
+        if ($securityQueueHardeningApplied -eq 0) {
+            Write-Host 'Applying database migration 020...' -ForegroundColor Yellow
+            Invoke-MySqlSource 'Database\Migrations\020_harden_security_queue_active_states.sql'
+        }
     }
 }
 
