@@ -34,7 +34,7 @@
     </script>
     <link rel="stylesheet" href="Frontend/Design/styles.css?v=20260629-phase11">
 </head>
-<body class="h-screen overflow-hidden flex flex-col font-sans text-sm md:text-base">
+<body class="h-[100dvh] overflow-hidden flex flex-col font-sans text-sm md:text-base">
 
     <!-- LOGIN VIEW (60/40 Split Screen) -->
     <div id="loginView" class="h-full w-full flex absolute z-50 transition-opacity duration-500 bg-white">
@@ -93,13 +93,13 @@
     </div>
 
     <!-- MAIN APP VIEW -->
-    <div id="appView" class="hidden h-full w-full flex bg-mpiLight relative overflow-hidden">
+    <div id="appView" class="hidden h-[100dvh] w-full flex bg-mpiLight relative overflow-hidden">
 
         <!-- Mobile Sidebar Overlay -->
         <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-20 hidden md:hidden" onclick="toggleSidebar()"></div>
 
         <!-- SIDEBAR -->
-        <aside id="sidebar" class="w-64 bg-mpiBlue text-white shadow-xl flex flex-col z-30 flex-shrink-0 fixed md:relative h-full transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out">
+        <aside id="sidebar" class="w-64 bg-mpiBlue text-white shadow-xl flex flex-col z-30 flex-shrink-0 fixed md:relative h-[100dvh] transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out">
             <div class="p-5 flex items-center justify-between border-b border-white/10 bg-mpiDark/30">
                 <div class="flex items-center space-x-2">
                     <div class="bg-white rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden"

@@ -4,6 +4,8 @@
             background-color: #F4F7F9;
             color: #333333;
             -webkit-tap-highlight-color: transparent;
+            height: 100vh;
+            height: 100dvh;
         }
 
         /* Custom Scrollbar */

@@ -15,14 +15,14 @@ USE gate_pass_system;
 -- =========================================================
 
 ALTER TABLE tbl_gate_pass_requests
-    ADD COLUMN vehicle_trip_type_code VARCHAR(20) NULL
+    ADD COLUMN IF NOT EXISTS vehicle_trip_type_code VARCHAR(20) NULL
         AFTER private_vehicle_details;
 
 ALTER TABLE tbl_vehicle_reservations
-    DROP FOREIGN KEY fk_vehicle_reservation_request;
+    DROP FOREIGN KEY IF EXISTS fk_vehicle_reservation_request;
 
 ALTER TABLE tbl_vehicle_reservations
-    DROP INDEX gate_pass_id;
+    DROP INDEX IF EXISTS gate_pass_id;
 
 ALTER TABLE tbl_vehicle_reservations
     ADD INDEX IF NOT EXISTS ix_vehicle_reservation_gate_pass (gate_pass_id);
