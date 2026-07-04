@@ -52,7 +52,8 @@ function setupRoleAccess(user) {
                 document.getElementById('navGroupSecurity').style.display = 'none';
                 document.getElementById('navAdminLabel').innerText = "System Configuration";
                 document.getElementById('filterDeptContainer').style.display = 'block';
-                switchSection('adminPanel');
+                // IT / System Admin should land on the Dashboard by default, not System Logs.
+                switchSection('dashBoard');
             }
             else if (user.role === 'President') {
                 document.getElementById('navItemApply').style.display = 'none'; // No form for president

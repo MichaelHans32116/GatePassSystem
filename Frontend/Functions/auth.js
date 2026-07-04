@@ -122,6 +122,9 @@ function showAuthenticatedApp(user, showSignedInToast = true) {
     clearTransientApplicationState?.();
     resetRequestForms?.();
     currentUser = user;
+    // An authenticated session is always the private calendar (with the past-records
+    // toggle), even if this browser previously opened the public guest calendar.
+    window.isGuestCalendarView = false;
     renderRequesterDepartmentSelectors();
     document.getElementById('loginView').style.opacity = '0';
 

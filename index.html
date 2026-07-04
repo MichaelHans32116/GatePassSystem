@@ -32,7 +32,7 @@
             }
         }
     </script>
-    <link rel="stylesheet" href="Frontend/Design/styles.css?v=20260629-phase11">
+    <link rel="stylesheet" href="Frontend/Design/styles.css?v=20260704-phase134">
 </head>
 <body class="h-[100dvh] overflow-hidden flex flex-col font-sans text-sm md:text-base">
 
@@ -528,8 +528,9 @@
                                     <div id="employeeTripTypeField" class="hidden">
                                         <label class="block text-[11px] font-semibold text-gray-500 uppercase mb-1">Trip Type</label>
                                         <select id="gpTripType" class="w-full bg-white border border-gray-300 p-2 rounded text-sm focus:ring-1 focus:ring-mpiBlue">
-                                            <option value="Hatid Lang">Hatid Lang</option>
-                                            <option value="Hatid at Sundo">Hatid at Sundo</option>
+                                            <option value="BOTH">Hatid at Sundo</option>
+                                            <option value="HATID">Hatid Lang</option>
+                                            <option value="SUNDO">Sundo Lang</option>
                                         </select>
                                     </div>
 
@@ -898,8 +899,8 @@
                 <h2 class="font-bold text-lg text-gray-800"><i class="fas fa-arrows-alt mr-2 text-gray-400"></i>Document Review</h2>
                 <div class="flex items-center space-x-2">
                     <div id="docViewModeToggle" class="doc-view-toggle inline-flex rounded border border-gray-200 bg-gray-100 p-0.5 mr-1" role="group" aria-label="Document view mode">
-                        <button type="button" id="docViewDigitalBtn" onclick="setDocumentViewMode('digital')" class="doc-view-toggle-btn is-active text-xs font-semibold px-3 py-1.5 rounded transition" aria-pressed="true"><i class="fas fa-list-ul mr-1"></i> Digital</button>
-                        <button type="button" id="docViewFormBtn" onclick="setDocumentViewMode('form')" class="doc-view-toggle-btn text-xs font-semibold px-3 py-1.5 rounded transition" aria-pressed="false"><i class="fas fa-file-alt mr-1"></i> Printable Form</button>
+                        <button type="button" id="docViewDigitalBtn" onclick="setDocumentViewMode('digital')" class="doc-view-toggle-btn text-xs font-semibold px-3 py-1.5 rounded transition" aria-pressed="false"><i class="fas fa-list-ul mr-1"></i> Digital</button>
+                        <button type="button" id="docViewFormBtn" onclick="setDocumentViewMode('form')" class="doc-view-toggle-btn is-active text-xs font-semibold px-3 py-1.5 rounded transition" aria-pressed="true"><i class="fas fa-file-alt mr-1"></i> Printable Form</button>
                     </div>
                     <button id="modalExpandButton" onclick="toggleMaximizeModal()" class="text-sm font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded transition" title="Expand document workspace"><i id="modalExpandIcon" class="fas fa-window-maximize mr-1"></i> <span id="modalExpandText">Expand</span></button>
                     <button id="modalPrintButton" onclick="printCurrentDocument()" class="text-sm font-semibold bg-gray-100 hover:bg-gray-200 text-gray-700 px-3 py-1.5 rounded transition"><i class="fas fa-print mr-1"></i> Print</button>
@@ -1474,15 +1475,15 @@
     <script src="Frontend/Functions/mock-data.js?v=20260624-7.2"></script>
     <script src="Frontend/Connectors/api-client.js?v=20260624-7.2"></script>
     <script src="Frontend/Functions/signature.js?v=20260629-bugfix"></script>
-    <script src="Frontend/Functions/material-gatepass.js?v=20260629-phase111"></script>
-    <script src="Frontend/Functions/modal.js?v=20260629-phase111"></script>
-    <script src="Frontend/Functions/gatepass.js?v=20260629-phase11"></script>
+    <script src="Frontend/Functions/material-gatepass.js?v=20260704-phase134"></script>
+    <script src="Frontend/Functions/modal.js?v=20260704-phase134"></script>
+    <script src="Frontend/Functions/gatepass.js?v=20260704-phase134"></script>
     <script src="Frontend/Functions/approvals.js?v=20260629-phase111"></script>
     <script src="Frontend/Functions/scanner.js?v=20260629-bugfix"></script>
     <script src="Frontend/Functions/admin.js?v=20260624-7.2"></script>
-    <script src="Frontend/Functions/navigation.js?v=20260624-7.2"></script>
-    <script src="Frontend/Functions/calendar.js?v=20260629-phase112"></script>
-    <script src="Frontend/Functions/auth.js?v=20260629-bugfix"></script>
+    <script src="Frontend/Functions/navigation.js?v=20260704-phase134"></script>
+    <script src="Frontend/Functions/calendar.js?v=20260704-phase134"></script>
+    <script src="Frontend/Functions/auth.js?v=20260704-phase134"></script>
     <script src="Frontend/Functions/app.js?v=20260629-bugfix"></script>
 </body>
 </html>
