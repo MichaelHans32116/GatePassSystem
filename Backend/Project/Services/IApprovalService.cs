@@ -1,8 +1,8 @@
-using GatePassSystem.Project.DTOs.Common;
-using GatePassSystem.Project.DTOs.GatePass;
-using GatePassSystem.Project.Models;
+﻿using FormRequestSystem.Project.DTOs.Common;
+using FormRequestSystem.Project.DTOs.GatePass;
+using FormRequestSystem.Project.Models;
 
-namespace GatePassSystem.Project.Services;
+namespace FormRequestSystem.Project.Services;
 
 public interface IApprovalService
 {
@@ -17,12 +17,6 @@ public interface IApprovalService
         ApprovalDecisionRequest request,
         string traceId,
         CancellationToken cancellationToken = default);
-
-    Task<ServiceResult<GatePassCancelResult>> CancelAsync(
-        long gatePassId,
-        long actorUserId,
-        GatePassCancelRequest request,
-        string traceId,
-        CancellationToken cancellationToken = default);
 }
+
 

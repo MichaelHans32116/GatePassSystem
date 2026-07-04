@@ -4,7 +4,7 @@
         ? path
         : path.slice(0, path.lastIndexOf('/') + 1);
     const isXamppWorkspace =
-        basePath.toLowerCase().includes('/gatepasssystem/');
+        basePath.toLowerCase().includes('/formrequestsystem/');
     const isProtectedPublicGateway =
         window.location.port === '8090' ||
         window.location.hostname === 'gatepass-practice.local' ||
@@ -19,7 +19,9 @@
         apiBaseUrl: window.location.protocol === 'file:'
             ? 'http://127.0.0.1:5087/api'
             : isXamppWorkspace || window.location.port === '5500'
-                ? directApiUrl
+                ? (window.location.hostname === '192.168.9.7'
+                    ? `${window.location.origin}/FormRequestSystem/api`
+                    : directApiUrl)
             : `${window.location.origin}${basePath}api`
     });
 })();

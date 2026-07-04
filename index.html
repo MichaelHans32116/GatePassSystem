@@ -34,7 +34,7 @@
     </script>
     <link rel="stylesheet" href="Frontend/Design/styles.css?v=20260629-phase11">
 </head>
-<body class="h-screen overflow-hidden flex flex-col font-sans text-sm md:text-base">
+<body class="h-[100dvh] overflow-hidden flex flex-col font-sans text-sm md:text-base">
 
     <!-- LOGIN VIEW (60/40 Split Screen) -->
     <div id="loginView" class="h-full w-full flex absolute z-50 transition-opacity duration-500 bg-white">
@@ -93,13 +93,13 @@
     </div>
 
     <!-- MAIN APP VIEW -->
-    <div id="appView" class="hidden h-full w-full flex bg-mpiLight relative overflow-hidden">
+    <div id="appView" class="hidden h-[100dvh] w-full flex bg-mpiLight relative overflow-hidden">
 
         <!-- Mobile Sidebar Overlay -->
         <div id="sidebarOverlay" class="fixed inset-0 bg-black/50 z-20 hidden md:hidden" onclick="toggleSidebar()"></div>
 
         <!-- SIDEBAR -->
-        <aside id="sidebar" class="w-64 bg-mpiBlue text-white shadow-xl flex flex-col z-30 flex-shrink-0 fixed md:relative h-full transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out">
+        <aside id="sidebar" class="w-64 bg-mpiBlue text-white shadow-xl flex flex-col z-30 flex-shrink-0 fixed md:relative h-[100dvh] transform -translate-x-full md:translate-x-0 transition-transform duration-300 ease-in-out">
             <div class="p-5 flex items-center justify-between border-b border-white/10 bg-mpiDark/30">
                 <div class="flex items-center space-x-2">
                     <div class="bg-white rounded-full flex items-center justify-center flex-shrink-0 overflow-hidden"
@@ -118,12 +118,12 @@
                     <i class="fas fa-home w-6 text-left"></i> <span class="text-sm">Dashboard</span>
                 </a>
 
-                <a href="#" class="nav-item px-6 py-3 transition text-white" data-target="scheduleCalendar" onclick="switchSection('scheduleCalendar')" id="navItemSchedule">
-                    <i class="fas fa-calendar-alt w-6 text-left"></i> <span class="text-sm">Schedule Calendar</span>
-                </a>
-
                 <a href="#" class="nav-item px-6 py-3 transition text-white" data-target="applyPass" onclick="switchSection('applyPass')" id="navItemApply">
                     <i class="fas fa-file-signature w-6 text-left"></i> <span class="text-sm">New Form Request</span>
+                </a>
+
+                <a href="#" class="nav-item px-6 py-3 transition text-white" data-target="scheduleCalendar" onclick="switchSection('scheduleCalendar')" id="navItemSchedule">
+                    <i class="fas fa-calendar-alt w-6 text-left"></i> <span class="text-sm">Schedule Calendar</span>
                 </a>
 
                 <div id="navGroupApprovals" class="mt-4 block">
@@ -227,7 +227,7 @@
                                 <table class="w-full text-left border-collapse min-w-max">
                                     <thead>
                                         <tr class="bg-gray-50 text-gray-500 text-[11px] uppercase tracking-wider border-b border-t">
-                                            <th class="px-4 py-3 font-semibold">GP-ID / Control No.</th>
+                                            <th class="px-4 py-3 font-semibold">Control No.</th>
                                             <th class="px-4 py-3 font-semibold">Associate Name</th>
                                             <th class="px-4 py-3 font-semibold">Will Return?</th>
                                             <th class="px-4 py-3 font-semibold">Current Queue Status</th>
@@ -371,6 +371,12 @@
                                     <option value="CANCELLED">Cancelled</option>
                                 </select>
                             </div>
+                            <div class="flex-shrink-0" id="schedArchivedContainer">
+                                <label class="flex items-center gap-1.5 cursor-pointer mt-4">
+                                    <input type="checkbox" id="schedShowArchived" class="rounded border-gray-300 text-mpiBlue focus:ring-mpiBlue" onchange="applyScheduleFilters()">
+                                    <span class="text-[10px] font-bold uppercase tracking-wider text-gray-500">See Archived Schedule</span>
+                                </label>
+                            </div>
                             <div class="flex-grow min-w-[180px]">
                                 <label class="block text-[10px] font-bold uppercase tracking-wider text-gray-500 mb-1">Search</label>
                                 <input type="text" id="schedFilterSearch" placeholder="Name, destination, control no..." class="w-full border border-gray-300 rounded px-3 py-2 text-xs focus:outline-none focus:border-mpiBlue" oninput="applyScheduleFilters()">
@@ -383,10 +389,26 @@
 
                     <!-- Calendar Header -->
                     <div class="bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden">
-                        <div class="px-4 md:px-5 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50/50">
-                            <button onclick="navigateScheduleMonth(-1)" class="text-sm text-gray-600 hover:text-mpiBlue transition px-3 py-1 rounded hover:bg-blue-50"><i class="fas fa-chevron-left"></i> Prev</button>
-                            <h2 class="font-bold text-gray-800 text-lg" id="schedMonthTitle">June 2026</h2>
-                            <button onclick="navigateScheduleMonth(1)" class="text-sm text-gray-600 hover:text-mpiBlue transition px-3 py-1 rounded hover:bg-blue-50">Next <i class="fas fa-chevron-right"></i></button>
+                        <div class="px-4 md:px-5 py-4 border-b border-gray-200 flex flex-col md:flex-row justify-between items-center gap-4 bg-gray-50/50">
+                            <!-- Left: Month Navigation -->
+                            <div class="flex items-center gap-4">
+                                <button onclick="navigateScheduleMonth(-1)" class="text-sm text-gray-600 hover:text-mpiBlue transition px-3 py-1 rounded hover:bg-blue-50"><i class="fas fa-chevron-left"></i> Prev</button>
+                                <h2 class="font-bold text-gray-800 text-lg min-w-[120px] text-center" id="schedMonthTitle">June 2026</h2>
+                                <button onclick="navigateScheduleMonth(1)" class="text-sm text-gray-600 hover:text-mpiBlue transition px-3 py-1 rounded hover:bg-blue-50">Next <i class="fas fa-chevron-right"></i></button>
+                            </div>
+                            
+                            <!-- Right: Export Options -->
+                            <div class="flex flex-wrap items-center gap-2">
+                                <div class="flex items-center gap-1.5 rounded border border-gray-300 bg-white px-2 py-1">
+                                    <label for="schedExportWeek" class="text-[9px] font-bold uppercase tracking-wider text-gray-500">Export Week</label>
+                                    <select id="schedExportWeek" class="border border-gray-300 rounded px-2 py-1 text-xs focus:outline-none focus:border-mpiBlue bg-white cursor-pointer py-0.5">
+                                        <!-- Populated dynamically -->
+                                    </select>
+                                </div>
+                                <button onclick="exportScheduleExcel('vehicle')" class="text-xs bg-green-600 text-white px-3 py-1.5 rounded hover:bg-green-700 transition flex items-center gap-1"><i class="fas fa-file-excel"></i> Vehicles</button>
+                                <button onclick="exportScheduleExcel('truck')" class="text-xs bg-blue-600 text-white px-3 py-1.5 rounded hover:bg-blue-700 transition flex items-center gap-1"><i class="fas fa-file-excel"></i> Trucks</button>
+                                <button onclick="exportScheduleExcel('both')" class="text-xs bg-purple-600 text-white px-3 py-1.5 rounded hover:bg-purple-700 transition flex items-center gap-1"><i class="fas fa-file-excel"></i> Both</button>
+                            </div>
                         </div>
 
                         <!-- Day-of-week headers -->
@@ -404,19 +426,6 @@
                         <div id="schedCalendarGrid" class="grid grid-cols-7">
                             <!-- Populated by JS -->
                         </div>
-                    </div>
-
-                    <!-- Export Bar -->
-                    <div class="mt-4 flex flex-wrap gap-3 justify-end">
-                        <div class="flex items-center gap-2 rounded border border-gray-200 bg-white px-3 py-2">
-                            <label for="schedExportWeek" class="text-[10px] font-bold uppercase tracking-wider text-gray-500">Export Week</label>
-                            <select id="schedExportWeek" class="border border-gray-300 rounded px-2 py-1 text-xs focus:outline-none focus:border-mpiBlue bg-white">
-                                <!-- Populated dynamically -->
-                            </select>
-                        </div>
-                        <button onclick="exportScheduleExcel('vehicle')" class="text-xs bg-green-600 text-white px-4 py-2 rounded hover:bg-green-700 transition"><i class="fas fa-file-excel mr-1"></i> Export Vehicles (Weekly)</button>
-                        <button onclick="exportScheduleExcel('truck')" class="text-xs bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700 transition"><i class="fas fa-file-excel mr-1"></i> Export Trucks (Weekly)</button>
-                        <button onclick="exportScheduleExcel('both')" class="text-xs bg-purple-600 text-white px-4 py-2 rounded hover:bg-purple-700 transition"><i class="fas fa-file-excel mr-1"></i> Export Both</button>
                     </div>
                 </section>
 
@@ -734,10 +743,13 @@
                         </div>
 
                         <div class="text-left bg-blue-50 p-3 rounded border border-blue-100 mb-3 space-y-2">
-                            <label class="block text-[10px] font-bold text-gray-500 uppercase">Camera</label>
-                            <select id="qrCameraSelect" class="w-full border border-gray-300 p-2 rounded text-sm bg-white">
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase">Select Camera</label>
+                            <select id="qrCameraSelect" class="hidden">
                                 <option value="">Detect cameras...</option>
                             </select>
+                            <div id="qrCameraButtonsContainer" class="flex flex-wrap gap-2 py-1">
+                                <span class="text-xs text-gray-400">Loading cameras...</span>
+                            </div>
                             <div class="grid grid-cols-2 gap-2">
                                 <button id="startQrCameraButton" type="button" onclick="startQrCamera()" class="bg-mpiBlue text-white px-3 py-2 rounded text-xs font-bold hover:bg-mpiDark">
                                     <i class="fas fa-camera mr-1"></i> Start Camera
@@ -752,7 +764,7 @@
                         <div class="text-left bg-gray-50 p-3 rounded border">
                             <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Manual Entry</label>
                             <div class="flex space-x-2">
-                                <input type="text" id="manualQrInput" placeholder="Scan QR or enter GP-ID" class="w-full flex-grow border border-gray-300 p-2 rounded text-sm focus:outline-none focus:border-mpiBlue min-w-0">
+                                <input type="text" id="manualQrInput" placeholder="Scan QR or enter Control No." class="w-full flex-grow border border-gray-300 p-2 rounded text-sm focus:outline-none focus:border-mpiBlue min-w-0" onkeydown="if(event.key==='Enter'){event.preventDefault();simulateQrScan();}">
                                 <button onclick="simulateQrScan()" class="w-auto flex-shrink-0 whitespace-nowrap bg-gray-800 text-white px-4 py-2 rounded text-sm font-bold hover:bg-black transition">Scan</button>
                             </div>
                         </div>
@@ -773,10 +785,11 @@
                     <div id="admin-logs" class="admin-tab-content bg-white rounded-lg shadow-sm border border-gray-200 overflow-hidden relative">
                         <div class="p-4 md:p-5 border-b bg-gray-50 flex flex-col sm:flex-row sm:flex-wrap items-start sm:items-end gap-4">
                             <div class="w-full sm:w-auto"><label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Search ID/Name</label><input type="text" id="logFilterName" placeholder="Enter keyword..." class="w-full border border-gray-300 p-2 rounded text-sm sm:w-48 md:w-56 focus:outline-none focus:border-mpiBlue"></div>
-                            <div class="w-full sm:w-auto"><label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Filter by Date</label><input type="date" id="logFilterDate" class="w-full border border-gray-300 p-2 rounded text-sm text-gray-700 focus:outline-none focus:border-mpiBlue"></div>
+                            <div class="w-full sm:w-auto"><label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">From Date</label><input type="date" id="logFilterFromDate" class="w-full border border-gray-300 p-2 rounded text-sm text-gray-700 focus:outline-none focus:border-mpiBlue"></div>
+                            <div class="w-full sm:w-auto"><label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">To Date</label><input type="date" id="logFilterToDate" class="w-full border border-gray-300 p-2 rounded text-sm text-gray-700 focus:outline-none focus:border-mpiBlue"></div>
                             <div class="w-full sm:w-auto" id="filterDeptContainer"><label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Department</label><select id="logFilterDept" class="w-full border border-gray-300 p-2 rounded text-sm text-gray-700 focus:outline-none focus:border-mpiBlue"><option value="">All Departments</option></select></div>
                             <div class="w-full sm:w-auto"><label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Form Type</label><select id="logFilterFormType" class="w-full border border-gray-300 p-2 rounded text-sm"><option value="">All Forms</option><option value="PERSON_GATE_PASS">Person Gate Pass</option><option value="MATERIAL_GATE_PASS">Material Gate Pass</option></select></div>
-                            <div class="w-full sm:w-auto"><label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Status</label><select id="logFilterStatus" class="w-full border border-gray-300 p-2 rounded text-sm"><option value="">All Statuses</option><option value="PENDING_SUPERIOR">Pending Superior</option><option value="PENDING_PRESIDENT">Pending President</option><option value="PENDING_PAS">Pending PAS</option><option value="APPROVED">Approved</option><option value="OUTSIDE">Outside</option><option value="RETURNED">Returned</option><option value="REJECTED">Rejected</option><option value="CANCELLED">Cancelled</option></select></div>
+                            <div class="w-full sm:w-auto"><label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Status</label><select id="logFilterStatus" class="w-full border border-gray-300 p-2 rounded text-sm"><option value="">All Statuses</option><option value="GENERAL_OPEN">📂 Open (Active)</option><option value="GENERAL_CLOSED">📁 Closed / Done</option><optgroup label="──────────"></optgroup><option value="PENDING_SUPERIOR">Pending Superior</option><option value="PENDING_PRESIDENT">Pending President</option><option value="PENDING_PAS">Pending PAS</option><option value="APPROVED">Approved</option><option value="OUTSIDE">Outside</option><option value="OVERDUE">Overdue</option><option value="RETURNED">Returned</option><option value="CLOSED">Closed</option><option value="REJECTED">Rejected</option><option value="CANCELLED">Cancelled</option><option value="EXPIRED">Expired</option></select></div>
                             <div class="w-full sm:w-auto"><button onclick="renderAdminLogs(1)" class="w-full bg-mpiBlue text-white px-5 py-2 rounded shadow text-sm font-bold hover:bg-mpiDark transition"><i class="fas fa-filter mr-2"></i>Apply Filters</button></div>
                             <div class="w-full sm:w-auto"><button id="btnPrintSelected" onclick="printSelectedLogs()" class="w-full hidden bg-emerald-600 hover:bg-emerald-700 text-white px-5 py-2 rounded shadow text-sm font-bold transition"><i class="fas fa-print mr-2"></i>Print Selected (<span id="selectedLogsCount">0</span>)</button></div>
                         </div>
@@ -946,30 +959,30 @@
                                 <table class="nested-print-table w-full h-full" style="margin: 0 !important; width: 100% !important; height: 100% !important; table-layout: fixed;">
                                     <!-- Row 1: Name & Date -->
                                     <tr class="border-b-nested">
-                                        <td class="align-top border-r-nested" style="width: 65%; height: 10mm;">
+                                        <td class="align-top border-r-nested" style="width: 65%; height: 20mm;">
                                             <div class="text-[7px] uppercase text-gray-500 font-semibold person-associates-label">NAME OF ASSOCIATES</div>
                                             <div id="vName" class="font-bold text-xs uppercase pl-1 pt-0.5"></div>
                                             <div id="vAssociatesExtra" class="person-associates-extra pl-1"></div>
                                         </td>
-                                        <td class="align-top" style="width: 35%; height: 10mm;">
+                                        <td class="align-top" style="width: 35%; height: 20mm;">
                                             <div class="text-[7px] uppercase text-gray-500 font-semibold">DATE FILED</div>
                                             <div id="vDateF" class="person-date-filed font-bold pl-1 pt-0.5"></div>
                                         </td>
                                     </tr>
                                     <!-- Row 2: Purpose & Driver -->
                                     <tr class="border-b-nested">
-                                        <td rowspan="2" class="align-top border-r-nested" style="width: 65%; height: 22mm;">
+                                        <td rowspan="2" class="align-top border-r-nested" style="width: 65%; height: 12mm;">
                                             <div class="text-[7px] uppercase text-gray-500 font-semibold">PURPOSE</div>
                                             <div id="vPurp" class="font-bold text-xs pl-1 pt-0.5 leading-tight"></div>
                                         </td>
-                                        <td class="align-top border-b-nested" style="width: 35%; height: 11mm;">
+                                        <td class="align-top border-b-nested" style="width: 35%; height: 6mm;">
                                             <div class="text-[7px] uppercase text-gray-500 font-semibold">DRIVER:</div>
                                             <div id="vDriver" class="font-bold text-[9px] pl-1 pt-0.5"></div>
                                         </td>
                                     </tr>
                                     <!-- Row 3: Vehicle -->
                                     <tr>
-                                        <td class="align-top" style="width: 35%; height: 11mm;">
+                                        <td class="align-top" style="width: 35%; height: 6mm;">
                                             <div class="text-[7px] uppercase text-gray-500 font-semibold">VEHICLE & PLATE</div>
                                             <div id="vPlate" class="font-bold text-[8px] pl-1 pt-0.5"></div>
                                         </td>
@@ -1129,7 +1142,64 @@
                 <!-- HRAD Assignment Selectors (Visible only during HRAD Assignment step) -->
                 <div id="hradAssignmentArea" class="bg-amber-50 border border-amber-200 p-4 rounded-xl hidden flex-col space-y-3">
                     <h3 class="font-extrabold text-amber-800 text-sm mb-1"><i class="fas fa-truck mr-1"></i> Assign Vehicle & Driver</h3>
-                    <p class="text-xs text-gray-600 mb-2">Requested Trip Type: <span id="hradRequestedTripType" class="font-bold text-gray-800"></span></p>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                        <p class="text-gray-600">Requested Schedule: <span id="hradRequestedSchedule" class="font-bold text-gray-800"></span></p>
+                        <p class="text-gray-600">Requested Trip Type: <span id="hradRequestedTripType" class="font-bold text-gray-800"></span></p>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+                        <p class="text-gray-600">Assigned Schedule: <span id="hradAssignedSchedule" class="font-bold text-gray-800"></span></p>
+                        <p class="text-gray-600">Calendar Basis: <span class="font-bold text-gray-800">HRAD-set time window</span></p>
+                    </div>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Schedule Start</label>
+                            <input type="time" id="hradScheduleStart" class="w-full bg-white border border-gray-300 p-2 rounded text-xs focus:outline-none focus:border-mpiBlue" oninput="updateHradAssignmentSummary(findGatePassRecord())" onchange="updateHradAssignmentSummary(findGatePassRecord())">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Schedule End</label>
+                            <input type="time" id="hradScheduleEnd" class="w-full bg-white border border-gray-300 p-2 rounded text-xs focus:outline-none focus:border-mpiBlue" oninput="updateHradAssignmentSummary(findGatePassRecord())" onchange="updateHradAssignmentSummary(findGatePassRecord())">
+                        </div>
+                    </div>
+                    <div id="hradScheduleModeRow" class="hidden grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Schedule Style</label>
+                            <select id="hradScheduleMode" class="w-full bg-white border border-gray-300 p-2 rounded text-xs focus:outline-none focus:border-mpiBlue" onchange="handleHradScheduleModeChange(findGatePassRecord())">
+                                <option value="STRAIGHT">Straight window</option>
+                                <option value="SPLIT">Split windows</option>
+                            </select>
+                        </div>
+                        <div class="rounded border border-dashed border-amber-200 bg-amber-100/60 p-3 text-[11px] text-amber-900 leading-relaxed">
+                            Use split windows when the same vehicle and driver need a gap between hatid and sundo. The calendar will reflect the gap as availability.
+                        </div>
+                    </div>
+                    <div id="hradSecondaryScheduleRow" class="hidden grid grid-cols-1 md:grid-cols-2 gap-3">
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Secondary Schedule Start</label>
+                            <input type="time" id="hradScheduleStartSecondary" class="w-full bg-white border border-gray-300 p-2 rounded text-xs focus:outline-none focus:border-mpiBlue" oninput="updateHradAssignmentSummary(findGatePassRecord())" onchange="updateHradAssignmentSummary(findGatePassRecord())">
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Secondary Schedule End</label>
+                            <input type="time" id="hradScheduleEndSecondary" class="w-full bg-white border border-gray-300 p-2 rounded text-xs focus:outline-none focus:border-mpiBlue" oninput="updateHradAssignmentSummary(findGatePassRecord())" onchange="updateHradAssignmentSummary(findGatePassRecord())">
+                        </div>
+                    </div>
+                    <p class="text-[11px] text-gray-500 -mt-1">These times drive the driver and vehicle calendar. Adjust them here for hatid, sundo, or both.</p>
+                    <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Trip Type</label>
+                            <select id="hradTripType" class="w-full bg-white border border-gray-300 p-2 rounded text-xs focus:outline-none focus:border-mpiBlue" onchange="handleHradTripTypeChange(findGatePassRecord())">
+                                <option value="HATID">Hatid lang</option>
+                                <option value="BOTH">Hatid at Sundo</option>
+                            </select>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Vehicle Availability</label>
+                            <div id="hradVehicleAvailability" class="w-full bg-white border border-gray-300 p-2 rounded text-xs font-semibold text-gray-700">Select a vehicle</div>
+                        </div>
+                        <div>
+                            <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Driver Availability</label>
+                            <div id="hradDriverAvailability" class="w-full bg-white border border-gray-300 p-2 rounded text-xs font-semibold text-gray-700">Select a driver</div>
+                        </div>
+                    </div>
                     <div class="grid grid-cols-1 md:grid-cols-2 gap-3">
                         <div>
                             <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Select Vehicle</label>
@@ -1139,7 +1209,7 @@
                         </div>
                         <div>
                             <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Select Driver</label>
-                            <select id="hradAssignDriver" class="w-full bg-white border border-gray-300 p-2 rounded text-xs focus:outline-none focus:border-mpiBlue">
+                            <select id="hradAssignDriver" class="w-full bg-white border border-gray-300 p-2 rounded text-xs focus:outline-none focus:border-mpiBlue" onchange="updateHradAssignmentSummary(findGatePassRecord())">
                                 <!-- Dynamically populated -->
                             </select>
                         </div>
@@ -1152,20 +1222,13 @@
                     <textarea id="decisionReasonInput" rows="3" maxlength="1000" class="w-full border border-gray-300 rounded p-2 text-sm focus:outline-none focus:border-mpiBlue" placeholder="Enter your reason or remarks..."></textarea>
                     <p id="decisionReasonError" class="hidden text-[11px] font-semibold text-red-600 mt-1">A reason is required.</p>
                 </div>
-                <!-- HRAD Cancel Gate Pass (remarks REQUIRED) + shared decision-remarks result container -->
-                <div id="cancelGatePassArea" class="bg-red-50 border border-red-200 p-4 rounded-xl hidden flex-col space-y-2">
-                    <h3 class="font-extrabold text-red-800 text-sm mb-1"><i class="fas fa-ban mr-1"></i> Cancel Gate Pass</h3>
-                    <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1" for="cancelGatePassRemarks">Cancellation Remarks <span class="text-red-600">*</span></label>
-                    <textarea id="cancelGatePassRemarks" rows="2" maxlength="1000" class="w-full bg-white border border-gray-300 p-2 rounded text-xs focus:outline-none focus:border-red-500" placeholder="Required: reason for cancelling this gate pass"></textarea>
-                </div>
                 <div id="decisionRemarksResult" class="hidden text-xs rounded-lg border p-3"></div>
 
                 <div id="approvalActionButtons" class="flex flex-col sm:flex-row justify-end space-y-2 sm:space-y-0 sm:space-x-2 w-full mt-auto pt-3 border-t border-gray-100">
-                    <button onclick="closeModal()" class="px-4 py-2 rounded border border-gray-300 text-sm font-medium hover:bg-gray-200 transition">Cancel</button>
                     <button id="holdRequestButton" onclick="holdCurrentPass()" class="bg-amber-600 hover:bg-amber-700 text-white px-5 py-2 rounded shadow text-sm font-bold transition hidden"><i class="fas fa-pause-circle mr-1"></i> Put on Hold</button>
-                    <button id="cancelGatePassButton" onclick="cancelCurrentPass()" class="bg-rose-700 hover:bg-rose-800 text-white px-5 py-2 rounded shadow text-sm font-bold transition hidden"><i class="fas fa-ban mr-1"></i> Cancel Gate Pass</button>
                     <button onclick="rejectCurrentPass()" class="bg-red-600 hover:bg-red-700 text-white px-5 py-2 rounded shadow text-sm font-bold transition"><i class="fas fa-times-circle mr-1"></i> Reject</button>
                     <button id="approveRequestButton" onclick="approveCurrentPass()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-2 rounded shadow text-sm font-bold transition"><i class="fas fa-check-circle mr-1"></i> Approve Request</button>
+                    <button onclick="closeModal()" class="px-4 py-2 rounded border border-gray-300 text-sm font-medium hover:bg-gray-200 transition">Close</button>
                 </div>
             </div>
         </div>
@@ -1190,21 +1253,40 @@
         </div>
     </div>
 
-    <!-- Global QR: Employee History Modal (no active passes) -->
+    <!-- Global QR: Employee Record Modal -->
     <div id="globalQrHistoryModal" class="fixed inset-0 z-[95] hidden items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm" style="display:none;">
-        <div class="w-full rounded-2xl bg-white shadow-2xl overflow-hidden" style="max-width:min(92vw,32rem);max-height:calc(100vh - 3rem);">
+        <div class="w-full rounded-2xl bg-white shadow-2xl overflow-hidden" style="max-width:min(94vw,40rem);max-height:calc(100vh - 3rem);">
             <div class="bg-gradient-to-r from-gray-700 to-gray-800 px-5 py-4 flex items-center justify-between">
                 <div>
-                    <h3 class="text-base font-extrabold text-white"><i class="fas fa-history mr-2"></i>Recent Transactions</h3>
+                    <h3 class="text-base font-extrabold text-white"><i class="fas fa-qrcode mr-2"></i>Employee QR Records</h3>
                     <p id="globalQrHistoryName" class="text-xs text-gray-300 mt-0.5 font-medium"></p>
                 </div>
                 <button type="button" onclick="closeGlobalQrHistoryModal()" class="rounded-full bg-white/20 px-3 py-2 text-xs font-bold text-white transition hover:bg-white/30">
                     <i class="fas fa-times"></i>
                 </button>
             </div>
+            <div class="border-b border-gray-100 bg-gray-50 px-4 pt-3">
+                <div class="flex flex-wrap gap-2" role="tablist" aria-label="Employee QR records tabs">
+                    <button type="button" id="globalQrPendingTabButton" onclick="switchGlobalQrHistoryTab('pending')" class="flex items-center gap-2 rounded-full border border-mpiBlue bg-mpiBlue px-4 py-2 text-xs font-bold text-white shadow-sm transition">
+                        <i class="fas fa-hourglass-half"></i>
+                        <span>Pending</span>
+                        <span id="globalQrPendingCount" class="rounded-full bg-white/20 px-2 py-0.5 text-[10px] font-extrabold">0</span>
+                    </button>
+                    <button type="button" id="globalQrClosedTabButton" onclick="switchGlobalQrHistoryTab('closed')" class="flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-xs font-bold text-gray-600 transition hover:bg-gray-50 hover:text-gray-800">
+                        <i class="fas fa-archive"></i>
+                        <span>Closed</span>
+                        <span id="globalQrClosedCount" class="rounded-full bg-gray-100 px-2 py-0.5 text-[10px] font-extrabold text-gray-500">0</span>
+                    </button>
+                </div>
+                <p class="py-3 text-xs text-gray-500"><i class="fas fa-info-circle mr-1 text-gray-400"></i>Pending and active passes stay on top so the current action is always easy to open.</p>
+            </div>
             <div class="px-4 py-3">
-                <p class="text-xs text-gray-500 mb-3"><i class="fas fa-info-circle mr-1 text-gray-400"></i>No active gate pass. Showing recent completed transactions.</p>
-                <div id="globalQrHistoryList" class="space-y-2 max-h-[55vh] overflow-y-auto pr-1"></div>
+                <div id="globalQrPendingPanel" class="space-y-2 max-h-[55vh] overflow-y-auto pr-1">
+                    <div id="globalQrPendingList" class="space-y-2"></div>
+                </div>
+                <div id="globalQrClosedPanel" class="hidden space-y-2 max-h-[55vh] overflow-y-auto pr-1">
+                    <div id="globalQrClosedList" class="space-y-2"></div>
+                </div>
                 <div id="globalQrHistoryEmpty" class="hidden py-8 text-center">
                     <i class="fas fa-inbox text-3xl text-gray-300 mb-2"></i>
                     <p class="text-sm text-gray-400">No transaction history found.</p>
@@ -1399,7 +1481,7 @@
     <script src="Frontend/Functions/scanner.js?v=20260629-bugfix"></script>
     <script src="Frontend/Functions/admin.js?v=20260624-7.2"></script>
     <script src="Frontend/Functions/navigation.js?v=20260624-7.2"></script>
-    <script src="Frontend/Functions/calendar.js?v=20260629-phase111"></script>
+    <script src="Frontend/Functions/calendar.js?v=20260629-phase112"></script>
     <script src="Frontend/Functions/auth.js?v=20260629-bugfix"></script>
     <script src="Frontend/Functions/app.js?v=20260629-bugfix"></script>
 </body>

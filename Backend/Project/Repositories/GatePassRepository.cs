@@ -1,11 +1,11 @@
 using System.Data;
 using System.Text.Json;
 using Dapper;
-using GatePassSystem.Project.DTOs.Common;
-using GatePassSystem.Project.DTOs.GatePass;
-using GatePassSystem.Project.Models;
+using FormRequestSystem.Project.DTOs.Common;
+using FormRequestSystem.Project.DTOs.GatePass;
+using FormRequestSystem.Project.Models;
 
-namespace GatePassSystem.Project.Repositories;
+namespace FormRequestSystem.Project.Repositories;
 
 public sealed class GatePassRepository(
     IDatabaseConnectionFactory connectionFactory) : IGatePassRepository
@@ -39,6 +39,7 @@ public sealed class GatePassRepository(
                     p_expected_in_at = request.ExpectedInAt?.UtcDateTime,
                     p_will_return = request.WillReturn,
                     p_vehicle_usage_code = request.VehicleUsageCode,
+                    p_vehicle_trip_type_code = request.VehicleTripTypeCode,
                     p_vehicle_id = request.VehicleId,
                     p_private_vehicle_details = request.PrivateVehicleDetails,
                     p_driver_id = request.DriverId,
@@ -303,6 +304,7 @@ public sealed class GatePassRepository(
                 request_row.will_return AS WillReturn,
                 request_row.vehicle_usage_code AS VehicleUsageCode,
                 request_row.private_vehicle_details AS PrivateVehicleDetails,
+                request_row.vehicle_trip_type_code AS VehicleTripTypeCode,
                 request_row.vehicle_id AS VehicleId,
                 vehicle.vehicle_name AS VehicleName,
                 vehicle.plate_number AS PlateNumber,
@@ -483,7 +485,9 @@ public sealed class GatePassRepository(
             WHERE (@RequesterUserId IS NULL
                    OR records.requester_user_id = @RequesterUserId)
               AND (@StatusCode IS NULL
-                   OR records.gate_pass_status_code = @StatusCode)
+                   OR (@StatusCode = 'GENERAL_OPEN' AND records.gate_pass_status_code NOT IN ('CLOSED', 'CANCELLED', 'REJECTED'))
+                   OR (@StatusCode = 'GENERAL_CLOSED' AND records.gate_pass_status_code IN ('CLOSED', 'CANCELLED', 'REJECTED'))
+                   OR (@StatusCode NOT IN ('GENERAL_OPEN', 'GENERAL_CLOSED') AND records.gate_pass_status_code = @StatusCode))
               AND (@FormTypeCode IS NULL
                    OR records.form_type_code = @FormTypeCode)
               AND (@DepartmentId IS NULL
@@ -790,6 +794,7 @@ public sealed class GatePassRepository(
             WillReturn = source.WillReturn,
             VehicleUsageCode = source.VehicleUsageCode,
             PrivateVehicleDetails = source.PrivateVehicleDetails,
+            VehicleTripTypeCode = source.VehicleTripTypeCode,
             VehicleId = source.VehicleId,
             VehicleName = source.VehicleName,
             PlateNumber = source.PlateNumber,
@@ -810,3 +815,4 @@ public sealed class GatePassRepository(
             Associates = associates
         };
 }
+

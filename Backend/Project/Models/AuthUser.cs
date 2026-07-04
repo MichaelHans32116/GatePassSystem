@@ -1,4 +1,4 @@
-namespace GatePassSystem.Project.Models;
+﻿namespace FormRequestSystem.Project.Models;
 
 public sealed class AuthUser
 {
@@ -40,3 +40,4 @@ public sealed class DepartmentAccessRecord
         DepartmentName = departmentName;
     }
 }
+

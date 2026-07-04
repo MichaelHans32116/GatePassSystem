@@ -1,7 +1,7 @@
-using GatePassSystem.Project.DTOs.Fleet;
-using GatePassSystem.Project.Models;
+﻿using FormRequestSystem.Project.DTOs.Fleet;
+using FormRequestSystem.Project.Models;
 
-namespace GatePassSystem.Project.Services;
+namespace FormRequestSystem.Project.Services;
 
 public interface IFleetService
 {
@@ -54,3 +54,4 @@ public interface IDashboardService
         long? departmentId,
         CancellationToken cancellationToken = default);
 }
+

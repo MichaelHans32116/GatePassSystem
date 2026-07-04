@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
-using GatePassSystem.Project.Models;
+using FormRequestSystem.Project.Models;
 
-namespace GatePassSystem.Project.DTOs.GatePass;
+namespace FormRequestSystem.Project.DTOs.GatePass;
 
 public sealed class CreateGatePassRequest
 {
@@ -27,6 +27,9 @@ public sealed class CreateGatePassRequest
     public string? PrivateVehicleDetails { get; init; }
 
     public long? DriverId { get; init; }
+
+    [StringLength(20)]
+    public string? VehicleTripTypeCode { get; init; }
 
     // Phase 11 / Requirement 5: optional additional associates/companions.
     // The directory-selected companions who accompany the requester. These
@@ -112,7 +115,13 @@ public sealed record ApprovalDecisionRequest(
     long? VehicleId = null,
     long? DriverId = null,
     bool? PutOnHold = null,
-    string? TripType = null);
+    string? FormTypeCode = null,
+    bool? WillReturn = null,
+    string? TripType = null,
+    DateTimeOffset? ExpectedOutAt = null,
+    DateTimeOffset? ExpectedInAt = null,
+    DateTimeOffset? SecondaryExpectedOutAt = null,
+    DateTimeOffset? SecondaryExpectedInAt = null);
 
 public sealed record ApprovalDecisionResult(
     long GatePassId,
@@ -120,14 +129,6 @@ public sealed record ApprovalDecisionResult(
     string NewStatus,
     string? NextApprovalStep,
     string? QrToken);
-
-public sealed record GatePassCancelRequest(
-    string? Remarks);
-
-public sealed record GatePassCancelResult(
-    long GatePassId,
-    string PreviousStatus,
-    string NewStatus);
 
 public sealed record SecurityScanRequest(
     string? QrToken,
@@ -155,3 +156,4 @@ public sealed record EmployeeLookupResponse(
     long? DepartmentId,
     string? DepartmentName,
     string PositionName);
+

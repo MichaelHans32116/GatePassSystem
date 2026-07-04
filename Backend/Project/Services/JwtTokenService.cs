@@ -1,11 +1,11 @@
-using System.IdentityModel.Tokens.Jwt;
+﻿using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Text;
-using GatePassSystem.Project.Models;
+using FormRequestSystem.Project.Models;
 using Microsoft.Extensions.Options;
 using Microsoft.IdentityModel.Tokens;
 
-namespace GatePassSystem.Project.Services;
+namespace FormRequestSystem.Project.Services;
 
 public sealed class JwtTokenService(
     IOptions<JwtOptions> options,
@@ -49,3 +49,4 @@ public sealed class JwtTokenService(
             expiresAt);
     }
 }
+

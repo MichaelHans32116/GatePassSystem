@@ -1,12 +1,12 @@
-FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
+﻿FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
 
-COPY Backend/GatePassSystem.Api.csproj Backend/
-COPY Backend/Project/GatePassSystem.Project.csproj Backend/Project/
-RUN dotnet restore Backend/GatePassSystem.Api.csproj
+COPY Backend/FormRequestSystem.Api.csproj Backend/
+COPY Backend/Project/FormRequestSystem.Project.csproj Backend/Project/
+RUN dotnet restore Backend/FormRequestSystem.Api.csproj
 
 COPY Backend/ Backend/
-RUN dotnet publish Backend/GatePassSystem.Api.csproj \
+RUN dotnet publish Backend/FormRequestSystem.Api.csproj \
     --configuration Release \
     --output /app/publish \
     --no-restore \
@@ -24,4 +24,5 @@ RUN mkdir -p /app/Data/signatures \
 
 USER app
 EXPOSE 8080
-ENTRYPOINT ["dotnet", "GatePassSystem.Api.dll"]
+ENTRYPOINT ["dotnet", "FormRequestSystem.Api.dll"]
+

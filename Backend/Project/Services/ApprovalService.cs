@@ -1,10 +1,10 @@
-using System.Text.Json;
-using GatePassSystem.Project.DTOs.Common;
-using GatePassSystem.Project.DTOs.GatePass;
-using GatePassSystem.Project.Models;
-using GatePassSystem.Project.Repositories;
+﻿using System.Text.Json;
+using FormRequestSystem.Project.DTOs.Common;
+using FormRequestSystem.Project.DTOs.GatePass;
+using FormRequestSystem.Project.Models;
+using FormRequestSystem.Project.Repositories;
 
-namespace GatePassSystem.Project.Services;
+namespace FormRequestSystem.Project.Services;
 
 public sealed class ApprovalService(
     IApprovalRepository approvalRepository,
@@ -34,6 +34,81 @@ public sealed class ApprovalService(
                 "A rejection reason is required.");
         }
 
+        if (approve && request.VehicleId.HasValue)
+        {
+            if (!request.ExpectedOutAt.HasValue || !request.ExpectedInAt.HasValue)
+            {
+                return ServiceResult<ApprovalDecisionResult>.Failure(
+                    "SCHEDULE_TIME_REQUIRED",
+                    "Set the HRAD schedule start and end before forwarding.");
+            }
+
+            if (request.ExpectedInAt <= request.ExpectedOutAt)
+            {
+                return ServiceResult<ApprovalDecisionResult>.Failure(
+                    "INVALID_SCHEDULE_RANGE",
+                    "Schedule end must be later than schedule start.");
+            }
+
+            var tripType = request.TripType?.Trim().ToUpperInvariant();
+            var formTypeCode = request.FormTypeCode?.Trim().ToUpperInvariant();
+            var willReturn = request.WillReturn == true;
+            var allowedTripType = string.Equals(formTypeCode, "MATERIAL_GATE_PASS", StringComparison.OrdinalIgnoreCase) || !willReturn
+                ? "HATID"
+                : "BOTH";
+
+            if (string.IsNullOrWhiteSpace(tripType))
+            {
+                return ServiceResult<ApprovalDecisionResult>.Failure(
+                    "TRIP_TYPE_REQUIRED",
+                    "Select the trip type before forwarding.");
+            }
+
+            if (!string.Equals(tripType, allowedTripType, StringComparison.OrdinalIgnoreCase))
+            {
+                return ServiceResult<ApprovalDecisionResult>.Failure(
+                    "INVALID_TRIP_TYPE",
+                    allowedTripType == "HATID"
+                        ? "This request only allows Hatid lang."
+                        : "This request only allows Hatid at Sundo.");
+            }
+
+            var hasSecondaryWindow =
+                request.SecondaryExpectedOutAt.HasValue ||
+                request.SecondaryExpectedInAt.HasValue;
+
+            if (hasSecondaryWindow &&
+                !string.Equals(tripType, "BOTH", StringComparison.OrdinalIgnoreCase))
+            {
+                return ServiceResult<ApprovalDecisionResult>.Failure(
+                    "SECONDARY_WINDOW_NOT_ALLOWED",
+                    "Split schedule windows are only allowed for Hatid at Sundo.");
+            }
+
+            if (request.SecondaryExpectedOutAt.HasValue != request.SecondaryExpectedInAt.HasValue)
+            {
+                return ServiceResult<ApprovalDecisionResult>.Failure(
+                    "SCHEDULE_TIME_REQUIRED",
+                    "Set both split schedule times before forwarding.");
+            }
+
+            if (request.SecondaryExpectedOutAt.HasValue &&
+                request.SecondaryExpectedInAt <= request.SecondaryExpectedOutAt)
+            {
+                return ServiceResult<ApprovalDecisionResult>.Failure(
+                    "INVALID_SCHEDULE_RANGE",
+                    "The split schedule end must be later than the split schedule start.");
+            }
+
+            if (request.SecondaryExpectedOutAt.HasValue &&
+                request.SecondaryExpectedOutAt <= request.ExpectedInAt)
+            {
+                return ServiceResult<ApprovalDecisionResult>.Failure(
+                    "INVALID_SCHEDULE_RANGE",
+                    "Split schedule windows must leave a gap between the primary and secondary trips.");
+            }
+        }
+
         var rawQrToken = approve
             ? qrTokenService.CreateToken(gatePassId)
             : null;
@@ -56,6 +131,10 @@ public sealed class ApprovalService(
             request.DriverId,
             request.PutOnHold,
             request.TripType,
+            request.ExpectedOutAt?.UtcDateTime,
+            request.ExpectedInAt?.UtcDateTime,
+            request.SecondaryExpectedOutAt?.UtcDateTime,
+            request.SecondaryExpectedInAt?.UtcDateTime,
             traceId,
             cancellationToken);
 
@@ -97,56 +176,5 @@ public sealed class ApprovalService(
                 issuedQrToken));
     }
 
-    public async Task<ServiceResult<GatePassCancelResult>> CancelAsync(
-        long gatePassId,
-        long actorUserId,
-        GatePassCancelRequest request,
-        string traceId,
-        CancellationToken cancellationToken = default)
-    {
-        if (string.IsNullOrWhiteSpace(request.Remarks))
-        {
-            return ServiceResult<GatePassCancelResult>.Failure(
-                "CANCEL_REMARKS_REQUIRED",
-                "A cancellation remark is required.");
-        }
-
-        var mutation = await approvalRepository.CancelAsync(
-            gatePassId,
-            actorUserId,
-            request.Remarks.Trim(),
-            traceId,
-            cancellationToken);
-
-        if (mutation is null)
-        {
-            return ServiceResult<GatePassCancelResult>.Failure(
-                "CANCEL_NOT_AVAILABLE",
-                "This request can no longer be cancelled.");
-        }
-
-        await operationsRepository.WriteAuditAsync(
-            actorUserId,
-            "FORM_REQUEST_CANCELLED",
-            "FORM_REQUEST",
-            gatePassId,
-            JsonSerializer.Serialize(new
-            {
-                mutation.FormTypeCode,
-                mutation.PreviousStatus,
-                mutation.NewStatus,
-                Remarks = request.Remarks.Trim()
-            }),
-            null,
-            null,
-            traceId,
-            cancellationToken);
-
-        return ServiceResult<GatePassCancelResult>.Success(
-            new GatePassCancelResult(
-                gatePassId,
-                mutation.PreviousStatus,
-                mutation.NewStatus));
-    }
-
 }
+

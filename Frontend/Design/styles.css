@@ -4,6 +4,8 @@
             background-color: #F4F7F9;
             color: #333333;
             -webkit-tap-highlight-color: transparent;
+            height: 100vh;
+            height: 100dvh;
         }
 
         /* Custom Scrollbar */
@@ -1743,4 +1745,223 @@
         .print-form table.nested-print-table tr.border-b-nested,
         .print-form table.nested-print-table td.border-b-nested {
             border-bottom: 1px solid black !important;
+        }
+
+        /* ========================================== */
+        /* RESPONSIVE RESPONSIVENESS FIXES (PHASE 13) */
+        /* ========================================== */
+
+        @media screen and (max-width: 768px) {
+            /* 1. Vehicle Schedule daily modal responsive styles */
+            #scheduleDayModal .w-full.max-w-6xl {
+                max-height: 92vh !important;
+                height: auto;
+                width: 95vw !important;
+                max-width: 95vw !important;
+            }
+            #scheduleDayModalBody {
+                padding: 10px !important;
+            }
+            #scheduleDayModalBody.sched-grid-active {
+                overflow: hidden !important;
+                display: flex;
+                flex-direction: column;
+            }
+            .sched-grid-wrap {
+                display: flex;
+                flex-direction: column;
+                flex-grow: 1;
+                min-height: 0;
+            }
+            .sched-grid-scroll {
+                max-height: 52vh !important;
+                flex-grow: 1;
+                overflow: auto !important;
+            }
+            .sched-grid-table {
+                min-width: 600px !important;
+            }
+            .sched-grid-vh {
+                min-width: 150px !important;
+                padding: 6px 4px !important;
+            }
+            .sched-grid-vh-name {
+                font-size: 10px !important;
+            }
+            .sched-grid-vh-sub {
+                font-size: 8px !important;
+            }
+            #scheduleDayModal .px-5.py-3 {
+                flex-direction: column !important;
+                gap: 10px !important;
+                align-items: stretch !important;
+                padding: 12px !important;
+            }
+            #scheduleDayModal .px-5.py-3 #scheduleDayModalCount {
+                text-align: center;
+            }
+            #scheduleDayModal .px-5.py-3 > div {
+                display: flex !important;
+                width: 100% !important;
+                gap: 8px !important;
+            }
+            #scheduleDayModal .px-5.py-3 > div button {
+                flex: 1 1 auto !important;
+                justify-content: center;
+                text-align: center;
+                white-space: nowrap;
+            }
+
+            /* 2. Document Review modal responsive styles */
+            .document-modal,
+            .document-modal.is-reviewing {
+                width: 96vw !important;
+                max-width: 100vw !important;
+                height: 90vh !important;
+                max-height: 90vh !important;
+                margin: auto !important;
+                left: 0 !important;
+                right: 0 !important;
+                top: 0 !important;
+                bottom: 0 !important;
+                position: fixed !important;
+                border-radius: 0.5rem !important;
+            }
+            .document-modal.is-reviewing {
+                display: flex !important;
+                flex-direction: column !important;
+            }
+            .document-modal.is-reviewing #modalScrollArea {
+                order: 2 !important;
+                flex-grow: 1 !important;
+                min-height: 0 !important;
+                display: flex !important;
+                align-items: flex-start !important;
+                justify-content: flex-start !important;
+                overflow: auto !important;
+                width: 100% !important;
+                padding: 10px !important;
+            }
+            .document-modal.is-reviewing #approvalActionArea {
+                order: 3 !important;
+                flex-shrink: 0 !important;
+                max-height: 35vh !important;
+                overflow-y: auto !important;
+                border-right: 0 !important;
+                border-top: 1px solid #e5e7eb !important;
+                width: 100% !important;
+            }
+
+            /* Toolbar / Header formatting */
+            #modalDragHandle {
+                display: grid !important;
+                grid-template-columns: 1fr auto !important;
+                grid-template-rows: auto auto !important;
+                gap: 8px 4px !important;
+                padding: 8px 12px !important;
+                align-items: center !important;
+                cursor: default !important;
+            }
+            #modalDragHandle h2 {
+                grid-column: 1;
+                grid-row: 1;
+                font-size: 14px !important;
+                margin: 0 !important;
+                padding-right: 40px !important;
+            }
+            #modalDragHandle h2 i.fa-arrows-alt {
+                display: none !important;
+            }
+            #modalDragHandle button[onclick="closeModal()"] {
+                position: absolute !important;
+                top: 8px !important;
+                right: 12px !important;
+                margin: 0 !important;
+                z-index: 10;
+            }
+            #modalDragHandle > div.flex {
+                grid-column: 1 / span 2;
+                grid-row: 2;
+                display: flex !important;
+                flex-direction: row !important;
+                align-items: center !important;
+                justify-content: flex-start !important;
+                gap: 6px !important;
+                margin: 0 !important;
+                width: 100% !important;
+                overflow-x: auto !important;
+                scrollbar-width: none;
+            }
+            #modalDragHandle > div.flex::-webkit-scrollbar {
+                display: none;
+            }
+            #docViewModeToggle {
+                margin-right: 0 !important;
+                flex-shrink: 0 !important;
+            }
+            #modalExpandButton,
+            #modalPrintButton {
+                flex-shrink: 0 !important;
+                padding: 4px 8px !important;
+                font-size: 11px !important;
+            }
+
+            /* Hide drag handle/resizer elements on mobile */
+            .resize-handle {
+                display: none !important;
+            }
+
+            /* 3. Printable Form screen preview scaling on mobile */
+            .modal-scroll-area {
+                justify-content: flex-start !important;
+            }
+            .print-form {
+                zoom: 0.62;
+                transform-origin: top left;
+                margin: 0 auto !important;
+            }
+        }
+
+        @media screen and (max-width: 480px) {
+            #scheduleDayModal .w-full.max-w-6xl {
+                width: 98vw !important;
+                max-width: 98vw !important;
+                max-height: 95vh !important;
+            }
+            .sched-grid-table {
+                min-width: 500px !important;
+            }
+            .sched-grid-vh {
+                min-width: 130px !important;
+            }
+            #scheduleDayModal .px-5.py-3 > div {
+                flex-direction: column !important;
+            }
+            #scheduleDayModal .px-5.py-3 > div button {
+                width: 100% !important;
+            }
+
+            .document-modal,
+            .document-modal.is-reviewing {
+                width: 100vw !important;
+                max-width: 100vw !important;
+                height: 100vh !important;
+                height: 100dvh !important;
+                max-height: 100vh !important;
+                max-height: 100dvh !important;
+                border-radius: 0 !important;
+            }
+
+            .print-form {
+                zoom: 0.54;
+            }
+
+            .digital-view-area .digital-view-header {
+                flex-direction: column !important;
+                align-items: flex-start !important;
+                gap: 6px !important;
+            }
+            .digital-view-title {
+                font-size: 0.9rem !important;
+            }
         }

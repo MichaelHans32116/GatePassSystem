@@ -14,4 +14,4 @@ if ($tunnelPid -and
 }
 
 Remove-Item $pidFile -Force -ErrorAction SilentlyContinue
-Write-Host 'Public Gate Pass tunnel stopped.' -ForegroundColor Green
+Write-Host 'Public Form Request tunnel stopped.' -ForegroundColor Green

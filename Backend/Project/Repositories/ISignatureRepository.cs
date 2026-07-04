@@ -1,7 +1,7 @@
-using GatePassSystem.Project.DTOs.Fleet;
-using GatePassSystem.Project.Models;
+﻿using FormRequestSystem.Project.DTOs.Fleet;
+using FormRequestSystem.Project.Models;
 
-namespace GatePassSystem.Project.Repositories;
+namespace FormRequestSystem.Project.Repositories;
 
 public interface ISignatureRepository
 {
@@ -19,3 +19,4 @@ public interface ISignatureRepository
         long userId,
         CancellationToken cancellationToken = default);
 }
+

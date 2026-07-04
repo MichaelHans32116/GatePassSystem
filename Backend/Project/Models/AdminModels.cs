@@ -1,4 +1,4 @@
-namespace GatePassSystem.Project.Models;
+﻿namespace FormRequestSystem.Project.Models;
 
 public sealed class AdminUserRecord
 {
@@ -68,3 +68,4 @@ public sealed class PermissionAdminRecord
     public string PermissionCode { get; init; } = string.Empty;
     public string? Description { get; init; }
 }
+

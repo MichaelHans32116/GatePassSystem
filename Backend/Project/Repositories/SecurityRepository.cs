@@ -1,9 +1,9 @@
-using Dapper;
-using GatePassSystem.Project.DTOs.GatePass;
-using GatePassSystem.Project.DTOs.Security;
-using GatePassSystem.Project.Models;
+﻿using Dapper;
+using FormRequestSystem.Project.DTOs.GatePass;
+using FormRequestSystem.Project.DTOs.Security;
+using FormRequestSystem.Project.Models;
 
-namespace GatePassSystem.Project.Repositories;
+namespace FormRequestSystem.Project.Repositories;
 
 public sealed class SecurityRepository(
     IDatabaseConnectionFactory connectionFactory,
@@ -22,6 +22,7 @@ public sealed class SecurityRepository(
                 """
                 SELECT *
                 FROM view_security_gate_queue
+                WHERE gate_pass_status_code IN ('APPROVED', 'OUTSIDE', 'OVERDUE')
                 ORDER BY expected_out_at, gate_pass_id;
                 """,
                 cancellationToken: cancellationToken));
@@ -544,4 +545,5 @@ public sealed class SecurityRepository(
         public int PendingApprovalCount { get; init; }
     }
 }
+
 

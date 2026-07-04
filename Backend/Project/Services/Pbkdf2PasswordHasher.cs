@@ -1,6 +1,6 @@
-using System.Security.Cryptography;
+﻿using System.Security.Cryptography;
 
-namespace GatePassSystem.Project.Services;
+namespace FormRequestSystem.Project.Services;
 
 public sealed class Pbkdf2PasswordHasher : IPasswordHasher
 {
@@ -58,3 +58,4 @@ public sealed class Pbkdf2PasswordHasher : IPasswordHasher
         }
     }
 }
+

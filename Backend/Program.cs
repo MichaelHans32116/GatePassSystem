@@ -1,9 +1,9 @@
-using System.Text;
+﻿using System.Text;
 using System.Threading.RateLimiting;
-using GatePassSystem.Api.Infrastructure;
-using GatePassSystem.Api.Infrastructure.Authorization;
-using GatePassSystem.Project;
-using GatePassSystem.Project.Models;
+using FormRequestSystem.Api.Infrastructure;
+using FormRequestSystem.Api.Infrastructure.Authorization;
+using FormRequestSystem.Project;
+using FormRequestSystem.Project.Models;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
@@ -94,10 +94,13 @@ var defaultOrigins = new[]
 {
     "http://localhost",
     "http://127.0.0.1",
+    "http://192.168.9.7",
     "http://localhost:5500",
     "http://127.0.0.1:5500",
+    "http://192.168.9.7:5500",
     "http://localhost:8080",
-    "http://127.0.0.1:8080"
+    "http://127.0.0.1:8080",
+    "http://192.168.9.7:8080"
 };
 
 var configuredOrigins = builder.Configuration
@@ -297,3 +300,4 @@ app.MapControllers().RequireRateLimiting(GeneralRateLimitPolicy);
 app.Run();
 
 public partial class Program;
+

@@ -1,4 +1,4 @@
-namespace GatePassSystem.Project.Models;
+﻿namespace FormRequestSystem.Project.Models;
 
 public sealed class VehicleRecord
 {
@@ -93,4 +93,5 @@ public sealed class FixedScheduleRecord
     public string ScheduleType { get; init; } = string.Empty;
     public bool IsActive { get; init; }
 }
+
 

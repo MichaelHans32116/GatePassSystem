@@ -1,0 +1,79 @@
+# Phase 13 Plan — Camera Switch Bug, Mobile UI, and SSL Warning Options
+
+This document details the plans to address the SSL "Not Private" warning for employees/guards, the camera auto-switching bug, and mobile camera selector styling.
+
+---
+
+## Part 1: Options to Resolve the SSL "Not Private" Warning
+
+Since `192.168.9.7` is a local/private IP address, public Certificate Authorities (like Let's Encrypt, DigiCert, etc.) cannot issue a standard, globally trusted certificate directly for the IP address. This results in the red browser warning.
+
+Below are the three options to handle this, along with their pros, cons, and our recommendation.
+
+### Option 1: Configure Browser flags on Scanner Devices (Recommended)
+- **Concept**: Since only the **security guards** use the QR scanner (employees simply show their QR codes on their screen or printouts), we only need to enable camera permissions on the guards' scanning devices (phones/tablets/PCs). We can tell Chromium-based browsers (Chrome, Edge, Brave) to treat the HTTP IP address as secure.
+- **Steps**:
+  1. On the guard's device, open Chrome/Brave/Edge.
+  2. Navigate to: `chrome://flags/#unsafely-treat-insecure-origin-as-secure` (or `brave://flags/...` or `edge://flags/...`).
+  3. Enter `http://192.168.9.7` in the input text area.
+  4. Change the dropdown from "Disabled" to "Enabled".
+  5. Relaunch/restart the browser.
+- **Pros**:
+  - Very simple (takes 1 minute to configure).
+  - Works over plain HTTP (no warnings, no HTTPS configuration needed on server).
+  - Zero cost.
+- **Cons**:
+  - Must be configured once on each scanning device.
+
+### Option 2: Register a Domain name + Let's Encrypt (Best Long-term/Professional Solution)
+- **Concept**: Register a domain (e.g. `gatepass-moriroku.com` or similar). Create a DNS A record pointing the domain to `192.168.9.7`. Obtain a globally trusted Let's Encrypt SSL certificate using the DNS-01 challenge (does not require the server to be exposed to the public internet).
+- **Pros**:
+  - 100% trusted. No warnings on any device (guards or employees).
+- **Cons**:
+  - Requires domain registration fee.
+  - Requires setting up automated DNS updates for renewals.
+
+### Option 3: Local Root CA Certificate Authority (IT Enterprise Solution)
+- **Concept**: Generate a self-signed certificate for the IP `192.168.9.7` with a custom Local Certificate Authority. Export the Root CA certificate and manually install it in the root trust store of all company-managed devices.
+- **Pros**:
+  - Bypasses warnings on all configured company devices.
+- **Cons**:
+  - Very complex setup.
+  - Doesn't work automatically on personal devices unless root cert is manually installed.
+
+---
+
+## Part 2: Camera Auto-Switching Bug Fix
+
+**Root Cause**:
+The `<select id="qrCameraSelect">` dropdown does not have a `change` event listener. When a different camera is selected, the application does not do anything until the user manually stops and starts the camera again.
+
+**Fix**:
+Add a change listener to the camera selector (or custom buttons) that automatically stops the active stream, updates the device configuration, and restarts the camera with the newly selected camera ID.
+
+---
+
+## Part 3: Mobile Camera Selector UI Enhancement
+
+**Current UI**:
+Uses a standard native `<select>` dropdown. On mobile, this opens the OS-native picker, which looks dated and breaks custom application styling.
+
+**Proposed UI**:
+- Hide the native `<select id="qrCameraSelect">` (keep it in the DOM with `class="hidden"` for backward compatibility).
+- Introduce a new container `#qrCameraButtonsContainer` that displays the detected cameras as **modern pill-shaped buttons** with icons.
+  - Back Camera (e.g. Rear camera): Displayed with a "flip camera" or "camera" icon.
+  - Front Camera (e.g. Selfie camera): Displayed with a "user/selfie" icon.
+- Selecting a camera is done in a single click (toggles active styling and automatically triggers the switch).
+
+---
+
+## Proposed Changes
+
+### 1. [MODIFY] [index.html](file:///c:/Users/ivanlaurente/Desktop/Hans Files/GatePassSystem/index.html)
+- Hide `<select id="qrCameraSelect">` using `class="hidden"`.
+- Add `<div id="qrCameraButtonsContainer" class="flex flex-wrap gap-2 py-1"></div>` right above the start/stop buttons.
+
+### 2. [MODIFY] [scanner.js](file:///c:/Users/ivanlaurente/Desktop/Hans Files/GatePassSystem/Frontend/Functions/scanner.js)
+- Implement `renderCameraButtons(devices, activeDeviceId)` to render the modern button UI.
+- Implement `switchCameraDevice(deviceId)` to set the hidden select value, re-render the buttons with active styles, and restart the active stream if scanning is running.
+- Update `initializeQrCameras()` to automatically render the camera buttons after enumeration.

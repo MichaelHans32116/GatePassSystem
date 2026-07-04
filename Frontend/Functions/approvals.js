@@ -55,12 +55,44 @@ async function approveCurrentPass() {
         let driverId = null;
         let tripType = null;
         let putOnHold = null;
+        let expectedOutAt = null;
+        let expectedInAt = null;
+        let secondaryExpectedOutAt = null;
+        let secondaryExpectedInAt = null;
 
         if (isHRADorAdmin && (pass.status === 'Pending HRAD Assignment' || pass.status === 'On Hold')) {
             vehicleId = Number(document.getElementById('hradAssignVehicle').value) || null;
             driverId = Number(document.getElementById('hradAssignDriver').value) || null;
+            tripType = normalizeHradTripTypeCode(
+                document.getElementById('hradTripType')?.value ||
+                pass?.vehicleTripTypeCode ||
+                ''
+            ) || null;
+            const scheduleStartValue = document.getElementById('hradScheduleStart')?.value || '';
+            const scheduleEndValue = document.getElementById('hradScheduleEnd')?.value || '';
+            if (!scheduleStartValue || !scheduleEndValue) {
+                showToast('Set both HRAD schedule start and end before forwarding.', 'error');
+                return;
+            }
+            const scheduleWindow = getHradScheduleWindow(pass);
+            if (scheduleWindow.isSplit && !scheduleWindow.isComplete) {
+                showToast('Set both split schedule windows before forwarding.', 'error');
+                return;
+            }
+            expectedOutAt = scheduleWindow.primaryWindow?.start?.toISOString() || null;
+            expectedInAt = scheduleWindow.primaryWindow?.end?.toISOString() || null;
+            secondaryExpectedOutAt = scheduleWindow.secondaryWindow?.start?.toISOString() || null;
+            secondaryExpectedInAt = scheduleWindow.secondaryWindow?.end?.toISOString() || null;
             if (!vehicleId) {
                 showToast('Select an available company vehicle before forwarding.', 'error');
+                return;
+            }
+            if (!expectedOutAt || !expectedInAt) {
+                showToast('Set the HRAD schedule start and end before forwarding.', 'error');
+                return;
+            }
+            if (scheduleWindow.end <= scheduleWindow.start) {
+                showToast('Schedule end must be later than schedule start.', 'error');
                 return;
             }
         }
@@ -73,7 +105,13 @@ async function approveCurrentPass() {
             vehicleId,
             driverId,
             tripType,
-            putOnHold
+            putOnHold,
+            formTypeCode: pass.formTypeCode || null,
+            willReturn: pass.willReturn !== false,
+            expectedOutAt,
+            expectedInAt,
+            secondaryExpectedOutAt,
+            secondaryExpectedInAt
         });
         if (saveCheck?.checked && currentUploadedSig) {
             saveApprovalSignaturePreference(
@@ -97,6 +135,16 @@ async function approveCurrentPass() {
 async function holdCurrentPass() {
     const pass = findGatePassRecord();
     if (!pass) return;
+
+    const canHold = currentUser && ['GA120', 'GA139'].includes(currentUser.id);
+    if (!canHold) {
+        showToast('Only HRAD approvers can place a request on hold.', 'error');
+        return;
+    }
+    if (pass.status !== 'Pending HRAD Assignment' && pass.status !== 'On Hold') {
+        showToast('Hold is only available during HRAD assignment.', 'error');
+        return;
+    }
 
     const composer = document.getElementById('decisionReasonComposer');
     // First click: reveal the inline composer and wait for the user to type a reason.
@@ -157,55 +205,6 @@ async function rejectCurrentPass() {
         await refreshApplicationState('reject-request');
     } catch (error) {
         showToast(error instanceof ApiError ? error.message : 'Unable to reject document.', 'error');
-    }
-}
-
-async function cancelCurrentPass() {
-    const pass = findGatePassRecord();
-    if (!pass) return;
-
-    const area = document.getElementById('cancelGatePassArea');
-    // First click: expand the cancel area and wait for the user to type a reason.
-    if (area && area.classList.contains('hidden')) {
-        area.classList.remove('hidden');
-        area.classList.add('flex');
-        document.getElementById('cancelGatePassRemarks')?.focus();
-        return;
-    }
-
-    const remarksInput = document.getElementById('cancelGatePassRemarks');
-    const resultBox = document.getElementById('decisionRemarksResult');
-    const remarks = (remarksInput?.value || '').trim();
-    if (!remarks) {
-        showToast('A cancellation remark is required.', 'error');
-        remarksInput?.focus();
-        return;
-    }
-
-    if (!window.confirm('Cancel this gate pass? This action cannot be undone.')) {
-        return;
-    }
-
-    const cancelButton = document.getElementById('cancelGatePassButton');
-    if (cancelButton) cancelButton.disabled = true;
-    try {
-        await ApiClient.post(`/approvals/${pass.dbId}/cancel`, {
-            remarks
-        });
-        if (resultBox) {
-            resultBox.className =
-                'text-xs rounded-lg border p-3 border-rose-200 bg-rose-50 text-rose-800';
-            resultBox.innerHTML =
-                `<i class="fas fa-ban mr-1"></i> Gate pass cancelled. Remarks: <strong>${escapeDocumentText(remarks)}</strong>`;
-            resultBox.classList.remove('hidden');
-        }
-        showToast('Gate pass cancelled.', 'error');
-        closeModal();
-        await refreshApplicationState('cancel-request');
-    } catch (error) {
-        showToast(error instanceof ApiError ? error.message : 'Unable to cancel gate pass.', 'error');
-    } finally {
-        if (cancelButton) cancelButton.disabled = false;
     }
 }
 
@@ -272,6 +271,7 @@ async function renderApprovalQueue() {
                 controlNo: item.controlNo || item.gatePassNo,
                 formTypeCode: item.formTypeCode || 'PERSON_GATE_PASS',
                 formName: item.formName || 'Person Gate Pass',
+                willReturn: item.willReturn,
                 userName: item.fullName,
                 userDept: item.departmentName,
                 destination: item.destination,
@@ -285,7 +285,7 @@ async function renderApprovalQueue() {
                 status: gatePassStatusLabels[`PENDING_${item.approvalStepCode}`],
                 vehicle: null,
                 signatures: { imm: null, pres: null, pas: null },
-                willReturn: Boolean(item.expectedInAt)
+                willReturn: item.willReturn
             }));
             updateApprovalQueueDisplay(queuePasses);
         } catch (error) {
@@ -338,6 +338,5 @@ function updateApprovalQueueDisplay(toApprove) {
 window.approveCurrentPass = approveCurrentPass;
 window.rejectCurrentPass = rejectCurrentPass;
 window.holdCurrentPass = holdCurrentPass;
-window.cancelCurrentPass = cancelCurrentPass;
 window.renderApprovalQueue = renderApprovalQueue;
 window.uploadCurrentSignature = uploadCurrentSignature;

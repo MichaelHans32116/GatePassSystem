@@ -1,4 +1,4 @@
-namespace GatePassSystem.Project.Models;
+﻿namespace FormRequestSystem.Project.Models;
 
 public sealed class VehicleScheduleRecord
 {
@@ -21,3 +21,4 @@ public sealed class VehicleScheduleRecord
     public long? GatePassId { get; init; }
     public string? ControlNo { get; init; }
 }
+

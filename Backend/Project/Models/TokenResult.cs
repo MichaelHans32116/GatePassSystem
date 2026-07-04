@@ -1,3 +1,4 @@
-namespace GatePassSystem.Project.Models;
+﻿namespace FormRequestSystem.Project.Models;
 
 public sealed record TokenResult(string AccessToken, DateTimeOffset ExpiresAt);
+

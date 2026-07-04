@@ -97,6 +97,27 @@ function schedStatusBadge(code) {
     return `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full ${cls}">${label}</span>`;
 }
 
+function schedEventDisplayPriority(entry) {
+    if (entry.scheduleSource === 'FIXED') return 0;
+    if (entry.statusCode === 'PENDING' || entry.statusCode === 'PENDING_SUPERIOR' || entry.statusCode === 'PENDING_PRESIDENT' || entry.statusCode === 'PENDING_PAS') {
+        return 1;
+    }
+    return 2;
+}
+
+function schedCompareEvents(a, b) {
+    const priorityDiff = schedEventDisplayPriority(a) - schedEventDisplayPriority(b);
+    if (priorityDiff !== 0) return priorityDiff;
+
+    const startDiff = String(a.startTime || '').localeCompare(String(b.startTime || ''));
+    if (startDiff !== 0) return startDiff;
+
+    const labelDiff = String(schedEventLabel(a)).localeCompare(String(schedEventLabel(b)));
+    if (labelDiff !== 0) return labelDiff;
+
+    return String(a.vehicleName || '').localeCompare(String(b.vehicleName || ''));
+}
+
 // ─── Filtering ───────────────────────────────────────────────────────
 function schedFilteredData() {
     const f = scheduleFilters;
@@ -116,18 +137,13 @@ function schedFilteredData() {
             const haystack = [entry.requesterName, entry.title, entry.destination, entry.controlNo, entry.vehicleName, entry.driverName]
                 .filter(Boolean).join(' ').toLowerCase();
             if (!haystack.includes(q)) return false;
-        } else {
-            // Hide past schedules if no search is active.
-            // Treat "00:00:00" (default TimeSpan for unassigned reservations) the same as
-            // null so events without an assigned end-time stay visible until midnight.
-            if (entry.scheduleDate) {
-                const datePart = entry.scheduleDate.split('T')[0];
-                const endPart = (entry.endTime && entry.endTime !== '00:00:00') ? entry.endTime : '23:59:59';
-                const [yr, mo, dy] = datePart.split('-').map(Number);
-                const [hh, mm, ss] = endPart.split(':').map(Number);
-                const eventEnd = new Date(yr, mo - 1, dy, hh || 0, mm || 0, ss || 0);
-                if (eventEnd < new Date()) return false;
-            }
+        }
+        // Hide past schedules if archived checkbox is not checked
+        if (!f.showArchived && entry.scheduleDate) {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            const eventDate = schedParseDateLocal(entry.scheduleDate);
+            if (entry.scheduleSource !== 'FIXED' && eventDate < today) return false;
         }
         return true;
     });
@@ -137,7 +153,7 @@ function schedEventsForDate(dateStr) {
     return schedFilteredData().filter(e => {
         const d = e.scheduleDate ? e.scheduleDate.split('T')[0] : '';
         return d === dateStr;
-    });
+    }).sort(schedCompareEvents);
 }
 
 // ─── Public filter actions ───────────────────────────────────────────
@@ -147,6 +163,7 @@ function applyScheduleFilters() {
     scheduleFilters.vehicleId = document.getElementById('schedFilterVehicle')?.value || '';
     scheduleFilters.status = document.getElementById('schedFilterStatus')?.value || '';
     scheduleFilters.search = document.getElementById('schedFilterSearch')?.value || '';
+    scheduleFilters.showArchived = document.getElementById('schedShowArchived')?.checked || false;
 
     // Jump to date if specified
     if (scheduleFilters.date) {
@@ -165,9 +182,11 @@ function applyScheduleFilters() {
 }
 
 function clearScheduleFilters() {
-    scheduleFilters = { date: '', driverId: '', vehicleId: '', status: '', search: '' };
+    scheduleFilters = { date: '', driverId: '', vehicleId: '', status: '', search: '', showArchived: false };
     const ids = ['schedFilterDate','schedFilterDriver','schedFilterVehicle','schedFilterStatus','schedFilterSearch'];
     ids.forEach(id => { const el = document.getElementById(id); if (el) el.value = ''; });
+    const archivedCheckbox = document.getElementById('schedShowArchived');
+    if (archivedCheckbox) archivedCheckbox.checked = false;
     renderScheduleCalendar();
 }
 
@@ -340,9 +359,16 @@ function navigateScheduleMonth(dir) {
 // Day-view mode: 'grid' renders the Excel-style per-day layout (vehicles as columns,
 // time slots as rows); 'list' keeps the compact card list. Defaults to grid.
 var scheduleDayView = 'grid';
+// Grid section toggle: 'vehicle' shows regular cars, 'truck' shows trucks/commercial.
+var schedDayGridType = 'vehicle';
 
 function setScheduleDayView(mode) {
     scheduleDayView = mode === 'list' ? 'list' : 'grid';
+    if (scheduleSelectedDay) openScheduleDayModal(scheduleSelectedDay);
+}
+
+function setScheduleDayGridType(type) {
+    schedDayGridType = (type === 'truck') ? 'truck' : 'vehicle';
     if (scheduleSelectedDay) openScheduleDayModal(scheduleSelectedDay);
 }
 
@@ -510,7 +536,7 @@ function schedRenderScheduleGrid(heading, vehicles, timeSlots, dayEvents) {
 }
 
 function schedRenderDayList(events) {
-    const sorted = [...events].sort((a, b) => (a.startTime || '').localeCompare(b.startTime || ''));
+    const sorted = [...events].sort(schedCompareEvents);
     let listHtml = '<div class="grid grid-cols-1 md:grid-cols-2 gap-3">';
     sorted.forEach(ev => {
         const timeRange = ev.startTime && ev.endTime
@@ -580,23 +606,42 @@ function openScheduleDayModal(dateStr) {
         const vehicleSlots = schedBuildTimeSlots('vehicle');
         const trucks = schedTruckVehicles();
         const truckSlots = schedBuildTimeSlots('truck');
-        const hasTruckEvents = events.some(ev => trucks.some(t => schedEventMatchesVehicle(ev, t)));
 
         const dayLabel = d.toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' });
+
+        const gridTypeTabs = `
+            <div class="flex gap-1.5 mb-3">
+                <button onclick="setScheduleDayGridType('vehicle')" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded transition ${schedDayGridType === 'vehicle' ? 'bg-mpiBlue text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}">
+                    <i class="fas fa-car-side"></i> Vehicles
+                </button>
+                <button onclick="setScheduleDayGridType('truck')" class="flex items-center gap-1.5 px-3 py-1.5 text-xs font-semibold rounded transition ${schedDayGridType === 'truck' ? 'bg-mpiBlue text-white' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}">
+                    <i class="fas fa-truck"></i> Trucks
+                </button>
+            </div>`;
+
         let gridHtml = '';
-        if (vehicles.length) {
-            gridHtml += schedRenderScheduleGrid(
-                `<i class="fas fa-car-side text-mpiBlue"></i> Vehicle Monitoring — ${schedEscape(dayLabel)}`,
-                vehicles, vehicleSlots, events);
-        }
-        if (hasTruckEvents && trucks.length) {
-            gridHtml += schedRenderScheduleGrid(
-                `<i class="fas fa-truck text-mpiBlue"></i> Truck Schedule — ${schedEscape(dayLabel)}`,
-                trucks, truckSlots, events);
+        if (schedDayGridType === 'truck') {
+            if (trucks.length) {
+                gridHtml = schedRenderScheduleGrid(
+                    `<i class="fas fa-truck text-mpiBlue"></i> Truck Schedule — ${schedEscape(dayLabel)}`,
+                    trucks, truckSlots, events);
+            }
+        } else {
+            if (vehicles.length) {
+                gridHtml = schedRenderScheduleGrid(
+                    `<i class="fas fa-car-side text-mpiBlue"></i> Vehicle Monitoring — ${schedEscape(dayLabel)}`,
+                    vehicles, vehicleSlots, events);
+            }
         }
 
         // Fall back to the list when there are no vehicle columns to render a grid into.
-        bodyEl.innerHTML = toggle + (gridHtml || schedRenderDayList(events));
+        bodyEl.innerHTML = toggle + gridTypeTabs + (gridHtml || schedRenderDayList(events));
+    }
+
+    if (events.length > 0 && scheduleDayView === 'grid' && ((schedDayGridType === 'truck' && schedTruckVehicles().length) || (schedDayGridType === 'vehicle' && schedMonitoringVehicles().length))) {
+        bodyEl.classList.add('sched-grid-active');
+    } else {
+        bodyEl.classList.remove('sched-grid-active');
     }
 
     modal.classList.remove('hidden');
@@ -608,6 +653,10 @@ function closeScheduleDayModal() {
     if (modal) {
         modal.classList.add('hidden');
         modal.classList.remove('flex');
+    }
+    const bodyEl = document.getElementById('scheduleDayModalBody');
+    if (bodyEl) {
+        bodyEl.classList.remove('sched-grid-active');
     }
 }
 
@@ -1257,7 +1306,7 @@ async function showPublicDriverCalendar() {
         document.getElementById('navGroupApprovals').style.display = 'none';
         document.getElementById('navGroupSecurity').style.display = 'none';
         document.getElementById('navGroupAdmin').style.display = 'none';
-        document.getElementById('navGroupHR').style.display = 'none';
+        document.getElementById('navGroupHRAD').style.display = 'none';
 
         // Add guest navigation back to login if it doesn't exist
         let backToLoginBtn = document.getElementById('navItemGuestLogin');
@@ -1287,6 +1336,10 @@ async function showPublicDriverCalendar() {
         if (logoutButton) {
             logoutButton.style.display = 'none';
         }
+
+        // Hide archived checkbox on public view
+        const archivedContainer = document.getElementById('schedArchivedContainer');
+        if (archivedContainer) archivedContainer.style.display = 'none';
 
         // Hide login view and show main app
         const loginView = document.getElementById('loginView');
@@ -1432,13 +1485,14 @@ function populateFixedScheduleFormDropdowns() {
     // Populate Vehicles
     vSelect.innerHTML = '<option value="">Select Vehicle</option>';
     (databaseVehicles || []).forEach(v => {
-        vSelect.innerHTML += `<option value="${schedEscape(v.id)}">${schedEscape(v.name)} (${schedEscape(v.plate)})</option>`;
+        const availability = String(v.status || v.availabilityStatusCode || 'Available');
+        vSelect.innerHTML += `<option value="${schedEscape(v.id)}">${schedEscape(v.name)} (${schedEscape(v.plate)}) — ${schedEscape(availability)}</option>`;
     });
 
     // Populate Drivers
     dSelect.innerHTML = '<option value="">Select Driver (Optional)</option>';
     (databaseDrivers || []).forEach(d => {
-        dSelect.innerHTML += `<option value="${schedEscape(d.driverId)}">${schedEscape(d.fullName)}</option>`;
+        dSelect.innerHTML += `<option value="${schedEscape(d.driverId)}">${schedEscape(d.fullName)} — Available</option>`;
     });
 }
 
@@ -1494,6 +1548,7 @@ window.applyScheduleFilters = applyScheduleFilters;
 window.clearScheduleFilters = clearScheduleFilters;
 window.openScheduleDayModal = openScheduleDayModal;
 window.setScheduleDayView = setScheduleDayView;
+window.setScheduleDayGridType = setScheduleDayGridType;
 window.closeScheduleDayModal = closeScheduleDayModal;
 window.exportScheduleExcel = exportScheduleExcel;
 window.populateScheduleFilterDropdowns = populateScheduleFilterDropdowns;
@@ -1525,7 +1580,7 @@ function openServiceScheduleRequestModal() {
         (databaseVehicles || []).forEach(v => {
             const opt = document.createElement('option');
             opt.value = v.id;
-            opt.textContent = `${v.name} (${v.plate})`;
+            opt.textContent = `${v.name} (${v.plate}) — ${v.status || v.availabilityStatusCode || 'Available'}`;
             vehicleSelect.appendChild(opt);
         });
         const crv = (databaseVehicles || []).find(v => v.name?.toUpperCase().includes('CRV'));
@@ -1540,7 +1595,7 @@ function openServiceScheduleRequestModal() {
         (databaseDrivers || []).forEach(d => {
             const opt = document.createElement('option');
             opt.value = d.driverId;
-            opt.textContent = d.fullName;
+            opt.textContent = `${d.fullName} — Available`;
             driverSelect.appendChild(opt);
         });
         const jt = (databaseDrivers || []).find(d => d.fullName?.toUpperCase().includes('TURRECHA'));

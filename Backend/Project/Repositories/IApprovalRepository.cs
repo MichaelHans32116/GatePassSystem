@@ -1,6 +1,6 @@
-using GatePassSystem.Project.Models;
+﻿using FormRequestSystem.Project.Models;
 
-namespace GatePassSystem.Project.Repositories;
+namespace FormRequestSystem.Project.Repositories;
 
 public interface IApprovalRepository
 {
@@ -20,14 +20,12 @@ public interface IApprovalRepository
         long? driverId,
         bool? putOnHold,
         string? tripType,
-        string traceId,
-        CancellationToken cancellationToken = default);
-
-    Task<ApprovalMutation?> CancelAsync(
-        long gatePassId,
-        long actorUserId,
-        string remarks,
+        DateTime? expectedOutAt,
+        DateTime? expectedInAt,
+        DateTime? secondaryExpectedOutAt,
+        DateTime? secondaryExpectedInAt,
         string traceId,
         CancellationToken cancellationToken = default);
 }
+
 

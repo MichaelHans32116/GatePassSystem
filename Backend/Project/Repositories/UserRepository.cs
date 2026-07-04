@@ -1,7 +1,7 @@
-using Dapper;
-using GatePassSystem.Project.Models;
+﻿using Dapper;
+using FormRequestSystem.Project.Models;
 
-namespace GatePassSystem.Project.Repositories;
+namespace FormRequestSystem.Project.Repositories;
 
 public sealed class UserRepository(IDatabaseConnectionFactory connectionFactory) : IUserRepository
 {
@@ -193,3 +193,4 @@ public sealed class UserRepository(IDatabaseConnectionFactory connectionFactory)
             new(DepartmentId, DepartmentCode, DepartmentName);
     }
 }
+

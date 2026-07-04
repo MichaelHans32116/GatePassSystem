@@ -1,6 +1,6 @@
-using System.ComponentModel.DataAnnotations;
+﻿using System.ComponentModel.DataAnnotations;
 
-namespace GatePassSystem.Project.DTOs.Auth;
+namespace FormRequestSystem.Project.DTOs.Auth;
 
 public sealed class LoginRequest
 {
@@ -12,3 +12,4 @@ public sealed class LoginRequest
     [StringLength(128, MinimumLength = 1)]
     public string Password { get; init; } = string.Empty;
 }
+

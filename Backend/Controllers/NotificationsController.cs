@@ -1,11 +1,11 @@
-using System.Data;
+﻿using System.Data;
 using Dapper;
-using GatePassSystem.Api.Infrastructure;
-using GatePassSystem.Project.Repositories;
+using FormRequestSystem.Api.Infrastructure;
+using FormRequestSystem.Project.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace GatePassSystem.Api.Controllers;
+namespace FormRequestSystem.Api.Controllers;
 
 [ApiController]
 [Authorize]
@@ -124,3 +124,4 @@ public sealed class NotificationsController(
         return Success<object>(new { success = true }, "Notifications marked as read.");
     }
 }
+

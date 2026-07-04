@@ -1,4 +1,4 @@
-param(
+﻿param(
     [switch]$NoBrowser,
     [switch]$SkipBuild,
     [switch]$UseXamppApache,
@@ -14,7 +14,7 @@ $apiListenUrl = if ($ExposeLan) {
     'http://127.0.0.1:5087'
 }
 $frontendUrl = if ($UseXamppApache) {
-    'http://127.0.0.1/GatePassSystem/'
+    'http://127.0.0.1/FormRequestSystem/'
 } else {
     'http://127.0.0.1:5500'
 }
@@ -77,7 +77,7 @@ $activeEmployeeCount = [int](& $mysql `
 if ((Test-Path $employeeWorkbook) -and $activeEmployeeCount -lt 95) {
     Write-Host 'Importing approved active employee fields...' -ForegroundColor Yellow
     & dotnet run `
-        --project "$repo\Backend\Tools\EmployeeImporter\GatePassSystem.EmployeeImporter.csproj" `
+        --project "$repo\Backend\Tools\EmployeeImporter\FormRequestSystem.EmployeeImporter.csproj" `
         -- `
         --file $employeeWorkbook `
         --connection 'Server=127.0.0.1;Port=3306;Database=gate_pass_system;User ID=root;Password=;SslMode=None' `
@@ -109,7 +109,8 @@ if ((Test-LocalPort 5087) -and -not $SkipBuild) {
     }
 
     if ($listenerProcess -and
-        $listenerProcess.Path -like '*GatePassSystem.Api*') {
+        ($listenerProcess.Path -like '*FormRequestSystem.Api*' -or
+         $listenerProcess.Path -like '*GatePassSystem.Api*')) {
         Stop-Process -Id $listenerProcess.Id -Force
         for ($attempt = 0; $attempt -lt 20; $attempt++) {
             if (-not (Test-LocalPort 5087)) {
@@ -118,13 +119,13 @@ if ((Test-LocalPort 5087) -and -not $SkipBuild) {
             Start-Sleep -Milliseconds 250
         }
     } else {
-        throw 'Port 5087 is already used by a process that is not GatePassSystem.Api.'
+        throw 'Port 5087 is already used by a process that is not FormRequestSystem.Api or the legacy GatePassSystem.Api.'
     }
 }
 
 if (-not (Test-LocalPort 5087)) {
     if (-not $SkipBuild) {
-        & dotnet build "$repo\Backend\GatePassSystem.sln" `
+        & dotnet build "$repo\Backend\FormRequestSystem.sln" `
             --configuration Release `
             --disable-build-servers `
             -maxcpucount:1
@@ -134,9 +135,14 @@ if (-not (Test-LocalPort 5087)) {
     }
 
     $apiDirectory = "$repo\Backend\bin\Release\net8.0"
-    $apiExe = Join-Path $apiDirectory 'GatePassSystem.Api.exe'
-    if (-not (Test-Path $apiExe)) {
-        throw 'GatePassSystem.Api.exe was not produced by the build.'
+    $apiExe = Join-Path $apiDirectory 'FormRequestSystem.Api.exe'
+    $legacyApiExe = Join-Path $apiDirectory 'GatePassSystem.Api.exe'
+    $apiExeToRun = if (Test-Path $apiExe) {
+        $apiExe
+    } elseif (Test-Path $legacyApiExe) {
+        $legacyApiExe
+    } else {
+        throw 'FormRequestSystem.Api.exe was not produced by the build.'
     }
     $apiLogDirectory = Join-Path $repo 'LocalData\logs'
     New-Item -ItemType Directory -Force -Path $apiLogDirectory | Out-Null
@@ -150,7 +156,7 @@ if (-not (Test-LocalPort 5087)) {
 `$env:GATEPASS_DB_CONNECTION='Server=127.0.0.1;Port=3306;Database=gate_pass_system;User ID=root;Password=;Allow User Variables=True;SslMode=None'
 `$env:Cors__AllowAnyOrigin='$($ExposeLan.ToString().ToLowerInvariant())'
 Set-Location '$apiDirectory'
-& '$apiExe'
+& '$apiExeToRun'
 "@
     Start-Process powershell.exe `
         -ArgumentList @('-NoProfile', '-WindowStyle', 'Hidden', '-Command', $apiCommand) `
@@ -164,7 +170,7 @@ if ($UseXamppApache) {
         throw 'XAMPP Apache or htdocs was not found under C:\xampp.'
     }
 
-    $xamppTarget = Join-Path $htdocs 'GatePassSystem'
+    $xamppTarget = Join-Path $htdocs 'FormRequestSystem'
     $xamppFrontendTarget = Join-Path $xamppTarget 'Frontend'
     New-Item -ItemType Directory -Force -Path $xamppFrontendTarget | Out-Null
     Copy-Item (Join-Path $repo 'index.html') $xamppTarget -Force
@@ -221,10 +227,10 @@ for ($attempt = 0; $attempt -lt 20; $attempt++) {
 }
 
 if (-not $healthy) {
-    throw 'Gate Pass API did not become healthy on port 5087.'
+    throw 'Form Request API did not become healthy on port 5087.'
 }
 
-Write-Host 'Gate Pass local stack is ready.' -ForegroundColor Green
+Write-Host 'Form Request local stack is ready.' -ForegroundColor Green
 Write-Host "Frontend: $frontendUrl"
 Write-Host "API health: $apiHealthUrl/api/health"
 Write-Host "Swagger: $apiHealthUrl/swagger"
@@ -243,7 +249,7 @@ if ($ExposeLan) {
 
     foreach ($address in $lanAddresses) {
         $lanFrontend = if ($UseXamppApache) {
-            "http://$address/GatePassSystem/"
+            "http://$address/FormRequestSystem/"
         } else {
             "http://${address}:5500"
         }
@@ -254,3 +260,4 @@ if ($ExposeLan) {
 if (-not $NoBrowser) {
     Start-Process $frontendUrl
 }
+

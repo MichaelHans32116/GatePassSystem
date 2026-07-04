@@ -33,6 +33,17 @@
             ...options
         });
 
+        if (response.status === 401 && !path.includes('/auth/login')) {
+            sessionStorage.clear();
+            alert('Session expired. Please log in again.');
+            if (typeof window.logout === 'function') {
+                window.logout();
+            } else {
+                location.reload();
+            }
+            throw new ApiError(401, 'Session expired');
+        }
+
         if (!response.ok) {
             let payload = null;
             try {

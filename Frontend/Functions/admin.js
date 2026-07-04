@@ -196,10 +196,27 @@ async function loadAdminReferences() {
     }
 }
 
+function getAdminStatusBadge(status) {
+    const s = String(status || '').toUpperCase().replace(/_/g, ' ');
+    let cls = 'bg-gray-100 text-gray-600';
+    if (s.includes('PENDING')) cls = 'bg-amber-100 text-amber-700';
+    else if (s === 'APPROVED') cls = 'bg-blue-100 text-blue-700';
+    else if (s.includes('OUTSIDE') || s.includes('IN USE')) cls = 'bg-indigo-100 text-indigo-700';
+    else if (s === 'RETURNED') cls = 'bg-teal-100 text-teal-700';
+    else if (s === 'CLOSED') cls = 'bg-emerald-100 text-emerald-700';
+    else if (s === 'CANCELLED' || s === 'REJECTED') cls = 'bg-red-100 text-red-700';
+    else if (s === 'OVERDUE') cls = 'bg-rose-100 text-rose-700 font-bold';
+    else if (s === 'EXPIRED') cls = 'bg-orange-100 text-orange-700';
+    else if (s === 'DRAFT') cls = 'bg-slate-100 text-slate-600';
+    const label = String(status || '').replace(/_/g, ' ');
+    return `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full whitespace-nowrap ${cls}">${label}</span>`;
+}
+
 async function renderAdminLogs(page = 1) {
     currentLogPage = Math.max(page, 1);
     const search = document.getElementById('logFilterName')?.value.trim() || '';
-    const date = document.getElementById('logFilterDate')?.value || '';
+    const fromDate = document.getElementById('logFilterFromDate')?.value || '';
+    const toDate = document.getElementById('logFilterToDate')?.value || '';
     const departmentId = document.getElementById('logFilterDept')?.value || '';
     const statusCode = document.getElementById('logFilterStatus')?.value || '';
     const formTypeCode = document.getElementById('logFilterFormType')?.value || '';
@@ -214,11 +231,12 @@ async function renderAdminLogs(page = 1) {
             if (departmentId) query.set('departmentId', departmentId);
             if (statusCode) query.set('statusCode', statusCode);
             if (formTypeCode) query.set('formTypeCode', formTypeCode);
-            if (date) {
-                const from = new Date(`${date}T00:00:00`);
-                const to = new Date(from);
+            if (fromDate) {
+                query.set('fromAppliedAt', new Date(`${fromDate}T00:00:00`).toISOString());
+            }
+            if (toDate) {
+                const to = new Date(`${toDate}T00:00:00`);
                 to.setDate(to.getDate() + 1);
-                query.set('fromAppliedAt', from.toISOString());
                 query.set('toAppliedAt', to.toISOString());
             }
             const response = await ApiClient.request(`/form-requests?${query}`);
@@ -235,7 +253,7 @@ async function renderAdminLogs(page = 1) {
         (!search || pass.userName.toLowerCase().includes(search.toLowerCase()) || pass.id.toLowerCase().includes(search.toLowerCase())) &&
         (!departmentId || pass.userDept === departmentId) &&
         (!formTypeCode || pass.formTypeCode === formTypeCode) &&
-        (!statusCode || pass.status === statusCode)
+        (!statusCode || (statusCode === 'GENERAL_OPEN' && !['CLOSED','CANCELLED','REJECTED'].includes(String(pass.status).toUpperCase())) || (statusCode === 'GENERAL_CLOSED' && ['CLOSED','CANCELLED','REJECTED'].includes(String(pass.status).toUpperCase())) || (statusCode !== 'GENERAL_OPEN' && statusCode !== 'GENERAL_CLOSED' && pass.status === statusCode))
     );
     renderMockAdminLogsWithActions(filtered);
 }
@@ -253,7 +271,7 @@ function renderDatabaseAdminLogs(response) {
             <td class="px-5 py-2 max-w-[180px] truncate text-xs" title="${adminEscape(pass.formTypeCode === 'MATERIAL_GATE_PASS' ? (pass.authorizedEmployeeName || 'Material release') : pass.destination)}">${adminEscape(compactLogText(pass.formTypeCode === 'MATERIAL_GATE_PASS' ? (pass.authorizedEmployeeName || 'Material release') : pass.destination))}</td>
             <td class="px-5 py-2 text-blue-600 font-mono text-xs">${adminEscape(pass.actualOut || '--:--')}</td>
             <td class="px-5 py-2 text-green-600 font-mono text-xs">${adminEscape(pass.actualIn || '--:--')}</td>
-            <td class="px-5 py-2 text-[10px]"><span class="px-2 py-1 rounded bg-gray-100">${adminEscape(pass.status)}</span></td>
+            <td class="px-5 py-2">${getAdminStatusBadge(pass.status)}</td>
             <td class="px-5 py-2 text-right whitespace-nowrap">
                 <button onclick="event.stopPropagation(); ${getViewPassCall(pass)}" class="rounded border border-blue-200 px-2.5 py-1 text-[11px] font-bold text-mpiBlue hover:bg-blue-50">View</button>
                 ${canDeleteGatePassLogs()
@@ -296,7 +314,7 @@ function renderMockAdminLogsWithActions(list) {
             <td class="px-5 py-2">${pass.willReturn ? 'No' : 'Yes'}</td>
             <td class="px-5 py-2">${pass.actualOut || '--:--'}</td>
             <td class="px-5 py-2">${pass.actualIn || '--:--'}</td>
-            <td class="px-5 py-2">${adminEscape(pass.status)}</td>
+            <td class="px-5 py-2">${getAdminStatusBadge(pass.status)}</td>
             <td class="px-5 py-2 text-right whitespace-nowrap">
                 <button onclick="event.stopPropagation(); ${getViewPassCall(pass)}" class="rounded border border-blue-200 px-2.5 py-1 text-[11px] font-bold text-mpiBlue hover:bg-blue-50">View</button>
                 ${canDeleteGatePassLogs()

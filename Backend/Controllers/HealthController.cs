@@ -1,8 +1,8 @@
-using GatePassSystem.Project.Repositories;
+﻿using FormRequestSystem.Project.Repositories;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace GatePassSystem.Api.Controllers;
+namespace FormRequestSystem.Api.Controllers;
 
 [ApiController]
 [Route("api/health")]
@@ -31,3 +31,4 @@ public sealed class HealthController(
             });
     }
 }
+

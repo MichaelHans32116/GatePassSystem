@@ -1,9 +1,9 @@
-using Dapper;
-using GatePassSystem.Project.DTOs.Admin;
-using GatePassSystem.Project.DTOs.Common;
-using GatePassSystem.Project.Models;
+﻿using Dapper;
+using FormRequestSystem.Project.DTOs.Admin;
+using FormRequestSystem.Project.DTOs.Common;
+using FormRequestSystem.Project.Models;
 
-namespace GatePassSystem.Project.Repositories;
+namespace FormRequestSystem.Project.Repositories;
 
 public sealed class AdminRepository(
     IDatabaseConnectionFactory connectionFactory) : IAdminRepository
@@ -878,3 +878,4 @@ public sealed class AdminRepository(
         public bool IsSystemRole { get; init; }
     }
 }
+

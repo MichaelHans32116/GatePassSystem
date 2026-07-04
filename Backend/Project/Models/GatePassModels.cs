@@ -1,4 +1,4 @@
-namespace GatePassSystem.Project.Models;
+﻿namespace FormRequestSystem.Project.Models;
 
 public sealed class RequesterContext
 {
@@ -47,6 +47,7 @@ public class GatePassRecord
     public DateTime? ExpiredAt { get; init; }
     public DateTime ExpectedOutAt { get; init; }
     public DateTime? ExpectedInAt { get; init; }
+    public string? VehicleTripTypeCode { get; init; }
     public DateTime? ActualOutAt { get; init; }
     public long? ActualOutSignatureFileId { get; init; }
     public DateTime? ActualInAt { get; init; }
@@ -138,6 +139,7 @@ public sealed class ApprovalQueueItem
     public string ControlNo { get; init; } = string.Empty;
     public string FormTypeCode { get; init; } = "PERSON_GATE_PASS";
     public string FormName { get; init; } = "Person Gate Pass";
+    public bool WillReturn { get; init; }
     public long ApprovalStepId { get; init; }
     public string ApprovalStepCode { get; init; } = string.Empty;
     public string EmployeeId { get; init; } = string.Empty;
@@ -173,3 +175,4 @@ public sealed record ApprovalMutation(
     string PreviousStatus,
     string NewStatus,
     string? NextApprovalStep);
+

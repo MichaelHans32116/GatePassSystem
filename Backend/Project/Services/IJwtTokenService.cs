@@ -1,8 +1,9 @@
-using GatePassSystem.Project.Models;
+﻿using FormRequestSystem.Project.Models;
 
-namespace GatePassSystem.Project.Services;
+namespace FormRequestSystem.Project.Services;
 
 public interface IJwtTokenService
 {
     TokenResult CreateToken(AuthUser user);
 }
+

@@ -1,8 +1,8 @@
-using GatePassSystem.Project.DTOs.GatePass;
-using GatePassSystem.Project.DTOs.Security;
-using GatePassSystem.Project.Models;
+﻿using FormRequestSystem.Project.DTOs.GatePass;
+using FormRequestSystem.Project.DTOs.Security;
+using FormRequestSystem.Project.Models;
 
-namespace GatePassSystem.Project.Repositories;
+namespace FormRequestSystem.Project.Repositories;
 
 public interface ISecurityRepository
 {
@@ -31,4 +31,5 @@ public interface ISecurityRepository
         string identifier,
         CancellationToken cancellationToken = default);
 }
+
 

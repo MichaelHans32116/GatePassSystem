@@ -181,10 +181,13 @@ function mapApiGatePass(record) {
         proofFileIds: record.proofFileIds || [],
         dateFiled: formatDateTime(record.appliedAt || record.createdAt),
         destination: record.destination,
+        expectedOutAtRaw: record.expectedOutAt || null,
+        expectedInAtRaw: record.expectedInAt || null,
         expectedOut: formatDateTime(record.expectedOutAt, false),
         expectedIn: record.expectedInAt ? formatDateTime(record.expectedInAt, false) : 'N/A',
         purpose: record.purpose,
         privateVehicleDetails: record.privateVehicleDetails || '',
+        vehicleTripTypeCode: record.vehicleTripTypeCode || '',
         vehicle,
         status,
         statusCode: record.gatePassStatusCode,
@@ -232,7 +235,7 @@ function populateDriverOptions(selectedDriverId = null) {
     driverSelect.innerHTML =
         '<option value="">Unassigned</option>' +
         databaseDrivers.map(driver =>
-            `<option value="${driver.driverId}" ${driver.driverId === selectedDriverId ? 'selected' : ''}>${adminEscape(driver.fullName)}</option>`
+            `<option value="${driver.driverId}" ${driver.driverId === selectedDriverId ? 'selected' : ''}>${adminEscape(driver.fullName)} — Available</option>`
         ).join('');
     driverSelect.disabled = false;
 }
@@ -258,9 +261,53 @@ function handleVehicleChange(sel) {
 
 function toggleExpectedIn(show) {
     const expectedIn = document.getElementById('gpExpectedIn');
+    updateRequestTripTypeOptions(show);
     expectedIn.required = show;
     expectedIn.disabled = !show;
     if (!show) expectedIn.value = '';
+}
+
+function normalizeRequestTripTypeCode(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    const upper = raw.toUpperCase();
+    if (upper === 'BOTH' || upper.includes('HATID AT SUNDO') || upper.includes('HATID_AND_SUNDO')) {
+        return 'BOTH';
+    }
+    if (upper === 'HATID' || upper.includes('HATID LANG')) {
+        return 'HATID';
+    }
+    return upper;
+}
+
+function updateRequestTripTypeOptions(willReturn) {
+    const select = document.getElementById('gpTripType');
+    if (!select) return;
+
+    const allowed = willReturn ? ['BOTH'] : ['HATID'];
+    const currentValue = normalizeRequestTripTypeCode(select.value || select.dataset.previousTripType || '');
+
+    select.innerHTML = allowed.map(code => `
+        <option value="${code}">${code === 'HATID' ? 'Hatid Lang' : 'Hatid at Sundo'}</option>
+    `).join('');
+
+    if (!willReturn) {
+        if (currentValue && currentValue !== 'HATID') {
+            select.dataset.previousTripType = currentValue;
+        }
+        select.value = 'HATID';
+        select.disabled = true;
+        return;
+    }
+
+    if (allowed.includes(currentValue)) {
+        select.value = currentValue;
+    } else if (select.dataset.previousTripType && allowed.includes(normalizeRequestTripTypeCode(select.dataset.previousTripType))) {
+        select.value = normalizeRequestTripTypeCode(select.dataset.previousTripType);
+    } else {
+        select.value = allowed[0];
+    }
+    select.disabled = allowed.length === 1;
 }
 
 function requiresSuperiorApproval(user) {
@@ -300,10 +347,15 @@ function toggleVehicleFields() {
     const manualFields = document.getElementById('manualVehicleFields');
     const manualVehicle = document.getElementById('gpManualVehicle');
     const manualDriver = document.getElementById('gpManualDriver');
+    const needsVehicle = document.getElementById('gpNeedVehicle')?.checked === true;
+    const willReturn = document.querySelector('input[name="gpWillReturn"]:checked')?.value !== 'no';
 
-    if (vehicleFields) vehicleFields.style.display = 'none';
-    if (tripTypeField) tripTypeField.style.display = 'none';
-    if (hradFields) hradFields.style.display = 'none';
+    if (vehicleFields) {
+        vehicleFields.classList.toggle('hidden', !needsVehicle);
+        vehicleFields.classList.toggle('flex', needsVehicle);
+    }
+    if (tripTypeField) tripTypeField.classList.toggle('hidden', !needsVehicle);
+    if (hradFields) hradFields.classList.add('hidden');
     if (manualFields) manualFields.classList.add('hidden');
 
     if (vehicleSelect) {
@@ -324,6 +376,7 @@ function toggleVehicleFields() {
         manualDriver.required = false;
     }
 
+    updateRequestTripTypeOptions(willReturn);
     updateApprovalRoutePreview();
 }
 
@@ -374,8 +427,15 @@ async function submitGatePass(e) {
     let vehicleId = null;
     let driverId = null;
     let privateVehicleDetails = null;
+    const vehicleTripTypeCode = needsVehicle
+        ? normalizeRequestTripTypeCode(document.getElementById('gpTripType')?.value)
+        : null;
 
     if (needsVehicle) {
+        if (!vehicleTripTypeCode) {
+            showToast('Select the trip type.', 'error');
+            return;
+        }
         vehicleUsageCode = 'COMPANY';
         privateVehicleDetails = 'Company Vehicle Needed';
     }
@@ -388,6 +448,7 @@ async function submitGatePass(e) {
         expectedInAt: expectedIn?.toISOString() || null,
         willReturn,
         vehicleUsageCode,
+        vehicleTripTypeCode,
         vehicleId,
         privateVehicleDetails,
         driverId,
@@ -415,6 +476,9 @@ async function submitGatePass(e) {
 function submitMockGatePass(e) {
     const isV = document.getElementById('gpNeedVehicle').checked;
     const willReturnBool = document.querySelector('input[name="gpWillReturn"]:checked').value === 'yes';
+    const vehicleTripTypeCode = isV
+        ? normalizeRequestTripTypeCode(document.getElementById('gpTripType')?.value)
+        : null;
     let customVehicleInfo = null;
 
     if (isV) {
@@ -435,9 +499,10 @@ function submitMockGatePass(e) {
         dateFiled: new Date().toLocaleDateString(),
         destination: document.getElementById('gpDestination').value,
         expectedOut: document.getElementById('gpExpectedOut').value,
-        expectedIn: document.getElementById('gpExpectedIn').value || 'N/A',
+        expectedIn: willReturnBool ? (document.getElementById('gpExpectedIn').value || 'N/A') : 'N/A',
         purpose: document.getElementById('gpPurpose').value,
         vehicle: customVehicleInfo,
+        vehicleTripTypeCode,
         status: getInitialRequestStatus(currentUser, isV),
         requiresSuperiorApproval: requiresSuperiorApproval(currentUser),
         requiresPresidentApproval: requiresPresidentApproval(currentUser, isV),
@@ -730,6 +795,11 @@ document.addEventListener('keydown', event => {
 });
 
 document.addEventListener('DOMContentLoaded', initializeEmployeeQrCard);
+document.addEventListener('DOMContentLoaded', () => {
+    const willReturn = document.querySelector('input[name="gpWillReturn"]:checked')?.value !== 'no';
+    updateRequestTripTypeOptions(willReturn);
+    toggleVehicleFields();
+});
 window.addEventListener('resize', renderExpandedEmployeeQr);
 window.visualViewport?.addEventListener('resize', renderExpandedEmployeeQr);
 

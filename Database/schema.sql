@@ -1,4 +1,4 @@
--- Gate Pass System canonical database schema
+﻿-- Form Request System canonical database schema
 -- Target: MariaDB 10.4+ / MySQL-compatible server
 --
 -- Naming follows the established HowConnect repository pattern:
@@ -437,6 +437,7 @@ CREATE TABLE IF NOT EXISTS tbl_gate_pass_requests (
     vehicle_usage_code VARCHAR(30) NOT NULL DEFAULT 'NONE',
     vehicle_id BIGINT UNSIGNED NULL,
     private_vehicle_details VARCHAR(255) NULL,
+    vehicle_trip_type_code VARCHAR(20) NULL,
     driver_id BIGINT UNSIGNED NULL,
     gate_pass_status_code VARCHAR(40) NOT NULL,
     requires_superior_approval BOOLEAN NOT NULL DEFAULT TRUE,
@@ -653,7 +654,7 @@ CREATE TABLE IF NOT EXISTS tbl_gate_pass_associates (
 
 CREATE TABLE IF NOT EXISTS tbl_vehicle_reservations (
     reservation_id BIGINT UNSIGNED PRIMARY KEY AUTO_INCREMENT,
-    gate_pass_id BIGINT UNSIGNED NOT NULL UNIQUE,
+    gate_pass_id BIGINT UNSIGNED NOT NULL,
     vehicle_id BIGINT UNSIGNED NOT NULL,
     driver_id BIGINT UNSIGNED NULL,
     reserved_from DATETIME NOT NULL,
@@ -674,6 +675,7 @@ CREATE TABLE IF NOT EXISTS tbl_vehicle_reservations (
     CONSTRAINT fk_vehicle_reservation_status
         FOREIGN KEY (reservation_status_code)
         REFERENCES tbl_reservation_statuses(reservation_status_code),
+    INDEX ix_vehicle_reservation_gate_pass (gate_pass_id),
     INDEX ix_vehicle_reservation_overlap
         (vehicle_id, reservation_status_code, reserved_from, reserved_until)
 ) ENGINE=InnoDB;
@@ -756,6 +758,7 @@ SELECT
     gpr.will_return,
     gpr.expected_out_at,
     gpr.expected_in_at,
+    gpr.vehicle_trip_type_code,
     gpr.actual_out_at,
     gpr.actual_in_at,
     e.employee_id,
@@ -775,7 +778,8 @@ LEFT JOIN tbl_vehicles v
     ON v.vehicle_id = gpr.vehicle_id
 LEFT JOIN tbl_drivers dr
     ON dr.driver_id = gpr.driver_id
-WHERE gps.allows_qr_scan = TRUE;
+WHERE gps.allows_qr_scan = TRUE
+  AND gps.is_terminal = FALSE;
 
 CREATE OR REPLACE VIEW view_vehicle_availability AS
 SELECT
@@ -898,3 +902,4 @@ LEFT JOIN tbl_employees authorized_employee
     ON authorized_employee.employee_record_id = gpr.authorized_employee_id
 LEFT JOIN tbl_departments authorized_department
     ON authorized_department.department_id = gpr.authorized_department_id;
+

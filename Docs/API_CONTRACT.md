@@ -124,7 +124,14 @@ Request:
 ```json
 {
   "signatureFileId": 22,
-  "comment": null
+  "comment": null,
+  "formTypeCode": "PERSON_GATE_PASS",
+  "willReturn": true,
+  "tripType": "BOTH",
+  "expectedOutAt": "2026-06-17T08:00:00+08:00",
+  "expectedInAt": "2026-06-17T09:00:00+08:00",
+  "secondaryExpectedOutAt": "2026-06-17T11:00:00+08:00",
+  "secondaryExpectedInAt": "2026-06-17T12:00:00+08:00"
 }
 ```
 

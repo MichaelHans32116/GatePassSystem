@@ -1,0 +1,145 @@
+# Phase 12 Plan — Mobile Scroll Fix + HTTPS for Camera
+
+## Problem 1: Mobile Scroll Cutoff
+
+**Root Cause:**
+The <body> tag (index.html line 37) uses Tailwind classes `h-screen overflow-hidden`.
+- `h-screen` maps to `height: 100vh`, but on mobile browsers the address bar and
+  bottom navigation bar eat into that 100vh, so the actual visible area is smaller.
+- `overflow-hidden` prevents any scrolling beyond that shrunk viewport.
+- Result: content at the bottom of pages (calendar, scanner, etc.) is literally
+  invisible and unreachable on phones.
+
+**Fix:**
+1. Change `h-screen` to `h-[100dvh]` on the <body> tag.
+   `dvh` (dynamic viewport height) is the modern CSS unit that accounts for
+   the browser chrome on mobile — it shrinks when the address bar is visible
+   and grows when it hides. Tailwind CDN supports `h-[100dvh]` as an
+   arbitrary value.
+2. Add a CSS fallback in styles.css for browsers that don't support dvh:
+   body { height: 100vh; height: 100dvh; }
+3. Apply the same `h-[100dvh]` fix to #appView (line 96) and <aside>
+   sidebar (line 102) which also use `h-full` (inheriting the body height).
+4. The main scrollable area #mainContent (line 216) already has
+   `overflow-y-auto flex-grow`, so once the parent heights are correct
+   it will scroll properly.
+
+**Files to change:**
+- index.html (lines 37, 96, 102)
+- Frontend/Design/styles.css (add dvh fallback at top)
+
+---
+
+## Problem 2: Camera Not Working (Needs HTTPS)
+
+**Root Cause:**
+The `navigator.mediaDevices` API (used for the QR camera scanner) is only
+available in **secure contexts**: localhost, 127.0.0.1, or pages served
+over HTTPS. The live server serves pages over plain HTTP at
+http://192.168.9.7/FormRequestSystem/, so the browser blocks camera access.
+
+**Current server state (verified via SSH):**
+- XAMPP Apache already has mod_ssl loaded and is listening on port 443.
+- The default XAMPP self-signed certificate is active at
+  conf/ssl.crt/server.crt / conf/ssl.key/server.key.
+- The SSL VirtualHost DocumentRoot is already C:/xampp/htdocs (same as HTTP).
+- This means https://192.168.9.7/FormRequestSystem/ should already be
+  reachable — the browser will show a "certificate not trusted" warning
+  (because it's self-signed), but once the user clicks "Proceed/Accept",
+  the camera API will work because the page is now in a secure context.
+
+**What we need to do:**
+
+### A. Fix the API URL when using HTTPS
+
+The frontend's runtime-config.js (line 12-13) builds the API URL as:
+  `${window.location.protocol}//${window.location.hostname}:5087/api`
+
+If the page is served over HTTPS, this becomes https://192.168.9.7:5087/api
+— but the Kestrel API only listens on HTTP port 5087. This would fail
+(mixed content / connection refused).
+
+**Solution: Apache Reverse Proxy**
+
+Add a reverse-proxy rule in the XAMPP Apache config so that requests to
+/FormRequestSystem/api/ are forwarded to http://127.0.0.1:5087/api/.
+This way the frontend can use the same-origin path and never needs to
+worry about the protocol mismatch.
+
+Steps:
+1. Enable mod_proxy and mod_proxy_http in httpd.conf on the server
+   (uncomment the LoadModule lines — they are already compiled in XAMPP).
+2. Add these directives to httpd-ssl.conf inside the <VirtualHost> block:
+     ProxyPreserveHost On
+     ProxyPass        /FormRequestSystem/api/ http://127.0.0.1:5087/api/
+     ProxyPassReverse /FormRequestSystem/api/ http://127.0.0.1:5087/api/
+3. Also add the same proxy rules to the HTTP VirtualHost (port 80) for
+   consistency — this way the frontend can always use the relative
+   /FormRequestSystem/api/ path regardless of protocol.
+
+### B. Update runtime-config.js
+
+Change the API URL detection so that when running under the XAMPP workspace
+path (/FormRequestSystem/), it uses the Apache reverse proxy path instead
+of the direct port-based URL:
+
+  apiBaseUrl: isXamppWorkspace
+      ? `${window.location.origin}/FormRequestSystem/api`
+      : ...
+
+This way:
+- HTTP  -> http://192.168.9.7/FormRequestSystem/api  -> proxy -> Kestrel
+- HTTPS -> https://192.168.9.7/FormRequestSystem/api -> proxy -> Kestrel
+
+No mixed-content issues. No protocol mismatch.
+
+### C. Restart Apache on the server
+
+After editing httpd.conf and httpd-ssl.conf, restart Apache via SSH:
+  C:\xampp\apache\bin\httpd.exe -k restart
+
+### D. CORS update (not needed)
+
+The live API's start-api.ps1 already sets Cors__AllowAnyOrigin = 'true',
+so CORS will not block the proxied requests from either HTTP or HTTPS origins.
+
+---
+
+## Verification Plan
+
+1. **Mobile scroll**: Open http://192.168.9.7/FormRequestSystem/ on a phone,
+   navigate to the calendar and QR scanner pages, confirm content at the bottom
+   is now visible and scrollable.
+
+2. **HTTPS + Camera**: Open https://192.168.9.7/FormRequestSystem/ on a phone,
+   accept the self-signed certificate warning, navigate to the QR Scanner page,
+   and confirm the camera starts successfully.
+
+3. **API health**: Verify that both
+   http://192.168.9.7/FormRequestSystem/api/health and
+   https://192.168.9.7/FormRequestSystem/api/health return HTTP 200 through
+   the reverse proxy.
+
+---
+
+## Risk Assessment
+
+| Risk                                     | Mitigation                                           |
+|------------------------------------------|------------------------------------------------------|
+| Self-signed cert shows browser warning   | Users only need to accept once; intranet IP trusted  |
+| Apache restart briefly disrupts apps     | Restart is fast (<2 sec); schedule during low-traffic |
+| mod_proxy not compiled in XAMPP          | XAMPP ships with mod_proxy; just uncomment LoadModule |
+| dvh not supported on very old browsers   | CSS fallback: height: 100vh; height: 100dvh;        |
+
+---
+
+## Files Summary
+
+| File                         | Change                                              |
+|------------------------------|-----------------------------------------------------|
+| index.html                   | h-screen -> h-[100dvh] on body, appView, sidebar    |
+| Frontend/Design/styles.css   | Add dvh fallback CSS                                |
+| Frontend/runtime-config.js   | Use reverse-proxy path for XAMPP workspace           |
+| Server: httpd.conf           | Uncomment mod_proxy, mod_proxy_http                 |
+| Server: httpd-ssl.conf       | Add ProxyPass rules for /FormRequestSystem/api/     |
+| Server: httpd.conf (port 80) | Add matching ProxyPass rules                        |

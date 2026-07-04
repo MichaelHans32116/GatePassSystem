@@ -1,8 +1,8 @@
-using GatePassSystem.Project.DTOs.Auth;
-using GatePassSystem.Project.Models;
-using GatePassSystem.Project.Repositories;
+﻿using FormRequestSystem.Project.DTOs.Auth;
+using FormRequestSystem.Project.Models;
+using FormRequestSystem.Project.Repositories;
 
-namespace GatePassSystem.Project.Services;
+namespace FormRequestSystem.Project.Services;
 
 public sealed class AuthService(
     IUserRepository userRepository,
@@ -57,3 +57,4 @@ public sealed class AuthService(
                 ? qrTokenService.CreateEmployeeToken(user.EmployeeRecordId.Value)
                 : null);
 }
+

@@ -8,7 +8,7 @@ incl. 1 critical). Backend builds clean; all edited JS passes `node --check`; `a
 | # | Feature | Key files |
 |---|---------|-----------|
 | 1A | Decision remarks panel + inline reason textarea (replaces `window.prompt`) | modal.js, approvals.js, index.html |
-| 1B | HRAD-only (GA120) Cancel Gate Pass + required remarks | migration 016, ApprovalsController/Service/Repository, modal.js, approvals.js, index.html |
+| 1B | HRAD-only vehicle scheduling window + required remarks; universal reject; cancel removed | migration 016, ApprovalsController/Service/Repository, modal.js, approvals.js, index.html |
 | 2 | Proofs viewable by routing chain, excluded from print + authz branch | SignatureRepository.cs, styles.css, gatepass.js (`proofFileIds` map fix) |
 | 3 | Python `/compress` (1600px/q70) wired into proof uploads only | app.py, SignatureStorage.cs, SignaturesController.cs, appsettings/docker-compose, material-gatepass.js |
 | 4 | Digital (default) vs Printable Form toggle | modal.js (`renderDigitalView`/`setDocumentViewMode`), index.html, styles.css |
@@ -25,11 +25,22 @@ HttpClient timeout.
   **Digital view** lists the full companion set on screen. The **single-pass** print (`window.print()` on the
   live `#printableArea`) still renders companions compactly in the one cell (fits ≤5 cleanly); true single-pass
   pagination onto extra sheets needs a visual print iteration and is the remaining follow-up.
-- **HRAD canceller hardcoded** to username `GA120` in two places (`ApprovalsController.IsHradCanceller` and
-  `modal.js setCancelGatePassControls`). If the HRAD approver changes, update both (or move to a permission/role).
+- **HRAD scheduling controls** are still keyed to the current HRAD usernames (`GA120` / `GA139`) in the modal and
+  approval flow. If the approver roster changes, update the role check in both layers.
 - **Digital view** does not list Person-pass companions (shows "Requested By" only); could add an associates row.
 - DB migrations 015 & 016 must be applied (`setup-xampp.ps1` now runs them); re-run `procedures.sql` for the
   comment-only SP note.
+
+### Follow-up progress (2026-07-02)
+- HRAD scheduling now supports straight windows and split windows for BOTH trips.
+- Approval payloads now carry optional secondary window timestamps for split schedules.
+- Database migration 018 adds `vehicle_trip_type_code` and removes the single-row reservation constraint so the calendar can reflect gaps between trips.
+- Validation/build pass completed locally after the change set.
+
+### Follow-up progress (2026-07-02, later pass)
+- Approval queue now carries the real `willReturn` flag from the backend instead of inferring it from `expectedInAt`.
+- HRAD trip selection no longer falls back to `privateVehicleDetails`; it now resolves from the assigned trip code or the allowed default for the form type.
+- Local verification re-ran clean: `node --check` passed for the updated frontend files, `dotnet build Backend/FormRequestSystem.sln` succeeded, and `git diff --check` returned only line-ending warnings.
 
 ---
 
@@ -223,10 +234,89 @@ associate keeps `First Middle Last`; additional companions use a **compact `Firs
 5. **Req 5** (multiple associates) — largest; schema + full-stack + printable layout.
 6. **Req 1B** (HRAD status-change action) — new endpoint; confirm exact statuses with Miss Joy first.
 
+---
+
+## Schedule Follow-Up Plan â€” Workbook-Driven HRAD Timing
+
+### Goal
+
+Make the vehicle and driver calendar reflect the actual workbook schedule windows instead of only the request
+`from/to` fields. The workbook is the source of truth for the route timing pattern:
+
+- `IN` and `OUT` are separate observable schedule markers.
+- Some days have one visible trip window.
+- Some days have extra mid-day entries that must stay visible in the calendar.
+- The calendar must show real availability gaps between windows, not only a single start/end pair.
+
+### File-by-file implementation order
+
+1. `Docs/VEHICLE SCHEDULE/VEHICLE MONITORING FOR MARCH 30 - APRIL 4, 2026.xlsx`
+   - Use this workbook as the schedule reference during implementation.
+   - Verify which rows are `IN`, `OUT`, and mid-day trip entries.
+   - Keep it as the baseline when comparing calendar output.
+2. `Backend/Project/Repositories/FleetRepository.cs`
+   - Update schedule projection so it can represent more than one window per day or per pass.
+   - Preserve the current calendar query shape only if it can carry split windows cleanly.
+   - If one parent reservation is not enough, add a child segment model instead of overloading `reserved_from` / `reserved_until`.
+3. `Backend/Project/Models/FleetModels.cs`
+   - Add explicit schedule/window models for `Hatid`, `Sundo`, `Both` straight-window assignment, and `Both` split-window assignment.
+   - Keep the model readable so calendar rendering and validation can share the same data shape.
+4. `Backend/Controllers/FleetController.cs`
+   - Ensure the calendar endpoint returns the new schedule shape without dropping the outbound rows.
+   - Keep conflict detection server-side for driver and vehicle overlap checks.
+5. `Backend/Project/Repositories/ApprovalRepository.cs`
+   - Remove the default assumption that HRAD approval always stores the request `from/to`.
+   - Persist the HRAD-assigned schedule window that was intentionally chosen during approval.
+   - If split windows are needed, save both windows explicitly.
+6. `Backend/Project/Services/ApprovalService.cs`
+   - Enforce validation that schedule start and end exist before forwarding.
+   - Reject invalid windows where end is not later than start.
+   - Keep this logic consistent with the repository so bad data cannot slip through.
+7. `Frontend/Functions/modal.js`
+   - Make the HRAD schedule inputs the source of truth for assignment time.
+   - Show the requested schedule as reference only.
+   - Show the assigned schedule separately so HRAD can see what will land in the calendar.
+   - Hide `Put on Hold` for non-HRAD approvers.
+8. `Frontend/Functions/approvals.js`
+   - Send the HRAD-assigned window to the backend.
+   - Require explicit schedule start and end before forward/assign actions.
+   - Keep `Reject` available universally.
+9. `Frontend/Functions/calendar.js`
+   - Render the stored schedule windows, including split windows.
+   - Preserve visible gaps between windows so availability is obvious.
+   - Keep conflict labels aligned with the same overlap rule the backend uses.
+10. `index.html`
+   - Keep the HRAD schedule controls visible in the assignment block.
+   - Keep `Close` at the bottom of the modal action stack.
+   - Keep the layout readable on narrower screens while the new time controls are added.
+11. `Docs/PHASE_11_PLAN.md` and `Docs/server access documentation.md`
+   - Record what was changed, what was verified, and what remains.
+   - Add short notes after each successful pass so the next review starts with fresh context.
+
+### Logic rules to preserve
+
+- If a driver or vehicle conflicts with an assigned schedule window, the result is `false` for availability.
+- If there is no conflict in the assigned time window, the result is `true`.
+- `Hatid` only or `Sundo` only should map to a single explicit window.
+- `Both` can be either one straight continuous schedule window or two separate windows with a free gap between them.
+- The calendar must reflect the schedule that HRAD chose, not the requester's original placeholder time.
+- If the workbook shows an `OUT` row, do not lose it during import or normalization.
+
+### Top-to-bottom recheck loop
+
+1. Inspect the current file layer.
+2. Patch the smallest safe change.
+3. Rebuild or rerender the touched layer.
+4. Recheck for missing `OUT` rows, button regressions, or conflict logic gaps.
+5. Clean stale helpers only after the new path is verified.
+6. Repeat from the top until the layer is clean before moving to the next file group.
+
+---
+
 ## Resolved Decisions (confirmed by Sir Lyndon / Miss Joy, 2026-06-29)
 
-- **1B:** Miss Joy needs a **"Cancelled"** status-change action (HRAD-only) with a **required remarks**.
-  New status code `CANCELLED` (vehicle/company gate passes). No reschedule/returned in this phase.
+- **1B:** Miss Joy now needs a **vehicle scheduling window** on the HRAD assignment step, while `Reject`
+  stays universal and the cancel action stays removed from the approval UI.
 - **5:** **Max 5** associates rendered per printed page; if more than fit, **overflow onto a new page**
   (additional printed sheet). Companions are chosen from the **employee directory (typeahead)**, same as
   the existing material authorized-employee picker. Keep `authorized_employee_id` as the primary

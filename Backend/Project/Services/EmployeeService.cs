@@ -1,7 +1,7 @@
-using GatePassSystem.Project.DTOs.GatePass;
-using GatePassSystem.Project.Repositories;
+﻿using FormRequestSystem.Project.DTOs.GatePass;
+using FormRequestSystem.Project.Repositories;
 
-namespace GatePassSystem.Project.Services;
+namespace FormRequestSystem.Project.Services;
 
 public sealed class EmployeeService(
     IEmployeeRepository employeeRepository) : IEmployeeService
@@ -25,3 +25,4 @@ public sealed class EmployeeService(
             employee.PositionName)).ToArray();
     }
 }
+

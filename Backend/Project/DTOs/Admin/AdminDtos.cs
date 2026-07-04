@@ -1,4 +1,4 @@
-namespace GatePassSystem.Project.DTOs.Admin;
+﻿namespace FormRequestSystem.Project.DTOs.Admin;
 
 public sealed class AdminUserQuery
 {
@@ -34,3 +34,4 @@ public sealed record SaveRoleRequest(
     string? Description,
     bool IsActive,
     IReadOnlyList<string> PermissionCodes);
+

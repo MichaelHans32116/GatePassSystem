@@ -214,27 +214,357 @@ function escapeDocumentText(value) {
         .replace(/'/g, '&#039;');
 }
 
-// Shows/hides the HRAD-only Cancel Gate Pass controls.
-// Only the BUTTON is shown on modal open; the textarea AREA is revealed on first click.
-function setCancelGatePassControls(pass) {
-    const area = document.getElementById('cancelGatePassArea');
-    const button = document.getElementById('cancelGatePassButton');
-    const remarks = document.getElementById('cancelGatePassRemarks');
-    const result = document.getElementById('decisionRemarksResult');
-    if (result) {
-        result.classList.add('hidden');
-        result.innerHTML = '';
+function setHradDecisionControls() {}
+
+function parseScheduleDateTime(value) {
+    if (!value) return null;
+    const d = new Date(value);
+    return Number.isNaN(d.getTime()) ? null : d;
+}
+
+function formatScheduleTimeInput(value) {
+    if (!(value instanceof Date) || Number.isNaN(value.getTime())) return '';
+    const hours = String(value.getHours()).padStart(2, '0');
+    const minutes = String(value.getMinutes()).padStart(2, '0');
+    return `${hours}:${minutes}`;
+}
+
+function getHradScheduleBaseDate(pass) {
+    return parseScheduleDateTime(
+        pass?.expectedOutAtRaw ||
+        pass?.expectedOutAt ||
+        pass?.expectedOut ||
+        pass?.formDate ||
+        pass?.dateFiled ||
+        pass?.createdAt ||
+        pass?.appliedAt
+    );
+}
+
+function buildHradScheduleDateTime(baseDate, timeValue) {
+    if (!(baseDate instanceof Date) || Number.isNaN(baseDate.getTime()) || !timeValue) return null;
+    const [hours, minutes] = String(timeValue).split(':').map(part => Number(part));
+    if (!Number.isFinite(hours) || !Number.isFinite(minutes)) return null;
+    const next = new Date(baseDate);
+    next.setHours(hours, minutes, 0, 0);
+    return Number.isNaN(next.getTime()) ? null : next;
+}
+
+function formatHradScheduleWindow(window) {
+    const startText = window?.start ? formatDateTime(window.start.toISOString()) : 'N/A';
+    const endText = window?.end ? formatDateTime(window.end.toISOString()) : 'N/A';
+    return `${startText} to ${endText}`;
+}
+
+function normalizeHradTripTypeCode(value) {
+    const raw = String(value || '').trim();
+    if (!raw) return '';
+    const upper = raw.toUpperCase();
+    if (upper === 'BOTH' || upper.includes('HATID AT SUNDO') || upper.includes('HATID_AND_SUNDO')) {
+        return 'BOTH';
     }
-    if (remarks) remarks.value = '';
-    // Always collapse the area — it only expands on the first click of the button.
-    if (area) area.classList.add('hidden');
-    const isHradCanceller =
-        typeof currentUser !== 'undefined' &&
-        currentUser && (currentUser.id === 'GA120' || currentUser.id === 'GA139');
-    const cancellable =
-        pass && !isFinishedDocumentStatus(pass.status);
-    const show = Boolean(isHradCanceller && cancellable);
-    if (button) button.classList.toggle('hidden', !show);
+    if (upper === 'HATID' || upper.includes('HATID LANG')) {
+        return 'HATID';
+    }
+    return upper;
+}
+
+function hradTripTypeLabel(code) {
+    const normalized = normalizeHradTripTypeCode(code);
+    const labels = {
+        HATID: 'Hatid lang',
+        BOTH: 'Hatid at Sundo'
+    };
+    return labels[normalized] || (code ? String(code) : 'Company Vehicle Needed');
+}
+
+function getAllowedHradTripTypes(pass) {
+    const formType = String(pass?.formTypeCode || '').trim().toUpperCase();
+    const willReturn = pass?.willReturn !== false;
+    if (!formType) {
+        return ['HATID'];
+    }
+    if (formType === 'MATERIAL_GATE_PASS') {
+        return ['HATID'];
+    }
+    if (!willReturn) {
+        return ['HATID'];
+    }
+    return ['BOTH'];
+}
+
+function setHradTripTypeOptions(pass) {
+    const select = document.getElementById('hradTripType');
+    if (!select) return;
+    const allowed = getAllowedHradTripTypes(pass);
+    const currentValue = normalizeHradTripTypeCode(
+        select.value ||
+        pass?.vehicleTripTypeCode ||
+        pass?.tripTypeCode ||
+        ''
+    );
+    select.innerHTML = allowed.map(code => `
+        <option value="${code}">${code === 'HATID' ? 'Hatid lang' : 'Hatid at Sundo'}</option>
+    `).join('');
+    select.value = allowed.includes(currentValue) ? currentValue : allowed[0];
+    select.disabled = allowed.length === 1;
+}
+
+function getHradTripTypeCode(pass) {
+    const selectValue = normalizeHradTripTypeCode(document.getElementById('hradTripType')?.value);
+    if (selectValue) return selectValue;
+    const fallbackValue = normalizeHradTripTypeCode(
+        pass?.vehicleTripTypeCode ||
+        pass?.tripTypeCode
+    );
+    if (fallbackValue) return fallbackValue;
+    return getAllowedHradTripTypes(pass)[0] || '';
+}
+
+function getHradScheduleModeCode() {
+    return String(document.getElementById('hradScheduleMode')?.value || 'STRAIGHT')
+        .trim()
+        .toUpperCase();
+}
+
+function setHradScheduleControls(pass) {
+    const modeRow = document.getElementById('hradScheduleModeRow');
+    const modeSelect = document.getElementById('hradScheduleMode');
+    const secondaryRow = document.getElementById('hradSecondaryScheduleRow');
+    const secondaryStart = document.getElementById('hradScheduleStartSecondary');
+    const secondaryEnd = document.getElementById('hradScheduleEndSecondary');
+    setHradTripTypeOptions(pass);
+    const tripType = getHradTripTypeCode(pass);
+    const isBothTrip = tripType === 'BOTH';
+    const splitMode = isBothTrip && getHradScheduleModeCode() === 'SPLIT';
+
+    if (modeRow) {
+        modeRow.classList.toggle('hidden', !isBothTrip);
+    }
+    if (modeSelect) {
+        if (!isBothTrip) {
+            modeSelect.value = 'STRAIGHT';
+        } else if (!modeSelect.value) {
+            modeSelect.value = 'STRAIGHT';
+        }
+    }
+    if (secondaryRow) {
+        secondaryRow.classList.toggle('hidden', !splitMode);
+    }
+    if (secondaryStart) {
+        secondaryStart.disabled = !splitMode;
+        if (!splitMode) secondaryStart.value = '';
+    }
+    if (secondaryEnd) {
+        secondaryEnd.disabled = !splitMode;
+        if (!splitMode) secondaryEnd.value = '';
+    }
+}
+
+function scheduleWindowFromInputs(baseDate, startId, endId) {
+    const startValue = document.getElementById(startId)?.value || '';
+    const endValue = document.getElementById(endId)?.value || '';
+    const start = buildHradScheduleDateTime(baseDate, startValue);
+    const end = buildHradScheduleDateTime(baseDate, endValue);
+    if (start && end && end <= start) {
+        return { start, end: null };
+    }
+    return { start, end };
+}
+
+function getHradScheduleWindow(pass) {
+    const baseDate = getHradScheduleBaseDate(pass);
+    const requestedStart = parseScheduleDateTime(
+        pass?.expectedOutAtRaw ||
+        pass?.expectedOutAt ||
+        pass?.expectedOut
+    );
+    const requestedEnd = parseScheduleDateTime(
+        pass?.expectedInAtRaw ||
+        pass?.expectedInAt ||
+        pass?.expectedIn
+    );
+    const tripType = getHradTripTypeCode(pass);
+    const scheduleMode = getHradScheduleModeCode();
+    const primaryWindow = scheduleWindowFromInputs(
+        baseDate,
+        'hradScheduleStart',
+        'hradScheduleEnd'
+    );
+    const secondaryWindow = tripType === 'BOTH' && scheduleMode === 'SPLIT'
+        ? scheduleWindowFromInputs(
+            baseDate,
+            'hradScheduleStartSecondary',
+            'hradScheduleEndSecondary'
+        )
+        : null;
+    const windows = [primaryWindow];
+    if (secondaryWindow) {
+        windows.push(secondaryWindow);
+    }
+    const completeWindows = windows.filter(window => window?.start && window?.end);
+    const isSplit = tripType === 'BOTH' && scheduleMode === 'SPLIT';
+    const start = completeWindows[0]?.start || null;
+    const end = completeWindows.length > 0
+        ? completeWindows[completeWindows.length - 1].end
+        : null;
+
+    return {
+        start,
+        end,
+        requestedStart,
+        requestedEnd,
+        tripType,
+        scheduleMode,
+        windows: completeWindows,
+        primaryWindow,
+        secondaryWindow,
+        isSplit,
+        isComplete: isSplit
+            ? completeWindows.length === 2
+            : completeWindows.length === 1
+    };
+}
+
+function setHradScheduleInputsFromPass(pass) {
+    const startInput = document.getElementById('hradScheduleStart');
+    const endInput = document.getElementById('hradScheduleEnd');
+    const secondaryStart = document.getElementById('hradScheduleStartSecondary');
+    const secondaryEnd = document.getElementById('hradScheduleEndSecondary');
+    const modeSelect = document.getElementById('hradScheduleMode');
+    if (!startInput && !endInput && !secondaryStart && !secondaryEnd && !modeSelect) return;
+    if (startInput) startInput.value = '';
+    if (endInput) endInput.value = '';
+    if (secondaryStart) secondaryStart.value = '';
+    if (secondaryEnd) secondaryEnd.value = '';
+    if (modeSelect) modeSelect.value = 'STRAIGHT';
+    setHradScheduleControls(pass);
+}
+
+function scheduleWindowOverlaps(startA, endA, startB, endB) {
+    if (!startA || !startB) return false;
+    const normalizedEndA = endA || new Date(startA.getTime() + 60 * 60 * 1000);
+    const normalizedEndB = endB || new Date(startB.getTime() + 60 * 60 * 1000);
+    return startA < normalizedEndB && normalizedEndA > startB;
+}
+
+function scheduleEntryWindow(entry) {
+    if (!entry?.scheduleDate) return null;
+    const datePart = String(entry.scheduleDate).split('T')[0];
+    const start = entry.startTime ? new Date(`${datePart}T${String(entry.startTime).substring(0, 8)}`) : null;
+    const end = entry.endTime
+        ? new Date(`${datePart}T${String(entry.endTime).substring(0, 8)}`)
+        : (start ? new Date(start.getTime() + 60 * 60 * 1000) : null);
+    if (start && Number.isNaN(start.getTime())) return null;
+    if (end && Number.isNaN(end.getTime())) return null;
+    return { start, end };
+}
+
+function scheduleWindowsOverlapAny(windowSet, rowWindow) {
+    return (windowSet || []).some(window =>
+        scheduleWindowOverlaps(window?.start, window?.end, rowWindow?.start, rowWindow?.end)
+    );
+}
+
+function getVehicleAvailabilityLabel(vehicle, pass) {
+    const status = String(vehicle?.status || vehicle?.availabilityStatusCode || '').trim().toUpperCase();
+    if (!vehicle) return 'Not Available';
+    if (status && status !== 'AVAILABLE') {
+        return status.includes('USE') || status.includes('RESERVED')
+            ? 'Away'
+            : 'Not Available';
+    }
+
+    const window = getHradScheduleWindow(pass);
+    if (!window.isComplete) {
+        return window.isSplit ? 'Awaiting split schedule' : 'Awaiting schedule';
+    }
+    const sourceRows = typeof scheduleData !== 'undefined' && Array.isArray(scheduleData)
+        ? scheduleData
+        : [];
+    const vehicleId = String(vehicle?.id || vehicle?.vehicleId || '');
+    const hasConflict = sourceRows.some(entry => {
+        if (String(entry.vehicleId || '') !== vehicleId) return false;
+        const rowWindow = scheduleEntryWindow(entry);
+        return scheduleWindowsOverlapAny(window.windows, rowWindow);
+    });
+    return hasConflict ? 'Away' : 'Available';
+}
+
+function getDriverAvailabilityLabel(driverId, pass) {
+    if (!driverId) return 'Unassigned';
+    const window = getHradScheduleWindow(pass);
+    if (!window.isComplete) {
+        return window.isSplit ? 'Awaiting split schedule' : 'Awaiting schedule';
+    }
+    const sourceRows = typeof scheduleData !== 'undefined' && Array.isArray(scheduleData)
+        ? scheduleData
+        : [];
+    const hasConflict = sourceRows.some(entry => {
+        if (String(entry.driverId || '') !== String(driverId)) return false;
+        const rowWindow = scheduleEntryWindow(entry);
+        return scheduleWindowsOverlapAny(window.windows, rowWindow);
+    });
+    return hasConflict ? 'Away' : 'Available';
+}
+
+function formatHradAssignedScheduleSummary(window) {
+    if (!window?.start || !window?.end) return 'N/A';
+
+    const outerBounds = formatHradScheduleWindow({
+        start: window.start,
+        end: window.end
+    });
+
+    if (window.isSplit) {
+        if (!Array.isArray(window.windows) || window.windows.length < 2) {
+            return 'Awaiting split schedule';
+        }
+        const windowsText = window.windows
+            .map(segment => formatHradScheduleWindow(segment))
+            .join(' / ');
+        return `${outerBounds} (split: ${windowsText})`;
+    }
+
+    return outerBounds;
+}
+
+function updateHradAssignmentSummary(pass) {
+    const scheduleEl = document.getElementById('hradRequestedSchedule');
+    const assignedScheduleEl = document.getElementById('hradAssignedSchedule');
+    const tripEl = document.getElementById('hradRequestedTripType');
+    const vehicleAvailabilityEl = document.getElementById('hradVehicleAvailability');
+    const driverAvailabilityEl = document.getElementById('hradDriverAvailability');
+    const vehicleSelect = document.getElementById('hradAssignVehicle');
+    const driverSelect = document.getElementById('hradAssignDriver');
+
+    const requestedWindow = {
+        start: parseScheduleDateTime(pass?.expectedOutAtRaw || pass?.expectedOutAt || pass?.expectedOut),
+        end: parseScheduleDateTime(pass?.expectedInAtRaw || pass?.expectedInAt || pass?.expectedIn)
+    };
+    const window = getHradScheduleWindow(pass);
+    if (scheduleEl) {
+        scheduleEl.innerText = formatHradScheduleWindow(requestedWindow);
+    }
+    if (assignedScheduleEl) {
+        assignedScheduleEl.innerText = formatHradAssignedScheduleSummary(window);
+    }
+    if (tripEl) {
+        tripEl.innerText = hradTripTypeLabel(
+            document.getElementById('hradTripType')?.value
+            || pass?.vehicleTripTypeCode
+            || pass?.tripTypeCode
+            || getAllowedHradTripTypes(pass)[0]
+        );
+    }
+    if (vehicleAvailabilityEl && vehicleSelect) {
+        const vehicle = (databaseVehicles || []).find(v => String(v.id) === String(vehicleSelect.value));
+        vehicleAvailabilityEl.innerText = vehicle ? getVehicleAvailabilityLabel(vehicle, pass) : 'Select a vehicle';
+    }
+    if (driverAvailabilityEl && driverSelect) {
+        const driver = (databaseDrivers || []).find(d => String(d.driverId) === String(driverSelect.value));
+        driverAvailabilityEl.innerText = driver ? getDriverAvailabilityLabel(driver.driverId, pass) : 'Select a driver';
+    }
 }
 
 // ---- Phase 11 Req 4: Digital vs Printable Form view mode ----
@@ -459,6 +789,7 @@ function initializeModalDragResize() {
             if (!modal || !dragHandle || !resizeHandle) return;
 
             dragHandle.addEventListener('pointerdown', (e) => {
+                if (window.innerWidth <= 768) return; // Disable dragging on mobile
                 if (isMaximized) return;
                 if (e.target.closest('button, input, select, textarea, a, label')) return;
 
@@ -480,6 +811,7 @@ function initializeModalDragResize() {
             });
 
             resizeHandle.addEventListener('pointerdown', (e) => {
+                if (window.innerWidth <= 768) return; // Disable resizing on mobile
                 if (isMaximized) return;
 
                 e.preventDefault();
@@ -1450,27 +1782,37 @@ async function viewPass(id, isReviewing = false) {
                             if (hradArea) {
                                 hradArea.classList.remove('hidden');
                                 hradArea.classList.add('flex');
-                                
+
+                                const scheduleSpan = document.getElementById('hradRequestedSchedule');
+                                if (scheduleSpan) {
+                                    scheduleSpan.innerText = `${p.expectedOut || 'N/A'}${p.expectedIn && p.expectedIn !== 'N/A' ? ` - ${p.expectedIn}` : ''}`;
+                                }
                                 const tripTypeSpan = document.getElementById('hradRequestedTripType');
                                 if (tripTypeSpan) {
-                                    tripTypeSpan.innerText = p.privateVehicleDetails || 'Company Vehicle Needed';
+                                    tripTypeSpan.innerText = hradTripTypeLabel(
+                                        p.vehicleTripTypeCode ||
+                                        p.tripTypeCode ||
+                                        getAllowedHradTripTypes(p)[0]
+                                    );
                                 }
-                                
+                                setHradScheduleInputsFromPass(p);
+
                                 const vSelect = document.getElementById('hradAssignVehicle');
                                 if (vSelect) {
                                     vSelect.innerHTML = '<option value="">Select Vehicle</option>';
                                     (databaseVehicles || []).forEach(v => {
-                                        vSelect.innerHTML += `<option value="${materialEscape(v.id)}">${materialEscape(v.name)} (${materialEscape(v.plate)})</option>`;
+                                        const availability = getVehicleAvailabilityLabel(v, p);
+                                        vSelect.innerHTML += `<option value="${materialEscape(v.id)}">${materialEscape(v.name)} (${materialEscape(v.plate)}) — ${materialEscape(availability)}</option>`;
                                     });
                                     if (p.vehicle?.id) vSelect.value = p.vehicle.id;
                                 }
-                                
-                                populateHradAssignDrivers(p.vehicle?.id);
+
+                                populateHradAssignDrivers(p.vehicle?.id, p);
+                                updateHradAssignmentSummary(p);
                             }
                             if (holdBtn) {
                                 const isHradUser = currentUser && (currentUser.id === 'GA120' || currentUser.id === 'GA139');
-                                const isVehicleRequest = p.tripTypeCode === 'COMPANY_VEHICLE';
-                                if (isHradUser && isVehicleRequest) {
+                                if (isHradUser) {
                                     holdBtn.classList.remove('hidden');
                                 } else {
                                     holdBtn.classList.add('hidden');
@@ -1485,22 +1827,17 @@ async function viewPass(id, isReviewing = false) {
                                 hradArea.classList.add('hidden');
                                 hradArea.classList.remove('flex');
                             }
+                            setHradScheduleInputsFromPass(null);
                             if (holdBtn) holdBtn.classList.add('hidden');
                             if (btnApprove) {
                                 btnApprove.innerHTML = '<i class="fas fa-check-circle mr-1"></i> Approve Request';
                                 btnApprove.onclick = approveCurrentPass;
                             }
                         }
-                        // Joy and Roxanne use Cancel instead of Reject.
-                        const isJoyOrRox = currentUser && (currentUser.id === 'GA120' || currentUser.id === 'GA139');
-                        if (btnReject) btnReject.classList.toggle('hidden', isJoyOrRox);
+                        if (btnReject) btnReject.classList.remove('hidden');
                         resetApprovalSignatureComposer();
                         showSignatureSource('upload');
                     }
-
-                    // HRAD-only Cancel Gate Pass control (Miss Joy = GA120, Miss Rox = GA139).
-                    // Shown only for the HRAD canceller on a non-terminal pass.
-                    setCancelGatePassControls(p);
 
                     // PRE-FILL USERNAME FOR TRUE LIVE PREVIEW ALIGNMENT
                     let targetContainerId = null;
@@ -1561,7 +1898,6 @@ async function viewPass(id, isReviewing = false) {
                     actionArea.style.display = 'none';
                     approvalSignatureEditor?.classList.add('hidden');
                     hideDecisionReasonComposer();
-                    setCancelGatePassControls(null);
                 }
             }
         }
@@ -2240,13 +2576,28 @@ window.setDocumentViewMode = setDocumentViewMode;
 window.printCurrentDocument = printCurrentDocument;
 window.renderDigitalView = renderDigitalView;
 window.printSelectedLogs = printSelectedLogs;
+window.updateHradAssignmentSummary = updateHradAssignmentSummary;
 
-function populateHradAssignDrivers(vehicleId = null) {
+function handleHradTripTypeChange(pass) {
+    setHradScheduleControls(pass);
+    updateHradAssignmentSummary(pass || findGatePassRecord());
+}
+
+function handleHradScheduleModeChange(pass) {
+    setHradScheduleControls(pass);
+    updateHradAssignmentSummary(pass || findGatePassRecord());
+}
+
+window.handleHradTripTypeChange = handleHradTripTypeChange;
+window.handleHradScheduleModeChange = handleHradScheduleModeChange;
+
+function populateHradAssignDrivers(vehicleId = null, pass = null) {
     const dSelect = document.getElementById('hradAssignDriver');
     if (!dSelect) return;
     dSelect.innerHTML = '<option value="">Select Driver (Optional)</option>';
     (databaseDrivers || []).forEach(d => {
-        dSelect.innerHTML += `<option value="${materialEscape(d.driverId)}">${materialEscape(d.fullName)}</option>`;
+        const availability = getDriverAvailabilityLabel(d.driverId, pass);
+        dSelect.innerHTML += `<option value="${materialEscape(d.driverId)}">${materialEscape(d.fullName)} — ${materialEscape(availability)}</option>`;
     });
 
     if (vehicleId) {
@@ -2255,10 +2606,11 @@ function populateHradAssignDrivers(vehicleId = null) {
             dSelect.value = vehicle.defaultDriverId;
         }
     }
+    updateHradAssignmentSummary(pass);
 }
 
 function handleHradAssignVehicleChange(select) {
-    populateHradAssignDrivers(select.value);
+    populateHradAssignDrivers(select.value, findGatePassRecord());
 }
 
 window.populateHradAssignDrivers = populateHradAssignDrivers;

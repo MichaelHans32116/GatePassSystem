@@ -1,9 +1,9 @@
-using GatePassSystem.Project.DTOs.Admin;
-using GatePassSystem.Project.DTOs.Common;
-using GatePassSystem.Project.Models;
-using GatePassSystem.Project.Repositories;
+﻿using FormRequestSystem.Project.DTOs.Admin;
+using FormRequestSystem.Project.DTOs.Common;
+using FormRequestSystem.Project.Models;
+using FormRequestSystem.Project.Repositories;
 
-namespace GatePassSystem.Project.Services;
+namespace FormRequestSystem.Project.Services;
 
 public sealed class AdminService(
     IAdminRepository repository,
@@ -140,3 +140,4 @@ public sealed class AdminService(
         CancellationToken cancellationToken = default) =>
         repository.GetPermissionsAsync(cancellationToken);
 }
+

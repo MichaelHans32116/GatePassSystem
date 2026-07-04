@@ -1,8 +1,8 @@
-using GatePassSystem.Project.DTOs.Admin;
-using GatePassSystem.Project.DTOs.Common;
-using GatePassSystem.Project.Models;
+﻿using FormRequestSystem.Project.DTOs.Admin;
+using FormRequestSystem.Project.DTOs.Common;
+using FormRequestSystem.Project.Models;
 
-namespace GatePassSystem.Project.Repositories;
+namespace FormRequestSystem.Project.Repositories;
 
 public interface IAdminRepository
 {
@@ -41,3 +41,4 @@ public interface IAdminRepository
     Task<IReadOnlyList<PermissionAdminRecord>> GetPermissionsAsync(
         CancellationToken cancellationToken = default);
 }
+

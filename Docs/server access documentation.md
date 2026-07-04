@@ -1,0 +1,322 @@
+# Server Access Documentation
+192.168.9.7 (Centralized System / XAMPP Server)
+
+PURPOSE
+-------
+SSH access was set up on 192.168.9.7 so files can be deployed remotely
+(via command line) instead of manually copying files on the physical
+machine. This was done to prepare for integrating FormRequestSystem into
+the centralized-system dashboard.
+
+
+SERVER INFO
+-----------
+IP Address        : 192.168.9.7
+Windows Machine    : n-timekeepingpc
+Windows User       : User  (member of Administrators group)
+XAMPP htdocs path  : C:\xampp\htdocs
+Centralized system : C:\xampp\htdocs\centralized-system
+Backup location     : C:\xampp\htdocs\centralized-system-backup
+
+CANONICAL USE
+-------------
+This is the single server handoff document for the live Moriroku XAMPP
+machine. Update this file instead of scattering notes in new docs.
+
+SAFE ACCESS RUNBOOK
+-------------------
+
+1. Connect by SSH, not by manually editing files on the server:
+
+   `ssh -i ~/.ssh/id_ed25519_gatepass User@192.168.9.7`
+
+2. Check the live health before touching anything:
+
+   `Invoke-WebRequest -UseBasicParsing 'http://192.168.9.7:5087/api/health'`
+
+3. Back up first, every time:
+
+   - Frontend: `C:\xampp\htdocs\FormRequestSystem`
+   - API: `C:\GatePassSystem\Api`
+   - Database: `gate_pass_system` dump with `mysqldump`
+   - Backup folder format: `C:\GatePassSystem\backups\YYYYMMDD-HHMMSS`
+
+4. Stage changes in a separate folder when possible, then mirror them into
+   the live path.
+
+5. If the API must be refreshed, stop or start only the `GatePassApi`
+   scheduled task. Do not stop Apache, MariaDB, Wi-Fi, router, or firewall
+   services.
+
+6. If you are changing the database, use a migration file plus
+   `Database/setup-xampp.ps1` when possible, and keep the scope limited to
+   `gate_pass_system` only.
+
+7. After every change, verify:
+
+   - `http://192.168.9.7/FormRequestSystem/`
+   - `http://192.168.9.7:5087/api/health`
+   - the affected browser flow
+
+8. If the browser says the API cannot connect, check CORS and the live
+   endpoint first before changing frontend code.
+
+
+RUNNING CHANGE LOG
+------------------
+
+This section is updated as each deployment step is completed so the
+server work can be reviewed later without relying on chat history.
+
+2026-07-01
+
+- Confirmed SSH access still works with
+  `ssh -i ~/.ssh/id_ed25519_gatepass User@192.168.9.7`.
+- Confirmed the live server exposes `C:\xampp\htdocs` and the existing
+  `centralized-system` folder.
+- Created a timestamped backup of the live dashboard folder at
+  `C:\xampp\htdocs\centralized-system-backup\20260701-075813`.
+- Added a new `Form Request System` tile to the centralized dashboard.
+- Changed the Form Request tile action to redirect to
+  `http://192.168.9.7/FormRequestSystem/`.
+- Staged the Form Request frontend files in
+  `C:\xampp\htdocs\FormRequestSystem`.
+- Verified that `http://192.168.9.7/FormRequestSystem/` returns HTTP 200
+  after staging.
+- Confirmed that the server does not currently have `dotnet` installed
+  in PATH or under `C:\Program Files\dotnet`.
+- Kept all router, Wi-Fi, firewall, and service network settings
+  unchanged.
+- Confirmed the Form Request API targets `net8.0` in
+  `Backend/FormRequestSystem.Api.csproj`.
+- Confirmed the Windows SSH service (`sshd`) is running on the server.
+- Confirmed the Windows Remote Desktop service (`TermService`) is also
+  running, but RDP firewall access was not tested.
+- Installed the official offline .NET 8 SDK on the server using the
+  Microsoft installer package. `dotnet.exe` is now available under
+  `C:\Program Files\dotnet`.
+- Verified the installed runtimes and SDK on the server:
+  - `Microsoft.AspNetCore.App 8.0.28`
+  - `Microsoft.NETCore.App 8.0.28`
+  - `Microsoft.WindowsDesktop.App 8.0.28`
+  - `.NET SDK 8.0.422`
+- Published the Form Request API to `C:\FormRequestSystem\Api` and started it
+  on `http://0.0.0.0:5087`.
+- Registered a startup task named `GatePassApi` that runs the API as
+  `SYSTEM` on boot.
+- Initialized the MariaDB `gate_pass_system` database using the
+  canonical schema and seed SQL files from the repository.
+- Verified `http://192.168.9.7:5087/api/health` returns HTTP 200 with
+  `database: Connected`.
+- Confirmed the server database had no user or employee rows before the
+  login fix (`tbl_user_accounts = 0`, `tbl_employees = 0`).
+- Created a database backup before changing login data:
+  `C:\FormRequestSystem\backups\gate_pass_system-before-login-bootstrap-20260701-090629.sql`.
+- Seeded a temporary `GPADMIN` system account with the
+  `SYSTEM_ADMIN` role so the Form Request UI can authenticate again.
+- Verified the server login endpoint now returns HTTP 200 for the
+  temporary admin account at `http://192.168.9.7:5087/api/auth/login`.
+- Created a fresh backup before removing the temporary login account:
+  `C:\FormRequestSystem\backups\gate_pass_system-before-gpadmin-removal-20260701-103227.sql`.
+- Removed the temporary `GPADMIN` account after confirming the row
+  count returned `0`.
+- Left the local `127.0.0.1:5087` dev login instance unchanged; it is a
+  separate environment from the server deployment.
+- Verified the XAMPP frontend at
+  `http://192.168.9.7/FormRequestSystem/` still returns HTTP 200.
+- Confirmed CORS allows the XAMPP origin for API access.
+- Removed temporary installer bundles, upload zips, and one-off setup
+  helper scripts from the server after deployment.
+- Imported the local `gate_pass_system` database into the server after a
+  fresh server backup.
+- Verified the imported server counts now match the local source:
+  `tbl_roles = 8`, `tbl_account_types = 3`, `tbl_account_statuses = 3`,
+  `tbl_employees = 95`, `tbl_user_accounts = 96`, routines = 7, views = 4.
+- Verified login on the merged server with an imported employee account:
+  `GA108` with the default `MMDDYYYY` password pattern.
+- Confirmed the merged server API is healthy again after the import.
+- Verified the centralized dashboard Form Request tile opens the live
+  Form Request app on `http://192.168.9.7/FormRequestSystem/` after entering
+  the internal dashboard password.
+- Removed the local `.codex-tmp` staging folder from this workspace
+  after deployment work was complete.
+- Confirmed the server root now contains only `Api`, `backups`, and
+  `Database`.
+
+2026-07-02
+
+- Created a pre-deploy safety backup at
+  `C:\GatePassSystem\backups\20260702-161014` containing the live
+  frontend, the live API folder, and a `gate_pass_system` MariaDB dump.
+- Applied database migration 018 on the server while MariaDB stayed up.
+- Copied the updated `FormRequestSystem` frontend files to
+  `C:\xampp\htdocs\FormRequestSystem`.
+- Staged the rebuilt API artifacts, then used the existing
+  `GatePassApi` scheduled task to restart the service without shutting
+  down the whole server.
+- Verified `http://192.168.9.7:5087/api/health` returns HTTP 200 and
+  the database reports `Connected`.
+- Verified `http://192.168.9.7/FormRequestSystem/` returns HTTP 200.
+- Removed the temporary `ApiUpdate` staging folder and the one-off
+  manual start logs after verification.
+
+2026-07-03
+
+- Backed up the live frontend file and a fresh `gate_pass_system` MariaDB
+  dump before schedule synchronization.
+- Copied the updated calendar frontend to
+  `C:\xampp\htdocs\FormRequestSystem\Frontend\Functions\calendar.js`.
+- Applied database migration 019 to sync the recurring fixed vehicle
+  schedule with the workbook reference.
+- Verified the workbook-aligned Saturday rows now exist in the live
+  database:
+  - `HONDA ACCORD / DAH-7724 / 06:00:00-06:30:00 / IN of Ms. N. Rodulfo`
+  - `HONDA BRV / DAZ-7569 / 17:30:00-18:00:00 / OUT of Ms. L. Solas`
+- Kept the database and API online during the update.
+- Verified `http://192.168.9.7/FormRequestSystem/` still returns HTTP 200.
+- Verified `http://192.168.9.7:5087/api/health` still reports
+  `Healthy` and `Connected`.
+- Prepared a security queue hardening pass in the repository so only active
+  scan states remain visible to guards, with live auto-refresh for the guard
+  screen to reduce stale queue entries.
+- Added a new migration plan entry (`020`) for the live server rollout of the
+  security queue filter, but did not deploy it yet during this note.
+- Restored the API boot launcher at `C:\GatePassSystem\Api\start-api.ps1` so
+  the scheduled task can start the server in Development mode with the
+  explicit `http://0.0.0.0:5087` bind that the live endpoint expects.
+- Added the live XAMPP origin `http://192.168.9.7` to the API CORS allow-list
+  so the Apache-served browser can call `/api/auth/login` and other endpoints
+  without the generic "Unable to connect to the Form Request API" browser
+  error.
+
+- Backed up the live frontend, live API folder, and `gate_pass_system`
+  database again at
+  `C:\GatePassSystem\backups\20260703-150913` before the request-trip-type
+  rollout.
+- Copied the updated frontend files to
+  `C:\xampp\htdocs\FormRequestSystem` and refreshed the live API folder at
+  `C:\GatePassSystem\Api` without touching Apache or MariaDB.
+- Applied the updated `SP_CreateGatePass` procedure from
+  `C:\GatePassSystem\Database\procedures.sql` so the server accepts the new
+  `vehicle_trip_type_code` parameter.
+- Verified the live API health endpoint still returns `Healthy` and
+  `Connected`.
+- Verified the deployed browser flow on
+  `http://192.168.9.7/FormRequestSystem/` logs in successfully, shows the
+  request form, and submits a payload containing
+  `vehicleTripTypeCode: BOTH` for the `willReturn = true` path.
+
+MIGRATION PLAN / MAX-PRECAUTION NOTES
+-------------------------------------
+
+- Keep the target limited to the `gate_pass_system` database only.
+- Back up the server database before every destructive change.
+- Remove temporary bootstrap identities before importing the actual
+  local database and real accounts.
+- Do not touch other XAMPP databases, Apache config, Wi-Fi, router, or
+  firewall settings.
+- Apply schema and data changes in a controlled sequence and verify
+  login after each major step.
+- Ask for approval before any step that can drop, truncate, or overwrite
+  live data beyond the agreed Gate Pass database scope.
+
+
+SETUP STEPS PERFORMED
+----------------------
+
+1. Checked if OpenSSH Server was installed (PowerShell, Admin):
+
+   Get-WindowsCapability -Online | Where-Object Name -like 'OpenSSH.Server*'
+
+   Result: OpenSSH.Server~~~~0.0.1.0 -- State: Installed
+   (already installed, no install step needed)
+
+
+2. Checked if the SSH service was running:
+
+   Get-Service sshd
+
+   Result: Status = Running
+   (already running, no start step needed)
+
+   If it had NOT been running, the commands would have been:
+   Start-Service sshd
+   Set-Service -Name sshd -StartupType 'Automatic'
+
+
+3. Generated an SSH key pair on the local machine (Ivan/Hans' PC,
+   NOT on the server):
+
+   ssh-keygen -t ed25519 -f ~/.ssh/id_ed25519_gatepass -N "" -C "gatepass-deploy"
+
+   This created:
+   - Private key: ~/.ssh/id_ed25519_gatepass   (stays on local machine only)
+   - Public key:  ~/.ssh/id_ed25519_gatepass.pub  (copied to server)
+
+
+4. Authorized the public key on the server.
+
+   IMPORTANT: Because the "User" account is a member of the
+   Administrators group, Windows OpenSSH requires admin keys to go
+   in a DIFFERENT file than normal user keys:
+
+   C:\ProgramData\ssh\administrators_authorized_keys
+
+   (NOT C:\Users\User\.ssh\authorized_keys -- that path only works
+   for non-admin accounts and was tried first, but failed with
+   "Permission denied")
+
+   Commands run on the server (PowerShell, Admin):
+
+   Add-Content -Path "C:\ProgramData\ssh\administrators_authorized_keys" -Value "<public key content>"
+   icacls "C:\ProgramData\ssh\administrators_authorized_keys" /inheritance:r /grant "SYSTEM:F" /grant "Administrators:F"
+
+
+5. Tested the connection from the local machine:
+
+   ssh -i ~/.ssh/id_ed25519_gatepass User@192.168.9.7 "echo test && whoami"
+
+   Result: SUCCESS
+   Connected as: n-timekeepingpc\user
+
+
+SCOPE / WHAT THIS ACCESS CAN AND CANNOT DO
+--------------------------------------------
+CAN:
+- Read and write files inside C:\xampp\htdocs (deploy web files)
+- Run commands as an Administrator-level Windows account
+
+CANNOT / NOT TOUCHED:
+- Router / WiFi / network configuration -- not touched, not in scope
+- This SSH access only operates at the file/OS level on this one
+  Windows machine. It does not modify network settings.
+
+
+SAFETY NOTES FOR FUTURE DEPLOYMENTS
+-------------------------------------
+- Always back up the target folder before overwriting
+  (e.g. xcopy centralized-system centralized-system-backup /E /I /Y)
+- Only touch the specific project folder being worked on; never run
+  bulk/wildcard operations against C:\xampp\htdocs root
+- Apache and MySQL service state should not be restarted/stopped
+  unless explicitly required and confirmed with the user first
+
+
+HOW TO RECONNECT (for reference)
+----------------------------------
+From a machine that already has the private key:
+
+   ssh -i ~/.ssh/id_ed25519_gatepass User@192.168.9.7
+
+To copy a file to the server:
+
+   scp -i ~/.ssh/id_ed25519_gatepass "local-file-path" "User@192.168.9.7:C:/xampp/htdocs/destination-path"
+
+
+DEPLOYMENT UPDATE
+-----------------
+- Deployed the static Form Request System frontend to `C:\xampp\htdocs\FormRequestSystem`.
+- Verified `http://192.168.9.7/FormRequestSystem/` returns HTTP 200.
+- Verified `http://192.168.9.7/FormRequestSystem/index.html` returns HTTP 200.
+Last updated: 2026-07-03
+

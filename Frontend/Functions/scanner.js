@@ -7,6 +7,24 @@ var qrCameraDetector = null;
 var qrCameraLastDetectionAt = 0;
 var qrCameraScanning = false;
 var qrClientCooldowns = new Map();
+const activeGuardQueueStatusCodes = new Set(['APPROVED', 'OUTSIDE', 'OVERDUE']);
+
+function isActiveGuardQueueItem(pass) {
+    const statusCode = String(pass?.statusCode || '').trim().toUpperCase();
+    const statusLabel = String(pass?.status || '').trim().toUpperCase();
+    return activeGuardQueueStatusCodes.has(statusCode) ||
+        statusLabel === 'WAITING OUT' ||
+        statusLabel === 'WAITING IN';
+}
+
+function isWaitingOutGuardQueueItem(pass) {
+    const statusCode = String(pass?.statusCode || '').trim().toUpperCase();
+    const statusLabel = String(pass?.status || '').trim().toUpperCase();
+    if (statusCode) {
+        return statusCode === 'APPROVED';
+    }
+    return statusLabel === 'APPROVED' || statusLabel === 'WAITING OUT';
+}
 
 async function executeSecurityScan(identifier, signatureFileId = null) {
     if (!isDatabaseSession()) {
@@ -44,7 +62,7 @@ async function simulateQrScan(identifierOverride = null, fromCamera = false) {
     const input = document.getElementById('manualQrInput');
     const identifier = (identifierOverride || input.value).trim();
     if (!identifier) {
-        showToast('Enter a QR or GP-ID.', 'error');
+        showToast('Enter a QR or Control No.', 'error');
         return;
     }
 
@@ -174,17 +192,13 @@ async function processGlobalQrData(data) {
     const recent = data.recent || [];
     const employeeName = data.employeeName || 'Employee';
 
-    if (active.length === 1) {
+    if (active.length === 1 && recent.length === 0) {
         // Single active pass — go directly to scan mode
         viewPass(active[0].gatePassId, true);
         return true;
-    } else if (active.length > 1) {
-        // Multiple active passes — show selection modal
-        showPassSelectionModal(active, employeeName);
-        return true;
-    } else if (recent.length > 0) {
-        // No active passes but has history — show history modal
-        showEmployeeHistoryModal(recent, employeeName);
+    } else if (active.length > 0 || recent.length > 0) {
+        // Show a tabbed record modal so pending/active records stay visible first.
+        showEmployeeHistoryModal(active, recent, employeeName);
         return true;
     } else {
         // No passes at all
@@ -275,8 +289,7 @@ function showPassSelectionModal(activePasses, employeeName) {
 }
 
 function selectGlobalQrPass(gatePassId) {
-    closeGlobalQrSelectionModal();
-    viewPass(gatePassId, true);
+    openGlobalQrRecord(gatePassId, true);
 }
 
 function closeGlobalQrSelectionModal() {
@@ -287,54 +300,218 @@ function closeGlobalQrSelectionModal() {
     }
 }
 
+function normalizeGlobalQrStatus(value) {
+    return String(value || '').trim().toUpperCase();
+}
+
+function getGlobalQrPendingStatusLabel(pass) {
+    const statusCode = normalizeGlobalQrStatus(pass?.statusCode);
+    const statusGroup = normalizeGlobalQrStatus(pass?.statusGroup);
+    const statusName = normalizeGlobalQrStatus(pass?.statusName);
+
+    if (statusGroup === 'PENDING' || statusCode.startsWith('PENDING') || statusName.startsWith('PENDING')) {
+        return 'Pending';
+    }
+
+    if (statusCode === 'APPROVED' || statusName === 'APPROVED' || statusName === 'WAITING OUT') {
+        return 'Waiting OUT';
+    }
+
+    if (statusCode === 'OUTSIDE' || statusCode === 'OVERDUE' || statusName === 'WAITING IN') {
+        return 'Waiting IN';
+    }
+
+    return pass?.statusName || 'Pending';
+}
+
+function getGlobalQrPendingBadgeClass(pass) {
+    const statusCode = normalizeGlobalQrStatus(pass?.statusCode);
+    const statusGroup = normalizeGlobalQrStatus(pass?.statusGroup);
+
+    if (statusGroup === 'PENDING' || statusCode.startsWith('PENDING')) {
+        return 'bg-amber-100 text-amber-800';
+    }
+
+    if (statusCode === 'APPROVED') {
+        return 'bg-yellow-100 text-yellow-800';
+    }
+
+    if (statusCode === 'OUTSIDE' || statusCode === 'OVERDUE') {
+        return 'bg-blue-100 text-blue-800';
+    }
+
+    return 'bg-gray-100 text-gray-700';
+}
+
+function getGlobalQrRecordIcon(pass) {
+    const formType = String(pass?.formTypeName || '').toUpperCase();
+    return formType.includes('MATERIAL') ? 'fa-box' : 'fa-user';
+}
+
+function getGlobalQrRecordIconColor(pass) {
+    return String(pass?.formTypeName || '').toUpperCase().includes('MATERIAL')
+        ? 'text-amber-600'
+        : 'text-mpiBlue';
+}
+
+function renderGlobalQrPendingCard(pass) {
+    const badgeClass = getGlobalQrPendingBadgeClass(pass);
+    const statusLabel = getGlobalQrPendingStatusLabel(pass);
+    const icon = getGlobalQrRecordIcon(pass);
+    const iconColor = getGlobalQrRecordIconColor(pass);
+
+    return `
+        <button type="button" onclick="openGlobalQrRecord(${pass.gatePassId}, true)"
+                class="w-full text-left p-3 rounded-xl border border-gray-200 hover:border-blue-400 hover:bg-blue-50 transition group flex items-center gap-3">
+            <div class="flex-shrink-0 w-9 h-9 rounded-full bg-gray-100 group-hover:bg-blue-100 flex items-center justify-center">
+                <i class="fas ${icon} ${iconColor} text-sm"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span class="font-mono text-xs font-bold text-gray-800">${materialEscape(pass.controlNo || pass.gatePassNo || '')}</span>
+                    <span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${badgeClass}">${materialEscape(statusLabel)}</span>
+                </div>
+                <p class="text-[10px] text-gray-500 mt-0.5 truncate">
+                    <span class="font-semibold ${iconColor}">${materialEscape(pass.formTypeName || 'Gate Pass')}</span>
+                    ${pass.destination ? ` · ${materialEscape(pass.destination)}` : ''}
+                </p>
+            </div>
+            <i class="fas fa-chevron-right text-gray-300 group-hover:text-blue-500 text-xs"></i>
+        </button>
+    `;
+}
+
+function renderGlobalQrClosedCard(pass) {
+    const statusColor = getHistoryStatusColor(pass.statusGroup);
+    const icon = getGlobalQrRecordIcon(pass);
+    const iconColor = getGlobalQrRecordIconColor(pass);
+    const dateStr = pass.completedAt || pass.dateFiled || '';
+
+    return `
+        <button type="button" onclick="openGlobalQrRecord(${pass.gatePassId}, false)"
+                class="w-full text-left p-3 rounded-xl border border-gray-200 hover:border-gray-400 hover:bg-gray-50 transition group flex items-center gap-3">
+            <div class="flex-shrink-0 w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center">
+                <i class="fas ${icon} ${iconColor} text-sm"></i>
+            </div>
+            <div class="flex-1 min-w-0">
+                <div class="flex items-center gap-2 flex-wrap">
+                    <span class="font-mono text-xs font-bold text-gray-700">${materialEscape(pass.controlNo || pass.gatePassNo || '')}</span>
+                    <span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${statusColor}">${materialEscape(pass.statusName || 'Closed')}</span>
+                </div>
+                <p class="text-[10px] text-gray-500 mt-0.5 truncate">
+                    <span class="font-semibold ${iconColor}">${materialEscape(pass.formTypeName || 'Gate Pass')}</span>
+                    ${dateStr ? ` · ${materialEscape(dateStr)}` : ''}
+                    ${pass.destination ? ` · ${materialEscape(pass.destination)}` : ''}
+                </p>
+            </div>
+            <i class="fas fa-eye text-gray-300 group-hover:text-gray-500 text-xs"></i>
+        </button>
+    `;
+}
+
+function openGlobalQrRecord(gatePassId, isReviewing) {
+    closeGlobalQrHistoryModal();
+    closeGlobalQrSelectionModal();
+    viewPass(gatePassId, isReviewing);
+}
+
 // ============================================================
-// GLOBAL QR UI: Employee History Modal (no active passes)
+// GLOBAL QR UI: Employee records modal (pending + closed)
 // ============================================================
-function showEmployeeHistoryModal(recentPasses, employeeName) {
+function toGlobalQrTime(value) {
+    const time = new Date(value || 0).getTime();
+    return Number.isFinite(time) ? time : 0;
+}
+
+function switchGlobalQrHistoryTab(tab) {
+    const modal = document.getElementById('globalQrHistoryModal');
+    if (!modal) return;
+
+    const normalizedTab = tab === 'closed' ? 'closed' : 'pending';
+    const pendingBtn = document.getElementById('globalQrPendingTabButton');
+    const closedBtn = document.getElementById('globalQrClosedTabButton');
+    const pendingPanel = document.getElementById('globalQrPendingPanel');
+    const closedPanel = document.getElementById('globalQrClosedPanel');
+
+    modal.dataset.activeTab = normalizedTab;
+
+    if (pendingPanel) pendingPanel.classList.toggle('hidden', normalizedTab !== 'pending');
+    if (closedPanel) closedPanel.classList.toggle('hidden', normalizedTab !== 'closed');
+
+    if (pendingBtn) {
+        pendingBtn.className = normalizedTab === 'pending'
+            ? 'flex items-center gap-2 rounded-full border border-mpiBlue bg-mpiBlue px-4 py-2 text-xs font-bold text-white shadow-sm transition'
+            : 'flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-xs font-bold text-gray-600 transition hover:bg-gray-50 hover:text-gray-800';
+    }
+
+    if (closedBtn) {
+        closedBtn.className = normalizedTab === 'closed'
+            ? 'flex items-center gap-2 rounded-full border border-slate-700 bg-slate-700 px-4 py-2 text-xs font-bold text-white shadow-sm transition'
+            : 'flex items-center gap-2 rounded-full border border-gray-200 bg-white px-4 py-2 text-xs font-bold text-gray-600 transition hover:bg-gray-50 hover:text-gray-800';
+    }
+}
+
+function showEmployeeHistoryModal(activePasses, recentPasses, employeeName) {
     const modal = document.getElementById('globalQrHistoryModal');
     const nameEl = document.getElementById('globalQrHistoryName');
-    const listEl = document.getElementById('globalQrHistoryList');
+    const pendingListEl = document.getElementById('globalQrPendingList');
+    const closedListEl = document.getElementById('globalQrClosedList');
+    const pendingCountEl = document.getElementById('globalQrPendingCount');
+    const closedCountEl = document.getElementById('globalQrClosedCount');
     const emptyEl = document.getElementById('globalQrHistoryEmpty');
-    if (!modal || !listEl) return;
+    if (!modal || !pendingListEl || !closedListEl) return;
 
     nameEl.textContent = employeeName;
 
-    if (recentPasses.length === 0) {
-        listEl.innerHTML = '';
-        if (emptyEl) emptyEl.classList.remove('hidden');
-    } else {
-        if (emptyEl) emptyEl.classList.add('hidden');
-        listEl.innerHTML = recentPasses.map(pass => {
-            const statusColor = getHistoryStatusColor(pass.statusGroup);
-            const icon = pass.formTypeName.toUpperCase().includes('MATERIAL')
-                ? 'fa-box' : 'fa-user';
-            const iconColor = pass.formTypeName.toUpperCase().includes('MATERIAL')
-                ? 'text-amber-600' : 'text-mpiBlue';
-            const dateStr = pass.dateFiled || '';
+    const sortedPending = [...(activePasses || [])].sort((a, b) => {
+        const aPriority = normalizeGlobalQrStatus(a?.statusGroup) === 'PENDING' || normalizeGlobalQrStatus(a?.statusCode).startsWith('PENDING') ? 0 : 1;
+        const bPriority = normalizeGlobalQrStatus(b?.statusGroup) === 'PENDING' || normalizeGlobalQrStatus(b?.statusCode).startsWith('PENDING') ? 0 : 1;
+        if (aPriority !== bPriority) return aPriority - bPriority;
 
-            return `
-                <button onclick="viewHistoryPass(${pass.gatePassId})"
-                        class="w-full text-left p-3 rounded-xl border border-gray-200 hover:border-gray-400 hover:bg-gray-50 transition group flex items-center gap-3">
-                    <div class="flex-shrink-0 w-9 h-9 rounded-full bg-gray-100 flex items-center justify-center">
-                        <i class="fas ${icon} ${iconColor} text-sm"></i>
-                    </div>
-                    <div class="flex-1 min-w-0">
-                        <div class="flex items-center gap-2">
-                            <span class="font-mono text-xs font-bold text-gray-700">${materialEscape(pass.controlNo || pass.gatePassNo || '')}</span>
-                            <span class="px-1.5 py-0.5 rounded text-[9px] font-bold ${statusColor}">${materialEscape(pass.statusName)}</span>
-                        </div>
-                        <p class="text-[10px] text-gray-500 mt-0.5 truncate">
-                            <span class="font-semibold ${iconColor}">${materialEscape(pass.formTypeName)}</span>
-                            ${dateStr ? ` · ${materialEscape(dateStr)}` : ''}
-                            ${pass.destination ? ` · ${materialEscape(pass.destination)}` : ''}
-                        </p>
-                    </div>
-                    <i class="fas fa-eye text-gray-300 group-hover:text-gray-500 text-xs"></i>
-                </button>
-            `;
-        }).join('');
+        const aTime = toGlobalQrTime(a?.expectedOut || a?.dateFiled);
+        const bTime = toGlobalQrTime(b?.expectedOut || b?.dateFiled);
+        if (aTime !== bTime) return aTime - bTime;
+
+        return Number(a?.gatePassId || 0) - Number(b?.gatePassId || 0);
+    });
+
+    const sortedClosed = [...(recentPasses || [])].sort((a, b) => {
+        const aTime = toGlobalQrTime(a?.completedAt || a?.dateFiled);
+        const bTime = toGlobalQrTime(b?.completedAt || b?.dateFiled);
+        if (aTime !== bTime) return bTime - aTime;
+        return Number(b?.gatePassId || 0) - Number(a?.gatePassId || 0);
+    });
+
+    if (pendingCountEl) pendingCountEl.textContent = String(sortedPending.length);
+    if (closedCountEl) closedCountEl.textContent = String(sortedClosed.length);
+
+    pendingListEl.innerHTML = sortedPending.length > 0
+        ? sortedPending.map(renderGlobalQrPendingCard).join('')
+        : `
+            <div class="rounded-xl border border-dashed border-gray-200 bg-gray-50 px-4 py-5 text-center">
+                <i class="fas fa-hourglass-half text-lg text-gray-300 mb-2"></i>
+                <p class="text-sm font-semibold text-gray-600">No pending or active passes right now.</p>
+                <p class="mt-1 text-xs text-gray-400">Any waiting in, waiting out, or active record will appear here first.</p>
+            </div>
+        `;
+
+    closedListEl.innerHTML = sortedClosed.length > 0
+        ? sortedClosed.map(renderGlobalQrClosedCard).join('')
+        : `
+            <div class="rounded-xl border border-dashed border-gray-200 bg-gray-50 px-4 py-5 text-center">
+                <i class="fas fa-inbox text-lg text-gray-300 mb-2"></i>
+                <p class="text-sm font-semibold text-gray-600">No closed records yet.</p>
+                <p class="mt-1 text-xs text-gray-400">Completed gate pass history will show up here.</p>
+            </div>
+        `;
+
+    if (emptyEl) {
+        const hasAnyRecords = sortedPending.length > 0 || sortedClosed.length > 0;
+        emptyEl.classList.toggle('hidden', hasAnyRecords);
     }
 
+    const initialTab = sortedPending.length > 0 ? 'pending' : 'closed';
+    switchGlobalQrHistoryTab(initialTab);
     modal.style.display = 'flex';
     modal.classList.remove('hidden');
 }
@@ -348,8 +525,7 @@ function getHistoryStatusColor(statusGroup) {
 }
 
 function viewHistoryPass(gatePassId) {
-    closeGlobalQrHistoryModal();
-    viewPass(gatePassId, false); // view-only
+    openGlobalQrRecord(gatePassId, false); // view-only
 }
 
 function closeGlobalQrHistoryModal() {
@@ -377,6 +553,55 @@ function setQrCameraStatus(message, type = 'muted') {
                     : 'text-gray-500'
     );
     status.innerText = message;
+}
+
+function renderCameraButtons(devices, activeDeviceId) {
+    const container = document.getElementById('qrCameraButtonsContainer');
+    if (!container) return;
+
+    if (!devices.length) {
+        container.innerHTML = `<span class="text-xs text-gray-500"><i class="fas fa-info-circle mr-1"></i>No camera detected</span>`;
+        return;
+    }
+
+    container.innerHTML = devices.map((device, index) => {
+        const label = device.label || `Camera ${index + 1}`;
+        const isSelected = device.deviceId === activeDeviceId;
+        const isBack = /back|rear|environment/i.test(label);
+        const isFront = /front|user/i.test(label);
+
+        let iconClass = 'fa-camera';
+        if (isBack) iconClass = 'fa-redo-alt'; // flip indicator
+        if (isFront) iconClass = 'fa-user-circle'; // selfie indicator
+
+        const btnClass = isSelected
+            ? 'bg-mpiBlue text-white border-mpiBlue ring-2 ring-blue-200'
+            : 'bg-white text-gray-700 border-gray-300 hover:bg-gray-50';
+
+        return `
+            <button type="button"
+                onclick="switchCameraDevice('${materialEscape(device.deviceId)}')"
+                class="border rounded-lg px-3 py-2 text-xs font-semibold flex items-center gap-1.5 transition-all shadow-sm cursor-pointer ${btnClass}"
+                title="${materialEscape(label)}">
+                <i class="fas ${iconClass}"></i>
+                <span>${materialEscape(label)}</span>
+            </button>
+        `;
+    }).join('');
+}
+
+async function switchCameraDevice(deviceId) {
+    const select = document.getElementById('qrCameraSelect');
+    if (!select) return;
+    select.value = deviceId;
+
+    const devices = (await navigator.mediaDevices.enumerateDevices())
+        .filter(device => device.kind === 'videoinput');
+    renderCameraButtons(devices, deviceId);
+
+    if (qrCameraScanning) {
+        await startQrCamera();
+    }
 }
 
 async function initializeQrCameras() {
@@ -410,14 +635,24 @@ async function initializeQrCameras() {
         const devices = (await navigator.mediaDevices.enumerateDevices())
             .filter(device => device.kind === 'videoinput');
         const previous = select.value;
+        let activeId = previous || (devices.length ? devices[0].deviceId : '');
+
         select.innerHTML = devices.length
             ? devices.map((device, index) =>
                 `<option value="${materialEscape(device.deviceId)}">${materialEscape(device.label || `Camera ${index + 1}`)}</option>`
             ).join('')
             : '<option value="">No camera detected</option>';
+
         if (devices.some(device => device.deviceId === previous)) {
             select.value = previous;
+            activeId = previous;
+        } else if (devices.length) {
+            select.value = devices[0].deviceId;
+            activeId = devices[0].deviceId;
         }
+
+        renderCameraButtons(devices, activeId);
+
         setQrCameraStatus(
             devices.length
                 ? `${devices.length} camera${devices.length === 1 ? '' : 's'} detected.`
@@ -599,32 +834,33 @@ async function renderGuardDashboard() {
     if (isDatabaseSession()) {
         try {
             const queue = await ApiClient.get('/security/queue');
-            queueItems = queue.map(item => ({
-                id: item.gatePassNo,
-                dbId: item.gatePassId,
-                controlNo: item.controlNo,
-                userName: item.fullName,
-                willReturn: item.willReturn,
-                employeeRecordId: item.employeeRecordId,
-                status: gatePassStatusLabels[item.gatePassStatusCode] || item.statusName,
-                vehicle: item.vehicleName ? {
-                    name: item.vehicleName,
-                    plate: item.plateNumber,
-                    driver: item.driverName
-                } : null
-            }));
+            queueItems = queue
+                .map(item => ({
+                    id: item.gatePassNo,
+                    dbId: item.gatePassId,
+                    controlNo: item.controlNo,
+                    userName: item.fullName,
+                    willReturn: item.willReturn,
+                    employeeRecordId: item.employeeRecordId,
+                    statusCode: item.gatePassStatusCode,
+                    status: gatePassStatusLabels[item.gatePassStatusCode] || item.statusName,
+                    vehicle: item.vehicleName ? {
+                        name: item.vehicleName,
+                        plate: item.plateNumber,
+                        driver: item.driverName
+                    } : null
+                }))
+                .filter(isActiveGuardQueueItem);
         } catch (error) {
             queueItems = [];
             showToast(error instanceof ApiError ? error.message : 'Unable to load security queue.', 'error');
         }
     } else {
-        queueItems = gatePasses.filter(pass =>
-            pass.status === 'Approved' || pass.status === 'Outside'
-        );
+        queueItems = gatePasses.filter(isActiveGuardQueueItem);
     }
 
     document.getElementById('guardQueueList').innerHTML = queueItems.map(pass => {
-        const waitingOut = pass.status === 'Approved' || pass.status === 'Waiting OUT';
+        const waitingOut = isWaitingOutGuardQueueItem(pass);
         return `
             <tr class="border-b hover:bg-gray-50">
                 <td class="px-4 py-2 text-xs font-mono font-bold text-mpiBlue">
@@ -646,8 +882,11 @@ window.initializeQrCameras = initializeQrCameras;
 window.startQrCamera = startQrCamera;
 window.stopQrCamera = stopQrCamera;
 window.resumeQrScanning = resumeQrScanning;
+window.switchCameraDevice = switchCameraDevice;
 window.selectGlobalQrPass = selectGlobalQrPass;
 window.closeGlobalQrSelectionModal = closeGlobalQrSelectionModal;
+window.switchGlobalQrHistoryTab = switchGlobalQrHistoryTab;
+window.openGlobalQrRecord = openGlobalQrRecord;
 window.viewHistoryPass = viewHistoryPass;
 window.closeGlobalQrHistoryModal = closeGlobalQrHistoryModal;
 

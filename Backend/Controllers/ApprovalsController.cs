@@ -1,11 +1,11 @@
-using GatePassSystem.Api.Infrastructure;
-using GatePassSystem.Project.DTOs.GatePass;
-using GatePassSystem.Project.Models;
-using GatePassSystem.Project.Services;
+﻿using FormRequestSystem.Api.Infrastructure;
+using FormRequestSystem.Project.DTOs.GatePass;
+using FormRequestSystem.Project.Models;
+using FormRequestSystem.Project.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 
-namespace GatePassSystem.Api.Controllers;
+namespace FormRequestSystem.Api.Controllers;
 
 [ApiController]
 [Authorize]
@@ -49,32 +49,6 @@ public sealed class ApprovalsController(
         CancellationToken cancellationToken) =>
         Decide(requestId, false, request, cancellationToken);
 
-    // HRAD-only (Miss Joy GA120 & Miss Rox GA139) hard-cancel with mandatory remarks.
-    private bool IsHradCanceller =>
-        User.FindFirst("username")?.Value == "GA120" || User.FindFirst("username")?.Value == "GA139";
-
-    [HttpPost("{requestId:long}/cancel")]
-    public async Task<ActionResult<ApiResponse<GatePassCancelResult>>> Cancel(
-        long requestId,
-        [FromBody] GatePassCancelRequest request,
-        CancellationToken cancellationToken)
-    {
-        if (!IsHradCanceller)
-        {
-            return Forbid();
-        }
-
-        var result = await approvalService.CancelAsync(
-            requestId,
-            CurrentUserId,
-            request,
-            HttpContext.TraceIdentifier,
-            cancellationToken);
-        return result.IsSuccess
-            ? Success(result.Value!, "Gate pass cancelled.")
-            : ServiceFailure(result);
-    }
-
     private async Task<ActionResult<ApiResponse<ApprovalDecisionResult>>> Decide(
         long requestId,
         bool approve,
@@ -100,4 +74,5 @@ public sealed class ApprovalsController(
             : ServiceFailure(result);
     }
 }
+
 

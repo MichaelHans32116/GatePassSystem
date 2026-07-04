@@ -1,12 +1,12 @@
-using System.Security.Claims;
-using GatePassSystem.Api.Infrastructure;
-using GatePassSystem.Project.DTOs.Auth;
-using GatePassSystem.Project.Services;
+﻿using System.Security.Claims;
+using FormRequestSystem.Api.Infrastructure;
+using FormRequestSystem.Project.DTOs.Auth;
+using FormRequestSystem.Project.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.RateLimiting;
 
-namespace GatePassSystem.Api.Controllers;
+namespace FormRequestSystem.Api.Controllers;
 
 [ApiController]
 [Route("api/auth")]
@@ -74,3 +74,4 @@ public sealed class AuthController(
     public IActionResult Logout() =>
         NoContent();
 }
+
