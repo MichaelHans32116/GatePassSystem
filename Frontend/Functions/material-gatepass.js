@@ -43,15 +43,34 @@ async function ensureAssociateDirectory() {
     }
 }
 
+// Bug 10: keep the companions dropdown short and relevant. Require a couple of
+// characters before searching, rank prefix matches (name/ID/last name) ahead of
+// loose substring hits, and cap the list to a small, scannable set.
+var ASSOCIATE_SUGGESTION_LIMIT = 6;
+var ASSOCIATE_SEARCH_MIN_CHARS = 2;
+
 function filterAssociateEmployees(term) {
     const needle = (term || '').trim().toLowerCase();
     const source = associateDirectoryCache || [];
-    if (!needle) return source.slice(0, 10);
-    return source.filter(employee =>
-        employee.fullName?.toLowerCase().includes(needle) ||
-        employee.employeeId?.toLowerCase().includes(needle) ||
-        employee.departmentName?.toLowerCase().includes(needle)
-    ).slice(0, 10);
+    if (needle.length < ASSOCIATE_SEARCH_MIN_CHARS) return [];
+
+    const scored = [];
+    for (const employee of source) {
+        const name = (employee.fullName || '').toLowerCase();
+        const empId = (employee.employeeId || '').toLowerCase();
+        const dept = (employee.departmentName || '').toLowerCase();
+        let rank = -1;
+        if (name.startsWith(needle) || empId.startsWith(needle)) {
+            rank = 0; // strongest: full name or ID starts with the term
+        } else if (name.split(/\s+/).some(word => word.startsWith(needle))) {
+            rank = 1; // a name word starts with the term (e.g. surname)
+        } else if (name.includes(needle) || empId.includes(needle) || dept.includes(needle)) {
+            rank = 2; // loose substring match anywhere
+        }
+        if (rank >= 0) scored.push({ employee, rank });
+    }
+    scored.sort((a, b) => a.rank - b.rank); // stable: preserves cache order within a rank
+    return scored.slice(0, ASSOCIATE_SUGGESTION_LIMIT).map(s => s.employee);
 }
 
 function updateAssociatesEmptyHint(formTypeCode) {
@@ -100,7 +119,12 @@ function renderAssociateSuggestions(rowId) {
     const search = row.querySelector('[data-associate-search]');
     const box = row.querySelector('[data-associate-suggestions]');
     if (!box) return;
-    const list = filterAssociateEmployees(search?.value);
+    const term = (search?.value || '').trim();
+    if (term.length < ASSOCIATE_SEARCH_MIN_CHARS) {
+        box.innerHTML = `<div class="px-3 py-2 text-[11px] text-gray-400">Type at least ${ASSOCIATE_SEARCH_MIN_CHARS} characters to search…</div>`;
+        return;
+    }
+    const list = filterAssociateEmployees(term);
     box.innerHTML = list.map(employee => `
         <button type="button" class="block w-full px-3 py-2 text-left hover:bg-blue-50" onclick="selectAssociate('${rowId}', ${employee.employeeRecordId})">
             <span class="block text-xs font-bold text-gray-800">${materialEscape(employee.fullName)} (${materialEscape(employee.employeeId)})</span>

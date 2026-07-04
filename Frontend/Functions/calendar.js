@@ -138,12 +138,26 @@ function schedFilteredData() {
                 .filter(Boolean).join(' ').toLowerCase();
             if (!haystack.includes(q)) return false;
         }
-        // Hide past schedules if archived checkbox is not checked
-        if (!f.showArchived && entry.scheduleDate) {
+        // Date-based visibility (Bugs 6, 7, 11).
+        if (entry.scheduleDate) {
             const today = new Date();
             today.setHours(0, 0, 0, 0);
             const eventDate = schedParseDateLocal(entry.scheduleDate);
-            if (entry.scheduleSource !== 'FIXED' && eventDate < today) return false;
+            const isPublic = window.isGuestCalendarView === true;
+            const isFixed = entry.scheduleSource === 'FIXED';
+
+            // Bug 11: permanent (FIXED) schedules only project one week ahead of today.
+            // One-off / gate-pass reservations may still be booked up to a month out.
+            if (isFixed) {
+                const horizon = new Date(today);
+                horizon.setDate(horizon.getDate() + 7);
+                if (eventDate > horizon) return false;
+            }
+
+            // Past-dated schedules:
+            //  • Bug 7: the public calendar always hides them.
+            //  • Bug 6: the private calendar hides them unless "Show past records" is on.
+            if (eventDate < today && (isPublic || !f.showArchived)) return false;
         }
         return true;
     });
@@ -219,7 +233,15 @@ function populateScheduleFilterDropdowns() {
 async function initializeScheduleCalendar() {
     populateScheduleFilterDropdowns();
     syncScheduleExportWeekInput();
-    
+
+    // Bug 6: the "See Archived Schedule" past-records toggle belongs to the private
+    // calendar. Make sure it is visible again even if this browser previously opened
+    // the public guest calendar (showPublicDriverCalendar hides it inline).
+    const archivedContainer = document.getElementById('schedArchivedContainer');
+    if (archivedContainer) {
+        archivedContainer.style.display = window.isGuestCalendarView === true ? 'none' : '';
+    }
+
     // Check if current user is an authorized HR manager
     const authorizedHR = ['GA120', 'GA150', 'GA133', 'GA139', 'GA409', 'GA407'];
     const activeUser = typeof currentUser !== 'undefined' ? currentUser : null;

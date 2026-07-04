@@ -263,6 +263,10 @@ function normalizeHradTripTypeCode(value) {
     if (upper === 'BOTH' || upper.includes('HATID AT SUNDO') || upper.includes('HATID_AND_SUNDO')) {
         return 'BOTH';
     }
+    // Check SUNDO before HATID: "HATID AT SUNDO" is handled above.
+    if (upper === 'SUNDO' || upper.includes('SUNDO LANG')) {
+        return 'SUNDO';
+    }
     if (upper === 'HATID' || upper.includes('HATID LANG')) {
         return 'HATID';
     }
@@ -273,6 +277,7 @@ function hradTripTypeLabel(code) {
     const normalized = normalizeHradTripTypeCode(code);
     const labels = {
         HATID: 'Hatid lang',
+        SUNDO: 'Sundo lang',
         BOTH: 'Hatid at Sundo'
     };
     return labels[normalized] || (code ? String(code) : 'Company Vehicle Needed');
@@ -290,7 +295,9 @@ function getAllowedHradTripTypes(pass) {
     if (!willReturn) {
         return ['HATID'];
     }
-    return ['BOTH'];
+    // Bug 1: a returning person pass may be Hatid at Sundo, Hatid lang or Sundo lang —
+    // HRAD honours the requester's choice but can still adjust.
+    return ['BOTH', 'HATID', 'SUNDO'];
 }
 
 function setHradTripTypeOptions(pass) {
@@ -303,9 +310,9 @@ function setHradTripTypeOptions(pass) {
         pass?.tripTypeCode ||
         ''
     );
-    select.innerHTML = allowed.map(code => `
-        <option value="${code}">${code === 'HATID' ? 'Hatid lang' : 'Hatid at Sundo'}</option>
-    `).join('');
+    select.innerHTML = allowed.map(code =>
+        `<option value="${code}">${hradTripTypeLabel(code)}</option>`
+    ).join('');
     select.value = allowed.includes(currentValue) ? currentValue : allowed[0];
     select.disabled = allowed.length === 1;
 }
@@ -568,7 +575,8 @@ function updateHradAssignmentSummary(pass) {
 }
 
 // ---- Phase 11 Req 4: Digital vs Printable Form view mode ----
-let currentDocumentViewMode = 'digital';
+// Bug 3: the modal opens on the Printable Form tab by default (not Digital).
+let currentDocumentViewMode = 'form';
 
 function setDocumentViewMode(mode) {
     currentDocumentViewMode = (mode === 'form') ? 'form' : 'digital';
@@ -674,9 +682,19 @@ function getPrintableGatePassNo(pass) {
             return deriveGatePassNoFromControlNo(pass?.controlNo) || direct;
         }
 
+// Bug 9: the "To Scan:" identifier printed under the QR is the human Control No.
+// (the guard's manual-entry field matches on controlNo — see scanner.js handleManualEntryLookup).
+// The whole control number is underlined, not just the trailing sequence.
+function formatScanControlNo(pass) {
+            const raw = String(pass?.controlNo || '').trim();
+            if (!raw || /^(GP-ID|TEMP|TMP|ID)-/i.test(raw)) return '';
+            const controlNo = raw.length > 20 ? raw.slice(0, 20) : raw;
+            return `<span class="qr-manual-suffix">${escapeDocumentText(controlNo)}</span>`;
+        }
+
 function getQrBackMetaHtml(pass) {
             const controlNo = escapeDocumentText(pass?.controlNo || '');
-            const scanId = formatManualScanId(getPrintableGatePassNo(pass));
+            const scanId = formatScanControlNo(pass);
             return `
                 <div class="qr-back-meta">
                     ${controlNo ? `<div>Control No.: <strong>${controlNo}</strong></div>` : ''}
@@ -776,8 +794,8 @@ function resetDocumentModalLayout() {
                 multiPrint.innerHTML = '';
                 multiPrint.classList.add('hidden');
             }
-            // Reset Phase 11 Req 4 view-mode state so the next opened document defaults to Digital.
-            currentDocumentViewMode = 'digital';
+            // Reset Phase 11 Req 4 view-mode state so the next opened document defaults to Printable Form (Bug 3).
+            currentDocumentViewMode = 'form';
             const digitalAreaReset = document.getElementById('digitalViewArea');
             if (digitalAreaReset) digitalAreaReset.innerHTML = '';
         }
@@ -1039,7 +1057,7 @@ async function renderMaterialBundle(pass) {
                         <div class="absolute material-front-qr-panel flex flex-col items-center justify-start text-center" style="top: 2mm; right: 3mm; width: 31mm; z-index: 10;">
                             <div class="materialQrCodeDisplay mb-0.5 flex items-center justify-center" style="width: 24mm; height: 24mm;"></div>
                             <div class="material-front-qr-control">Control No.: ${materialEscape(controlNo)}</div>
-                            <div class="material-front-qr-scan">To Scan: ${formatManualScanId(getPrintableGatePassNo(pass))}</div>
+                            <div class="material-front-qr-scan">To Scan: ${formatScanControlNo(pass)}</div>
                         </div>
 
                                 <!-- Underlined Authorization Statement (Canva Layout) -->
@@ -1517,9 +1535,9 @@ async function viewPass(id, isReviewing = false) {
             if (scanTextQR) scanTextQR.innerText = '';
 
             if (gpIdTextDisplay) {
-                const printableGatePassNo = getPrintableGatePassNo(p);
-                gpIdTextDisplay.innerHTML = printableGatePassNo
-                    ? `To Scan: <strong>${formatManualScanId(printableGatePassNo)}</strong>`
+                const scanControlNo = formatScanControlNo(p);
+                gpIdTextDisplay.innerHTML = scanControlNo
+                    ? `To Scan: <strong>${scanControlNo}</strong>`
                     : '';
             }
 
@@ -1552,9 +1570,9 @@ async function viewPass(id, isReviewing = false) {
                             : '';
                     }
                     if (scanTextQR) {
-                        const printableGatePassNo = getPrintableGatePassNo(p);
-                        scanTextQR.innerHTML = printableGatePassNo
-                            ? `To Scan: <strong>${formatManualScanId(printableGatePassNo)}</strong>`
+                        const scanControlNo = formatScanControlNo(p);
+                        scanTextQR.innerHTML = scanControlNo
+                            ? `To Scan: <strong>${scanControlNo}</strong>`
                             : '';
                     }
 
@@ -1645,9 +1663,9 @@ async function viewPass(id, isReviewing = false) {
                 }
             }
 
-            // Render the read-only Digital view and default to it (Req 4).
+            // Render the read-only Digital view but default to the Printable Form tab (Bug 3).
             renderDigitalView(p);
-            setDocumentViewMode('digital');
+            setDocumentViewMode('form');
 
             const modal = document.getElementById('printModal');
             if(modal) {
@@ -1774,11 +1792,13 @@ async function viewPass(id, isReviewing = false) {
                         resetApprovalSignatureComposer();
                         showSignatureSource('upload');
                     } else {
-                        approvalSignatureEditor?.classList.remove('hidden');
                         const hradArea = document.getElementById('hradAssignmentArea');
                         const holdBtn = document.getElementById('holdRequestButton');
-                        
+
                         if (p.status === 'Pending HRAD Assignment' || p.status === 'On Hold') {
+                            // Bug 5: HRAD vehicle-schedule approval (Ms Rox / Ms Joy) has no signature step
+                            // — the drawn signature was never saved, so the panel is hidden here.
+                            approvalSignatureEditor?.classList.add('hidden');
                             if (hradArea) {
                                 hradArea.classList.remove('hidden');
                                 hradArea.classList.add('flex');
@@ -1823,6 +1843,8 @@ async function viewPass(id, isReviewing = false) {
                                 btnApprove.onclick = approveCurrentPass;
                             }
                         } else {
+                            // Regular approval flow keeps the digital signature step.
+                            approvalSignatureEditor?.classList.remove('hidden');
                             if (hradArea) {
                                 hradArea.classList.add('hidden');
                                 hradArea.classList.remove('flex');
@@ -2101,9 +2123,9 @@ async function renderPersonGatePassClone(p) {
                     : '';
             }
             if (scanTextQR) {
-                const printableGatePassNo = getPrintableGatePassNo(p);
-                scanTextQR.innerHTML = printableGatePassNo
-                    ? `To Scan: <strong>${formatManualScanId(printableGatePassNo)}</strong>`
+                const scanControlNo = formatScanControlNo(p);
+                scanTextQR.innerHTML = scanControlNo
+                    ? `To Scan: <strong>${scanControlNo}</strong>`
                     : '';
             }
 
@@ -2201,7 +2223,7 @@ async function renderMaterialGatePassClone(p) {
             <div class="absolute material-front-qr-panel flex flex-col items-center justify-start text-center" style="top: 2mm; right: 3mm; width: 31mm; z-index: 10;">
                 <div class="materialQrCodeDisplay mb-0.5 flex items-center justify-center" style="width: 24mm; height: 24mm;"></div>
                 <div class="material-front-qr-control">Control No.: ${materialEscape(controlNo)}</div>
-                <div class="material-front-qr-scan">To Scan: ${formatManualScanId(getPrintableGatePassNo(p))}</div>
+                <div class="material-front-qr-scan">To Scan: ${formatScanControlNo(p)}</div>
             </div>
 
             <!-- Underlined Authorization Statement (Canva Layout) -->

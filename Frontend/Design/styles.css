@@ -338,9 +338,12 @@
         .person-associates-extra {
             margin-top: 0.2mm;
         }
+        /* Bug 2: enlarge the additional-companion names on the associate pass so a
+           group is easy to read. A page shows the primary associate plus up to four
+           companions, so the taller lines still fit the NAME OF ASSOCIATES cell. */
         .person-associate-compact {
-            font-size: 6.5px;
-            line-height: 1.05;
+            font-size: 8px;
+            line-height: 1.18;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
@@ -467,7 +470,7 @@
             line-height: 1.05;
         }
         .guard-scan-time {
-            min-height: 4mm;
+            min-height: 3.6mm;
             display: flex;
             align-items: center;
             justify-content: center;
@@ -487,14 +490,21 @@
             text-overflow: ellipsis;
         }
         .guard-scan-sig {
-            min-height: 4.5mm;
-            max-height: 4.5mm;
+            min-height: 3.8mm;
+            max-height: 3.8mm;
             display: flex;
             align-items: center;
             justify-content: center;
             overflow: hidden;
             margin-top: 0.2mm;
             margin-bottom: 0.2mm;
+        }
+        /* Bug 8: lift the ACTUAL OUT / ACTUAL IN block off the bottom border so the
+           guard time/signature/name row is not jammed against the edge of the form.
+           The space reclaimed from the stack heights above keeps the form at 105mm. */
+        .person-print-form .guard-status-row td {
+            vertical-align: middle;
+            padding-bottom: 2mm;
         }
         .guard-scan-sig img {
             max-height: 100%;
@@ -1241,8 +1251,8 @@
             font-size: 5.7px;
         }
         .a4-wrapper.is-batch-print .person-print-form .person-associate-compact {
-            font-size: 6px;
-            line-height: 1;
+            font-size: 7px;
+            line-height: 1.12;
         }
         .a4-wrapper.has-multiple-passes .person-print-form .guard-status-row td {
             padding-top: 0.35mm !important;

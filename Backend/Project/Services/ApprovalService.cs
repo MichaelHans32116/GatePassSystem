@@ -53,9 +53,15 @@ public sealed class ApprovalService(
             var tripType = request.TripType?.Trim().ToUpperInvariant();
             var formTypeCode = request.FormTypeCode?.Trim().ToUpperInvariant();
             var willReturn = request.WillReturn == true;
-            var allowedTripType = string.Equals(formTypeCode, "MATERIAL_GATE_PASS", StringComparison.OrdinalIgnoreCase) || !willReturn
-                ? "HATID"
-                : "BOTH";
+            var dropOffOnly =
+                string.Equals(formTypeCode, "MATERIAL_GATE_PASS", StringComparison.OrdinalIgnoreCase) ||
+                !willReturn;
+            // Bug 1: when the associate returns, they may request Hatid at Sundo (BOTH),
+            // Hatid lang (HATID, drop-off only) or Sundo lang (SUNDO, pick-up only).
+            // A material pass or a no-return (time-out only) trip can only be a drop-off.
+            var allowedTripTypes = dropOffOnly
+                ? new[] { "HATID" }
+                : new[] { "BOTH", "HATID", "SUNDO" };
 
             if (string.IsNullOrWhiteSpace(tripType))
             {
@@ -64,13 +70,13 @@ public sealed class ApprovalService(
                     "Select the trip type before forwarding.");
             }
 
-            if (!string.Equals(tripType, allowedTripType, StringComparison.OrdinalIgnoreCase))
+            if (Array.IndexOf(allowedTripTypes, tripType) < 0)
             {
                 return ServiceResult<ApprovalDecisionResult>.Failure(
                     "INVALID_TRIP_TYPE",
-                    allowedTripType == "HATID"
+                    dropOffOnly
                         ? "This request only allows Hatid lang."
-                        : "This request only allows Hatid at Sundo.");
+                        : "Select Hatid at Sundo, Hatid lang, or Sundo lang.");
             }
 
             var hasSecondaryWindow =

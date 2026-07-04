@@ -274,22 +274,36 @@ function normalizeRequestTripTypeCode(value) {
     if (upper === 'BOTH' || upper.includes('HATID AT SUNDO') || upper.includes('HATID_AND_SUNDO')) {
         return 'BOTH';
     }
+    // Check SUNDO before HATID: "HATID AT SUNDO" is already handled above, so a
+    // remaining "SUNDO" means pick-up only.
+    if (upper === 'SUNDO' || upper.includes('SUNDO LANG')) {
+        return 'SUNDO';
+    }
     if (upper === 'HATID' || upper.includes('HATID LANG')) {
         return 'HATID';
     }
     return upper;
 }
 
+function requestTripTypeLabel(code) {
+    if (code === 'HATID') return 'Hatid Lang';
+    if (code === 'SUNDO') return 'Sundo Lang';
+    return 'Hatid at Sundo';
+}
+
 function updateRequestTripTypeOptions(willReturn) {
     const select = document.getElementById('gpTripType');
     if (!select) return;
 
-    const allowed = willReturn ? ['BOTH'] : ['HATID'];
+    // Bug 1: when the requester will return, they choose the trip type themselves —
+    // Hatid at Sundo (drop-off + pick-up), Hatid lang (drop-off only) or Sundo lang
+    // (pick-up only). If they won't return (time out only), only a drop-off makes sense.
+    const allowed = willReturn ? ['BOTH', 'HATID', 'SUNDO'] : ['HATID'];
     const currentValue = normalizeRequestTripTypeCode(select.value || select.dataset.previousTripType || '');
 
-    select.innerHTML = allowed.map(code => `
-        <option value="${code}">${code === 'HATID' ? 'Hatid Lang' : 'Hatid at Sundo'}</option>
-    `).join('');
+    select.innerHTML = allowed.map(code =>
+        `<option value="${code}">${requestTripTypeLabel(code)}</option>`
+    ).join('');
 
     if (!willReturn) {
         if (currentValue && currentValue !== 'HATID') {
@@ -307,7 +321,7 @@ function updateRequestTripTypeOptions(willReturn) {
     } else {
         select.value = allowed[0];
     }
-    select.disabled = allowed.length === 1;
+    select.disabled = false;
 }
 
 function requiresSuperiorApproval(user) {
