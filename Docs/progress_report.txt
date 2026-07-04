@@ -1,0 +1,22 @@
+# Progress Report
+
+Updated: July 4, 2026
+
+## Completed
+
+- Merged the employee QR records work into `main` via PR #3.
+- Updated the security scanner flow to show `Pending` and `Closed` tabs for employee QR records.
+- Kept pending and active records visible first so guards see the actionable pass immediately.
+- Preserved closed records in a view-only history tab.
+- Consolidated stale planning notes out of the active implementation plan.
+
+## Current Focus
+
+- Keep the scanner UX aligned with the current gate pass lifecycle.
+- Keep the active docs short and move finished planning notes into the archive.
+
+## Documentation Policy
+
+- Do not edit [`Docs/server access documentation.md`](server%20access%20documentation.md).
+- Do not edit [`Docs/BACKEND_DATABASE_PLAN To server.md`](BACKEND_DATABASE_PLAN%20To%20server.md).
+- Use [`Docs/archived plan.txt`](archived%20plan.txt) for historical planning notes.

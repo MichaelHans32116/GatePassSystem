@@ -1,0 +1,36 @@
+# Archived Plan
+
+Historical notes for the original Phase 8 Global QR proposal.
+
+This file preserves the older planning text after the feature shipped so the active plan can stay short and current.
+
+## Original Goal
+
+- Treat the employee QR as a global gate pass scanner.
+- Support active pass scanning.
+- Support multiple active pass selection.
+- Support history viewing for completed passes.
+- Fix the closed-pass "not found" experience.
+
+## Original Behavior Notes
+
+- If one active pass exists, go straight to scan mode.
+- If multiple active passes exist, show a selection popup.
+- If no active passes exist but history does, show recent completed transactions.
+- If a closed control number is scanned or entered, open it in view-only mode.
+- Keep per-pass `GP1.` QR behavior unchanged.
+
+## Original Verification Checklist
+
+- Single active pass.
+- Multiple active passes.
+- No active passes.
+- Click a completed pass in history.
+- Closed control number lookup.
+- Per-pass QR unchanged.
+- Empty employee with zero passes ever.
+
+## Status
+
+- This proposal has been implemented in the active UI flow.
+- See [`Docs/progress_report.txt`](progress_report.txt) for the current project status.
