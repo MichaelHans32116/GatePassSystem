@@ -53,6 +53,22 @@ required only because of Bug 1 (`ApprovalService.cs`). No DB migration needed.
 - Keep the scanner UX aligned with the current gate pass lifecycle.
 - Keep the active docs short and move finished planning notes into the archive.
 
+## Turnover For Yza
+
+- Please create your own feature branch from the latest synced branch before
+  making changes.
+- Open a pull request back into `office/hans-branch` when the work is ready.
+- Keep the branch focused on one change set so the review stays clean.
+- Aim for 5+ commits in the branch so the PR shows a clear progression.
+
+Recent commit trail:
+
+- `f61d121` - Phase 13.5: Harden guard queue against stale terminal rows
+- `08bf490` - Phase 13.4: Fix 11 requester, print, calendar, and login bugs
+- `3f0b2c2` - Trim docs and add progress report
+- `026d7d9` - Merge pull request #3 from MichaelHans32116/office/hans-branch
+- `ca6e11c` - Tab employee QR records
+
 ## Documentation Policy
 
 - Do not edit [`Docs/server access documentation.md`](server%20access%20documentation.md).
