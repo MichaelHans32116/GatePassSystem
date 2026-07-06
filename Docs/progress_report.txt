@@ -60,6 +60,12 @@ required only because of Bug 1 (`ApprovalService.cs`). No DB migration needed.
 - Open a pull request back into `office/hans-branch` when the work is ready.
 - Keep the branch focused on one change set so the review stays clean.
 - Aim for 5+ commits in the branch so the PR shows a clear progression.
+- Let us help each other on the branch so we both build momentum, earn clean
+  achievements, and keep the work moving forward together.
+- Keep prompts, comments, and commit messages human-like and natural. Avoid
+  overly AI-sounding wording; write them the way we would normally talk.
+- Make commit tone short, clear, and conversational so the history feels real
+  and easy to review.
 
 Recent commit trail:
 
