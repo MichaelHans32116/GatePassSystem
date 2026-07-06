@@ -1,18 +1,26 @@
 # Progress Report
 
-Updated: July 4, 2026
+Updated: July 6, 2026
 
-## Phase 13.4 — Bug-fix batch (11 items)
+## Phase 13.5 - Guard queue hardening
+
+Frontend and backend guard-queue corrections.
+
+- Guard queue: the live queue now queries the base gate-pass tables directly
+  and filters on active QR-scan states, so rejected/cancelled/expired rows do
+  not leak into the active security list even if a deployed view lags behind.
+
+## Phase 13.4 - Bug-fix batch (11 items)
 
 Frontend-only unless noted. Requester-facing and print/calendar corrections.
 
 - Bug 1 (Trip Type): requester can now choose Hatid at Sundo / Hatid lang /
   Sundo lang when returning (drop-off only when not returning / material).
-  Added the SUNDO code end-to-end. **Backend change** in
+  Added the SUNDO code end-to-end. Backend change in
   `ApprovalService.cs` relaxes the HRAD-approval trip-type validation, so the
   API must be rebuilt + redeployed for this one.
 - Bug 2: enlarged the additional-companion names on the associate pass
-  (8px single / 7px batch print) — form stays within the 105mm A6 budget.
+  (8px single / 7px batch print) - form stays within the 105mm A6 budget.
 - Bug 3: the Document Review modal now opens on the Printable Form tab.
 - Bug 4: IT / System Admin land on the Dashboard after login, not System Logs.
 - Bug 5: HRAD vehicle-schedule approval (Ms Rox / Ms Joy) no longer shows the
@@ -23,7 +31,7 @@ Frontend-only unless noted. Requester-facing and print/calendar corrections.
 - Bug 8: lifted the ACTUAL OUT / ACTUAL IN block ~3mm off the bottom border
   (was flush); verified no overflow for single and multi-companion prints.
 - Bug 9: the "To Scan" label prints the full Control No. (underlined), which is
-  what the guard types into manual lookup — not the GP- number.
+  what the guard types into manual lookup - not the GP- number.
 - Bug 10: the additional-companions search needs 2+ characters, ranks prefix
   matches first, and caps the dropdown at 6.
 - Bug 11: permanent (FIXED) schedules only project one week ahead; one-off /

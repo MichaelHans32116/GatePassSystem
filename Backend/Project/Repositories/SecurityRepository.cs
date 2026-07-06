@@ -20,10 +20,41 @@ public sealed class SecurityRepository(
         var items = await connection.QueryAsync<SecurityQueueItem>(
             new CommandDefinition(
                 """
-                SELECT *
-                FROM view_security_gate_queue
-                WHERE gate_pass_status_code IN ('APPROVED', 'OUTSIDE', 'OVERDUE')
-                ORDER BY expected_out_at, gate_pass_id;
+                -- Query the base tables directly so the live queue stays correct
+                -- even if a deployed security view lags behind the codebase.
+                SELECT
+                    gpr.gate_pass_id AS GatePassId,
+                    gpr.gate_pass_no AS GatePassNo,
+                    gpr.control_no AS ControlNo,
+                    gpr.gate_pass_status_code AS GatePassStatusCode,
+                    gps.status_name AS StatusName,
+                    gpr.will_return AS WillReturn,
+                    gpr.expected_out_at AS ExpectedOutAt,
+                    gpr.expected_in_at AS ExpectedInAt,
+                    gpr.actual_out_at AS ActualOutAt,
+                    gpr.actual_in_at AS ActualInAt,
+                    e.employee_record_id AS EmployeeRecordId,
+                    e.employee_id AS EmployeeId,
+                    e.full_name AS FullName,
+                    d.department_name AS DepartmentName,
+                    v.vehicle_name AS VehicleName,
+                    v.plate_number AS PlateNumber,
+                    dr.full_name AS DriverName
+                FROM tbl_gate_pass_requests gpr
+                JOIN tbl_gate_pass_statuses gps
+                    ON gps.gate_pass_status_code = gpr.gate_pass_status_code
+                   AND gps.allows_qr_scan = TRUE
+                   AND gps.is_terminal = FALSE
+                JOIN tbl_employees e
+                    ON e.employee_record_id = COALESCE(gpr.authorized_employee_id, gpr.requester_employee_id)
+                JOIN tbl_departments d
+                    ON d.department_id = COALESCE(gpr.authorized_department_id, gpr.requester_department_id)
+                LEFT JOIN tbl_vehicles v
+                    ON v.vehicle_id = gpr.vehicle_id
+                LEFT JOIN tbl_drivers dr
+                    ON dr.driver_id = gpr.driver_id
+                WHERE gpr.gate_pass_status_code IN ('APPROVED', 'OUTSIDE', 'OVERDUE')
+                ORDER BY gpr.expected_out_at, gpr.gate_pass_id;
                 """,
                 cancellationToken: cancellationToken));
         return items.AsList();
