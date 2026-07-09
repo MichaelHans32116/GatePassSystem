@@ -489,3 +489,51 @@ window.refreshApplicationState = refreshApplicationState;
 window.checkUnreadNotifications = checkUnreadNotifications;
 window.toggleNotificationDropdown = toggleNotificationDropdown;
 window.markAllNotificationsAsRead = markAllNotificationsAsRead;
+function renderPaginationControls(totalItems, currentPage, pageSize, containerId, onPageChangeCallbackName) {
+    const container = document.getElementById(containerId);
+    if (!container) return;
+    
+    if (totalItems <= pageSize) {
+        container.innerHTML = '';
+        return;
+    }
+    
+    const totalPages = Math.ceil(totalItems / pageSize);
+    const startIdx = (currentPage - 1) * pageSize + 1;
+    const endIdx = Math.min(currentPage * pageSize, totalItems);
+    
+    let html = 
+    <div class="flex justify-between items-center w-full px-4 py-3 bg-white border-t border-gray-200 sm:px-6">
+        <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
+            <div>
+                <p class="text-sm text-gray-700">
+                    Showing <span class="font-medium"></span> to <span class="font-medium"></span> of <span class="font-medium"></span> results
+                </p>
+            </div>
+            <div>
+                <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
+                    <button onclick="()" >
+                        <span class="sr-only">Previous</span>
+                        <i class="fas fa-chevron-left"></i>
+                    </button>
+                    <button onclick="()" >
+                        <span class="sr-only">Next</span>
+                        <i class="fas fa-chevron-right"></i>
+                    </button>
+                </nav>
+            </div>
+        </div>
+        <div class="flex items-center justify-between w-full sm:hidden">
+            <button onclick="()" >
+                Previous
+            </button>
+            <span class="text-sm text-gray-700">Page  of </span>
+            <button onclick="()" >
+                Next
+            </button>
+        </div>
+    </div>;
+    
+    container.innerHTML = html;
+}
+window.renderPaginationControls = renderPaginationControls;

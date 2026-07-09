@@ -12,6 +12,6 @@ var currentViewedPassId = null;
 var currentUploadedSig = null;
 var currentOriginalSignatureData = null;
 var currentLogPage = 1;
-var logsPerPage = 15;
+var logsPerPage = 10;
 
 window.mockVehicles = mockVehicles;

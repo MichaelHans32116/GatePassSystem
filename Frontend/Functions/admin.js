@@ -10,7 +10,12 @@ var adminState = {
     userPage: 1,
     userTotalPages: 1
 };
-const adminUserPageSize = 15;
+let adminFleetPage = 1;
+let adminDriverPage = 1;
+const PAGE_SIZE = 10;
+window.changeAdminFleetPage = function(page) { adminFleetPage = page; renderAdminMasterLists(); };
+window.changeAdminDriverPage = function(page) { adminDriverPage = page; renderAdminMasterLists(); };
+const adminUserPageSize = 10;
 
 function canDeleteGatePassLogs() {
     return currentUser?.role === 'System Admin' || currentUser?.role === 'Admin';
@@ -664,9 +669,17 @@ async function renderAdminFleet() {
         adminState.vehicles = vehicles;
         adminState.drivers = drivers;
         const driverMap = new Map(drivers.map(driver => [driver.driverId, driver.fullName]));
+        const allVehicles = vehicles;
+        const vStart = (adminFleetPage - 1) * PAGE_SIZE;
+        vehicles = allVehicles.slice(vStart, vStart + PAGE_SIZE);
+        
         document.getElementById('adminFleetList').innerHTML = vehicles.map(vehicle => `
             <tr class="border-b"><td class="p-3 font-semibold">${adminEscape(vehicle.vehicleName)}</td><td class="p-3 font-mono text-xs">${adminEscape(vehicle.plateNumber)}</td><td class="p-3 text-xs">${adminEscape(driverMap.get(vehicle.defaultDriverId) || 'Unassigned')}</td><td class="p-3 text-xs">${adminEscape(vehicle.availabilityStatusCode)}</td><td class="p-3 text-right"><button onclick="openVehicleEditor(${vehicle.vehicleId})" class="text-blue-600 border px-2 py-1 rounded mr-1"><i class="fas fa-edit"></i></button><button onclick="archiveVehicle(${vehicle.vehicleId})" class="text-red-600 border px-2 py-1 rounded"><i class="fas fa-archive"></i></button></td></tr>
         `).join('') || '<tr><td colspan="5" class="p-6 text-center text-gray-400">No active vehicles.</td></tr>';
+        const allDrivers = drivers;
+        const dStart = (adminDriverPage - 1) * PAGE_SIZE;
+        drivers = allDrivers.slice(dStart, dStart + PAGE_SIZE);
+        
         document.getElementById('adminDriverList').innerHTML = drivers.map(driver => `
             <tr class="border-b"><td class="p-3 font-semibold">${adminEscape(driver.fullName)}</td><td class="p-3 text-xs">${adminEscape(driver.driverTypeCode)}</td><td class="p-3 text-xs">${adminEscape(driver.licenseNumber || '—')}</td><td class="p-3 text-xs">${adminDate(driver.licenseExpiryDate)}</td><td class="p-3 text-right"><button onclick="openDriverEditor(${driver.driverId})" class="text-blue-600 border px-2 py-1 rounded mr-1"><i class="fas fa-edit"></i></button><button onclick="archiveDriver(${driver.driverId})" class="text-red-600 border px-2 py-1 rounded"><i class="fas fa-archive"></i></button></td></tr>
         `).join('') || '<tr><td colspan="5" class="p-6 text-center text-gray-400">No active drivers.</td></tr>';

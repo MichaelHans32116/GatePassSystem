@@ -1000,6 +1000,7 @@ function schedGetExportMonday() {
 async function exportScheduleExcel(format) {
     if (typeof ExcelJS === 'undefined') {
         showToast('ExcelJS library not loaded. Please refresh and try again.', 'error');
+        if (window.renderPaginationControls) window.renderPaginationControls(allPendingEvents.length, pendingSchedulePage, PAGE_SIZE, 'pendingPagination', 'changePendingSchedulePage');
         return;
     }
 
@@ -1510,6 +1511,7 @@ function renderFixedSchedulesList() {
 
     if (vehicles.length === 0) {
         container.innerHTML = `<div class="p-6 text-center text-gray-400">No vehicles available.</div>`;
+        if (window.renderPaginationControls) window.renderPaginationControls(allPendingEvents.length, pendingSchedulePage, PAGE_SIZE, 'pendingPagination', 'changePendingSchedulePage');
         return;
     }
 
