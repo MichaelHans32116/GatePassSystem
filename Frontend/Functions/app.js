@@ -489,6 +489,7 @@ window.refreshApplicationState = refreshApplicationState;
 window.checkUnreadNotifications = checkUnreadNotifications;
 window.toggleNotificationDropdown = toggleNotificationDropdown;
 window.markAllNotificationsAsRead = markAllNotificationsAsRead;
+
 function renderPaginationControls(totalItems, currentPage, pageSize, containerId, onPageChangeCallbackName) {
     const container = document.getElementById(containerId);
     if (!container) return;
@@ -502,21 +503,21 @@ function renderPaginationControls(totalItems, currentPage, pageSize, containerId
     const startIdx = (currentPage - 1) * pageSize + 1;
     const endIdx = Math.min(currentPage * pageSize, totalItems);
     
-    let html = 
+    let html = `
     <div class="flex justify-between items-center w-full px-4 py-3 bg-white border-t border-gray-200 sm:px-6">
         <div class="hidden sm:flex-1 sm:flex sm:items-center sm:justify-between">
             <div>
                 <p class="text-sm text-gray-700">
-                    Showing <span class="font-medium"></span> to <span class="font-medium"></span> of <span class="font-medium"></span> results
+                    Showing <span class="font-medium">${startIdx}</span> to <span class="font-medium">${endIdx}</span> of <span class="font-medium">${totalItems}</span> results
                 </p>
             </div>
             <div>
                 <nav class="relative z-0 inline-flex rounded-md shadow-sm -space-x-px" aria-label="Pagination">
-                    <button onclick="()" >
+                    <button onclick="${onPageChangeCallbackName}(${currentPage - 1})" ${currentPage === 1 ? 'disabled class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-gray-100 text-sm font-medium text-gray-400 cursor-not-allowed"' : 'class="relative inline-flex items-center px-2 py-2 rounded-l-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"'}>
                         <span class="sr-only">Previous</span>
                         <i class="fas fa-chevron-left"></i>
                     </button>
-                    <button onclick="()" >
+                    <button onclick="${onPageChangeCallbackName}(${currentPage + 1})" ${currentPage === totalPages ? 'disabled class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-gray-100 text-sm font-medium text-gray-400 cursor-not-allowed"' : 'class="relative inline-flex items-center px-2 py-2 rounded-r-md border border-gray-300 bg-white text-sm font-medium text-gray-500 hover:bg-gray-50"'}>
                         <span class="sr-only">Next</span>
                         <i class="fas fa-chevron-right"></i>
                     </button>
@@ -524,15 +525,15 @@ function renderPaginationControls(totalItems, currentPage, pageSize, containerId
             </div>
         </div>
         <div class="flex items-center justify-between w-full sm:hidden">
-            <button onclick="()" >
+            <button onclick="${onPageChangeCallbackName}(${currentPage - 1})" ${currentPage === 1 ? 'disabled class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-400 bg-gray-100"' : 'class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"'}>
                 Previous
             </button>
-            <span class="text-sm text-gray-700">Page  of </span>
-            <button onclick="()" >
+            <span class="text-sm text-gray-700">Page ${currentPage} of ${totalPages}</span>
+            <button onclick="${onPageChangeCallbackName}(${currentPage + 1})" ${currentPage === totalPages ? 'disabled class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-400 bg-gray-100"' : 'class="relative inline-flex items-center px-4 py-2 border border-gray-300 text-sm font-medium rounded-md text-gray-700 bg-white hover:bg-gray-50"'}>
                 Next
             </button>
         </div>
-    </div>;
+    </div>`;
     
     container.innerHTML = html;
 }
