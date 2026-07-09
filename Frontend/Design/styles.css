@@ -2003,3 +2003,48 @@
     color: #9ca3af;
 }
 .um-shot b { color: #6b7280; }
+
+/* ===== In-app User Manual — slide viewer (Canva-style, left-to-right) ===== */
+.um-stage {
+    overflow: hidden;
+    min-height: 320px;
+}
+@media (max-width: 640px) { .um-stage { min-height: 380px; } }
+.um-slide-body p { margin-bottom: 0.5rem; }
+@keyframes umFromRight { from { opacity: 0; transform: translateX(28px); } to { opacity: 1; transform: none; } }
+@keyframes umFromLeft  { from { opacity: 0; transform: translateX(-28px); } to { opacity: 1; transform: none; } }
+.um-anim-next { animation: umFromRight 0.22s ease; }
+.um-anim-prev { animation: umFromLeft 0.22s ease; }
+.um-navbtn {
+    display: inline-flex;
+    align-items: center;
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #4b5563;
+    background: #f3f4f6;
+    border: 1px solid #e5e7eb;
+    border-radius: 0.5rem;
+    padding: 0.5rem 0.9rem;
+    transition: background 0.15s ease, opacity 0.15s ease;
+}
+.um-navbtn:hover:not([disabled]) { background: #e5e7eb; }
+.um-navbtn[disabled] { opacity: 0.4; cursor: default; }
+.um-navbtn-primary {
+    color: #ffffff;
+    background: #374151;
+    border-color: #374151;
+}
+.um-navbtn-primary:hover { background: #1f2937; }
+.um-dots { display: flex; align-items: center; gap: 0.4rem; }
+.um-dot {
+    width: 8px;
+    height: 8px;
+    border-radius: 9999px;
+    background: #d1d5db;
+    border: none;
+    padding: 0;
+    cursor: pointer;
+    transition: background 0.15s ease, transform 0.15s ease;
+}
+.um-dot:hover { background: #9ca3af; }
+.um-dot-active { background: #374151; transform: scale(1.25); }

@@ -135,6 +135,7 @@ async function switchSection(targetId) {
                 }
             }
             if(sectionTargetId === 'scheduleCalendar') initializeScheduleCalendar();
+            if(sectionTargetId === 'userManual') initUserManual();
         }
 
 

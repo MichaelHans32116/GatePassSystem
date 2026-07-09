@@ -2,6 +2,22 @@
 
 Updated: July 9, 2026
 
+## Phase 14.2 - In-app User Manual as role-gated slides
+
+Reworked the in-app manual from a single scrolling page into a Canva-style,
+page-by-page slideshow, gated by role/permission.
+
+- New `Frontend/Functions/usermanual.js`: renders into `#umRoot`. Users first
+  see a picker of guides filtered to their role (Overview for everyone;
+  Requester, Approver, PAS/HRAD, Guard, Admin shown only to matching roles /
+  permissions, incl. canNoteGatePass and TRUCK_SCHEDULE_MANAGER). Selecting a
+  guide opens it one slide at a time with Previous/Next, dot indicators, a
+  slide counter, left-to-right animation, and arrow-key navigation.
+- `styles.css`: slide-viewer styles (`.um-stage`, `.um-navbtn`, `.um-dot`,
+  animations). `navigation.js`: `initUserManual()` on section open.
+- Documentation stays only inside the manual page (not elsewhere in the app).
+  The standalone docx/pdf are unchanged (the user added their own screenshots).
+
 ## Phase 14.1 - Documentation overhaul + in-app User Manual
 
 Rebuilt the user documentation (the old Gemini set was text-only with
