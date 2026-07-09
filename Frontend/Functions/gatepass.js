@@ -19,6 +19,9 @@ const gatePassStatusLabels = {
     EXPIRED: 'Expired'
 };
 
+let myPassesCurrentPage = 1;
+window.changeMyPassesPage = function(page) { myPassesCurrentPage = page; renderStandardDashboard(); };
+
 function isDatabaseSession() {
     return ApiClient.isDatabaseSession();
 }
@@ -672,7 +675,10 @@ async function renderStandardDashboard() {
     document.getElementById('cntCompleted').innerText =
         myPasses.filter(pass => ['Returned', 'Closed'].includes(pass.status)).length;
 
-    document.getElementById('myPassesTableBody').innerHTML = visiblePasses.map((pass) => `
+    const startIndex = (myPassesCurrentPage - 1) * window.GLOBAL_PAGE_SIZE;
+    const paginatedPasses = visiblePasses.slice(startIndex, startIndex + window.GLOBAL_PAGE_SIZE);
+
+    document.getElementById('myPassesTableBody').innerHTML = paginatedPasses.map((pass) => `
         <tr class="hover:bg-gray-50 transition border-b cursor-pointer" onclick="${getViewPassCall(pass)}">
             <td class="px-4 md:px-5 py-3 font-mono text-mpiBlue text-xs font-bold">${materialEscape(pass.controlNo || pass.id)}</td>
             <td class="px-4 md:px-5 py-3">${pass.dateFiled}</td>
@@ -681,6 +687,10 @@ async function renderStandardDashboard() {
             <td class="px-4 md:px-5 py-3 text-right"><button class="text-mpiBlue hover:underline text-xs"><i class="fas fa-eye"></i></button></td>
         </tr>
     `).join('') || '<tr><td colspan="5" class="px-5 py-8 text-center text-gray-400">No records match your search.</td></tr>';
+    
+    if (window.renderPaginationControls) {
+        window.renderPaginationControls(visiblePasses.length, myPassesCurrentPage, window.GLOBAL_PAGE_SIZE, 'myPassesPagination', 'changeMyPassesPage');
+    }
 }
 
 function renderMyEmployeeQr() {

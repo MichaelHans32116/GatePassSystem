@@ -9,6 +9,9 @@ var qrCameraScanning = false;
 var qrClientCooldowns = new Map();
 const activeGuardQueueStatusCodes = new Set(['APPROVED', 'OUTSIDE', 'OVERDUE']);
 
+let guardQueueCurrentPage = 1;
+window.changeGuardQueuePage = function(page) { guardQueueCurrentPage = page; renderGuardDashboard(); };
+
 function isActiveGuardQueueItem(pass) {
     const statusCode = String(pass?.statusCode || '').trim().toUpperCase();
     const statusLabel = String(pass?.status || '').trim().toUpperCase();
@@ -859,7 +862,10 @@ async function renderGuardDashboard() {
         queueItems = gatePasses.filter(isActiveGuardQueueItem);
     }
 
-    document.getElementById('guardQueueList').innerHTML = queueItems.map(pass => {
+    const startIndex = (guardQueueCurrentPage - 1) * window.GLOBAL_PAGE_SIZE;
+    const paginatedQueue = queueItems.slice(startIndex, startIndex + window.GLOBAL_PAGE_SIZE);
+
+    document.getElementById('guardQueueList').innerHTML = paginatedQueue.map(pass => {
         const waitingOut = isWaitingOutGuardQueueItem(pass);
         return `
             <tr class="border-b hover:bg-gray-50">
@@ -873,6 +879,10 @@ async function renderGuardDashboard() {
             </tr>
         `;
     }).join('') || '<tr><td colspan="4" class="px-4 py-6 text-center text-gray-400 text-xs">Queue is empty. No pending scans.</td></tr>';
+    
+    if (window.renderPaginationControls) {
+        window.renderPaginationControls(queueItems.length, guardQueueCurrentPage, window.GLOBAL_PAGE_SIZE, 'guardQueuePagination', 'changeGuardQueuePage');
+    }
 }
 
 window.simulateQrScan = simulateQrScan;

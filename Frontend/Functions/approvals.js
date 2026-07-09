@@ -2,6 +2,9 @@
 
 var databaseApprovalQueue = [];
 
+let approvalCurrentPage = 1;
+window.changeApprovalPage = function(page) { approvalCurrentPage = page; renderApprovalList(); };
+
 // Caches the most recent /signatures upload for the current approval session so a
 // retried approval (after a transient failure) reuses the same file instead of
 // uploading a fresh one each time and orphaning the previous upload. Reset per pass
@@ -322,7 +325,10 @@ function updateApprovalQueueDisplay(toApprove) {
         badge.classList.add('hidden');
     }
 
-    document.getElementById('approvalList').innerHTML = toApprove.map(pass => `
+    const startIndex = (approvalCurrentPage - 1) * window.GLOBAL_PAGE_SIZE;
+    const paginatedApprovals = toApprove.slice(startIndex, startIndex + window.GLOBAL_PAGE_SIZE);
+
+    document.getElementById('approvalList').innerHTML = paginatedApprovals.map(pass => `
         <div class="bg-white border p-4 rounded shadow-sm flex flex-col justify-between">
             <div class="mb-3">
                 <div class="mb-2 flex items-start justify-between gap-2"><div><span class="text-[9px] font-bold uppercase tracking-wide ${pass.formTypeCode === 'MATERIAL_GATE_PASS' ? 'text-amber-600' : 'text-mpiBlue'}">${materialEscape(pass.formName || 'Form Request')}</span><h3 class="font-bold text-sm">${materialEscape(pass.userName)}</h3></div><span class="whitespace-nowrap rounded bg-yellow-100 px-1 text-[9px]">${materialEscape(pass.status)}</span></div>
@@ -333,6 +339,10 @@ function updateApprovalQueueDisplay(toApprove) {
             <button onclick="${getViewPassCall(pass, true)}" class="w-full bg-blue-50 text-mpiBlue text-xs font-bold py-2 rounded hover:bg-mpiBlue hover:text-white transition">Review Document</button>
         </div>
     `).join('') || '<div class="col-span-2 text-center py-10 text-gray-400">No pending approvals.</div>';
+    
+    if (window.renderPaginationControls) {
+        window.renderPaginationControls(toApprove.length, approvalCurrentPage, window.GLOBAL_PAGE_SIZE, 'approvalPagination', 'changeApprovalPage');
+    }
 }
 
 window.approveCurrentPass = approveCurrentPass;

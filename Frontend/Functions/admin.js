@@ -1,3 +1,11 @@
+let adminLogsPage = 1;
+window.changeAdminLogsPage = function(page) { adminLogsPage = page; renderAdminDashboard(); };
+let adminUsersPage = 1;
+window.changeAdminUsersPage = function(page) { adminUsersPage = page; renderAdminDashboard(); };
+let adminFleetPage = 1;
+window.changeAdminFleetPage = function(page) { adminFleetPage = page; renderAdminMasterLists(); };
+let adminDriverPage = 1;
+window.changeAdminDriverPage = function(page) { adminDriverPage = page; renderAdminMasterLists(); };
 // Database-backed system configuration, fleet, and gate-pass logs.
 
 var adminState = {
@@ -266,7 +274,10 @@ async function renderAdminLogs(page = 1) {
 function renderDatabaseAdminLogs(response) {
     const list = response.items.map(mapApiGatePass);
     gatePasses = list;
-    document.getElementById('adminLogsTable').innerHTML = list.map(pass => `
+    const startIndexLogs = (adminLogsPage - 1) * window.GLOBAL_PAGE_SIZE;
+    const paginatedLogs = list.slice(startIndexLogs, startIndexLogs + window.GLOBAL_PAGE_SIZE);
+
+    document.getElementById('adminLogsTable').innerHTML = paginatedLogs.map(pass => `
         <tr class="hover:bg-gray-50 transition border-b cursor-pointer" onclick="${getViewPassCall(pass)}">
             <td class="px-5 py-2 text-center" onclick="event.stopPropagation()"><input type="checkbox" class="log-checkbox rounded border-gray-300 text-mpiBlue focus:ring-mpiBlue" data-id="${pass.dbId}" onchange="updateSelectedLogsCount()"></td>
             <td class="px-5 py-2 font-mono text-xs">${adminEscape(pass.controlNo || pass.id)}</td>
@@ -300,7 +311,10 @@ function renderDatabaseAdminLogs(response) {
 }
 
 function renderMockAdminLogs(list) {
-    document.getElementById('adminLogsTable').innerHTML = list.map(pass => `
+    const startIndexLogs = (adminLogsPage - 1) * window.GLOBAL_PAGE_SIZE;
+    const paginatedLogs = list.slice(startIndexLogs, startIndexLogs + window.GLOBAL_PAGE_SIZE);
+
+    document.getElementById('adminLogsTable').innerHTML = paginatedLogs.map(pass => `
         <tr class="border-b"><td class="px-5 py-2">${adminEscape(pass.id)}</td><td>${adminEscape(pass.userName)}</td><td>${adminEscape(pass.userDept)}</td><td>${pass.willReturn ? 'No' : 'Yes'}</td><td>${pass.actualOut || '—'}</td><td>${pass.actualIn || '—'}</td><td>${adminEscape(pass.status)}</td></tr>
     `).join('') || '<tr><td colspan="7" class="text-center py-6 text-gray-400">No logs found.</td></tr>';
 }
@@ -310,7 +324,10 @@ function changeLogPage(step) {
 }
 
 function renderMockAdminLogsWithActions(list) {
-    document.getElementById('adminLogsTable').innerHTML = list.map(pass => `
+    const startIndexLogs = (adminLogsPage - 1) * window.GLOBAL_PAGE_SIZE;
+    const paginatedLogs = list.slice(startIndexLogs, startIndexLogs + window.GLOBAL_PAGE_SIZE);
+
+    document.getElementById('adminLogsTable').innerHTML = paginatedLogs.map(pass => `
         <tr class="border-b hover:bg-gray-50 transition cursor-pointer" onclick="${getViewPassCall(pass)}">
             <td class="px-5 py-2 text-center" onclick="event.stopPropagation()"><input type="checkbox" class="log-checkbox rounded border-gray-300 text-mpiBlue focus:ring-mpiBlue" data-id="${pass.id}" onchange="updateSelectedLogsCount()"></td>
             <td class="px-5 py-2">${adminEscape(pass.id)}</td>

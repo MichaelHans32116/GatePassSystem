@@ -1,4 +1,6 @@
 // Application startup and cross-feature dashboard refresh.
+
+window.GLOBAL_PAGE_SIZE = 10;
 function updateDate() {
     const options = {
         weekday: 'short',
