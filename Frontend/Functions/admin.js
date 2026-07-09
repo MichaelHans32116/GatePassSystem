@@ -18,11 +18,7 @@ var adminState = {
     userPage: 1,
     userTotalPages: 1
 };
-let adminFleetPage = 1;
-let adminDriverPage = 1;
-const PAGE_SIZE = 10;
-window.changeAdminFleetPage = function(page) { adminFleetPage = page; renderAdminMasterLists(); };
-window.changeAdminDriverPage = function(page) { adminDriverPage = page; renderAdminMasterLists(); };
+
 const adminUserPageSize = 10;
 
 function canDeleteGatePassLogs() {
