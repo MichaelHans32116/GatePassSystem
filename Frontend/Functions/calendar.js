@@ -23,10 +23,14 @@ function schedParseDateLocal(iso) {
 function schedFormatTime12(timeStr) {
     if (!timeStr) return '';
     const [h, m] = timeStr.split(':');
-    let hour = parseInt(h, 10);
-    const ampm = hour >= 12 ? 'PM' : 'AM';
-    hour = hour % 12 || 12;
-    return `${hour}:${m} ${ampm}`;
+    let hour = parseInt(h, 10) % 24;
+    
+    if (hour === 0) return `12:${m} MN`;
+    if (hour === 12) return `12:${m} NN`;
+    
+    const ampm = hour < 12 ? 'AM' : 'PM';
+    const hour12 = hour % 12 || 12;
+    return `${hour12}:${m} ${ampm}`;
 }
 
 function schedGetWeekNumber(d) {
@@ -848,8 +852,18 @@ function schedBuildTimeSlots(kind) {
         const eh = Math.floor(endTotal / 60);
         const em = endTotal % 60;
         const fmt = (hr, mn) => `${hr}:${String(mn).padStart(2, '0')}`;
+        
+        const fmt12 = (hr, mn) => {
+            const mStr = String(mn).padStart(2, '0');
+            let h12 = hr % 24;
+            if (h12 === 0) return `12:${mStr} MN`;
+            if (h12 === 12) return `12:${mStr} NN`;
+            if (h12 < 12) return `${h12}:${mStr} AM`;
+            return `${h12 - 12}:${mStr} PM`;
+        };
+
         return {
-            label: `${fmt(h, m)} ~ ${fmt(eh, em)}`,
+            label: `${fmt12(h, m)} ~ ${fmt12(eh, em)}`,
             start: h * 60 + m,
             end: endTotal,
             startKey: fmt(h, m),
