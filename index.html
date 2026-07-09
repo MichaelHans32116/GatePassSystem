@@ -1187,10 +1187,11 @@
                     <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
                         <div>
                             <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Trip Type</label>
-                            <select id="hradTripType" class="w-full bg-white border border-gray-300 p-2 rounded text-xs focus:outline-none focus:border-mpiBlue" onchange="handleHradTripTypeChange(findGatePassRecord())">
+                            <select id="hradTripType" class="w-full bg-white border border-gray-300 p-2 rounded text-xs focus:outline-none focus:border-mpiBlue disabled:bg-gray-100 disabled:text-gray-600 disabled:cursor-not-allowed" onchange="handleHradTripTypeChange(findGatePassRecord())">
                                 <option value="HATID">Hatid lang</option>
                                 <option value="BOTH">Hatid at Sundo</option>
                             </select>
+                            <p id="hradTripTypeLockedHint" class="text-[10px] text-gray-500 mt-1 hidden"><i class="fas fa-lock text-[9px] mr-0.5"></i>Set by the requester</p>
                         </div>
                         <div>
                             <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Vehicle Availability</label>
@@ -1326,7 +1327,7 @@
             </div>
             <div class="p-5 overflow-y-auto flex-grow">
                 <div class="mb-4 flex justify-between items-center">
-                    <p class="text-xs text-gray-500">Manage permanent weekly schedules for trucks and drivers.</p>
+                    <p id="fixedSchedulesSubtitle" class="text-xs text-gray-500">Manage permanent weekly schedules for trucks and drivers.</p>
                     <button onclick="openAddFixedScheduleForm()" class="text-xs bg-mpiBlue text-white font-bold px-3 py-1.5 rounded hover:bg-mpiDark transition"><i class="fas fa-plus mr-1"></i> Add Schedule</button>
                 </div>
                 <div class="overflow-x-auto border border-gray-200 rounded-lg">
@@ -1476,13 +1477,13 @@
     <script src="Frontend/Connectors/api-client.js?v=20260624-7.2"></script>
     <script src="Frontend/Functions/signature.js?v=20260629-bugfix"></script>
     <script src="Frontend/Functions/material-gatepass.js?v=20260704-phase134"></script>
-    <script src="Frontend/Functions/modal.js?v=20260704-phase134"></script>
+    <script src="Frontend/Functions/modal.js?v=20260709-phase1311"></script>
     <script src="Frontend/Functions/gatepass.js?v=20260704-phase134"></script>
     <script src="Frontend/Functions/approvals.js?v=20260629-phase111"></script>
     <script src="Frontend/Functions/scanner.js?v=20260629-bugfix"></script>
     <script src="Frontend/Functions/admin.js?v=20260624-7.2"></script>
     <script src="Frontend/Functions/navigation.js?v=20260704-phase134"></script>
-    <script src="Frontend/Functions/calendar.js?v=20260704-phase134"></script>
+    <script src="Frontend/Functions/calendar.js?v=20260709-phase1311"></script>
     <script src="Frontend/Functions/auth.js?v=20260704-phase134"></script>
     <script src="Frontend/Functions/app.js?v=20260629-bugfix"></script>
 </body>

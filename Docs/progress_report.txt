@@ -1,6 +1,35 @@
 # Progress Report
 
-Updated: July 6, 2026
+Updated: July 9, 2026
+
+## Phase 13.9 - Scheduling fixes (3 items)
+
+Three schedule-related fixes across frontend, backend, and DB.
+
+- Calendar pending: a reservation now stays "pending" on the calendar from
+  HRAD assignment all the way through the final PAS noting, and only drops the
+  "Pending" tag once the pass is fully APPROVED. Before, it flipped to
+  RESERVED as soon as it hit PENDING_PAS, so it looked approved too early.
+  Backend change in `ApprovalRepository.cs` (reservation status). A PENDING
+  reservation still blocks the vehicle, so no double-booking risk. The month
+  pills and the day grid now show the word "Pending" explicitly, not just a
+  colour. API rebuild + redeploy required.
+- Trip type locked at HRAD: the requester already picks Hatid at Sundo /
+  Hatid lang / Sundo lang on their form, so the HRAD assignment modal no
+  longer lets Ms Joy re-choose it - the Trip Type selector is locked to the
+  requester's choice ("Set by the requester" hint). Straight-vs-split
+  scheduling for a Both trip still works. Frontend `modal.js` + a backend
+  guard in `ApprovalRepository.cs` that keeps the requester's stored trip type.
+- Truck schedule manager: MUAMAR (GA136, Logistics/PPC) can now manage the
+  recurring weekly TRUCK schedules only - not regular cars. New role +
+  permission (`fleet.truckschedule.manage`) in migration 022, backend scope
+  checks in `FleetController.cs` (trucks = vehicle_type 'TRUCK'), and the
+  "Manage Fixed Schedules" tool filters to trucks for him. HRAD keeps full
+  access. Needs the DB migration + API redeploy.
+
+Deploy note: frontend cache-bust bumped to `20260709-phase1311` (modal.js,
+calendar.js). Run the DB setup so migration 022 applies. Backend redeploy
+required.
 
 ## Phase 13.5 - Guard queue hardening
 

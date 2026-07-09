@@ -304,17 +304,30 @@ function setHradTripTypeOptions(pass) {
     const select = document.getElementById('hradTripType');
     if (!select) return;
     const allowed = getAllowedHradTripTypes(pass);
-    const currentValue = normalizeHradTripTypeCode(
-        select.value ||
+    // The requester already chose the trip type (Hatid at Sundo / Hatid lang /
+    // Sundo lang) on their own request form — that IS the request. HRAD must honour
+    // it, so when the request carries a trip type we lock the selector to that single
+    // value instead of re-offering the whole list. Only legacy requests with no
+    // stored trip type fall back to the editable list.
+    const requested = normalizeHradTripTypeCode(
         pass?.vehicleTripTypeCode ||
         pass?.tripTypeCode ||
         ''
     );
-    select.innerHTML = allowed.map(code =>
+    const locked = Boolean(requested) && allowed.includes(requested);
+    const options = locked ? [requested] : allowed;
+    const currentValue = locked
+        ? requested
+        : normalizeHradTripTypeCode(select.value || requested || '');
+    select.innerHTML = options.map(code =>
         `<option value="${code}">${hradTripTypeLabel(code)}</option>`
     ).join('');
-    select.value = allowed.includes(currentValue) ? currentValue : allowed[0];
-    select.disabled = allowed.length === 1;
+    select.value = options.includes(currentValue) ? currentValue : options[0];
+    select.disabled = locked || options.length === 1;
+    select.dataset.locked = locked ? 'true' : 'false';
+
+    const lockedHint = document.getElementById('hradTripTypeLockedHint');
+    if (lockedHint) lockedHint.classList.toggle('hidden', !locked);
 }
 
 function getHradTripTypeCode(pass) {

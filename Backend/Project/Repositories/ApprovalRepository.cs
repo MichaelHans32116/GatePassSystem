@@ -331,7 +331,13 @@ public sealed class ApprovalRepository(
                         driver_id = @DriverId,
                         expected_out_at = @ExpectedOutAt,
                         expected_in_at = @ExpectedInAt,
-                        vehicle_trip_type_code = NULLIF(TRIM(@TripType), ''),
+                        -- The requester's own Hatid/Sundo/Both choice is authoritative:
+                        -- keep whatever they already submitted and only fall back to the
+                        -- HRAD-supplied value for legacy requests that stored none.
+                        vehicle_trip_type_code = COALESCE(
+                            NULLIF(TRIM(vehicle_trip_type_code), ''),
+                            NULLIF(TRIM(@TripType), '')
+                        ),
                         vehicle_usage_code = CASE
                             WHEN @VehicleId IS NULL AND NULLIF(TRIM(@TripType), '') IS NOT NULL THEN 'PRIVATE'
                             WHEN @VehicleId IS NOT NULL THEN 'COMPANY'
@@ -587,12 +593,17 @@ public sealed class ApprovalRepository(
                 transaction,
                 cancellationToken: cancellationToken));
 
-            // Update associated vehicle reservation status
+            // Update associated vehicle reservation status.
+            // The reservation stays PENDING (and shows as "pending" on the calendar)
+            // through every remaining approval step — including the final PAS noting —
+            // and only becomes RESERVED once the gate pass is fully APPROVED. A PENDING
+            // reservation still blocks vehicle availability, so this does not risk a
+            // double-booking while the request is awaiting its last sign-offs.
             await connection.ExecuteAsync(new CommandDefinition(
                 """
                 UPDATE tbl_vehicle_reservations
                 SET reservation_status_code = CASE
-                    WHEN @NewStatusCode IN ('APPROVED', 'PENDING_PAS') THEN 'RESERVED'
+                    WHEN @NewStatusCode = 'APPROVED' THEN 'RESERVED'
                     WHEN @NewStatusCode IN ('REJECTED', 'CANCELLED') THEN 'CANCELLED'
                     ELSE reservation_status_code
                 END

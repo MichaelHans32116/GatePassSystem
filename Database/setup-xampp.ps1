@@ -265,6 +265,14 @@ if ($databaseExists -eq 0) {
             Write-Host 'Applying database migration 021...' -ForegroundColor Yellow
             Invoke-MySqlSource 'Database\Migrations\021_add_missing_fixed_vehicle_schedules.sql'
         }
+
+        $truckScheduleManagerApplied = Invoke-MySqlScalarInt `
+            "SELECT COUNT(*) FROM gate_pass_system.tbl_schema_versions WHERE version_no='022';"
+
+        if ($truckScheduleManagerApplied -eq 0) {
+            Write-Host 'Applying database migration 022...' -ForegroundColor Yellow
+            Invoke-MySqlSource 'Database\Migrations\022_truck_schedule_manager.sql'
+        }
     }
 }
 

@@ -79,6 +79,17 @@ function schedEventPillClass(entry) {
     return 'bg-blue-100 text-blue-800 border-blue-200';
 }
 
+// A reservation is "pending" while the gate pass is still moving through approval —
+// from HRAD assignment all the way to the final PAS noting. Once fully approved the
+// reservation flips to RESERVED and this returns false, so the "Pending" tag drops off.
+function schedIsPendingEntry(entry) {
+    const code = String((entry && entry.statusCode) || '').toUpperCase();
+    return code === 'PENDING' ||
+        code === 'PENDING_SUPERIOR' ||
+        code === 'PENDING_PRESIDENT' ||
+        code === 'PENDING_PAS';
+}
+
 function schedStatusBadge(code) {
     const map = {
         'FIXED':     'bg-emerald-100 text-emerald-700',
@@ -242,12 +253,19 @@ async function initializeScheduleCalendar() {
         archivedContainer.style.display = window.isGuestCalendarView === true ? 'none' : '';
     }
 
-    // Check if current user is an authorized HR manager
+    // Check if current user is an authorized HR manager, or a truck-only schedule
+    // manager (Logistics/PPC — e.g. MUAMAR / GA136). HR managers see every fixed
+    // schedule; truck managers only see and edit TRUCK schedules (enforced by the
+    // 'fleet.truckschedule.manage' permission on the backend).
     const authorizedHR = ['GA120', 'GA150', 'GA133', 'GA139', 'GA409', 'GA407'];
+    const truckScheduleManagers = ['GA136'];
     const activeUser = typeof currentUser !== 'undefined' ? currentUser : null;
+    const isHrScheduleManager = Boolean(activeUser && authorizedHR.includes(activeUser.id));
+    const isTruckScheduleManager = Boolean(activeUser && truckScheduleManagers.includes(activeUser.id));
+    window.fixedScheduleTruckOnly = isTruckScheduleManager && !isHrScheduleManager;
     const btn = document.getElementById('btnManageFixedSchedules');
     if (btn) {
-        if (activeUser && authorizedHR.includes(activeUser.id)) {
+        if (isHrScheduleManager || isTruckScheduleManager) {
             btn.classList.remove('hidden');
         } else {
             btn.classList.add('hidden');
@@ -354,8 +372,9 @@ function renderScheduleCalendar() {
         visibleEvents.forEach(ev => {
             const pillCls = schedEventPillClass(ev);
             const timeLabel = ev.startTime ? schedFormatTime12(ev.startTime) : '';
+            const pendingTag = schedIsPendingEntry(ev) ? '<span class="font-bold">Pending · </span>' : '';
             html += `<div class="text-[9px] leading-tight truncate px-1.5 py-0.5 rounded border mb-0.5 ${pillCls}" title="${schedEscape(ev.title || ev.vehicleName || '')}">`;
-            html += `${timeLabel ? schedEscape(timeLabel) + ' ' : ''}${schedEscape(ev.vehicleName || ev.title || '')}`;
+            html += `${timeLabel ? schedEscape(timeLabel) + ' ' : ''}${pendingTag}${schedEscape(ev.vehicleName || ev.title || '')}`;
             html += `</div>`;
         });
 
@@ -537,8 +556,13 @@ function schedRenderScheduleGrid(heading, vehicles, timeSlots, dayEvents) {
                 tds += `<td class="sched-grid-special" rowspan="${cell.rowspan}" colspan="${cell.colspan}">${schedEscape(cell.label)}</td>`;
             } else {
                 const ev = cell.ev;
+                // The day grid colours cells by vehicle, not status, so a pending
+                // reservation looks identical to an approved one. Tag it explicitly.
+                const pendingBadge = schedIsPendingEntry(ev)
+                    ? '<span style="display:block;font-size:8px;font-weight:700;opacity:0.85;text-transform:uppercase;letter-spacing:0.03em;">● Pending</span>'
+                    : '';
                 tds += `<td class="sched-grid-event" rowspan="${cell.rowspan}" style="background:${cell.fill};color:${cell.fontColor}" title="${schedEscape(schedEventTooltip(ev))}">
-                    <span class="sched-grid-event-title">${schedEscape(schedEventLabel(ev))}</span>
+                    <span class="sched-grid-event-title">${schedEscape(schedEventLabel(ev))}</span>${pendingBadge}
                 </td>`;
             }
         }
@@ -1400,6 +1424,12 @@ let loadedFixedSchedules = [];
 async function openFixedSchedulesModal() {
     const modal = document.getElementById('fixedSchedulesModal');
     if (!modal) return;
+    const subtitle = document.getElementById('fixedSchedulesSubtitle');
+    if (subtitle) {
+        subtitle.textContent = window.fixedScheduleTruckOnly
+            ? 'Manage permanent weekly TRUCK schedules only (Logistics/PPC).'
+            : 'Manage permanent weekly schedules for trucks and drivers.';
+    }
     modal.classList.remove('hidden');
     modal.classList.add('flex');
     await loadFixedSchedulesList();
@@ -1424,17 +1454,41 @@ async function loadFixedSchedulesList() {
 
 const daysOfWeekNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
 
+// A vehicle counts as a truck when the backend flags it vehicle_type = 'TRUCK'
+// (ISUZU Canter, Mitsubishi Fuso, Flexi Van). Fall back to the name/plate heuristic
+// for records that don't carry the type.
+function schedVehicleIsTruck(vehicle) {
+    if (!vehicle) return false;
+    const type = String(vehicle.vehicleType || vehicle.type || '').toUpperCase();
+    if (type) return type === 'TRUCK';
+    return schedIsTruckPlanVehicle(vehicle);
+}
+
+function schedFixedScheduleIsTruck(item) {
+    const vehicle = (databaseVehicles || []).find(v => String(v.id) === String(item.vehicleId));
+    if (vehicle) return schedVehicleIsTruck(vehicle);
+    return schedIsTruckPlanVehicle({ name: item.vehicleName, plate: item.plateNumber });
+}
+
 function renderFixedSchedulesList() {
     const tbody = document.getElementById('fixedSchedulesTableBody');
     if (!tbody) return;
     tbody.innerHTML = '';
 
-    if (loadedFixedSchedules.length === 0) {
-        tbody.innerHTML = '<tr><td colspan="6" class="px-4 py-6 text-center text-gray-400">No fixed weekly schedules seeded.</td></tr>';
+    // Truck-only managers (Logistics/PPC) never see regular vehicle schedules.
+    const rows = window.fixedScheduleTruckOnly
+        ? loadedFixedSchedules.filter(schedFixedScheduleIsTruck)
+        : loadedFixedSchedules;
+
+    if (rows.length === 0) {
+        const emptyText = window.fixedScheduleTruckOnly
+            ? 'No fixed weekly truck schedules yet.'
+            : 'No fixed weekly schedules seeded.';
+        tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-6 text-center text-gray-400">${emptyText}</td></tr>`;
         return;
     }
 
-    loadedFixedSchedules.forEach(item => {
+    rows.forEach(item => {
         const tr = document.createElement('tr');
         tr.className = 'border-b hover:bg-gray-50';
         tr.innerHTML = `
@@ -1504,12 +1558,14 @@ function populateFixedScheduleFormDropdowns() {
     const dSelect = document.getElementById('fsDriver');
     if (!vSelect || !dSelect) return;
 
-    // Populate Vehicles
+    // Populate Vehicles. Truck-only managers can only pick TRUCK vehicles.
     vSelect.innerHTML = '<option value="">Select Vehicle</option>';
-    (databaseVehicles || []).forEach(v => {
-        const availability = String(v.status || v.availabilityStatusCode || 'Available');
-        vSelect.innerHTML += `<option value="${schedEscape(v.id)}">${schedEscape(v.name)} (${schedEscape(v.plate)}) — ${schedEscape(availability)}</option>`;
-    });
+    (databaseVehicles || [])
+        .filter(v => !window.fixedScheduleTruckOnly || schedVehicleIsTruck(v))
+        .forEach(v => {
+            const availability = String(v.status || v.availabilityStatusCode || 'Available');
+            vSelect.innerHTML += `<option value="${schedEscape(v.id)}">${schedEscape(v.name)} (${schedEscape(v.plate)}) — ${schedEscape(availability)}</option>`;
+        });
 
     // Populate Drivers
     dSelect.innerHTML = '<option value="">Select Driver (Optional)</option>';

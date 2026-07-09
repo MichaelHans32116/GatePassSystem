@@ -131,8 +131,15 @@ public sealed class FleetController(
         [FromBody] SaveFixedScheduleRequest request,
         CancellationToken cancellationToken)
     {
-        var username = User.FindFirst("username")?.Value;
-        if (username != "GA120" && username != "GA150" && username != "GA133" && username != "GA139" && username != "GA409" && username != "GA407")
+        var scope = await ResolveScheduleScopeAsync(cancellationToken);
+        if (!scope.CanManageAll && !scope.CanManageTrucksOnly)
+        {
+            return Forbid();
+        }
+
+        // A truck-only manager (Logistics/PPC) may only touch TRUCK vehicles.
+        if (!scope.CanManageAll &&
+            !await IsTruckVehicleAsync(request.VehicleId, cancellationToken))
         {
             return Forbid();
         }
@@ -147,8 +154,17 @@ public sealed class FleetController(
         [FromBody] SaveFixedScheduleRequest request,
         CancellationToken cancellationToken)
     {
-        var username = User.FindFirst("username")?.Value;
-        if (username != "GA120" && username != "GA150" && username != "GA133" && username != "GA139" && username != "GA409" && username != "GA407")
+        var scope = await ResolveScheduleScopeAsync(cancellationToken);
+        if (!scope.CanManageAll && !scope.CanManageTrucksOnly)
+        {
+            return Forbid();
+        }
+
+        // A truck-only manager may only edit an existing truck schedule and may not
+        // repoint it to a non-truck vehicle.
+        if (!scope.CanManageAll &&
+            (!await IsTruckFixedScheduleAsync(id, cancellationToken) ||
+             !await IsTruckVehicleAsync(request.VehicleId, cancellationToken)))
         {
             return Forbid();
         }
@@ -162,14 +178,86 @@ public sealed class FleetController(
         long id,
         CancellationToken cancellationToken)
     {
-        var username = User.FindFirst("username")?.Value;
-        if (username != "GA120" && username != "GA150" && username != "GA133" && username != "GA139" && username != "GA409" && username != "GA407")
+        var scope = await ResolveScheduleScopeAsync(cancellationToken);
+        if (!scope.CanManageAll && !scope.CanManageTrucksOnly)
+        {
+            return Forbid();
+        }
+
+        if (!scope.CanManageAll &&
+            !await IsTruckFixedScheduleAsync(id, cancellationToken))
         {
             return Forbid();
         }
 
         await fleetService.DeleteFixedScheduleAsync(id, cancellationToken);
         return NoContent();
+    }
+
+    // HRAD managers keep full access to every fixed schedule; a truck-only manager
+    // (e.g. MUAMAR / Logistics-PPC) is granted the data-driven
+    // 'fleet.truckschedule.manage' permission and is limited to TRUCK vehicles.
+    private static readonly string[] HradScheduleManagers =
+        { "GA120", "GA150", "GA133", "GA139", "GA409", "GA407" };
+
+    private async Task<(bool CanManageAll, bool CanManageTrucksOnly)> ResolveScheduleScopeAsync(
+        CancellationToken cancellationToken)
+    {
+        var username = User.FindFirst("username")?.Value;
+        if (username is not null && Array.IndexOf(HradScheduleManagers, username) >= 0)
+        {
+            return (true, false);
+        }
+
+        await using var connection =
+            await connectionFactory.OpenConnectionAsync(cancellationToken);
+        var hasTruckPermission = await connection.ExecuteScalarAsync<int>(new CommandDefinition(
+            """
+            SELECT COUNT(*)
+            FROM tbl_user_roles ur
+            JOIN tbl_roles r ON r.role_id = ur.role_id
+            JOIN tbl_role_permissions rp ON rp.role_id = ur.role_id
+            JOIN tbl_permissions p ON p.permission_id = rp.permission_id
+            WHERE ur.user_id = @UserId
+              AND ur.is_active = TRUE
+              AND r.is_active = TRUE
+              AND p.permission_code = 'fleet.truckschedule.manage';
+            """,
+            new { UserId = CurrentUserId },
+            cancellationToken: cancellationToken));
+
+        return (false, hasTruckPermission > 0);
+    }
+
+    private async Task<bool> IsTruckVehicleAsync(
+        long vehicleId,
+        CancellationToken cancellationToken)
+    {
+        await using var connection =
+            await connectionFactory.OpenConnectionAsync(cancellationToken);
+        var isTruck = await connection.ExecuteScalarAsync<int>(new CommandDefinition(
+            "SELECT COUNT(*) FROM tbl_vehicles WHERE vehicle_id = @VehicleId AND UPPER(vehicle_type) = 'TRUCK';",
+            new { VehicleId = vehicleId },
+            cancellationToken: cancellationToken));
+        return isTruck > 0;
+    }
+
+    private async Task<bool> IsTruckFixedScheduleAsync(
+        long fixedScheduleId,
+        CancellationToken cancellationToken)
+    {
+        await using var connection =
+            await connectionFactory.OpenConnectionAsync(cancellationToken);
+        var isTruck = await connection.ExecuteScalarAsync<int>(new CommandDefinition(
+            """
+            SELECT COUNT(*)
+            FROM tbl_fixed_vehicle_schedules fs
+            JOIN tbl_vehicles v ON v.vehicle_id = fs.vehicle_id
+            WHERE fs.fixed_schedule_id = @Id AND UPPER(v.vehicle_type) = 'TRUCK';
+            """,
+            new { Id = fixedScheduleId },
+            cancellationToken: cancellationToken));
+        return isTruck > 0;
     }
 
     [HttpPost("fleet/service-request")]
