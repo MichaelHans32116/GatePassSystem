@@ -14,18 +14,95 @@ function updateDate() {
 
 function showToast(message, type = 'success') {
             const container = document.getElementById('toastContainer');
+            if (!container) return; // Guard clause in case container is missing
             const toast = document.createElement('div');
             const colors = type === 'success' ? 'bg-green-600' : (type === 'error' ? 'bg-red-600' : 'bg-gray-800');
             const icon = type === 'success' ? 'fa-check' : (type === 'error' ? 'fa-exclamation' : 'fa-info');
             toast.className = `${colors} text-white px-5 py-3 rounded shadow-lg flex items-center space-x-3 transform transition-all duration-300 translate-x-full opacity-0 pointer-events-auto`;
-            toast.innerHTML = `<i class="fas ${icon}"></i> <span class="text-sm font-medium">${escapeHtml(message)}</span>`;
+
+            toast.innerHTML = `
+                <i class="fas ${icon}"></i>
+                <span class="text-sm font-medium">${message}</span>
+            `;
+
             container.appendChild(toast);
-            setTimeout(() => toast.classList.remove('translate-x-full', 'opacity-0'), 10);
+
+            requestAnimationFrame(() => {
+                toast.classList.remove('translate-x-full', 'opacity-0');
+            });
+
             setTimeout(() => {
                 toast.classList.add('translate-x-full', 'opacity-0');
                 setTimeout(() => toast.remove(), 300);
             }, 3000);
+}
+
+function appConfirm(title, message, type = 'danger') {
+    return new Promise((resolve) => {
+        const modal = document.getElementById('appConfirmModal');
+        const content = document.getElementById('appConfirmModalContent');
+        const titleEl = document.getElementById('appConfirmTitle');
+        const messageEl = document.getElementById('appConfirmMessage');
+        const iconEl = document.getElementById('appConfirmIcon');
+        const okBtn = document.getElementById('appConfirmOkBtn');
+        const cancelBtn = document.getElementById('appConfirmCancelBtn');
+
+        if (!modal) {
+            // Fallback to native confirm if HTML is missing
+            resolve(confirm(`${title}\n\n${message}`));
+            return;
         }
+
+        titleEl.textContent = title;
+        messageEl.textContent = message;
+
+        if (type === 'danger') {
+            iconEl.className = 'flex-shrink-0 w-10 h-10 rounded-full bg-red-100 flex items-center justify-center text-red-600';
+            iconEl.innerHTML = '<i class="fas fa-exclamation-triangle text-xl"></i>';
+            okBtn.className = 'text-sm font-bold bg-red-600 text-white px-5 py-2 rounded-lg hover:bg-red-700 transition-colors shadow-sm';
+            okBtn.textContent = 'Delete';
+        } else {
+            iconEl.className = 'flex-shrink-0 w-10 h-10 rounded-full bg-mpiBlue/10 flex items-center justify-center text-mpiBlue';
+            iconEl.innerHTML = '<i class="fas fa-question-circle text-xl"></i>';
+            okBtn.className = 'text-sm font-bold bg-mpiBlue text-white px-5 py-2 rounded-lg hover:bg-mpiDark transition-colors shadow-sm';
+            okBtn.textContent = 'OK';
+        }
+
+        const cleanup = () => {
+            modal.classList.remove('opacity-100');
+            modal.classList.add('opacity-0');
+            content.classList.remove('scale-100');
+            content.classList.add('scale-95');
+            setTimeout(() => {
+                modal.classList.add('hidden');
+                modal.classList.remove('flex');
+            }, 200);
+            okBtn.onclick = null;
+            cancelBtn.onclick = null;
+        };
+
+        okBtn.onclick = () => {
+            cleanup();
+            resolve(true);
+        };
+
+        cancelBtn.onclick = () => {
+            cleanup();
+            resolve(false);
+        };
+
+        modal.classList.remove('hidden');
+        modal.classList.add('flex');
+        
+        // Trigger animation
+        requestAnimationFrame(() => {
+            modal.classList.remove('opacity-0');
+            modal.classList.add('opacity-100');
+            content.classList.remove('scale-95');
+            content.classList.add('scale-100');
+        });
+    });
+}
 
 // ── Notification state ──────────────────────────────────────────────────────
 // Tracks notification IDs that have already produced a toast in this session

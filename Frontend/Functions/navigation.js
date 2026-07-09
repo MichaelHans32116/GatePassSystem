@@ -10,14 +10,15 @@ function toggleSidebar() {
 function setupRoleAccess(user) {
             // Reset visibility
             document.getElementById('navItemApply').style.display = 'flex';
-            const allowedCalendarUserIds = ['GA125', 'GA120', 'GA150', 'GA133', 'GA139', 'GA409', 'GA407'];
+            const allowedCalendarUserIds = ['GA125', 'GA120', 'GA150', 'GA133', 'GA139', 'GA409', 'GA407', 'GA136'];
             const hasCalendarAccess = allowedCalendarUserIds.includes(user.id) || 
                                      user.role === 'System Admin' || 
                                      user.role === 'President' || 
                                      user.role === 'Security' || 
                                      user.role === 'PAS' || 
                                      user.role === 'HRAD' ||
-                                     user.canNoteGatePass;
+                                     user.canNoteGatePass ||
+                                     (user.roles && user.roles.includes('TRUCK_SCHEDULE_MANAGER'));
             if (hasCalendarAccess) {
                 document.getElementById('navItemSchedule').style.display = 'flex';
             } else {

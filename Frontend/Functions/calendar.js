@@ -261,7 +261,7 @@ async function initializeScheduleCalendar() {
     const truckScheduleManagers = ['GA136'];
     const activeUser = typeof currentUser !== 'undefined' ? currentUser : null;
     const isHrScheduleManager = Boolean(activeUser && authorizedHR.includes(activeUser.id));
-    const isTruckScheduleManager = Boolean(activeUser && truckScheduleManagers.includes(activeUser.id));
+    const isTruckScheduleManager = Boolean(activeUser && (truckScheduleManagers.includes(activeUser.id) || (activeUser.roles && activeUser.roles.includes('TRUCK_SCHEDULE_MANAGER'))));
     window.fixedScheduleTruckOnly = isTruckScheduleManager && !isHrScheduleManager;
     const btn = document.getElementById('btnManageFixedSchedules');
     if (btn) {
@@ -1420,6 +1420,7 @@ async function showPublicDriverCalendar() {
 
 // ─── Manage Fixed Weekly Schedules ──────────────────────────────────
 let loadedFixedSchedules = [];
+let fixedScheduleActiveDay = 1; // Default to Monday
 
 async function openFixedSchedulesModal() {
     const modal = document.getElementById('fixedSchedulesModal');
@@ -1446,10 +1447,32 @@ async function loadFixedSchedulesList() {
     try {
         const res = await ApiClient.get('/fleet/fixed-schedules');
         loadedFixedSchedules = Array.isArray(res) ? res : [];
+        renderFixedSchedulesTabs();
         renderFixedSchedulesList();
     } catch (err) {
         showToast('Unable to load fixed schedules.', 'error');
     }
+}
+
+function renderFixedSchedulesTabs() {
+    const tabsContainer = document.getElementById('fixedSchedulesDayTabs');
+    if (!tabsContainer) return;
+    tabsContainer.innerHTML = '';
+    
+    const days = [1, 2, 3, 4, 5, 6]; // Mon to Sat
+    days.forEach(day => {
+        const btn = document.createElement('button');
+        const isActive = fixedScheduleActiveDay === day;
+        
+        btn.className = `px-6 py-2 text-sm font-bold border-b-2 transition ${isActive ? 'border-mpiBlue text-mpiBlue' : 'border-transparent text-gray-500 hover:text-gray-700 hover:border-gray-300'}`;
+        btn.innerText = daysOfWeekNames[day].toUpperCase();
+        btn.onclick = () => {
+            fixedScheduleActiveDay = day;
+            renderFixedSchedulesTabs();
+            renderFixedSchedulesList();
+        };
+        tabsContainer.appendChild(btn);
+    });
 }
 
 const daysOfWeekNames = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
@@ -1471,45 +1494,95 @@ function schedFixedScheduleIsTruck(item) {
 }
 
 function renderFixedSchedulesList() {
-    const tbody = document.getElementById('fixedSchedulesTableBody');
-    if (!tbody) return;
-    tbody.innerHTML = '';
+    const container = document.getElementById('fixedSchedulesMatrixContainer');
+    if (!container) return;
+    container.innerHTML = '';
 
-    // Truck-only managers (Logistics/PPC) never see regular vehicle schedules.
-    const rows = window.fixedScheduleTruckOnly
+    const allRows = window.fixedScheduleTruckOnly
         ? loadedFixedSchedules.filter(schedFixedScheduleIsTruck)
         : loadedFixedSchedules;
 
-    if (rows.length === 0) {
-        const emptyText = window.fixedScheduleTruckOnly
-            ? 'No fixed weekly truck schedules yet.'
-            : 'No fixed weekly schedules seeded.';
-        tbody.innerHTML = `<tr><td colspan="6" class="px-4 py-6 text-center text-gray-400">${emptyText}</td></tr>`;
+    const dayRows = allRows.filter(s => s.dayOfWeek === fixedScheduleActiveDay);
+
+    const vehicles = window.fixedScheduleTruckOnly 
+        ? (databaseVehicles || []).filter(schedVehicleIsTruck)
+        : (databaseVehicles || []);
+
+    if (vehicles.length === 0) {
+        container.innerHTML = `<div class="p-6 text-center text-gray-400">No vehicles available.</div>`;
         return;
     }
 
-    rows.forEach(item => {
-        const tr = document.createElement('tr');
-        tr.className = 'border-b hover:bg-gray-50';
-        tr.innerHTML = `
-            <td class="px-4 py-3 font-semibold text-gray-700">${daysOfWeekNames[item.dayOfWeek] || item.dayOfWeek}</td>
-            <td class="px-4 py-3 text-gray-600 font-mono">${(item.startTime || '').substring(0, 5)} - ${(item.endTime || '').substring(0, 5)}</td>
-            <td class="px-4 py-3 text-gray-800">${schedEscape(item.vehicleName)} <span class="text-xs text-gray-500 font-mono">(${schedEscape(item.plateNumber)})</span></td>
-            <td class="px-4 py-3 text-gray-600">${schedEscape(item.driverName || 'Unassigned')}</td>
-            <td class="px-4 py-3">
-                <div class="font-bold text-gray-800">${schedEscape(item.title)}</div>
-                ${item.description ? `<div class="text-gray-500 text-[10px]">${schedEscape(item.description)}</div>` : ''}
-            </td>
-            <td class="px-4 py-3 space-x-2">
-                <button onclick="openEditFixedScheduleForm(${item.fixedScheduleId})" class="text-blue-600 hover:underline"><i class="fas fa-edit"></i> Edit</button>
-                <button onclick="deleteFixedSchedule(${item.fixedScheduleId})" class="text-red-600 hover:underline"><i class="fas fa-trash"></i> Delete</button>
-            </td>
-        `;
-        tbody.appendChild(tr);
+    const timeSlots = schedBuildTimeSlots('truck');
+    
+    const dayEvents = dayRows.map(s => ({
+        startTime: s.startTime,
+        endTime: s.endTime,
+        vehicleName: s.vehicleName,
+        plateNumber: s.plateNumber,
+        driverName: s.driverName,
+        title: s.title,
+        description: s.description,
+        fixedScheduleId: s.fixedScheduleId,
+        vehicleId: s.vehicleId,
+        scheduleSource: 'FIXED',
+        statusCode: 'FIXED'
+    }));
+
+    const matrix = schedBuildDayMatrix(vehicles, timeSlots, dayEvents);
+
+    let head = '<th class="sched-grid-time-head">TIME</th>';
+    vehicles.forEach((vehicle, vi) => {
+        const style = schedVehicleStyle(vehicle, vi);
+        const bg = schedArgbToHex(style.fill);
+        const fc = style.fontColor ? schedArgbToHex(style.fontColor) : schedReadableTextColor(bg);
+        const name = String(vehicle?.name || '').toUpperCase();
+        const plate = String(vehicle?.plate || '').toUpperCase();
+        const driver = schedDriverLabel(vehicle?.driver);
+        const sub = [plate, driver].filter(Boolean).join(' · ');
+        head += `<th class="sched-grid-vh" style="background:${bg};color:${fc}">
+            <span class="sched-grid-vh-name">${schedEscape(name)}</span>
+            ${sub ? `<span class="sched-grid-vh-sub">${schedEscape(sub)}</span>` : ''}
+        </th>`;
     });
+
+    let rowsHtml = '';
+    timeSlots.forEach((slot, ri) => {
+        const afterHours = slot.start >= SCHED_AFTER_HOURS_MIN;
+        let tds = '';
+        for (let vi = 0; vi < vehicles.length; vi++) {
+            const cell = matrix[ri][vi];
+            if (cell === 'skip') continue;
+            if (cell === undefined) {
+                const vehicleId = vehicles[vi].id;
+                tds += `<td class="sched-grid-cell${afterHours ? ' sched-grid-after' : ''} cursor-pointer hover:bg-gray-100 transition" onclick="openAddFixedScheduleForm(${vehicleId}, ${fixedScheduleActiveDay}, '${slot.startKey}')"></td>`;
+            } else if (cell.type === 'special') {
+                tds += `<td class="sched-grid-special" rowspan="${cell.rowspan}" colspan="${cell.colspan}">${schedEscape(cell.label)}</td>`;
+            } else {
+                const ev = cell.ev;
+                tds += `<td class="sched-grid-event cursor-pointer hover:opacity-90 transition relative group/fsevent" rowspan="${cell.rowspan}" style="background:${cell.fill};color:${cell.fontColor}" onclick="openEditFixedScheduleForm(${ev.fixedScheduleId})" title="${schedEscape(schedEventTooltip(ev))}">
+                    <span class="sched-grid-event-title">${schedEscape(schedEventLabel(ev))}</span>
+                    <button onclick="event.stopPropagation(); deleteFixedSchedule(${ev.fixedScheduleId})" class="absolute top-1 right-1 opacity-0 group-hover/fsevent:opacity-100 text-red-600 hover:text-red-800 transition"><i class="fas fa-times-circle"></i></button>
+                </td>`;
+            }
+        }
+        rowsHtml += `<tr><td class="sched-grid-time${afterHours ? ' sched-grid-time-after' : ''}">${schedEscape(slot.label)}</td>${tds}</tr>`;
+    });
+
+    const html = `
+    <div class="sched-grid-wrap h-full border-0">
+        <div class="sched-grid-scroll h-full">
+            <table class="sched-grid-table">
+                <thead><tr>${head}</tr></thead>
+                <tbody>${rowsHtml}</tbody>
+            </table>
+        </div>
+    </div>`;
+    
+    container.innerHTML = html;
 }
 
-function openAddFixedScheduleForm() {
+function openAddFixedScheduleForm(vehicleId = null, dayOfWeek = null, timeStart = null) {
     const modal = document.getElementById('fixedScheduleFormModal');
     if (!modal) return;
     document.getElementById('fixedScheduleFormTitle').innerText = 'Add Fixed Schedule';
@@ -1517,6 +1590,25 @@ function openAddFixedScheduleForm() {
     document.getElementById('fsId').value = '';
     
     populateFixedScheduleFormDropdowns();
+
+    if (vehicleId) {
+        document.getElementById('fsVehicle').value = vehicleId;
+    }
+    if (dayOfWeek !== null) {
+        document.getElementById('fsDayOfWeek').value = dayOfWeek;
+    }
+    if (timeStart) {
+        document.getElementById('fsStartTime').value = timeStart;
+        // Calculate end time (+30 mins)
+        const [h, m] = timeStart.split(':').map(Number);
+        let endH = h;
+        let endM = m + 30;
+        if (endM >= 60) {
+            endH += 1;
+            endM -= 60;
+        }
+        document.getElementById('fsEndTime').value = `${String(endH).padStart(2, '0')}:${String(endM).padStart(2, '0')}`;
+    }
     
     modal.classList.remove('hidden');
     modal.classList.add('flex');
@@ -1606,9 +1698,11 @@ async function saveFixedScheduleForm(event) {
 }
 
 async function deleteFixedSchedule(id) {
-    if (!confirm('Are you sure you want to delete this fixed schedule?')) return;
+    const confirmed = await appConfirm('Delete Schedule', 'Are you sure you want to delete this fixed schedule?', 'danger');
+    if (!confirmed) return;
+    
     try {
-        await ApiClient.delete(`/fleet/fixed-schedule/${id}`);
+        await ApiClient.request(`/fleet/fixed-schedule/${id}`, { method: 'DELETE' });
         showToast('Fixed schedule deleted successfully.');
         await loadFixedSchedulesList();
         await loadAndRenderScheduleMonth();
