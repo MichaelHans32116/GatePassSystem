@@ -39,6 +39,28 @@ function umIsAdmin() { return umRoleIs(['System Admin']) || umHasRoleCode(['SYST
 function umShot(label) {
     return '<div class="um-shot">Screenshot ' + label + '</div>';
 }
+// Real screenshot, click to enlarge. `caption` is optional small text under the image.
+function umImg(slug, alt, caption) {
+    var src = 'Frontend/Design/images/manual/' + slug + '.jpg';
+    return '<figure class="um-figure">' +
+        '<img src="' + src + '" alt="' + umEsc(alt) + '" class="um-img" onclick="umZoom(this.src, this.alt)" loading="lazy">' +
+        (caption ? '<figcaption class="um-caption">' + umEsc(caption) + '</figcaption>' : '') +
+        '</figure>';
+}
+function umZoom(src, alt) {
+    var overlay = document.getElementById('umZoomOverlay');
+    if (!overlay) {
+        overlay = document.createElement('div');
+        overlay.id = 'umZoomOverlay';
+        overlay.className = 'um-zoom-overlay';
+        overlay.onclick = function () { overlay.classList.remove('um-zoom-open'); };
+        overlay.innerHTML = '<img class="um-zoom-img">';
+        document.body.appendChild(overlay);
+    }
+    overlay.querySelector('img').src = src;
+    overlay.querySelector('img').alt = alt || '';
+    overlay.classList.add('um-zoom-open');
+}
 function umEsc(v) {
     return String(v == null ? '' : v)
         .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
@@ -68,6 +90,8 @@ function umManuals() {
                     '<p class="text-sm">Three parts talk to each other:</p>' +
                     '<pre class="text-[11px] leading-snug bg-gray-50 border border-gray-200 rounded p-3 overflow-x-auto text-gray-700 mt-2">BROWSER        API SERVER        DATABASE\n(the UI)   &lt;-&gt;  (the logic)  &lt;-&gt;  (storage)\nindex.html HTTPS ASP.NET Core  SQL MariaDB/XAMPP</pre>' +
                     '<p class="text-xs text-gray-500 mt-2">The browser talks to the API; the API reads/writes the database and generates QR codes.</p>' },
+                { t: 'Ready to get started', h:
+                    '<p class="text-sm">Open the guide for your role from the previous screen — <b>Requester</b>, <b>Approver</b>, <b>PAS / HRAD</b>, <b>Security Guard</b>, or <b>Administrator</b> — for real, step-by-step screenshots from the system.</p>' },
             ]
         },
         {
@@ -76,12 +100,12 @@ function umManuals() {
             access: umCanRequest,
             slides: [
                 { t: 'Requester Guide', h: '<p>For any employee who needs to leave the premises, use a vehicle, or release items. Follow these steps in order.</p>' },
-                { t: 'Step 1 — Log in', h: '<p>Log in with your <b>Employee ID</b> and <b>password</b>.</p>' + umShot('R1 — Login Screen') },
-                { t: 'Step 2 — Choose the type', h: '<p>On the dashboard, choose the gate pass type: <b>Person</b>, <b>Vehicle</b>, or <b>Material</b>.</p>' + umShot('R2 — Dashboard with Gate Pass buttons') },
-                { t: 'Step 3 — Fill in the details', h: '<p>Enter the name, date, time, <b>purpose</b>, and <b>destination</b>. If a company vehicle is needed, select the <b>trip type</b>.</p>' + umShot('R3 — Request Form (filled in)') },
+                { t: 'Step 1 — Log in', h: '<p>Log in with your <b>Employee ID</b> and <b>password</b>.</p>' + umImg('r1-login', 'Login screen') },
+                { t: 'Step 2 — Choose the type', h: '<p>On the dashboard, choose the gate pass type: <b>Person</b>, <b>Vehicle</b>, or <b>Material</b>.</p>' + umImg('r2-dashboard', 'Dashboard with Gate Pass buttons') },
+                { t: 'Step 3 — Fill in the details', h: '<p>Enter the name, date, time, <b>purpose</b>, and <b>destination</b>. If a company vehicle is needed, select the <b>trip type</b>.</p>' + umImg('r3-request-form', 'Request form filled in') },
                 { t: 'Step 4 — Submit', h: '<p>Click <b>Submit</b> and wait for approval from your superior or the person in charge.</p>' },
-                { t: 'Step 5 — Check the status', h: '<p>Open <b>My Requests</b> to see whether the request is <b>Pending</b>, <b>Approved</b>, or <b>Rejected</b>.</p>' + umShot('R4 — My Requests List') },
-                { t: 'Step 6 — Print', h: '<p>Once <b>Approved</b>, a <b>Print</b> button appears — it produces the formal pass with the <b>QR code</b> and signatures.</p>' + umShot('R5 — Printable Gate Pass Form') + '<p class="text-xs text-gray-500 mt-2">Tip: print only when Approved, and keep the QR clear for the guard to scan.</p>' },
+                { t: 'Step 5 — Check the status', h: '<p>Open <b>My Requests</b> to see whether the request is <b>Pending</b>, <b>Approved</b>, or <b>Rejected</b>.</p>' + umImg('r4-my-requests', 'My Requests list') },
+                { t: 'Step 6 — Print', h: '<p>Once <b>Approved</b>, a <b>Print</b> button appears — it produces the formal pass with the <b>QR code</b> and signatures.</p>' + umImg('r5-printable-form', 'Printable gate pass form with QR code') + '<p class="text-xs text-gray-500 mt-2">Tip: print only when Approved, and keep the QR clear for the guard to scan.</p>' },
             ]
         },
         {
@@ -90,10 +114,11 @@ function umManuals() {
             access: umIsApprover,
             slides: [
                 { t: 'Approver Guide', h: '<p>For an Immediate Superior or the President — you decide whether to permit an employee\'s request.</p>' },
-                { t: 'Step 1 — Open the Approval Dashboard', h: '<p>Log in and go to the <b>Approval Dashboard</b> to see pending requests.</p>' + umShot('AP1 — Approval Dashboard (Pending)') },
-                { t: 'Step 2 — Review the request', h: '<p>Click <b>Review</b> beside the requester\'s name and read the destination, purpose, and (if any) the schedule.</p>' + umShot('AP2 — Document Review Modal') },
-                { t: 'Step 3 — Sign', h: '<p>Apply your <b>e-signature</b> on the digital canvas — mouse or touchscreen.</p>' + umShot('AP3 — Signature Pad') },
-                { t: 'Step 4 — Approve or Reject', h: '<p>Click <b>Approve</b>. If it cannot proceed, click <b>Reject</b> and give a clear reason.</p><p class="text-xs text-gray-500 mt-2">After you approve, it moves to the next step (HRAD / President / PAS) until the route is complete.</p>' },
+                { t: 'Step 1 — Open the Approval Dashboard', h: '<p>Log in and go to the <b>Approval Dashboard</b> to see pending requests.</p>' + umImg('ap1-dashboard', 'Approval dashboard with pending requests') },
+                { t: 'Step 2 — Click Review', h: '<p>Click <b>Review</b> beside the requester\'s name to open the request.</p>' + umImg('ap2-review-click', 'Reviewing a request in the list') },
+                { t: 'Step 3 — Read the details', h: '<p>Check the destination, purpose, and (if any) the schedule in the Document Review view.</p>' + umImg('ap3-review-details', 'Document review with request details') },
+                { t: 'Step 4 — Sign', h: '<p>Apply your <b>e-signature</b> on the digital canvas — mouse or touchscreen.</p>' + umImg('ap4-signature-pad', 'Signature pad') },
+                { t: 'Step 5 — Approve or Reject', h: '<p>Click <b>Approve</b>. If it cannot proceed, click <b>Reject</b> and give a clear reason.</p>' + umImg('ap5-approve', 'Approve or Reject buttons') + '<p class="text-xs text-gray-500 mt-2">After you approve, it moves to the next step (HRAD / President / PAS) until the route is complete.</p>' },
             ]
         },
         {
@@ -102,11 +127,13 @@ function umManuals() {
             access: umIsHrad,
             slides: [
                 { t: 'PAS / HRAD Guide', h: '<p>You control the vehicle, driver, and schedule for requests that need a company vehicle.</p>' },
-                { t: 'Step 1 — Open the calendar', h: '<p>Open the <b>Schedule Calendar</b> (monthly view).</p>' + umShot('H1 — Calendar View (monthly)') },
-                { t: 'Step 2 — Find pending schedules', h: '<p>Requests that need a company vehicle appear as a <b>Pending Schedule</b> on the calendar.</p>' + umShot('H2 — Pending Schedule on the calendar') },
-                { t: 'Step 3 — Assign vehicle and driver', h: '<p>Click the request and pick the <b>vehicle</b> and <b>driver</b>. The <b>trip type is locked</b> to the requester\'s choice; you may still choose <i>straight</i> or <i>split</i> scheduling for a round trip.</p>' + umShot('H3 — HRAD Assignment Modal (trip type locked)') },
+                { t: 'Step 1 — Open the calendar', h: '<p>Open the <b>Schedule Calendar</b> (monthly view).</p>' + umImg('h1-calendar', 'Monthly calendar view') },
+                { t: 'Step 2 — Find pending schedules', h: '<p>Requests that need a company vehicle appear as a <b>Pending Schedule</b> on the calendar.</p>' + umImg('h2-pending-schedule', 'Pending schedule on the calendar') },
+                { t: 'Step 3 — Assign vehicle and driver', h: '<p>Click the request and pick the <b>vehicle</b> and <b>driver</b>. The <b>trip type is locked</b> to the requester\'s choice; you may still choose <i>straight</i> or <i>split</i> scheduling for a round trip.</p>' + umImg('h3-assignment-modal', 'HRAD assignment modal with trip type locked') },
                 { t: 'Step 4 — Save', h: '<p>Save to update the calendar. It stays <b>Pending</b> until fully approved, then the "Pending" label disappears.</p>' },
-                { t: 'Fixed / recurring schedules', h: '<p>For recurring trips, use <b>Manage Fixed Schedules</b>.</p>' + umShot('H4 — Manage Fixed Schedules Modal') + '<p class="text-xs text-gray-500 mt-2">Logistics/PPC staff see <b>trucks only</b> here.</p>' },
+                { t: 'Fixed / recurring schedules', h: '<p>For recurring trips, click <b>Manage Fixed Schedules</b>.</p>' + umImg('h4-fixed-schedules', 'Manage Fixed Schedules modal') },
+                { t: 'Adding a fixed schedule', h: '<p>Set the vehicle, driver, day of week, and time for the recurring trip.</p>' + umImg('h5-fixed-schedule-form', 'Fixed schedule form') },
+                { t: 'Saved fixed schedule', h: '<p>The recurring trip now appears automatically every week — no need to re-enter it.</p>' + umImg('h6-fixed-schedule-saved', 'Saved fixed schedule list') + '<p class="text-xs text-gray-500 mt-2">Logistics/PPC staff see <b>trucks only</b> here.</p>' },
             ]
         },
         {
@@ -115,9 +142,10 @@ function umManuals() {
             access: umIsGuard,
             slides: [
                 { t: 'Security Guard Guide', h: '<p>You ensure only authorized people enter and exit.</p>' },
-                { t: 'Step 1 — Open the scanner', h: '<p>Open the <b>Guard Scanner</b> page on a tablet or computer.</p>' + umShot('G1 — Guard Scanner Page') },
-                { t: 'Step 2 — Scan the QR', h: '<p>Present the QR to the camera: <b>GREEN</b> = valid/approved, <b>RED</b> = rejected/expired.</p>' + umShot('G2 — Scan Result (valid / invalid)') },
-                { t: 'Step 3 — Mark OUT / IN', h: '<p>Click <b>Mark as OUT</b> on exit and <b>Mark as IN</b> on return — saved automatically.</p><p class="text-xs text-gray-500 mt-2">If the QR won\'t read, type the <b>Control No.</b> from the form.</p>' },
+                { t: 'Step 1 — Open the scanner', h: '<p>Open the <b>Guard Scanner</b> page on a tablet or computer.</p>' + umImg('g1-scanner-page', 'Guard scanner page') },
+                { t: 'Step 2 — Scan the QR', h: '<p>Present the printed gate pass to the camera and wait for a result.</p>' + umImg('g2-scan-result-a', 'Scanning a gate pass') },
+                { t: 'Step 3 — Read the result', h: '<p><b>GREEN</b> means valid and Approved; <b>RED</b> means Rejected or expired. The scanned pass details appear on screen.</p>' + umImg('g3-scan-result-b', 'A scanned gate pass on a mobile device') },
+                { t: 'Step 4 — Mark OUT / IN', h: '<p>Click <b>Mark as OUT</b> on exit and <b>Mark as IN</b> on return — saved automatically.</p>' + umImg('g4-mark-in', 'Marking a pass as IN') + '<p class="text-xs text-gray-500 mt-2">If the QR won\'t read, type the <b>Control No.</b> from the form.</p>' },
             ]
         },
         {
@@ -126,10 +154,10 @@ function umManuals() {
             access: umIsAdmin,
             slides: [
                 { t: 'Administrator Guide', h: '<p>You maintain users and master data.</p>' },
-                { t: 'Step 1 — Admin Panel', h: '<p>Go to the <b>Admin Panel</b>.</p>' + umShot('AD1 — Admin Panel Dashboard') },
-                { t: 'Step 2 — User Management', h: '<p>Add employees, reset passwords, or deactivate resigned users.</p>' + umShot('AD2 — User Management Page') },
-                { t: 'Step 3 — Master Lists', h: '<p>Update <b>Trucks</b>, <b>Drivers</b>, and <b>Destinations</b>.</p>' + umShot('AD3 — Master List Settings') },
-                { t: 'Step 4 — Audit Trail', h: '<p>Use the <b>Audit Trail</b> to trace who approved or changed records.</p>' + umShot('AD4 — Audit Trail / System Logs') },
+                { t: 'Step 1 — Admin Panel', h: '<p>Go to the <b>Admin Panel</b>.</p>' + umImg('ad1-admin-panel', 'Admin panel dashboard') },
+                { t: 'Step 2 — User Management', h: '<p>Add employees, reset passwords, or deactivate resigned users.</p>' + umImg('ad2-user-management', 'User management page') },
+                { t: 'Step 3 — Master Lists', h: '<p>Update <b>Trucks</b>, <b>Drivers</b>, and <b>Destinations</b>.</p>' + umImg('ad3-master-lists', 'Master list settings') },
+                { t: 'Step 4 — Audit Trail', h: '<p>Use the <b>Audit Trail</b> to trace who approved or changed records.</p>' + umImg('ad4-audit-trail', 'Audit trail and system logs') },
                 { t: 'Technical setup (IT)', h: '<p class="text-sm">Front end: Vanilla JS + Tailwind. Back end: ASP.NET Core 8 (C#), Dapper, stored procedures. Database: MariaDB via XAMPP. Auth: Employee ID + password &rarr; JWT. Approval steps: SUPERIOR &rarr; HRAD_ASSIGN &rarr; PRESIDENT &rarr; PAS.</p>' },
             ]
         },

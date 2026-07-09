@@ -2,6 +2,34 @@
 
 Updated: July 9, 2026
 
+## Phase 14.4 - Real screenshots in the in-app slide manual
+
+Wired the user's real screenshots (previously only embedded in the docx
+manuals) into the in-app slide viewer, and removed the "put screenshot here"
+placeholder text from the System Overview docs.
+
+- Extracted 24 screenshots from the 5 role docx manuals (Requester, Approver,
+  PAS/HRAD, Guard, Admin), resized to fit a slide (max 1100x1200) and
+  recompressed as JPEG - ~4.8 MB of source images down to ~1.3 MB, saved
+  under `Frontend/Design/images/manual/`.
+- `usermanual.js`: added `umImg()` (renders a captioned, click-to-zoom image)
+  and `umZoom()` (fullscreen lightbox overlay). Expanded the Approver (3->5),
+  PAS/HRAD (4->6), and Guard (2->4) guides to one slide per real screenshot,
+  since the user captured more granular steps than the original placeholder
+  count; Requester and Admin already matched 1:1 and just got real images.
+- `styles.css`: `.um-figure/.um-img/.um-caption` (bordered, shadowed, capped
+  at 46vh so tall portrait/mobile shots stay contained) and
+  `.um-zoom-overlay/.um-zoom-img` for the lightbox. `.um-stage` switched from
+  `overflow:hidden` to a scrollable max-height so image + text slides never
+  clip.
+- System Overview (docx/pdf, both the standalone file and the in-app
+  Overview guide) no longer has "SCREENSHOT" placeholder boxes for the
+  route-preview/architecture diagram, since no real screenshot exists for
+  those - just the explanatory text.
+- Verified in preview: every `umImg()` reference resolves to a real file (no
+  orphans), all slide counts/step order walk correctly per role, images load
+  with no 404s, and the zoom lightbox opens the correct enlarged image.
+
 ## Phase 14.2 - In-app User Manual as role-gated slides
 
 Reworked the in-app manual from a single scrolling page into a Canva-style,
