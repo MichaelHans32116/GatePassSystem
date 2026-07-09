@@ -2,6 +2,33 @@
 
 Updated: July 9, 2026
 
+## Phase 14.1 - Documentation overhaul + in-app User Manual
+
+Rebuilt the user documentation (the old Gemini set was text-only with
+"[ ILAGAY DITO ANG PICTURE ]" placeholders and no real screenshots).
+
+- New in-app "User Manual" page (Help section in the sidebar, visible to all
+  roles): overview, system architecture, role table, collapsible step-by-step
+  guides per role, FAQ, and glossary. Plain/monochrome (not colorful), formal
+  English, with 18 labeled screenshot slots. Files: `index.html` (new
+  `sec-userManual`), `navigation.js` (title), `styles.css` (`.um-shot`).
+- Regenerated the 6 standalone docs (`FormRequest_Documentation/`, docx + pdf)
+  with expanded content + architecture + labeled [SCREENSHOT] boxes, formal
+  English, plain styling. Master source: `00_MASTER_Documentation.md`. These
+  doc files are intentionally kept OUT of git - the final versions will contain
+  real employee screenshots (per the no-real-data-in-git rule). Gemini's
+  originals were backed up before regenerating.
+- Screenshots are not yet inserted (deferred). An 18-shot checklist (R1..AD4)
+  is in the master doc and the in-app manual; drop images into the labeled
+  slots when ready - no code change needed.
+
+Security note (CrowdStrike Falcon): the warnings on the Codex-generated ops
+scripts most likely come from `start-public.ps1` (silent `winget` install of
+cloudflared + a hidden Cloudflare Tunnel to *.trycloudflare.com) and the
+hidden-window launchers that start the freshly-built API .exe. These are
+legitimate helpers but use TTP-like patterns (tunneling tool, hidden process,
+low-reputation binary) that behavioral EDR flags. `generate_docs.py` is benign.
+
 ## Phase 13.9 - Scheduling fixes (3 items)
 
 Three schedule-related fixes across frontend, backend, and DB.

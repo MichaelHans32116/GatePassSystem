@@ -12,6 +12,12 @@
       "runtimeExecutable": "npm",
       "runtimeArgs": ["--prefix", "C:/Users/Michael Hans/OneDrive/Desktop/BuildBid/web-app", "run", "dev", "--", "-p", "3939"],
       "port": 3939
+    },
+    {
+      "name": "formrequest-frontend",
+      "runtimeExecutable": "python",
+      "runtimeArgs": ["-m", "http.server", "5599", "--directory", "C:/Users/ivanlaurente/Desktop/Hans Files/GatePassSystem"],
+      "port": 5599
     }
   ]
 }

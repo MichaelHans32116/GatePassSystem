@@ -32,7 +32,7 @@
             }
         }
     </script>
-    <link rel="stylesheet" href="Frontend/Design/styles.css?v=20260709-phase1312">
+    <link rel="stylesheet" href="Frontend/Design/styles.css?v=20260709-manual">
 </head>
 <body class="h-[100dvh] overflow-hidden flex flex-col font-sans text-sm md:text-base">
 
@@ -154,6 +154,13 @@
                     <div class="px-6 py-2 text-[10px] font-bold text-blue-300 uppercase tracking-widest">System</div>
                     <a href="#" class="nav-item px-6 py-3 transition text-white" data-target="adminPanel" onclick="switchSection('adminPanel')">
                         <i class="fas fa-folder-open w-6 text-left"></i> <span class="text-sm" id="navAdminLabel">Logs & Records</span>
+                    </a>
+                </div>
+
+                <div class="mt-4 block">
+                    <div class="px-6 py-2 text-[10px] font-bold text-blue-300 uppercase tracking-widest">Help</div>
+                    <a href="#" class="nav-item px-6 py-3 transition text-white" data-target="userManual" onclick="switchSection('userManual')" id="navItemManual">
+                        <i class="fas fa-book w-6 text-left"></i> <span class="text-sm">User Manual</span>
                     </a>
                 </div>
             </nav>
@@ -882,6 +889,217 @@
                     </div>
                 </section>
 
+                <!-- SECTION: USER MANUAL -->
+                <section id="sec-userManual" class="view-section hidden fade-in max-w-4xl mx-auto text-gray-800">
+                    <div class="bg-white rounded-lg shadow-sm border border-gray-200 p-6 md:p-8">
+
+                        <!-- Header -->
+                        <div class="border-b border-gray-200 pb-4 mb-5">
+                            <h2 class="text-xl font-bold text-gray-800"><i class="fas fa-book mr-2 text-gray-500"></i>User Manual — FormRequest System</h2>
+                            <p class="text-sm text-gray-500 mt-1">A guide for every user. Select your role below for step-by-step instructions.</p>
+                            <p class="text-[11px] text-gray-400 mt-2">Version 1.0 · For internal use only.</p>
+                        </div>
+
+                        <!-- Quick nav -->
+                        <div class="mb-6 grid grid-cols-2 sm:grid-cols-3 gap-2 text-xs">
+                            <a href="#um-overview" class="border border-gray-200 rounded px-3 py-2 text-gray-600 hover:bg-gray-50 transition"><i class="fas fa-circle-info w-4 text-gray-400"></i> Overview</a>
+                            <a href="#um-architecture" class="border border-gray-200 rounded px-3 py-2 text-gray-600 hover:bg-gray-50 transition"><i class="fas fa-sitemap w-4 text-gray-400"></i> Architecture</a>
+                            <a href="#um-roles" class="border border-gray-200 rounded px-3 py-2 text-gray-600 hover:bg-gray-50 transition"><i class="fas fa-users w-4 text-gray-400"></i> Roles</a>
+                            <a href="#um-guides" class="border border-gray-200 rounded px-3 py-2 text-gray-600 hover:bg-gray-50 transition"><i class="fas fa-list-check w-4 text-gray-400"></i> Role Guides</a>
+                            <a href="#um-faq" class="border border-gray-200 rounded px-3 py-2 text-gray-600 hover:bg-gray-50 transition"><i class="fas fa-circle-question w-4 text-gray-400"></i> FAQ</a>
+                            <a href="#um-glossary" class="border border-gray-200 rounded px-3 py-2 text-gray-600 hover:bg-gray-50 transition"><i class="fas fa-book-open w-4 text-gray-400"></i> Glossary</a>
+                        </div>
+
+                        <!-- 1. Overview -->
+                        <div id="um-overview" class="mb-8">
+                            <h3 class="text-base font-bold text-gray-800 mb-2">1. What is the FormRequest System?</h3>
+                            <p class="text-sm leading-relaxed text-gray-600">An internal web application that digitizes the entire <b>gate pass</b> process — from request, approval, and printing, to monitoring entry and exit at the gate. Approvals are digital (with e-signatures), every approved pass carries a <b>QR code</b> for a single-scan <b>Time Out / Time In</b> by the guard, and a <b>calendar</b> manages vehicle and driver schedules.</p>
+                            <div class="mt-3 grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+                                <div class="border border-gray-200 rounded p-3"><b class="text-gray-700">Person Gate Pass</b><p class="text-gray-500 text-xs mt-1">For personnel leaving the premises. Includes QR Time Out / Time In and may include a company vehicle.</p></div>
+                                <div class="border border-gray-200 rounded p-3"><b class="text-gray-700">Material Gate Pass</b><p class="text-gray-500 text-xs mt-1">For releasing materials or items, with an itemized release list.</p></div>
+                            </div>
+                            <p class="text-xs text-gray-500 mt-3"><b>Trip type (when a company vehicle is required):</b> the requester selects <i>Hatid at Sundo</i> (drop-off and pick-up), <i>Hatid lang</i> (drop-off only), or <i>Sundo lang</i> (pick-up only). The requester's chosen trip type is final — it is locked at assignment.</p>
+                        </div>
+
+                        <!-- 2. Architecture -->
+                        <div id="um-architecture" class="mb-8">
+                            <h3 class="text-base font-bold text-gray-800 mb-2">2. How it works (System Architecture)</h3>
+                            <p class="text-sm leading-relaxed text-gray-600 mb-3">Three components communicate with one another: the <b>browser</b> (what you see and interact with), the <b>API server</b> (the logic layer — where decisions are made and QR codes are generated), and the <b>database</b> (where all records are stored). The flow is: browser &rarr; API &rarr; database &rarr; back to the browser.</p>
+                            <pre class="text-[11px] leading-snug bg-gray-50 border border-gray-200 rounded p-3 overflow-x-auto text-gray-700">  BROWSER            API SERVER           DATABASE
+  (front-end UI)  ⇄  (logic layer)  ⇄     (storage)
+  index.html   HTTPS  ASP.NET Core 8  SQL  MariaDB / XAMPP</pre>
+                            <details class="mt-3 border border-gray-200 rounded">
+                                <summary class="cursor-pointer px-3 py-2 text-sm font-semibold text-gray-700 select-none">Technical details (for IT)</summary>
+                                <div class="px-3 pb-3 text-xs text-gray-600 space-y-1">
+                                    <p><b>Front end:</b> Vanilla JavaScript + Tailwind CSS (<code>index.html</code> + <code>Frontend/Functions/</code>).</p>
+                                    <p><b>Back end:</b> ASP.NET Core 8 (C#), Dapper, stored procedures.</p>
+                                    <p><b>Database:</b> MariaDB via XAMPP (<code>Database/</code> schema + migrations).</p>
+                                    <p><b>Authentication:</b> login with Employee ID + password &rarr; JWT access token.</p>
+                                    <p><b>Roles/permissions:</b> stored in the database (<code>tbl_roles</code>, <code>tbl_permissions</code>, <code>tbl_user_roles</code>).</p>
+                                    <p><b>Approval steps:</b> SUPERIOR &rarr; HRAD_ASSIGN &rarr; PRESIDENT &rarr; PAS, each recorded in the audit history.</p>
+                                </div>
+                            </details>
+                            <div class="my-3 flex items-center justify-center rounded-lg border-2 border-dashed border-gray-300 bg-gray-50 px-4 py-6 text-center text-xs text-gray-400">
+                                <span><i class="fas fa-image mr-1.5"></i>Screenshot <b>A2</b> — System Architecture Diagram <span class="block mt-1 text-[10px]">(optional · place the actual image here)</span></span>
+                            </div>
+                        </div>
+
+                        <!-- 3. Roles -->
+                        <div id="um-roles" class="mb-8">
+                            <h3 class="text-base font-bold text-gray-800 mb-2">3. Roles and who uses them</h3>
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left border-collapse text-sm">
+                                    <thead><tr class="bg-gray-50 border-y text-gray-500 text-[11px] uppercase tracking-wider"><th class="px-3 py-2 font-semibold">Role</th><th class="px-3 py-2 font-semibold">Responsibility in the system</th></tr></thead>
+                                    <tbody class="divide-y divide-gray-100 text-gray-600">
+                                        <tr><td class="px-3 py-2 font-semibold text-gray-700">Requester (Associate)</td><td class="px-3 py-2">Creates gate pass requests for themselves.</td></tr>
+                                        <tr><td class="px-3 py-2 font-semibold text-gray-700">Immediate Superior</td><td class="px-3 py-2">First to approve a subordinate's request.</td></tr>
+                                        <tr><td class="px-3 py-2 font-semibold text-gray-700">President</td><td class="px-3 py-2">Executive approval when required.</td></tr>
+                                        <tr><td class="px-3 py-2 font-semibold text-gray-700">PAS / HRAD</td><td class="px-3 py-2">Final noting; assigns the vehicle and schedule.</td></tr>
+                                        <tr><td class="px-3 py-2 font-semibold text-gray-700">Security Guard</td><td class="px-3 py-2">Scans the QR code; records Time Out / Time In.</td></tr>
+                                        <tr><td class="px-3 py-2 font-semibold text-gray-700">System Administrator</td><td class="px-3 py-2">Manages users, master lists, and audit logs.</td></tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+
+                        <!-- 4. Role guides (collapsible) -->
+                        <div id="um-guides" class="mb-8">
+                            <h3 class="text-base font-bold text-gray-800 mb-3">4. Step-by-step guide per role</h3>
+
+                            <details class="border border-gray-200 rounded mb-2" open>
+                                <summary class="cursor-pointer px-4 py-3 text-sm font-bold text-gray-700 bg-gray-50 select-none"><i class="fas fa-user-pen w-5 text-gray-400"></i> Requester — Creating a Request</summary>
+                                <div class="px-4 py-3 text-sm text-gray-600">
+                                    <ol class="list-decimal ml-5 space-y-1">
+                                        <li><b>Log in</b> with your Employee ID and password.</li>
+                                    </ol>
+                                    <div class="um-shot">Screenshot <b>R1</b> — Login Screen</div>
+                                    <ol class="list-decimal ml-5 space-y-1" start="2">
+                                        <li>On the dashboard, choose the gate pass type (Person / Vehicle / Material).</li>
+                                    </ol>
+                                    <div class="um-shot">Screenshot <b>R2</b> — Dashboard with Gate Pass buttons</div>
+                                    <ol class="list-decimal ml-5 space-y-1" start="3">
+                                        <li>Fill in the details: name, date, time, purpose, and destination. If a company vehicle is needed, select the trip type.</li>
+                                    </ol>
+                                    <div class="um-shot">Screenshot <b>R3</b> — Request Form (filled in)</div>
+                                    <ol class="list-decimal ml-5 space-y-1" start="4">
+                                        <li>Click <b>Submit</b> and wait for approval.</li>
+                                        <li>Under <b>My Requests</b>, you can see whether the request is Pending, Approved, or Rejected.</li>
+                                    </ol>
+                                    <div class="um-shot">Screenshot <b>R4</b> — My Requests List</div>
+                                    <ol class="list-decimal ml-5 space-y-1" start="6">
+                                        <li>Once Approved, a <b>Print</b> button appears — this produces the formal gate pass form with the QR code and signatures.</li>
+                                    </ol>
+                                    <div class="um-shot">Screenshot <b>R5</b> — Printable Gate Pass Form (with QR + signature)</div>
+                                </div>
+                            </details>
+
+                            <details class="border border-gray-200 rounded mb-2">
+                                <summary class="cursor-pointer px-4 py-3 text-sm font-bold text-gray-700 bg-gray-50 select-none"><i class="fas fa-check-double w-5 text-gray-400"></i> Approver — Superior &amp; President</summary>
+                                <div class="px-4 py-3 text-sm text-gray-600">
+                                    <ol class="list-decimal ml-5 space-y-1">
+                                        <li>Log in and go to the <b>Approval Dashboard</b>.</li>
+                                    </ol>
+                                    <div class="um-shot">Screenshot <b>AP1</b> — Approval Dashboard (Pending)</div>
+                                    <ol class="list-decimal ml-5 space-y-1" start="2">
+                                        <li>Click <b>Review</b> beside the requester's name and read the details.</li>
+                                    </ol>
+                                    <div class="um-shot">Screenshot <b>AP2</b> — Document Review Modal</div>
+                                    <ol class="list-decimal ml-5 space-y-1" start="3">
+                                        <li>Apply your <b>e-signature</b> (mouse or touchscreen), then click <b>Approve</b>. If it cannot be approved, click <b>Reject</b> and provide a clear reason.</li>
+                                    </ol>
+                                    <div class="um-shot">Screenshot <b>AP3</b> — Signature Pad</div>
+                                </div>
+                            </details>
+
+                            <details class="border border-gray-200 rounded mb-2">
+                                <summary class="cursor-pointer px-4 py-3 text-sm font-bold text-gray-700 bg-gray-50 select-none"><i class="fas fa-calendar-alt w-5 text-gray-400"></i> PAS / HRAD — Vehicle Scheduling</summary>
+                                <div class="px-4 py-3 text-sm text-gray-600">
+                                    <ol class="list-decimal ml-5 space-y-1">
+                                        <li>Open the <b>Schedule Calendar</b>.</li>
+                                    </ol>
+                                    <div class="um-shot">Screenshot <b>H1</b> — Calendar View (monthly)</div>
+                                    <ol class="list-decimal ml-5 space-y-1" start="2">
+                                        <li>Vehicle requests that require a company vehicle appear as a <b>Pending Schedule</b>.</li>
+                                    </ol>
+                                    <div class="um-shot">Screenshot <b>H2</b> — Pending Schedule on the calendar</div>
+                                    <ol class="list-decimal ml-5 space-y-1" start="3">
+                                        <li>Click the request and select the vehicle and driver. The <b>trip type is locked</b> to the requester's choice; you may still choose whether the schedule is <i>straight</i> or <i>split</i> for a round trip.</li>
+                                    </ol>
+                                    <div class="um-shot">Screenshot <b>H3</b> — HRAD Assignment Modal (trip type locked)</div>
+                                    <ol class="list-decimal ml-5 space-y-1" start="4">
+                                        <li>For recurring trips, click <b>Manage Fixed Schedules</b>. <span class="text-gray-500">(Logistics/PPC sees <b>trucks only</b>.)</span></li>
+                                    </ol>
+                                    <div class="um-shot">Screenshot <b>H4</b> — Manage Fixed Schedules Modal</div>
+                                </div>
+                            </details>
+
+                            <details class="border border-gray-200 rounded mb-2">
+                                <summary class="cursor-pointer px-4 py-3 text-sm font-bold text-gray-700 bg-gray-50 select-none"><i class="fas fa-qrcode w-5 text-gray-400"></i> Security Guard — QR Scanning</summary>
+                                <div class="px-4 py-3 text-sm text-gray-600">
+                                    <ol class="list-decimal ml-5 space-y-1">
+                                        <li>Open the <b>Guard Scanner</b> page.</li>
+                                    </ol>
+                                    <div class="um-shot">Screenshot <b>G1</b> — Guard Scanner Page</div>
+                                    <ol class="list-decimal ml-5 space-y-1" start="2">
+                                        <li>Present the QR code to the camera. <b>GREEN</b> = valid/approved, <b>RED</b> = rejected/expired.</li>
+                                    </ol>
+                                    <div class="um-shot">Screenshot <b>G2</b> — Scan Result (valid / invalid)</div>
+                                    <ol class="list-decimal ml-5 space-y-1" start="3">
+                                        <li>Click <b>Mark as OUT</b> upon exit and <b>Mark as IN</b> upon return. If the QR code cannot be read, type the <b>Control No.</b> instead.</li>
+                                    </ol>
+                                </div>
+                            </details>
+
+                            <details class="border border-gray-200 rounded mb-2">
+                                <summary class="cursor-pointer px-4 py-3 text-sm font-bold text-gray-700 bg-gray-50 select-none"><i class="fas fa-user-shield w-5 text-gray-400"></i> System Administrator</summary>
+                                <div class="px-4 py-3 text-sm text-gray-600">
+                                    <ol class="list-decimal ml-5 space-y-1">
+                                        <li>Go to the <b>Admin Panel</b>.</li>
+                                    </ol>
+                                    <div class="um-shot">Screenshot <b>AD1</b> — Admin Panel Dashboard</div>
+                                    <ol class="list-decimal ml-5 space-y-1" start="2">
+                                        <li>In <b>User Management</b>, add a new employee, reset a password, or deactivate a resigned user.</li>
+                                    </ol>
+                                    <div class="um-shot">Screenshot <b>AD2</b> — User Management Page</div>
+                                    <ol class="list-decimal ml-5 space-y-1" start="3">
+                                        <li>In <b>Master Lists</b>, update Trucks, Drivers, and Destinations.</li>
+                                    </ol>
+                                    <div class="um-shot">Screenshot <b>AD3</b> — Master List Settings</div>
+                                    <ol class="list-decimal ml-5 space-y-1" start="4">
+                                        <li>The full <b>Audit Trail</b> is also available to trace actions.</li>
+                                    </ol>
+                                    <div class="um-shot">Screenshot <b>AD4</b> — Audit Trail / System Logs</div>
+                                </div>
+                            </details>
+                        </div>
+
+                        <!-- 5. FAQ -->
+                        <div id="um-faq" class="mb-8">
+                            <h3 class="text-base font-bold text-gray-800 mb-2">5. Frequently Asked Questions</h3>
+                            <div class="space-y-2 text-sm">
+                                <details class="border border-gray-200 rounded"><summary class="cursor-pointer px-3 py-2 font-semibold text-gray-700 select-none">Why is there no Print button on my request?</summary><p class="px-3 pb-3 text-gray-600">The Print button appears only once the request is <b>Approved</b>. If it is still Pending, wait for approval.</p></details>
+                                <details class="border border-gray-200 rounded"><summary class="cursor-pointer px-3 py-2 font-semibold text-gray-700 select-none">Why does my schedule still show "Pending" on the calendar?</summary><p class="px-3 pb-3 text-gray-600">This is normal — it remains Pending until every approval step is complete (through the final PAS noting). Once fully Approved, the "Pending" label disappears.</p></details>
+                                <details class="border border-gray-200 rounded"><summary class="cursor-pointer px-3 py-2 font-semibold text-gray-700 select-none">The guard cannot read the QR code.</summary><p class="px-3 pb-3 text-gray-600">Type the <b>Control No.</b> from the form for a manual lookup. Make sure the printed form is clear.</p></details>
+                                <details class="border border-gray-200 rounded"><summary class="cursor-pointer px-3 py-2 font-semibold text-gray-700 select-none">I cannot log in.</summary><p class="px-3 pb-3 text-gray-600">Check your Employee ID and password. If the account is new or was reset, you may need to change the password on first login. If the problem persists, contact the Administrator / IT.</p></details>
+                            </div>
+                        </div>
+
+                        <!-- 6. Glossary -->
+                        <div id="um-glossary">
+                            <h3 class="text-base font-bold text-gray-800 mb-2">6. Glossary</h3>
+                            <dl class="text-sm text-gray-600 space-y-1">
+                                <div><dt class="inline font-semibold text-gray-700">Gate Pass:</dt> <dd class="inline">formal authorization to leave the premises or release items.</dd></div>
+                                <div><dt class="inline font-semibold text-gray-700">QR Code:</dt> <dd class="inline">the code on an approved form that the guard scans.</dd></div>
+                                <div><dt class="inline font-semibold text-gray-700">Time Out / Time In:</dt> <dd class="inline">the recorded times of exit and return.</dd></div>
+                                <div><dt class="inline font-semibold text-gray-700">Trip Type:</dt> <dd class="inline">Hatid at Sundo (round trip), Hatid lang (drop-off), or Sundo lang (pick-up).</dd></div>
+                                <div><dt class="inline font-semibold text-gray-700">Reservation:</dt> <dd class="inline">a vehicle reserved for a specific date and time.</dd></div>
+                                <div><dt class="inline font-semibold text-gray-700">Control No.:</dt> <dd class="inline">the unique number of each pass (used for manual lookup).</dd></div>
+                            </dl>
+                        </div>
+
+                    </div>
+                </section>
+
             </div>
         </main>
     </div>
@@ -1491,7 +1709,7 @@
     <script src="Frontend/Functions/approvals.js?v=20260709-phase1312"></script>
     <script src="Frontend/Functions/scanner.js?v=20260709-phase1312"></script>
     <script src="Frontend/Functions/admin.js?v=20260709-phase1312.2"></script>
-    <script src="Frontend/Functions/navigation.js?v=20260709-phase1312"></script>
+    <script src="Frontend/Functions/navigation.js?v=20260709-manual"></script>
     <script src="Frontend/Functions/calendar.js?v=20260709-phase1312"></script>
     <script src="Frontend/Functions/auth.js?v=20260709-phase1312"></script>
     <script src="Frontend/Functions/app.js?v=20260709-phase1312"></script>

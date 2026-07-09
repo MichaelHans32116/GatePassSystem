@@ -109,6 +109,7 @@ async function switchSection(targetId) {
                 'approvals':'Workflow Approvals', 'guardScan':'Security QR Scanner',
                 'fleetManagement': 'Vehicles & Drivers',
                 'scheduleCalendar': 'Vehicle Schedule Calendar',
+                'userManual': 'User Manual',
                 'adminPanel': currentUser && currentUser.role === 'System Admin' ? 'System Configuration' : 'Department Logs'
             };
             document.getElementById('pageTitle').innerText = titles[targetId] || 'System';
