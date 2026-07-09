@@ -12,7 +12,7 @@
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
     <!-- QR Code Generator -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script src="Frontend/SRC/vendor/jsQR.js?v=20260709-1045.4.0"></script>
+    <script src="Frontend/SRC/vendor/jsQR.js?v=20260709-phase1312.4.0"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 
     <script>
@@ -32,7 +32,7 @@
             }
         }
     </script>
-    <link rel="stylesheet" href="Frontend/Design/styles.css?v=20260709-1045">
+    <link rel="stylesheet" href="Frontend/Design/styles.css?v=20260709-phase1312">
 </head>
 <body class="h-[100dvh] overflow-hidden flex flex-col font-sans text-sm md:text-base">
 
@@ -960,30 +960,30 @@
                                 <table class="nested-print-table w-full h-full" style="margin: 0 !important; width: 100% !important; height: 100% !important; table-layout: fixed;">
                                     <!-- Row 1: Name & Date -->
                                     <tr class="border-b-nested">
-                                        <td class="align-top border-r-nested" style="width: 65%; height: 20mm;">
+                                        <td rowspan="2" class="align-top border-r-nested" style="width: 65%; height: 22mm;">
                                             <div class="text-[7px] uppercase text-gray-500 font-semibold person-associates-label">NAME OF ASSOCIATES</div>
                                             <div id="vName" class="font-bold text-xs uppercase pl-1 pt-0.5"></div>
                                             <div id="vAssociatesExtra" class="person-associates-extra pl-1"></div>
                                         </td>
-                                        <td class="align-top" style="width: 35%; height: 20mm;">
+                                        <td class="align-top border-b-nested" style="width: 35%; height: 12mm;">
                                             <div class="text-[7px] uppercase text-gray-500 font-semibold">DATE FILED</div>
                                             <div id="vDateF" class="person-date-filed font-bold pl-1 pt-0.5"></div>
                                         </td>
                                     </tr>
-                                    <!-- Row 2: Purpose & Driver -->
+                                    <!-- Row 2: Driver -->
                                     <tr class="border-b-nested">
-                                        <td rowspan="2" class="align-top border-r-nested" style="width: 65%; height: 12mm;">
-                                            <div class="text-[7px] uppercase text-gray-500 font-semibold">PURPOSE</div>
-                                            <div id="vPurp" class="font-bold text-xs pl-1 pt-0.5 leading-tight"></div>
-                                        </td>
-                                        <td class="align-top border-b-nested" style="width: 35%; height: 6mm;">
+                                        <td class="align-top border-b-nested" style="width: 35%; height: 10mm;">
                                             <div class="text-[7px] uppercase text-gray-500 font-semibold">DRIVER:</div>
                                             <div id="vDriver" class="font-bold text-[9px] pl-1 pt-0.5"></div>
                                         </td>
                                     </tr>
-                                    <!-- Row 3: Vehicle -->
+                                    <!-- Row 3: Purpose & Vehicle -->
                                     <tr>
-                                        <td class="align-top" style="width: 35%; height: 6mm;">
+                                        <td class="align-top border-r-nested" style="width: 65%; height: 10mm;">
+                                            <div class="text-[7px] uppercase text-gray-500 font-semibold">PURPOSE</div>
+                                            <div id="vPurp" class="font-bold text-xs pl-1 pt-0.5 leading-tight"></div>
+                                        </td>
+                                        <td class="align-top" style="width: 35%; height: 10mm;">
                                             <div class="text-[7px] uppercase text-gray-500 font-semibold">VEHICLE & PLATE</div>
                                             <div id="vPlate" class="font-bold text-[8px] pl-1 pt-0.5"></div>
                                         </td>
@@ -1481,19 +1481,19 @@
         </div>
     </div>
 
-    <script src="Frontend/runtime-config.js?v=20260709-1045.2"></script>
-    <script src="Frontend/Functions/mock-data.js?v=20260709-1045.2"></script>
-    <script src="Frontend/Connectors/api-client.js?v=20260709-1045.2"></script>
-    <script src="Frontend/Functions/signature.js?v=20260709-1045"></script>
-    <script src="Frontend/Functions/material-gatepass.js?v=20260709-1045"></script>
-    <script src="Frontend/Functions/modal.js?v=20260709-1045"></script>
-    <script src="Frontend/Functions/gatepass.js?v=20260709-1045"></script>
-    <script src="Frontend/Functions/approvals.js?v=20260709-1045"></script>
-    <script src="Frontend/Functions/scanner.js?v=20260709-1045"></script>
-    <script src="Frontend/Functions/admin.js?v=20260709-1045.2"></script>
-    <script src="Frontend/Functions/navigation.js?v=20260709-1045"></script>
-    <script src="Frontend/Functions/calendar.js?v=20260709-1045"></script>
-    <script src="Frontend/Functions/auth.js?v=20260709-1045"></script>
-    <script src="Frontend/Functions/app.js?v=20260709-1045"></script>
+    <script src="Frontend/runtime-config.js?v=20260709-phase1312.2"></script>
+    <script src="Frontend/Functions/mock-data.js?v=20260709-phase1312.2"></script>
+    <script src="Frontend/Connectors/api-client.js?v=20260709-phase1312.2"></script>
+    <script src="Frontend/Functions/signature.js?v=20260709-phase1312"></script>
+    <script src="Frontend/Functions/material-gatepass.js?v=20260709-phase1312"></script>
+    <script src="Frontend/Functions/modal.js?v=20260709-phase1312"></script>
+    <script src="Frontend/Functions/gatepass.js?v=20260709-phase1312"></script>
+    <script src="Frontend/Functions/approvals.js?v=20260709-phase1312"></script>
+    <script src="Frontend/Functions/scanner.js?v=20260709-phase1312"></script>
+    <script src="Frontend/Functions/admin.js?v=20260709-phase1312.2"></script>
+    <script src="Frontend/Functions/navigation.js?v=20260709-phase1312"></script>
+    <script src="Frontend/Functions/calendar.js?v=20260709-phase1312"></script>
+    <script src="Frontend/Functions/auth.js?v=20260709-phase1312"></script>
+    <script src="Frontend/Functions/app.js?v=20260709-phase1312"></script>
 </body>
 </html>
