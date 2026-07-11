@@ -1,4 +1,4 @@
-
+﻿
 <!DOCTYPE html>
 <html lang="en">
 <head>
@@ -6,14 +6,18 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>MPI - Form Request System</title>
     <link rel="icon" type="image/png" href="Frontend/Design/images/logo.png">
+    <link rel="preconnect" href="https://cdnjs.cloudflare.com" crossorigin>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap">
     <!-- Tailwind CSS -->
     <script src="https://cdn.tailwindcss.com"></script>
     <!-- FontAwesome for Icons -->
     <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
-    <!-- QR Code Generator -->
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
-    <script src="Frontend/SRC/vendor/jsQR.js?v=20260709-phase1312.4.0"></script>
-    <script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+    <!-- QR Code Generator (deferred: only used after user interaction, never during first paint) -->
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+    <script defer src="Frontend/SRC/vendor/jsQR.js?v=20260709-phase1312.4.0"></script>
+    <script defer src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
 
     <script>
         tailwind.config = {
@@ -32,9 +36,48 @@
             }
         }
     </script>
-    <link rel="stylesheet" href="Frontend/Design/styles.css?v=20260709-manual3">
+    <link rel="stylesheet" href="Frontend/Design/styles.css?v=20260711-landing1">
 </head>
 <body class="h-[100dvh] overflow-hidden flex flex-col font-sans text-sm md:text-base">
+
+    <!-- SPLASH INTRO (logo animation, then straight to login) -->
+    <div id="landingView" class="fixed inset-0 z-[60] bg-white flex items-center justify-center transition-opacity duration-700 cursor-pointer" onclick="hideLanding()">
+        <div class="text-center select-none px-6">
+            <div class="splash-logo flex items-center justify-center gap-4 sm:gap-5">
+                <img src="Frontend/Design/images/logo.png" alt="MPI Logo" class="h-14 sm:h-20 w-auto" width="480" height="227">
+                <span class="text-4xl sm:text-6xl font-extrabold tracking-tight leading-none">
+                    <span class="text-mpiDark">Form</span><span class="text-mpiBlue">Request</span>
+                </span>
+            </div>
+            <p class="splash-tagline mt-5 text-base sm:text-xl text-gray-400 font-medium tracking-wide">Request. Approve. Pass Through.</p>
+        </div>
+    </div>
+
+    <script>
+        // Splash intro wiring. Runs before DOMContentLoaded so the
+        // authenticated-session listener is registered ahead of auth.js.
+        function hideLanding(instant) {
+            const landing = document.getElementById('landingView');
+            if (!landing || landing.classList.contains('hidden')) return;
+            if (instant) {
+                landing.classList.add('hidden');
+                return;
+            }
+            landing.style.opacity = '0';
+            setTimeout(() => landing.classList.add('hidden'), 700);
+        }
+
+        // A restored session goes straight to the app; #login skips the splash.
+        window.addEventListener('gatepass:authenticated', () => hideLanding(true));
+        if (window.location.hash === '#login') {
+            hideLanding(true);
+        } else {
+            setTimeout(() => hideLanding(), 2300);
+        }
+
+        window.hideLanding = hideLanding;
+    </script>
+
 
     <!-- LOGIN VIEW (60/40 Split Screen) -->
     <div id="loginView" class="h-full w-full flex absolute z-50 transition-opacity duration-500 bg-white">
@@ -1507,6 +1550,6 @@
     <script src="Frontend/Functions/usermanual.js?v=20260709-manual3"></script>
     <script src="Frontend/Functions/calendar.js?v=20260709-phase1312"></script>
     <script src="Frontend/Functions/auth.js?v=20260709-phase1312"></script>
-    <script src="Frontend/Functions/app.js?v=20260709-phase1312"></script>
+    <script src="Frontend/Functions/app.js?v=20260712-perf1"></script>
 </body>
 </html>

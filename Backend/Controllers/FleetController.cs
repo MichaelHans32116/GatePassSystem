@@ -8,6 +8,7 @@ using FormRequestSystem.Project.Repositories;
 using FormRequestSystem.Project.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.Extensions.Caching.Memory;
 
 namespace FormRequestSystem.Api.Controllers;
 
@@ -17,13 +18,30 @@ namespace FormRequestSystem.Api.Controllers;
 public sealed class FleetController(
     IFleetService fleetService,
     IDatabaseConnectionFactory connectionFactory,
-    ILogger<FleetController> logger) : ApiControllerBase
+    ILogger<FleetController> logger,
+    IMemoryCache cache) : ApiControllerBase
 {
+    // Vehicles and drivers are stable master lists hit by every calendar and
+    // request-form load. They are cached briefly and invalidated on every
+    // mutation in this controller (the only write path for both lists).
+    private const string VehiclesCacheKey = "fleet:vehicles";
+    private const string DriversCacheKey = "fleet:drivers";
+    private static readonly TimeSpan MasterListCacheTtl = TimeSpan.FromMinutes(5);
+
     [AllowAnonymous]
     [HttpGet("vehicles")]
     public async Task<ActionResult<ApiResponse<IReadOnlyList<VehicleRecord>>>> Vehicles(
-        CancellationToken cancellationToken) =>
-        Success(await fleetService.GetVehiclesAsync(cancellationToken));
+        CancellationToken cancellationToken)
+    {
+        if (!cache.TryGetValue(VehiclesCacheKey, out IReadOnlyList<VehicleRecord>? vehicles) ||
+            vehicles is null)
+        {
+            vehicles = await fleetService.GetVehiclesAsync(cancellationToken);
+            cache.Set(VehiclesCacheKey, vehicles, MasterListCacheTtl);
+        }
+
+        return Success(vehicles);
+    }
 
     [Authorize(Policy = GatePassPermissions.FleetManage)]
     [HttpPost("vehicles")]
@@ -35,6 +53,7 @@ public sealed class FleetController(
             null,
             request,
             cancellationToken);
+        cache.Remove(VehiclesCacheKey);
         return CreatedAtAction(
             nameof(Vehicles),
             new ApiResponse<object>(
@@ -51,6 +70,7 @@ public sealed class FleetController(
         CancellationToken cancellationToken)
     {
         await fleetService.SaveVehicleAsync(id, request, cancellationToken);
+        cache.Remove(VehiclesCacheKey);
         return Success<object>(new { id }, "Vehicle updated.");
     }
 
@@ -61,14 +81,24 @@ public sealed class FleetController(
         CancellationToken cancellationToken)
     {
         await fleetService.ArchiveVehicleAsync(id, cancellationToken);
+        cache.Remove(VehiclesCacheKey);
         return NoContent();
     }
 
     [AllowAnonymous]
     [HttpGet("drivers")]
     public async Task<ActionResult<ApiResponse<IReadOnlyList<DriverRecord>>>> Drivers(
-        CancellationToken cancellationToken) =>
-        Success(await fleetService.GetDriversAsync(cancellationToken));
+        CancellationToken cancellationToken)
+    {
+        if (!cache.TryGetValue(DriversCacheKey, out IReadOnlyList<DriverRecord>? drivers) ||
+            drivers is null)
+        {
+            drivers = await fleetService.GetDriversAsync(cancellationToken);
+            cache.Set(DriversCacheKey, drivers, MasterListCacheTtl);
+        }
+
+        return Success(drivers);
+    }
 
     [Authorize(Policy = GatePassPermissions.FleetManage)]
     [HttpPost("drivers")]
@@ -80,6 +110,7 @@ public sealed class FleetController(
             null,
             request,
             cancellationToken);
+        cache.Remove(DriversCacheKey);
         return CreatedAtAction(
             nameof(Drivers),
             new ApiResponse<object>(
@@ -96,6 +127,7 @@ public sealed class FleetController(
         CancellationToken cancellationToken)
     {
         await fleetService.SaveDriverAsync(id, request, cancellationToken);
+        cache.Remove(DriversCacheKey);
         return Success<object>(new { id }, "Driver updated.");
     }
 
@@ -106,6 +138,7 @@ public sealed class FleetController(
         CancellationToken cancellationToken)
     {
         await fleetService.ArchiveDriverAsync(id, cancellationToken);
+        cache.Remove(DriversCacheKey);
         return NoContent();
     }
 
