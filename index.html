@@ -36,12 +36,12 @@
             }
         }
     </script>
-    <link rel="stylesheet" href="Frontend/Design/styles.css?v=20260711-landing1">
+    <link rel="stylesheet" href="Frontend/Design/styles.css?v=20260712-splash2">
 </head>
 <body class="h-[100dvh] overflow-hidden flex flex-col font-sans text-sm md:text-base">
 
     <!-- SPLASH INTRO (logo animation, then straight to login) -->
-    <div id="landingView" class="fixed inset-0 z-[60] bg-white flex items-center justify-center transition-opacity duration-700 cursor-pointer" onclick="hideLanding()">
+    <div id="landingView" class="fixed inset-0 z-[60] bg-white flex items-center justify-center transition-opacity duration-500 cursor-pointer" onclick="hideLanding()">
         <div class="text-center select-none px-6">
             <div class="splash-logo flex items-center justify-center gap-4 sm:gap-5">
                 <img src="Frontend/Design/images/logo.png" alt="MPI Logo" class="h-14 sm:h-20 w-auto" width="480" height="227">
@@ -64,7 +64,7 @@
                 return;
             }
             landing.style.opacity = '0';
-            setTimeout(() => landing.classList.add('hidden'), 700);
+            setTimeout(() => landing.classList.add('hidden'), 500);
         }
 
         // A restored session goes straight to the app; #login skips the splash.
@@ -72,7 +72,7 @@
         if (window.location.hash === '#login') {
             hideLanding(true);
         } else {
-            setTimeout(() => hideLanding(), 2300);
+            setTimeout(() => hideLanding(), 1400);
         }
 
         window.hideLanding = hideLanding;
