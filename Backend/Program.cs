@@ -82,6 +82,7 @@ builder.Services.AddSwaggerGen(options =>
         });
 });
 builder.Services.AddResponseCompression();
+builder.Services.AddMemoryCache();
 builder.Services.Configure<SignatureStorageOptions>(
     builder.Configuration.GetSection("SignatureStorage"));
 builder.Services.AddSingleton<ISignatureStorage, SignatureStorage>();

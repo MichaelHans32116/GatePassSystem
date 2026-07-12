@@ -174,6 +174,7 @@ if ($UseXamppApache) {
     $xamppFrontendTarget = Join-Path $xamppTarget 'Frontend'
     New-Item -ItemType Directory -Force -Path $xamppFrontendTarget | Out-Null
     Copy-Item (Join-Path $repo 'index.html') $xamppTarget -Force
+    Copy-Item (Join-Path $repo '.htaccess') $xamppTarget -Force
     Copy-Item (Join-Path $repo 'Frontend\*') $xamppFrontendTarget -Recurse -Force
 
     if (-not (Test-LocalPort 80)) {

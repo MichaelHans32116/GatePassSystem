@@ -221,6 +221,7 @@ async function logout() {
     document.getElementById('appView').classList.add('hidden');
     document.getElementById('loginView').classList.remove('hidden');
     document.getElementById('loginForm').reset();
+    window.playLoginEntrance?.();
 
     const guestLogin = document.getElementById('navItemGuestLogin');
     if (guestLogin) guestLogin.style.display = 'none';

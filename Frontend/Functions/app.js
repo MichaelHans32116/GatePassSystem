@@ -254,8 +254,10 @@ document.addEventListener('DOMContentLoaded', () => {
     initializeGatePassForm();
     renderAdminTables();
 
-    // Poll for new notifications every 10 seconds
+    // Poll for new notifications every 10 seconds. Hidden tabs skip the poll
+    // entirely; the next visible tick picks up anything missed.
     window.setInterval(() => {
+        if (document.hidden) return;
         if (currentUser && isDatabaseSession() && currentUser.role !== 'Security') {
             checkUnreadNotifications();
         }
@@ -263,6 +265,7 @@ document.addEventListener('DOMContentLoaded', () => {
 
     window.setInterval(async () => {
         if (
+            document.hidden ||
             !currentUser ||
             currentUser.role !== 'Security' ||
             getVisibleSectionId() !== 'sec-guardScan' ||
