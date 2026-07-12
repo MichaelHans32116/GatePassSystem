@@ -36,7 +36,7 @@
             }
         }
     </script>
-    <link rel="stylesheet" href="Frontend/Design/styles.css?v=20260712-splash2">
+    <link rel="stylesheet" href="Frontend/Design/styles.css?v=20260712-splash3">
 </head>
 <body class="h-[100dvh] overflow-hidden flex flex-col font-sans text-sm md:text-base">
 
@@ -64,7 +64,17 @@
                 return;
             }
             landing.style.opacity = '0';
+            playLoginEntrance();
             setTimeout(() => landing.classList.add('hidden'), 500);
+        }
+
+        // Replays the login panes' entrance animation (splash hand-off and logout).
+        function playLoginEntrance() {
+            const login = document.getElementById('loginView');
+            if (!login || login.classList.contains('hidden')) return;
+            login.classList.remove('login-enter');
+            void login.offsetWidth; // restart the CSS animations
+            login.classList.add('login-enter');
         }
 
         // A restored session goes straight to the app; #login skips the splash.
@@ -76,6 +86,7 @@
         }
 
         window.hideLanding = hideLanding;
+        window.playLoginEntrance = playLoginEntrance;
     </script>
 
 
@@ -83,11 +94,11 @@
     <div id="loginView" class="h-full w-full flex absolute z-50 transition-opacity duration-500 bg-white">
 
         <!-- Left Side: Factory Image & Text (60%) -->
-        <div class="hidden md:flex md:w-[60%] relative bg-cover bg-center" style="background-image: url('Frontend/Design/images/moriroku.jpg');">
+        <div class="login-hero-pane hidden md:flex md:w-[60%] relative bg-cover bg-center" style="background-image: url('Frontend/Design/images/moriroku.jpg');">
             <!-- Light overlay -->
             <div class="absolute inset-0 bg-black/40"></div>
             <!-- Text Overlay -->
-            <div class="absolute bottom-1/3 left-12 lg:left-24 text-white fade-in z-10 pointer-events-none">
+            <div class="login-hero-text absolute bottom-1/3 left-12 lg:left-24 text-white fade-in z-10 pointer-events-none">
                 <h1 class="text-5xl lg:text-6xl font-extrabold tracking-tight mb-3 drop-shadow-xl">Form Request System</h1>
                 <h2 class="text-lg lg:text-xl tracking-widest uppercase font-semibold text-blue-100 drop-shadow-md">Moriroku Philippines, Inc.</h2>
                 <div class="w-40 h-1.5 bg-white mt-6 rounded-full drop-shadow-lg opacity-90"></div>
@@ -95,7 +106,7 @@
         </div>
 
         <!-- Right Side: Login Form (40%) -->
-        <div class="w-full md:w-[40%] flex flex-col justify-center items-center px-8 relative fade-in bg-white h-full overflow-y-auto">
+        <div class="login-form-pane w-full md:w-[40%] flex flex-col justify-center items-center px-8 relative fade-in bg-white h-full overflow-y-auto">
 
             <div class="w-full max-w-md">
                 <div class="text-center mb-8 w-full mt-8 md:mt-0">
@@ -1549,7 +1560,7 @@
     <script src="Frontend/Functions/navigation.js?v=20260709-manual2"></script>
     <script src="Frontend/Functions/usermanual.js?v=20260709-manual3"></script>
     <script src="Frontend/Functions/calendar.js?v=20260709-phase1312"></script>
-    <script src="Frontend/Functions/auth.js?v=20260709-phase1312"></script>
+    <script src="Frontend/Functions/auth.js?v=20260712-splash3"></script>
     <script src="Frontend/Functions/app.js?v=20260712-perf1"></script>
 </body>
 </html>

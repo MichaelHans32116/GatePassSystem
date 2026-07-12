@@ -33,6 +33,19 @@
             to { opacity: 1; transform: none; }
         }
 
+        /* Login entrance (plays while the splash dissolves, and on logout) */
+        #loginView.login-enter .login-hero-pane { animation: loginHeroIn 0.9s cubic-bezier(0.16, 1, 0.3, 1) both; }
+        #loginView.login-enter .login-hero-text { animation: loginRiseIn 0.8s cubic-bezier(0.16, 1, 0.3, 1) 0.25s both; }
+        #loginView.login-enter .login-form-pane { animation: loginRiseIn 0.7s cubic-bezier(0.16, 1, 0.3, 1) 0.12s both; }
+        @keyframes loginHeroIn {
+            from { opacity: 0; transform: scale(1.045); }
+            to { opacity: 1; transform: none; }
+        }
+        @keyframes loginRiseIn {
+            from { opacity: 0; transform: translateY(22px); }
+            to { opacity: 1; transform: none; }
+        }
+
         /* Sidebar Nav Item active state (Edge-to-edge layout) */
         .nav-item { opacity: 0.7; border-left: 4px solid transparent; display: flex; align-items: center; }
         .nav-item:hover { opacity: 1; background-color: rgba(255,255,255,0.05); }
