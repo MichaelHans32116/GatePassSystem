@@ -180,3 +180,21 @@ Recent commit trail:
 - Do not edit [`Docs/server access documentation.md`](server%20access%20documentation.md).
 - Do not edit [`Docs/BACKEND_DATABASE_PLAN To server.md`](BACKEND_DATABASE_PLAN%20To%20server.md).
 - Use [`Docs/archived plan.txt`](archived%20plan.txt) for historical planning notes.
+
+## 2026-07-18 - Phase 16.1: UAT sheet + system documentation PDFs
+
+- Added `Docs/FormRequestSystem_UAT_SignOff.pdf` - one-page signable UAT
+  checklist (14 scenarios, acceptance decision, 4 signature blocks).
+- Added `Docs/FormRequestSystem_System_Documentation.pdf` - 15-page system
+  and architecture documentation with plain monochrome visual diagrams
+  (request flows, status lifecycle, architecture, database map, expansion
+  roadmap for Leave/OT/General Request forms) plus the SSH-only server
+  runbook for 192.168.9.7 and the Falcon warning guidance.
+- Editable HTML sources for both PDFs live in `Docs/doc-sources/`;
+  re-render with headless Edge (`--print-to-pdf`).
+- Live server checked over SSH the same day: API healthy, DB connected,
+  migrations 001-022 applied, deployment current. Noted in the doc
+  (Section 10): 8 aging pending requests, 3 approved passes never scanned
+  out (no auto-expire job), plus 9 code-level notes (hard-coded approver
+  IDs, test-delete endpoint, non-expiring QR, dead frontend code, etc.).
+  Check-and-note only; no fixes applied.

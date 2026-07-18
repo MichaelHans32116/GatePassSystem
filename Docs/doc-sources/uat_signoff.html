@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Form Request System — UAT Sign-Off</title>
+<style>
+  @page { size: A4; margin: 10mm 12mm; }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body { font-family: "Segoe UI", Arial, sans-serif; color: #000; font-size: 9.5px; line-height: 1.35; }
+  .header { display: flex; align-items: center; justify-content: space-between; border-bottom: 2px solid #000; padding-bottom: 6px; margin-bottom: 8px; }
+  .header h1 { font-size: 16px; color: #000; letter-spacing: .3px; }
+  .header .sub { font-size: 9.5px; color: #333; margin-top: 2px; }
+  .header .doc-tag { text-align: right; font-size: 8.5px; color: #333; line-height: 1.5; }
+  .doc-tag b { color: #000; font-size: 10px; }
+  .meta { display: grid; grid-template-columns: 1fr 1fr 1fr; gap: 4px 14px; border: 1px solid #000; padding: 6px 10px; margin-bottom: 7px; }
+  .meta div { font-size: 9px; }
+  .meta b { color: #000; }
+  .intro { margin-bottom: 7px; font-size: 9.5px; }
+  h2 { font-size: 10.5px; color: #000; text-transform: uppercase; letter-spacing: .5px; margin: 7px 0 4px; }
+  table.tests { width: 100%; border-collapse: collapse; }
+  table.tests th { border: 1px solid #000; background: #fff; color: #000; font-size: 8.5px; font-weight: 700; padding: 3px 5px; text-align: left; }
+  table.tests td { border: 1px solid #000; padding: 3px 5px; font-size: 9px; vertical-align: middle; }
+  .cb { display: inline-block; width: 9px; height: 9px; border: 1.2px solid #000; vertical-align: -1px; margin-right: 3px; }
+  .resultcell { white-space: nowrap; }
+  .accept { border: 1px solid #000; padding: 6px 10px; margin-top: 7px; }
+  .accept .choices { margin-top: 4px; display: flex; gap: 22px; font-size: 9.5px; }
+  .sigs { display: grid; grid-template-columns: 1fr 1fr 1fr 1fr; gap: 12px; margin-top: 10px; }
+  .sig { text-align: center; }
+  .sig .line { border-bottom: 1px solid #000; height: 30px; margin-bottom: 3px; }
+  .sig .who { font-weight: 700; font-size: 8.8px; }
+  .sig .role { font-size: 8px; color: #333; }
+  .sig .date { font-size: 8px; color: #333; margin-top: 5px; text-align: left; }
+  .footer { margin-top: 8px; border-top: 1px solid #000; padding-top: 4px; font-size: 7.8px; color: #333; display: flex; justify-content: space-between; }
+</style>
+</head>
+<body>
+
+<div class="header">
+  <div>
+    <h1>FORM REQUEST SYSTEM</h1>
+    <div class="sub">User Acceptance Test (UAT) — Sign-Off Sheet &nbsp;•&nbsp; Person &amp; Material Gate Pass Workflow</div>
+  </div>
+  <div class="doc-tag">
+    <b>UAT-001</b><br>
+    Moriroku Philippines, Inc.<br>
+    Internal Workflow Application
+  </div>
+</div>
+
+<div class="meta">
+  <div><b>System:</b> Form Request System (Gate Pass)</div>
+  <div><b>Environment:</b> http://192.168.9.7/FormRequestSystem/</div>
+  <div><b>UAT Date:</b> ____________________</div>
+  <div><b>Version / Build:</b> July 2026 release</div>
+  <div><b>Database:</b> gate_pass_system (MariaDB)</div>
+  <div><b>Prepared by:</b> IT Department</div>
+</div>
+
+<div class="intro">
+  This system replaces the paper gate pass. An employee files a request on the computer, the approvers sign it
+  electronically, and the guard scans a QR code when the person or items go out and come back in. Please try each
+  item below, mark <b>Pass</b> or <b>Fail</b>, write remarks if needed, then sign at the bottom.
+</div>
+
+<h2>Test Checklist</h2>
+<table class="tests">
+  <tr>
+    <th style="width:4%">#</th>
+    <th style="width:66%">What to test (in simple terms)</th>
+    <th style="width:13%">Result</th>
+    <th style="width:17%">Remarks</th>
+  </tr>
+  <tr><td>1</td><td><b>Log in</b> — open the system, enter your Employee ID and password, and reach your dashboard.</td><td class="resultcell"><span class="cb"></span>Pass &nbsp;<span class="cb"></span>Fail</td><td></td></tr>
+  <tr><td>2</td><td><b>File a Person Gate Pass</b> — fill in destination, purpose, date and time out/in, then submit.</td><td class="resultcell"><span class="cb"></span>Pass &nbsp;<span class="cb"></span>Fail</td><td></td></tr>
+  <tr><td>3</td><td><b>File a Material Gate Pass</b> — choose the authorized employee, list the items, attach a photo of the items, then submit.</td><td class="resultcell"><span class="cb"></span>Pass &nbsp;<span class="cb"></span>Fail</td><td></td></tr>
+  <tr><td>4</td><td><b>Request a company vehicle</b> — tick "Company Vehicle Needed" and confirm the request goes to HRAD for vehicle assignment.</td><td class="resultcell"><span class="cb"></span>Pass &nbsp;<span class="cb"></span>Fail</td><td></td></tr>
+  <tr><td>5</td><td><b>Approve as Immediate Superior</b> — open the pending request, review it, apply your e-signature, and approve.</td><td class="resultcell"><span class="cb"></span>Pass &nbsp;<span class="cb"></span>Fail</td><td></td></tr>
+  <tr><td>6</td><td><b>Assign vehicle and driver (HRAD)</b> — pick the vehicle, driver, and schedule window; the booking appears on the calendar.</td><td class="resultcell"><span class="cb"></span>Pass &nbsp;<span class="cb"></span>Fail</td><td></td></tr>
+  <tr><td>7</td><td><b>Approve as President</b> — company-vehicle and superior-filed requests reach the President for approval.</td><td class="resultcell"><span class="cb"></span>Pass &nbsp;<span class="cb"></span>Fail</td><td></td></tr>
+  <tr><td>8</td><td><b>PAS noting</b> — after PAS notes the request, the status becomes <b>Approved</b> and a QR code appears.</td><td class="resultcell"><span class="cb"></span>Pass &nbsp;<span class="cb"></span>Fail</td><td></td></tr>
+  <tr><td>9</td><td><b>Reject with reason</b> — reject a request; the requester sees the reason and gets a notification.</td><td class="resultcell"><span class="cb"></span>Pass &nbsp;<span class="cb"></span>Fail</td><td></td></tr>
+  <tr><td>10</td><td><b>Print the form</b> — print the approved gate pass; the printout shows the details, signatures, and QR code.</td><td class="resultcell"><span class="cb"></span>Pass &nbsp;<span class="cb"></span>Fail</td><td></td></tr>
+  <tr><td>11</td><td><b>Guard scan — Time OUT</b> — the guard scans the QR at the gate; the status changes to <b>Outside</b> (or items are released).</td><td class="resultcell"><span class="cb"></span>Pass &nbsp;<span class="cb"></span>Fail</td><td></td></tr>
+  <tr><td>12</td><td><b>Guard scan — Time IN</b> — on return, the guard scans again; the status changes to <b>Returned</b>.</td><td class="resultcell"><span class="cb"></span>Pass &nbsp;<span class="cb"></span>Fail</td><td></td></tr>
+  <tr><td>13</td><td><b>Vehicle / truck schedule calendar</b> — the calendar shows the fixed weekly schedules and new bookings correctly.</td><td class="resultcell"><span class="cb"></span>Pass &nbsp;<span class="cb"></span>Fail</td><td></td></tr>
+  <tr><td>14</td><td><b>Admin functions</b> — the administrator can add/edit users, vehicles, and drivers, and view the system logs.</td><td class="resultcell"><span class="cb"></span>Pass &nbsp;<span class="cb"></span>Fail</td><td></td></tr>
+</table>
+
+<div class="accept">
+  <b>Acceptance Decision</b> — By signing below, we confirm that the items above were tested on the environment stated,
+  and that the results are as marked.
+  <div class="choices">
+    <span><span class="cb"></span> <b>Accepted</b> — ready for daily use</span>
+    <span><span class="cb"></span> <b>Accepted with notes</b> — usable; minor items to fix</span>
+    <span><span class="cb"></span> <b>Not accepted</b> — major items to fix, retest needed</span>
+  </div>
+</div>
+
+<div class="sigs">
+  <div class="sig">
+    <div class="line"></div>
+    <div class="who">Tested by</div>
+    <div class="role">End-User Representative</div>
+    <div class="date">Date: ____________</div>
+  </div>
+  <div class="sig">
+    <div class="line"></div>
+    <div class="who">Reviewed by</div>
+    <div class="role">HRAD Representative</div>
+    <div class="date">Date: ____________</div>
+  </div>
+  <div class="sig">
+    <div class="line"></div>
+    <div class="who">Verified by</div>
+    <div class="role">IT / System Developer</div>
+    <div class="date">Date: ____________</div>
+  </div>
+  <div class="sig">
+    <div class="line"></div>
+    <div class="who">Approved by</div>
+    <div class="role">IT Supervisor</div>
+    <div class="date">Date: ____________</div>
+  </div>
+</div>
+
+<div class="footer">
+  <span>Form Request System — UAT Sign-Off (1 page)</span>
+  <span>Moriroku Philippines, Inc. — Internal Document</span>
+</div>
+
+</body>
+</html>
