@@ -198,3 +198,15 @@ Recent commit trail:
   out (no auto-expire job), plus 9 code-level notes (hard-coded approver
   IDs, test-delete endpoint, non-expiring QR, dead frontend code, etc.).
   Check-and-note only; no fixes applied.
+
+## 2026-07-18 - Phase 16.2: Deeper live-server sweep, one new finding
+
+- Ran a second read-only sweep on 192.168.9.7 over SSH: notification
+  backlog 0, locked accounts 0, orphaned pending approval steps 0, scan
+  history normal (16 out / 3 in / 4 rejected attempts, all expected).
+- New finding added to the documentation as O3: five vehicle reservations
+  with lapsed schedule windows still active (4 PENDING, 1 RESERVED,
+  oldest 29 June) - they block vehicle availability until the parent
+  requests are cancelled or a cleanup job releases them.
+- Regenerated `Docs/FormRequestSystem_System_Documentation.pdf` (still
+  15 pages) and synced `Docs/doc-sources/system_documentation.html`.

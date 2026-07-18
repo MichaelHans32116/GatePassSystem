@@ -640,6 +640,7 @@ Restart only the API (never Apache or MariaDB):
     <tr><th style="width:6%">#</th><th>Observation</th><th style="width:38%">Suggested action</th></tr>
     <tr><td>O1</td><td>Eight requests filed between 29 June and 9 July are still sitting in a pending-approval status — approvers have not acted on them.</td><td>Remind approvers; consider an automatic reminder or escalation after a set number of days (see Section 11).</td></tr>
     <tr><td>O2</td><td>Three approved passes were never scanned OUT at the gate, and nothing automatically expires them — they stay in the guard's queue indefinitely.</td><td>Add a scheduled job that moves stale approved passes to Expired (the status already exists; only the automation is missing).</td></tr>
+    <tr><td>O3</td><td>Five vehicle reservations whose schedule window has already passed are still marked active (four pending, one reserved, the oldest from 29 June). Because active reservations block availability, these vehicles can look busy on the calendar even though the trips are long over.</td><td>The same cleanup job should release a reservation once its window lapses without use; until then, HRAD can cancel the stale parent requests by hand.</td></tr>
   </table>
 
   <h2>10.3 Code-level notes</h2>
