@@ -1,4 +1,4 @@
-﻿namespace FormRequestSystem.Project.DTOs.Admin;
+namespace FormRequestSystem.Project.DTOs.Admin;
 
 public sealed class AdminUserQuery
 {
@@ -6,8 +6,8 @@ public sealed class AdminUserQuery
     public string? RoleCode { get; init; }
     public long? DepartmentId { get; init; }
     public string? AccountStatusCode { get; init; } = "ACTIVE";
-    public DateTime? HiredFrom { get; init; }
-    public DateTime? HiredTo { get; init; }
+    public DateOnly? HiredFrom { get; init; }
+    public DateOnly? HiredTo { get; init; }
     public int Page { get; init; } = 1;
     public int PageSize { get; init; } = 100;
 }
