@@ -1,4 +1,4 @@
-﻿using FormRequestSystem.Api.Infrastructure;
+using FormRequestSystem.Api.Infrastructure;
 using FormRequestSystem.Project.DTOs.GatePass;
 using FormRequestSystem.Project.Models;
 using FormRequestSystem.Project.Services;
@@ -19,7 +19,8 @@ public sealed class ApprovalsController(
                      claim.Value is
                          "gatepass.approve.superior" or
                          "gatepass.approve.president" or
-                         "gatepass.note.pas");
+                         "gatepass.note.pas" or
+                         "fleet.manage");
 
     [HttpGet("queue")]
     public async Task<ActionResult<ApiResponse<IReadOnlyList<ApprovalQueueItem>>>> Queue(

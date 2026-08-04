@@ -86,6 +86,35 @@ public sealed class ApprovalRepository(
                                 AND aa.is_active = TRUE
                           )
                       )
+                      OR (
+                          step.approval_step_code = 'HRAD_ASSIGN'
+                          AND EXISTS (
+                              SELECT 1
+                              FROM tbl_user_roles actor_role
+                              JOIN tbl_role_permissions role_permission
+                                ON role_permission.role_id =
+                                   actor_role.role_id
+                              JOIN tbl_permissions permission_row
+                                ON permission_row.permission_id =
+                                   role_permission.permission_id
+                              JOIN tbl_roles role_row
+                                ON role_row.role_id = actor_role.role_id
+                              WHERE actor_role.user_id = @ApproverUserId
+                                AND actor_role.is_active = TRUE
+                                AND role_row.is_active = TRUE
+                                AND permission_row.permission_code =
+                                    'fleet.manage'
+                          )
+                          AND EXISTS (
+                              SELECT 1
+                              FROM tbl_approval_assignments aa
+                              WHERE aa.approver_user_id = @ApproverUserId
+                                AND aa.approval_step_code = 'HRAD_ASSIGN'
+                                AND aa.form_type_code =
+                                    request_row.form_type_code
+                                AND aa.is_active = TRUE
+                          )
+                      )
                   )
                   AND (
                       request_row.gate_pass_status_code = CONCAT('PENDING_', step.approval_step_code)
@@ -150,6 +179,28 @@ public sealed class ApprovalRepository(
                               FROM tbl_approval_assignments assignment
                               WHERE assignment.approver_user_id = @ActorUserId
                                 AND assignment.approval_step_code = 'PAS'
+                                AND assignment.form_type_code = request_row.form_type_code
+                                AND assignment.is_active = TRUE
+                          )
+                      )
+                      OR (
+                          step.approval_step_code = 'HRAD_ASSIGN'
+                          AND EXISTS (
+                              SELECT 1
+                              FROM tbl_user_roles actor_role
+                              JOIN tbl_role_permissions role_permission
+                                ON role_permission.role_id = actor_role.role_id
+                              JOIN tbl_permissions permission_row
+                                ON permission_row.permission_id = role_permission.permission_id
+                              WHERE actor_role.user_id = @ActorUserId
+                                AND actor_role.is_active = TRUE
+                                AND permission_row.permission_code = 'fleet.manage'
+                          )
+                          AND EXISTS (
+                              SELECT 1
+                              FROM tbl_approval_assignments assignment
+                              WHERE assignment.approver_user_id = @ActorUserId
+                                AND assignment.approval_step_code = 'HRAD_ASSIGN'
                                 AND assignment.form_type_code = request_row.form_type_code
                                 AND assignment.is_active = TRUE
                           )

@@ -1,4 +1,4 @@
-﻿using Dapper;
+using Dapper;
 using FormRequestSystem.Project.Models;
 
 namespace FormRequestSystem.Project.Repositories;
@@ -40,23 +40,7 @@ public sealed class UserRepository(IDatabaseConnectionFactory connectionFactory)
             {UserSelect}
             WHERE (
                    UPPER(TRIM(ua.username)) = UPPER(TRIM(@Username))
-                OR UPPER(TRIM(COALESCE(e.full_name, ua.display_name))) = UPPER(TRIM(@Username))
-                OR LEFT(
-                    UPPER(TRIM(COALESCE(e.full_name, ua.display_name))),
-                    CHAR_LENGTH(TRIM(@Username)) + 1
-                ) = CONCAT(UPPER(TRIM(@Username)), ' ')
-                OR FIND_IN_SET(
-                    UPPER(TRIM(@Username)),
-                    REPLACE(
-                        REPLACE(
-                            UPPER(TRIM(COALESCE(e.full_name, ua.display_name))),
-                            '.',
-                            ''
-                        ),
-                        ' ',
-                        ','
-                    )
-                ) > 0
+                OR UPPER(TRIM(COALESCE(e.full_name, ua.display_name))) LIKE CONCAT('%', UPPER(TRIM(@Username)), '%')
             )
             ORDER BY
                 (UPPER(TRIM(ua.username)) = UPPER(TRIM(@Username))) DESC,
