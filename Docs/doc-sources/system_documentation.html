@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
 <meta charset="utf-8">
-<title>Form Request System — System &amp; Architecture Documentation</title>
+<title>Form Request System: System &amp; Architecture Documentation</title>
 <style>
   @page { size: A4; margin: 14mm 16mm; }
   * { margin: 0; padding: 0; box-sizing: border-box; }
@@ -40,13 +40,13 @@
 
 <!-- ============ COVER ============ -->
 <div class="page cover">
-  <div class="brand">Moriroku Philippines, Inc. — Internal IT</div>
+  <div class="brand">Moriroku Philippines, Inc. Internal IT</div>
   <h1 class="title">Form Request System</h1>
   <div class="subtitle">System &amp; Architecture Documentation</div>
   <div class="rule"></div>
   <div class="meta">
     Person Gate Pass &nbsp;•&nbsp; Material Gate Pass &nbsp;•&nbsp; Vehicle Scheduling &nbsp;•&nbsp; QR Security Scanning<br>
-    Version 1.0 &nbsp;•&nbsp; July 2026<br>
+    Version 1.1 &nbsp;•&nbsp; August 2026<br>
     Live environment: http://192.168.9.7/FormRequestSystem/<br>
     Prepared by the IT Department
   </div>
@@ -56,7 +56,7 @@
 <div class="page">
   <h1>Contents</h1>
   <table class="toc">
-    <tr><td>1&nbsp;&nbsp;Introduction — what this system is</td></tr>
+    <tr><td>1&nbsp;&nbsp;Introduction: what this system is</td></tr>
     <tr><td>2&nbsp;&nbsp;Users and roles</td></tr>
     <tr><td>3&nbsp;&nbsp;How a request flows (visual)</td></tr>
     <tr><td>4&nbsp;&nbsp;Request status lifecycle (visual)</td></tr>
@@ -64,16 +64,16 @@
     <tr><td>6&nbsp;&nbsp;Database design</td></tr>
     <tr><td>7&nbsp;&nbsp;API overview</td></tr>
     <tr><td>8&nbsp;&nbsp;Security model</td></tr>
-    <tr><td>9&nbsp;&nbsp;Server operations — 192.168.9.7 (SSH-only runbook)</td></tr>
+    <tr><td>9&nbsp;&nbsp;Server operations: 192.168.9.7 (SSH-only runbook)</td></tr>
     <tr><td>10&nbsp;&nbsp;System health check and known issues (as of 18 July 2026)</td></tr>
-    <tr><td>11&nbsp;&nbsp;Expansion roadmap — growing beyond gate passes</td></tr>
-    <tr><td>12&nbsp;&nbsp;Appendix — repository map and common commands</td></tr>
+    <tr><td>11&nbsp;&nbsp;Expansion roadmap: growing beyond gate passes</td></tr>
+    <tr><td>12&nbsp;&nbsp;Appendix: repository map and common commands</td></tr>
   </table>
 </div>
 
 <!-- ============ 1. INTRODUCTION ============ -->
 <div>
-  <h1>1 &nbsp;Introduction — what this system is</h1>
+  <h1>1 &nbsp;Introduction: what this system is</h1>
   <p>
     The <b>Form Request System</b> is an internal web application that replaces the paper gate pass process.
     Instead of filling out a paper form, walking it around for signatures, and hoping it does not get lost,
@@ -86,8 +86,8 @@
     <tr><th style="width:22%">Form</th><th>Purpose</th><th style="width:30%">Special features</th></tr>
     <tr>
       <td><b>Person Gate Pass</b></td>
-      <td>An employee needs to leave the premises during work hours (official business or personal). May include companions and a company vehicle with a driver.</td>
-      <td>QR Time OUT and Time IN at the gate; vehicle and driver assignment by HRAD; trip types (drop-off, pick-up, or both).</td>
+      <td>An employee needs to leave the premises during work hours (official business or personal). May include companions (employees, or outside companions such as visitors or OJTs) and a company vehicle with a driver.</td>
+      <td>QR Time OUT and Time IN at the gate; vehicle and driver assignment by HRAD; trip types (drop off, pick up, or both); the requester may stay inside and file the pass for the listed associates only.</td>
     </tr>
     <tr>
       <td><b>Material Gate Pass</b></td>
@@ -97,19 +97,20 @@
   </table>
   <h2>What the system provides end to end</h2>
   <ul>
-    <li><b>One login for everything</b> — employees sign in with their Employee ID; what they see depends on their role.</li>
-    <li><b>Automatic approval routing</b> — the system knows who must approve each request and in what order. Nobody can approve their own request.</li>
-    <li><b>Electronic signatures</b> — approvers draw or upload their signature once and reuse it; the signature appears on the printed form.</li>
-    <li><b>Daily control numbers</b> — every form receives a control number in the familiar office format, generated automatically without duplicates.</li>
-    <li><b>QR-verified gate activity</b> — the guard scans; the system decides whether it is a Time OUT or Time IN and records the exact timestamp. Manual entry of the control number is a fallback.</li>
-    <li><b>Vehicle and truck scheduling</b> — a calendar of company vehicle bookings and fixed weekly schedules, with Excel export matching the office monitoring workbooks.</li>
-    <li><b>Notifications</b> — requesters and approvers are notified inside the app when action is needed or a decision is made.</li>
-    <li><b>Complete audit trail</b> — every status change, scan, and admin action is recorded and cannot be edited.</li>
+    <li><b>One login for everything</b>: employees sign in with their name or Employee ID, case insensitive; what they see depends on their role. Each user changes their own password through the profile chip at the top right of the screen.</li>
+    <li><b>Automatic approval routing</b>: the system knows who must approve each request and in what order. Nobody can approve their own request.</li>
+    <li><b>Electronic signatures</b>: approvers draw or upload their signature once and reuse it; the signature appears on the printed form.</li>
+    <li><b>Daily control numbers</b>: every form receives a control number in the familiar office format, generated automatically without duplicates.</li>
+    <li><b>QR-verified gate activity</b>: the guard scans; the system decides whether it is a Time OUT or Time IN and records the exact timestamp. Manual entry of the control number is a fallback.</li>
+    <li><b>Vehicle and truck scheduling</b>: a calendar of company vehicle bookings and fixed weekly schedules, with Excel export matching the office monitoring workbooks.</li>
+    <li><b>Notifications</b>: requesters and approvers are notified inside the app when action is needed or a decision is made.</li>
+    <li><b>Dashboard</b>: compact, tappable statistic cards filter the request table (tapping the same card again clears the filter); users with approval duties see a For Your Approval card that opens the Approvals page; on mobile the New Form Request button appears at the top.</li>
+    <li><b>Complete audit trail</b>: every status change, scan, and admin action is recorded and cannot be edited.</li>
   </ul>
   <div class="callout">
     <b>Built to grow.</b> The system was deliberately designed as a general <i>form request platform</i>, not just a gate
-    pass tool. New form types — for example a <b>Leave Form</b>, <b>Overtime (OT) Form</b>, or a general
-    <b>Request Form</b> — can be added on top of the same login, approval, signature, notification, and audit machinery.
+    pass tool. New form types, for example a <b>Leave Form</b>, an <b>Overtime (OT) Form</b>, or a general
+    <b>Request Form</b>, can be added on top of the same login, approval, signature, notification, and audit machinery.
     Section 11 explains exactly how.
   </div>
 </div>
@@ -125,9 +126,9 @@
     <tr><th style="width:20%">Role</th><th style="width:40%">Who this usually is</th><th>What they can do</th></tr>
     <tr><td><b>Associate</b> (default)</td><td>Any regular employee</td><td>File Person and Material gate passes; track their own requests; print approved forms.</td></tr>
     <tr><td><b>Immediate Superior</b></td><td>Section heads / managers</td><td>Everything an Associate can, plus approve or reject requests from their department with an e-signature.</td></tr>
-    <tr><td><b>HRAD / PAS Noter</b></td><td>Personnel &amp; Admin Section staff</td><td>Final "noting" step of every request; assign vehicles, drivers, and schedule windows; manage fixed weekly schedules; place requests on hold; view department logs.</td></tr>
-    <tr><td><b>President</b></td><td>Company president</td><td>Approves company-vehicle requests and requests filed by superiors; can book a service vehicle directly; read-only department logs.</td></tr>
-    <tr><td><b>Security</b></td><td>Guards at the gate</td><td>Scanner screen and live gate queue only. Scan QR codes (or type the control number) to record Time OUT and Time IN with a guard signature.</td></tr>
+    <tr><td><b>HRAD / PAS Noter</b></td><td>Personnel &amp; Admin Section staff</td><td>Final "noting" step of every request (PAS); assign vehicles, drivers, and schedule windows; manage fixed weekly schedules; place requests on hold; view department logs. The HRAD vehicle assigners are Joy (GA120), Roxanne Encinada (GA139), and Myla Mae Abarquez (GA412).</td></tr>
+    <tr><td><b>President</b></td><td>Company president</td><td>Final approver of company vehicle passes, by physical signature on the printed form; there is no digital President approval step. The PRESIDENT signature line carries the printed name TOMOAKI MAEKAWA. Can book a service vehicle directly; read-only department logs.</td></tr>
+    <tr><td><b>Security</b></td><td>Guards at the gate</td><td>Scanner screen and live gate queue only. Security accounts land directly on the QR scanner and can open the queue dashboard through a View Dashboard button on the scanner page. Scan QR codes (or type the control number) to record Time OUT and Time IN with a guard signature.</td></tr>
     <tr><td><b>Driver</b></td><td>Company drivers</td><td>Same as Associate; can also be assigned to vehicle bookings.</td></tr>
     <tr><td><b>Truck Schedule Manager</b></td><td>Logistics / PPC staff</td><td>Manage recurring truck schedules on the calendar (trucks only).</td></tr>
     <tr><td><b>System Administrator</b></td><td>IT</td><td>Manage users, roles, departments, vehicles, and drivers; view gate pass logs and the audit trail. Cannot scan (reserved for Security) and cannot approve.</td></tr>
@@ -155,18 +156,19 @@
     <text x="92" y="60" text-anchor="middle" font-size="8.5" fill="#333">destination, purpose, schedule</text>
 
     <rect x="208" y="20" width="168" height="56" fill="#fff" stroke="#000" stroke-width="1.3"/>
-    <text x="292" y="44" text-anchor="middle" font-size="11" font-weight="700" fill="#000">Immediate Superior</text>
-    <text x="292" y="60" text-anchor="middle" font-size="8.5" fill="#333">reviews and e-signs</text>
+    <text x="292" y="40" text-anchor="middle" font-size="11" font-weight="700" fill="#000">Immediate Superior</text>
+    <text x="292" y="54" text-anchor="middle" font-size="8.5" fill="#333">reviews and e-signs; skipped when</text>
+    <text x="292" y="66" text-anchor="middle" font-size="8.5" fill="#333">the requester is a superior</text>
 
     <rect x="408" y="20" width="168" height="56" fill="#fff" stroke="#000" stroke-width="1.3" stroke-dasharray="5 3"/>
     <text x="492" y="40" text-anchor="middle" font-size="11" font-weight="700" fill="#000">HRAD assigns vehicle</text>
     <text x="492" y="54" text-anchor="middle" font-size="8.5" fill="#333">only when a company</text>
     <text x="492" y="66" text-anchor="middle" font-size="8.5" fill="#333">vehicle is requested</text>
 
-    <rect x="608" y="20" width="164" height="56" fill="#fff" stroke="#000" stroke-width="1.3" stroke-dasharray="5 3"/>
-    <text x="690" y="40" text-anchor="middle" font-size="11" font-weight="700" fill="#000">President approves</text>
-    <text x="690" y="54" text-anchor="middle" font-size="8.5" fill="#333">company vehicle, or the</text>
-    <text x="690" y="66" text-anchor="middle" font-size="8.5" fill="#333">requester is a superior</text>
+    <rect x="608" y="20" width="164" height="56" fill="#fff" stroke="#000" stroke-width="1.3"/>
+    <text x="690" y="40" text-anchor="middle" font-size="11" font-weight="700" fill="#000">PAS notes the request</text>
+    <text x="690" y="54" text-anchor="middle" font-size="8.5" fill="#333">the final digital step</text>
+    <text x="690" y="66" text-anchor="middle" font-size="8.5" fill="#333">before approval</text>
 
     <line x1="176" y1="48" x2="204" y2="48" stroke="#000" stroke-width="1.4" marker-end="url(#arr)"/>
     <line x1="376" y1="48" x2="404" y2="48" stroke="#000" stroke-width="1.4" marker-end="url(#arr)"/>
@@ -174,20 +176,21 @@
     <!-- down -->
     <line x1="690" y1="76" x2="690" y2="112" stroke="#000" stroke-width="1.4" marker-end="url(#arr)"/>
     <!-- row 2 (right to left) -->
-    <rect x="608" y="116" width="164" height="56" fill="#fff" stroke="#000" stroke-width="1.3"/>
-    <text x="690" y="140" text-anchor="middle" font-size="11" font-weight="700" fill="#000">PAS notes the request</text>
-    <text x="690" y="156" text-anchor="middle" font-size="8.5" fill="#333">final administrative step</text>
+    <rect x="608" y="116" width="164" height="56" fill="#e6e6e6" stroke="#000" stroke-width="1.6"/>
+    <text x="690" y="140" text-anchor="middle" font-size="11" font-weight="700" fill="#000">APPROVED</text>
+    <text x="690" y="156" text-anchor="middle" font-size="8.5" fill="#333">QR code is issued, form printable</text>
 
-    <rect x="408" y="116" width="168" height="56" fill="#e6e6e6" stroke="#000" stroke-width="1.6"/>
-    <text x="492" y="140" text-anchor="middle" font-size="11" font-weight="700" fill="#000">APPROVED</text>
-    <text x="492" y="156" text-anchor="middle" font-size="8.5" fill="#333">QR code is issued, form printable</text>
+    <rect x="408" y="116" width="168" height="56" fill="#fff" stroke="#000" stroke-width="1.3" stroke-dasharray="5 3"/>
+    <text x="492" y="134" text-anchor="middle" font-size="11" font-weight="700" fill="#000">President signs on paper</text>
+    <text x="492" y="149" text-anchor="middle" font-size="8.5" fill="#333">printed company vehicle form only;</text>
+    <text x="492" y="161" text-anchor="middle" font-size="8.5" fill="#333">printed name TOMOAKI MAEKAWA</text>
 
     <rect x="208" y="116" width="168" height="56" fill="#fff" stroke="#000" stroke-width="1.3"/>
-    <text x="292" y="140" text-anchor="middle" font-size="11" font-weight="700" fill="#000">Guard scans — Time OUT</text>
+    <text x="292" y="140" text-anchor="middle" font-size="11" font-weight="700" fill="#000">Guard scans: Time OUT</text>
     <text x="292" y="156" text-anchor="middle" font-size="8.5" fill="#333">person leaves the premises</text>
 
     <rect x="8" y="116" width="168" height="56" fill="#fff" stroke="#000" stroke-width="1.3"/>
-    <text x="92" y="140" text-anchor="middle" font-size="11" font-weight="700" fill="#000">Guard scans — Time IN</text>
+    <text x="92" y="140" text-anchor="middle" font-size="11" font-weight="700" fill="#000">Guard scans: Time IN</text>
     <text x="92" y="156" text-anchor="middle" font-size="8.5" fill="#333">person returns; pass is closed</text>
 
     <line x1="608" y1="144" x2="580" y2="144" stroke="#000" stroke-width="1.4" marker-end="url(#arr)"/>
@@ -197,7 +200,28 @@
     <text x="390" y="212" text-anchor="middle" font-size="9" fill="#333">Dashed steps happen only when needed. A one-way trip (no return) closes right after Time OUT.</text>
   </svg>
   </div>
-  <div class="figcap">Figure 1 — Person Gate Pass: from filing to gate scanning</div>
+  <div class="figcap">Figure 1: Person Gate Pass, from filing to gate scanning</div>
+
+  <h3>Who the pass covers</h3>
+  <ol>
+    <li>The Associates section of the request form asks who the request is for. <b>Kasama ako</b> (the default) means the requester goes out together with the listed associates. <b>Para sa iba lang</b> means the requester stays inside the premises and the pass covers only the listed associates; at least one associate is then required.</li>
+    <li>Each companion row has an <b>Employee</b> checkbox. When it is ticked, the companion is picked from the employee directory and the suggestion list shows up to six matches. When it is not ticked, the companion is an outside person such as a visitor or an OJT, whose name is typed directly and saved exactly as typed. Pressing Enter on a finished row automatically adds and focuses the next companion row; the Add companion button does the same.</li>
+  </ol>
+
+  <h3>Vehicle assignment rules (HRAD)</h3>
+  <ol>
+    <li>The assignment modal shows the requested schedule window, the trip type (Hatid, Sundo, or Both, with a note when the requester is not aboard), and vehicle and driver availability.</li>
+    <li>A split schedule (for example 10:00 to 11:00 in the morning and 1:00 to 2:00 in the afternoon) is stored as two separate reservation windows, so the calendar keeps the gap vacant.</li>
+    <li>The system refuses to forward an assignment when the selected vehicle or the selected driver is already booked in any requested window, including recurring fixed runs.</li>
+    <li>The Request Service Schedule button on the Vehicle Schedule Calendar routes to the standard New Request form with Company Vehicle already ticked.</li>
+  </ol>
+
+  <h3>The printed Person Gate Pass</h3>
+  <ol>
+    <li>When the requester is not going out, the form prints a REQUESTOR line with the requester's name above the NAME OF ASSOCIATES section, separated by a rule line.</li>
+    <li>A service indicator prints under VEHICLE AND PLATE when the trip is a service or pick up run (for example, SERVICE / SUNDO, REQUESTOR NOT ABOARD).</li>
+    <li>For company vehicle passes, the PRESIDENT signature line carries the printed name TOMOAKI MAEKAWA and is signed by hand on paper.</li>
+  </ol>
 
   <h2>3.2 Material Gate Pass</h2>
   <div class="figure">
@@ -232,14 +256,14 @@
     <text x="690" y="160" text-anchor="middle" font-size="8.5" fill="#333">letterhead form printable with QR</text>
 
     <rect x="360" y="120" width="216" height="56" fill="#fff" stroke="#000" stroke-width="1.3"/>
-    <text x="468" y="144" text-anchor="middle" font-size="11" font-weight="700" fill="#000">Guard scans — items released</text>
+    <text x="468" y="144" text-anchor="middle" font-size="11" font-weight="700" fill="#000">Guard scans: items released</text>
     <text x="468" y="160" text-anchor="middle" font-size="8.5" fill="#333">guard signs; the pass is closed</text>
 
     <line x1="608" y1="148" x2="580" y2="148" stroke="#000" stroke-width="1.4" marker-end="url(#arr)"/>
     <text x="390" y="212" text-anchor="middle" font-size="9" fill="#333">Photo proofs are visible to every approver in the app but are never printed on the form.</text>
   </svg>
   </div>
-  <div class="figcap">Figure 2 — Material Gate Pass: itemized release with photo proof</div>
+  <div class="figcap">Figure 2: Material Gate Pass, itemized release with photo proof</div>
 
   <div class="callout">
     <b>Built-in safeguards:</b> the approval order is fixed when the request is submitted; a requester can never approve
@@ -274,10 +298,8 @@
     <text x="224" y="65" text-anchor="middle" font-size="9" fill="#000">Superior</text>
     <rect x="290" y="44" width="105" height="34" fill="#fff" stroke="#666"/>
     <text x="342" y="65" text-anchor="middle" font-size="9" fill="#000">HRAD assignment</text>
-    <rect x="172" y="86" width="105" height="34" fill="#fff" stroke="#666"/>
-    <text x="224" y="107" text-anchor="middle" font-size="9" fill="#000">President</text>
-    <rect x="290" y="86" width="105" height="34" fill="#fff" stroke="#666"/>
-    <text x="342" y="107" text-anchor="middle" font-size="9" fill="#000">PAS noting</text>
+    <rect x="231" y="86" width="105" height="34" fill="#fff" stroke="#666"/>
+    <text x="283" y="107" text-anchor="middle" font-size="9" fill="#000">PAS noting</text>
 
     <!-- APPROVED / OUTSIDE -->
     <rect x="458" y="40" width="130" height="46" fill="#e6e6e6" stroke="#000" stroke-width="1.6"/>
@@ -322,7 +344,7 @@
     <text x="322" y="158" text-anchor="middle" font-size="7.5" fill="#333">rejected / cancelled</text>
   </svg>
   </div>
-  <div class="figcap">Figure 3 — Status lifecycle. Solid lines are scanner or approval actions; dashed lines are the one-way-trip shortcut.</div>
+  <div class="figcap">Figure 3: Status lifecycle. Solid lines are scanner or approval actions; dashed lines are the one-way-trip shortcut.</div>
   <p>
     Every transition writes an entry in an <b>immutable status history</b> table with who changed it and when.
     An "On Hold" state also exists so HRAD can pause a request (for example while waiting for a vehicle) without
@@ -336,7 +358,7 @@
   <p>
     The system has three layers running on the office server <b>192.168.9.7</b>: the web frontend (plain HTML and
     JavaScript served by Apache), the API (ASP.NET Core 8 on port 5087), and the MariaDB database. Browsers never talk
-    to the database directly — everything passes through the API, which enforces all the business rules.
+    to the database directly; everything passes through the API, which enforces all the business rules.
   </p>
   <div class="figure">
   <svg viewBox="0 0 780 430" width="100%">
@@ -347,13 +369,13 @@
     </defs>
     <!-- clients -->
     <rect x="30" y="14" width="200" height="50" fill="#fff" stroke="#000" stroke-width="1.3"/>
-    <text x="130" y="35" text-anchor="middle" font-size="10.5" font-weight="700" fill="#000">Office PC — browser</text>
+    <text x="130" y="35" text-anchor="middle" font-size="10.5" font-weight="700" fill="#000">Office PC: browser</text>
     <text x="130" y="51" text-anchor="middle" font-size="8.5" fill="#333">requesters, approvers, admin</text>
     <rect x="290" y="14" width="200" height="50" fill="#fff" stroke="#000" stroke-width="1.3"/>
-    <text x="390" y="35" text-anchor="middle" font-size="10.5" font-weight="700" fill="#000">Mobile phone — browser</text>
+    <text x="390" y="35" text-anchor="middle" font-size="10.5" font-weight="700" fill="#000">Mobile phone: browser</text>
     <text x="390" y="51" text-anchor="middle" font-size="8.5" fill="#333">same app, responsive layout</text>
     <rect x="550" y="14" width="200" height="50" fill="#fff" stroke="#000" stroke-width="1.3"/>
-    <text x="650" y="35" text-anchor="middle" font-size="10.5" font-weight="700" fill="#000">Guard station — scanner</text>
+    <text x="650" y="35" text-anchor="middle" font-size="10.5" font-weight="700" fill="#000">Guard station: scanner</text>
     <text x="650" y="51" text-anchor="middle" font-size="8.5" fill="#333">camera QR scan or manual entry</text>
 
     <line x1="130" y1="64" x2="345" y2="106" stroke="#000" stroke-width="1.3" marker-end="url(#arr3)"/>
@@ -362,15 +384,15 @@
 
     <!-- Apache -->
     <rect x="140" y="110" width="500" height="62" fill="#fff" stroke="#000" stroke-width="1.6"/>
-    <text x="390" y="134" text-anchor="middle" font-size="11.5" font-weight="700" fill="#000">Apache (XAMPP) — web server on 192.168.9.7</text>
+    <text x="390" y="134" text-anchor="middle" font-size="11.5" font-weight="700" fill="#000">Apache (XAMPP): web server on 192.168.9.7</text>
     <text x="390" y="152" text-anchor="middle" font-size="8.8" fill="#333">serves the Form Request web app files; quietly forwards every "/FormRequestSystem/api" call to the API</text>
 
     <line x1="390" y1="172" x2="390" y2="212" stroke="#000" stroke-width="1.4" marker-end="url(#arr3)"/>
 
     <!-- API -->
     <rect x="140" y="216" width="500" height="62" fill="#fff" stroke="#000" stroke-width="1.6"/>
-    <text x="390" y="240" text-anchor="middle" font-size="11.5" font-weight="700" fill="#000">ASP.NET Core 8 API — port 5087</text>
-    <text x="390" y="258" text-anchor="middle" font-size="8.8" fill="#333">login &amp; permissions, approval routing, QR issuing &amp; scan decisions, scheduling — runs as the "GatePassApi" startup task</text>
+    <text x="390" y="240" text-anchor="middle" font-size="11.5" font-weight="700" fill="#000">ASP.NET Core 8 API: port 5087</text>
+    <text x="390" y="258" text-anchor="middle" font-size="8.8" fill="#333">login &amp; permissions, approval routing, QR issuing &amp; scan decisions, scheduling; runs as the "GatePassApi" startup task</text>
 
     <line x1="390" y1="278" x2="390" y2="318" stroke="#000" stroke-width="1.4" marker-end="url(#arr3)"/>
     <line x1="640" y1="247" x2="676" y2="247" stroke="#000" stroke-width="1.3" marker-end="url(#arr3)"/>
@@ -384,18 +406,18 @@
     <!-- DB cylinder -->
     <path d="M 290 330 a 100 14 0 0 0 200 0 v 60 a 100 14 0 0 1 -200 0 z" fill="#fff" stroke="#000" stroke-width="1.6"/>
     <ellipse cx="390" cy="330" rx="100" ry="14" fill="#e6e6e6" stroke="#000" stroke-width="1.6"/>
-    <text x="390" y="366" text-anchor="middle" font-size="10.5" font-weight="700" fill="#000">MariaDB — gate_pass_system</text>
+    <text x="390" y="366" text-anchor="middle" font-size="10.5" font-weight="700" fill="#000">MariaDB: gate_pass_system</text>
     <text x="390" y="382" text-anchor="middle" font-size="8.5" fill="#333">requests, approvals, users, vehicles, audit</text>
   </svg>
   </div>
-  <div class="figcap">Figure 4 — Production architecture on the office server</div>
+  <div class="figcap">Figure 4: Production architecture on the office server</div>
 
   <h2>5.1 Frontend</h2>
   <p>
-    Plain HTML, CSS, and JavaScript — no framework and no build step. The single page <code>index.html</code> loads
+    Plain HTML, CSS, and JavaScript, with no framework and no build step. The single page <code>index.html</code> loads
     modules from <code>Frontend/Functions/</code> (one file per feature area: gate pass form, material form, approvals,
     scanner, calendar, admin, signatures, user manual). A small <code>runtime-config.js</code> detects where the app is
-    running (developer PC, LAN, or the office server) and picks the right API address automatically — the same files run
+    running (developer PC, LAN, or the office server) and picks the right API address automatically; the same files run
     unchanged in every environment.
   </p>
   <h2>5.2 API</h2>
@@ -465,7 +487,7 @@
 
     <rect x="30" y="284" width="170" height="42" fill="#fff" stroke="#000" stroke-width="1.2"/>
     <text x="115" y="302" text-anchor="middle" font-size="9.5" font-weight="700" fill="#000">Vehicle reservations</text>
-    <text x="115" y="316" text-anchor="middle" font-size="8" fill="#333">schedule windows, split trips</text>
+    <text x="115" y="316" text-anchor="middle" font-size="8" fill="#333">schedule windows; a split trip is two windows</text>
 
     <rect x="305" y="294" width="170" height="42" fill="#fff" stroke="#000" stroke-width="1.2"/>
     <text x="390" y="312" text-anchor="middle" font-size="9.5" font-weight="700" fill="#000">Guard scans</text>
@@ -478,7 +500,7 @@
     <!-- center -->
     <rect x="280" y="150" width="220" height="70" fill="#000"/>
     <text x="390" y="180" text-anchor="middle" font-size="11.5" font-weight="700" fill="#fff">GATE PASS REQUESTS</text>
-    <text x="390" y="198" text-anchor="middle" font-size="8.5" fill="#ddd">one row per request — control no., QR, status</text>
+    <text x="390" y="198" text-anchor="middle" font-size="8.5" fill="#ddd">one row per request: control no., QR, status</text>
 
     <!-- reference strip -->
     <rect x="10" y="356" width="760" height="42" fill="#fff" stroke="#000" stroke-width="1.2" stroke-dasharray="6 3"/>
@@ -486,12 +508,12 @@
     <text x="390" y="389" text-anchor="middle" font-size="8.5" fill="#333">employees • user accounts • departments • roles &amp; permissions • vehicles • drivers • form types • status codes • approval routing rules</text>
   </svg>
   </div>
-  <div class="figcap">Figure 5 — The request table at the center, its child tables around it, master data underneath</div>
+  <div class="figcap">Figure 5: The request table at the center, its child tables around it, master data underneath</div>
 
   <h2>6.1 Design principles that matter</h2>
   <ul>
     <li><b>Statuses and types are data, not code.</b> Form types, statuses, trip types, scan actions, and roles live in
-      reference tables. Adding a new value is a seed row, not a schema change — this is what makes new form types cheap to add.</li>
+      reference tables. Adding a new value is a seed row, not a schema change; this is what makes new form types cheap to add.</li>
     <li><b>Approval routing is configuration.</b> A routing table maps each approval step and form type to the person
       responsible, with priorities, alternates, and validity dates. Changing an approver is a data change.</li>
     <li><b>Nothing is deleted.</b> Requests reach a terminal status; vehicles and users are archived, not removed; the
@@ -513,10 +535,10 @@
   </p>
   <table>
     <tr><th style="width:22%">Group</th><th style="width:36%">Main endpoints</th><th>Purpose</th></tr>
-    <tr><td><b>Authentication</b></td><td><code>POST /api/auth/login</code>, <code>GET /api/auth/me</code></td><td>Sign in with Employee ID and password; returns the login token, roles, and permissions.</td></tr>
+    <tr><td><b>Authentication</b></td><td><code>POST /api/auth/login</code>, <code>GET /api/auth/me</code></td><td>Sign in with the employee name (full name, a leading part, or an individual name part) or the Employee ID, case insensitive, plus the password; returns the login token, roles, and permissions.</td></tr>
     <tr><td><b>Requests</b></td><td><code>POST /api/form-requests</code>, <code>POST /api/form-requests/material</code>, <code>GET /api/form-requests/my</code>, <code>GET /api/form-requests/{id}</code>, <code>GET /api/form-requests/{id}/qr</code></td><td>Create Person and Material requests, list your own, open details, fetch the QR code.</td></tr>
     <tr><td><b>Approvals</b></td><td><code>GET /api/approvals/queue</code>, <code>POST /api/approvals/{id}/approve</code>, <code>POST /api/approvals/{id}/reject</code></td><td>The approver's inbox and decisions; the approve call also carries HRAD's vehicle, driver, trip type, and schedule window.</td></tr>
-    <tr><td><b>Security</b></td><td><code>GET /api/security/queue</code>, <code>POST /api/security/scans</code>, employee-pass lookups</td><td>Guard-only. The scan endpoint decides by itself whether a scan is a Time OUT or Time IN.</td></tr>
+    <tr><td><b>Security</b></td><td><code>GET /api/security/queue</code>, <code>POST /api/security/scans</code>, employee-pass lookups</td><td>Guard only. The scan endpoint decides by itself whether a scan is a Time OUT or Time IN.</td></tr>
     <tr><td><b>Fleet</b></td><td><code>/api/vehicles</code>, <code>/api/drivers</code>, <code>/api/fleet/schedule</code>, fixed-schedule management</td><td>Vehicle and driver master lists (cached), the calendar feed, and recurring weekly schedules.</td></tr>
     <tr><td><b>Admin</b></td><td><code>/api/admin/users</code>, <code>/api/admin/roles</code>, <code>/api/admin/departments</code></td><td>User, role, and department management; archiving instead of deleting.</td></tr>
     <tr><td><b>Signatures</b></td><td><code>POST /api/signatures</code>, <code>GET /api/signatures/{id}</code></td><td>Upload and retrieve signature and proof images (size-limited, permission-checked).</td></tr>
@@ -535,17 +557,18 @@
   <h1>8 &nbsp;Security model</h1>
   <h2>8.1 Sign-in and permissions</h2>
   <ul>
-    <li>Passwords are stored only as salted PBKDF2 hashes — nobody, including IT, can read a password from the database.</li>
+    <li>Passwords are stored only as salted PBKDF2 hashes; nobody, including IT, can read a password from the database.</li>
+    <li>Users change their own password by clicking the profile chip (their name and avatar) at the top right of the screen, which opens the Change Password dialog. The Change Password entry is no longer in the sidebar.</li>
     <li>A successful login issues a signed token valid for a limited time; the browser keeps it only for the session (closing the tab logs you out).</li>
-    <li>Permissions ride inside the token, and every API endpoint declares exactly which permission it needs. The scanner is additionally locked to the Security role alone — even administrators cannot record gate scans.</li>
+    <li>Permissions ride inside the token, and every API endpoint declares exactly which permission it needs. The scanner is additionally locked to the Security role alone; even administrators cannot record gate scans.</li>
     <li>Login attempts are rate-limited to slow down password guessing; accounts can be locked and archived.</li>
   </ul>
   <h2>8.2 QR codes</h2>
   <ul>
-    <li>QR codes are cryptographically signed by the server — a QR made in a photo editor will not scan as valid.</li>
+    <li>QR codes are cryptographically signed by the server; a QR made in a photo editor will not scan as valid.</li>
     <li>The database stores only a fingerprint of the QR, never the QR itself.</li>
     <li>The scan endpoint decides the action itself (Time OUT versus Time IN) based on the request's current status; a guard cannot record the wrong direction.</li>
-    <li>A 30-second cooldown per pass prevents accidental double scans, and every attempt — valid or not — is recorded.</li>
+    <li>A 30-second cooldown per pass prevents accidental double scans, and every attempt, valid or not, is recorded.</li>
   </ul>
   <h2>8.3 Auditability</h2>
   <ul>
@@ -562,11 +585,11 @@
 
 <!-- ============ 9. SERVER OPS ============ -->
 <div class="section">
-  <h1>9 &nbsp;Server operations — 192.168.9.7 (SSH-only runbook)</h1>
+  <h1>9 &nbsp;Server operations: 192.168.9.7 (SSH-only runbook)</h1>
   <p>
     The live system runs on the office machine <b>n-timekeepingpc</b> (192.168.9.7). It also hosts the company's
     centralized dashboard, so the golden rule is: <b>touch only the Form Request folders and the
-    <code>gate_pass_system</code> database — never Apache, MariaDB services, other folders, or any network settings.</b>
+    <code>gate_pass_system</code> database, never Apache, MariaDB services, other folders, or any network settings.</b>
   </p>
 
   <h2>9.1 Why CrowdStrike Falcon warns, and how to work without triggering it</h2>
@@ -578,7 +601,7 @@
   </div>
   <table>
     <tr><th style="width:34%">Avoid on office machines</th><th>Use instead</th></tr>
-    <tr><td>Launcher batch files that start the API in a hidden window (<code>Start_FormRequest_Backend*.bat</code> and similar)</td><td>The API on the server already starts by itself through the <code>GatePassApi</code> startup task — no launcher needed. For local development, run the API in a normal visible terminal.</td></tr>
+    <tr><td>Launcher batch files that start the API in a hidden window (<code>Start_FormRequest_Backend*.bat</code> and similar)</td><td>The API on the server already starts by itself through the <code>GatePassApi</code> startup task; no launcher is needed. For local development, run the API in a normal visible terminal.</td></tr>
     <tr><td>The temporary internet tunnel script (<code>start-public.ps1</code> / cloudflared)</td><td>Test on the office network directly; the system is LAN-only by design.</td></tr>
     <tr><td>Copying files to the server with ad-hoc helper scripts</td><td>Plain <code>ssh</code> and <code>scp</code> commands (below). These are Microsoft-signed Windows tools that Falcon trusts.</td></tr>
   </table>
@@ -604,17 +627,17 @@ Restart only the API (never Apache or MariaDB):
 
   <h2>9.3 Deployment checklist (every time)</h2>
   <ol>
-    <li><b>Back up first</b> — copy the live frontend folder, the API folder, and a database dump into
+    <li><b>Back up first</b>: copy the live frontend folder, the API folder, and a database dump into
       <code>C:\GatePassSystem\backups\</code> with a date-stamped folder name.</li>
-    <li><b>Stage, then swap</b> — copy new files into a staging folder on the server, verify, then mirror into the live path.</li>
-    <li><b>Database changes only via migration files</b> — add the numbered file <i>and</i> its block in
+    <li><b>Stage, then swap</b>: copy new files into a staging folder on the server, verify, then mirror into the live path.</li>
+    <li><b>Database changes only via migration files</b>: add the numbered file <i>and</i> its block in
       <code>Database/setup-xampp.ps1</code>, then run the runner. Scope is always the <code>gate_pass_system</code> database only.</li>
-    <li><b>Verify after every change</b> — the health endpoint, the login page at
+    <li><b>Verify after every change</b>: the health endpoint, the login page at
       <code>http://192.168.9.7/FormRequestSystem/</code>, and the specific screen you changed.</li>
     <li><b>Never touch</b> Apache, MariaDB, Wi-Fi, router, firewall, or the centralized-system folders.</li>
   </ol>
   <div class="callout">
-    The server-side handoff log lives in <code>Docs/server access documentation.md</code> — every deployment adds a
+    The server-side handoff log lives in <code>Docs/server access documentation.md</code>; every deployment adds a
     dated entry there, so the server's history can be reviewed without relying on chat logs or memory.
   </div>
 </div>
@@ -622,13 +645,13 @@ Restart only the API (never Apache or MariaDB):
 <!-- ============ 10. HEALTH & KNOWN ISSUES ============ -->
 <div class="section">
   <h1>10 &nbsp;System health check and known issues</h1>
-  <p><i>Checked live over SSH on 18 July 2026. Reference for the next maintenance window — nothing here blocks daily use.</i></p>
-  <h2>10.1 Live server status — all good</h2>
+  <p><i>Checked live over SSH on 18 July 2026. Reference for the next maintenance window; nothing here blocks daily use.</i></p>
+  <h2>10.1 Live server status: all good</h2>
   <table>
     <tr><th style="width:40%">Check</th><th>Result</th></tr>
     <tr><td>API health probe</td><td>Healthy; database Connected</td></tr>
     <tr><td>Web app</td><td>Loads normally (HTTP 200)</td></tr>
-    <tr><td>Database migrations</td><td>Complete — all versions 001 through 022 applied</td></tr>
+    <tr><td>Database migrations</td><td>Complete; all versions 001 through 022 applied</td></tr>
     <tr><td>Data</td><td>95 employees, 96 accounts, 30 requests; in active daily use (latest request filed the same morning)</td></tr>
     <tr><td>API build</td><td>Compiles with 0 warnings and 0 errors; live copy rebuilt the same day</td></tr>
     <tr><td>Apache request forwarding</td><td>Configured and working (same-origin API calls, caching, compression)</td></tr>
@@ -638,8 +661,8 @@ Restart only the API (never Apache or MariaDB):
   <h2>10.2 Observations from live data (operational)</h2>
   <table>
     <tr><th style="width:6%">#</th><th>Observation</th><th style="width:38%">Suggested action</th></tr>
-    <tr><td>O1</td><td>Eight requests filed between 29 June and 9 July are still sitting in a pending-approval status — approvers have not acted on them.</td><td>Remind approvers; consider an automatic reminder or escalation after a set number of days (see Section 11).</td></tr>
-    <tr><td>O2</td><td>Three approved passes were never scanned OUT at the gate, and nothing automatically expires them — they stay in the guard's queue indefinitely.</td><td>Add a scheduled job that moves stale approved passes to Expired (the status already exists; only the automation is missing).</td></tr>
+    <tr><td>O1</td><td>Eight requests filed between 29 June and 9 July are still sitting in a pending-approval status; approvers have not acted on them.</td><td>Remind approvers; consider an automatic reminder or escalation after a set number of days (see Section 11).</td></tr>
+    <tr><td>O2</td><td>Three approved passes were never scanned OUT at the gate, and nothing automatically expires them; they stay in the guard's queue indefinitely.</td><td>Add a scheduled job that moves stale approved passes to Expired (the status already exists; only the automation is missing).</td></tr>
     <tr><td>O3</td><td>Five vehicle reservations whose schedule window has already passed are still marked active (four pending, one reserved, the oldest from 29 June). Because active reservations block availability, these vehicles can look busy on the calendar even though the trips are long over.</td><td>The same cleanup job should release a reservation once its window lapses without use; until then, HRAD can cancel the stale parent requests by hand.</td></tr>
   </table>
 
@@ -651,7 +674,7 @@ Restart only the API (never Apache or MariaDB):
     <tr><td>C3</td><td class="lvl">Medium</td><td>A pass's QR code never really expires: the server automatically extends the expiry whenever the code is requested, and the code itself is deterministic. A leaked printout stays scannable for the life of the pass. Acceptable on a closed LAN; revisit if the system is ever exposed more widely.</td></tr>
     <tr><td>C4</td><td class="lvl">Low</td><td>One security lookup compares the employment status against <code>'Active'</code> while everywhere else uses <code>'ACTIVE'</code>. Harmless under the current database collation, but a latent bug if the collation ever changes.</td></tr>
     <tr><td>C5</td><td class="lvl">Low</td><td>Four admin-page pagination helpers reference functions that no longer exist (leftovers from an older admin screen). They are not wired to any button today, but would crash if ever called.</td></tr>
-    <tr><td>C6</td><td class="lvl">Low</td><td>One frontend function for the material form is defined twice (the second definition silently wins); two role checks in the navigation code can never match. Dead code — safe, but worth cleaning.</td></tr>
+    <tr><td>C6</td><td class="lvl">Low</td><td>One frontend function for the material form is defined twice (the second definition silently wins); two role checks in the navigation code can never match. Dead code; safe, but worth cleaning.</td></tr>
     <tr><td>C7</td><td class="lvl">Low</td><td>Eight debugging log statements remain in the QR scanner code path (visible in the browser console only).</td></tr>
     <tr><td>C8</td><td class="lvl">Low</td><td>Cache-busting version tags in <code>index.html</code> are maintained by hand and currently mixed across files. Works, but easy to forget on deployment; a single shared version constant would be safer.</td></tr>
     <tr><td>C9</td><td class="lvl">Low</td><td>Documentation drift: the developer guide still points to an old frontend folder, and the early API contract document differs from the live endpoints. The code is correct; the older documents need refreshing.</td></tr>
@@ -660,11 +683,11 @@ Restart only the API (never Apache or MariaDB):
 
 <!-- ============ 11. EXPANSION ============ -->
 <div class="section">
-  <h1>11 &nbsp;Expansion roadmap — growing beyond gate passes</h1>
+  <h1>11 &nbsp;Expansion roadmap: growing beyond gate passes</h1>
   <p>
     The most important architectural fact about this system: <b>"gate pass" is just the first tenant of a general
     form-request platform.</b> Login, roles, approval routing, e-signatures, notifications, printing, QR scanning, and
-    the audit trail are all shared machinery — they were built once and every new form type reuses them.
+    the audit trail are all shared machinery; they were built once and every new form type reuses them.
   </p>
   <div class="figure">
   <svg viewBox="0 0 780 310" width="100%">
@@ -678,10 +701,10 @@ Restart only the API (never Apache or MariaDB):
     <!-- live tiles -->
     <rect x="200" y="24" width="180" height="56" fill="#e6e6e6" stroke="#000" stroke-width="1.6"/>
     <text x="290" y="48" text-anchor="middle" font-size="10.5" font-weight="700" fill="#000">Person Gate Pass</text>
-    <text x="290" y="64" text-anchor="middle" font-size="8.5" fill="#333">LIVE — in daily use</text>
+    <text x="290" y="64" text-anchor="middle" font-size="8.5" fill="#333">LIVE: in daily use</text>
     <rect x="400" y="24" width="180" height="56" fill="#e6e6e6" stroke="#000" stroke-width="1.6"/>
     <text x="490" y="48" text-anchor="middle" font-size="10.5" font-weight="700" fill="#000">Material Gate Pass</text>
-    <text x="490" y="64" text-anchor="middle" font-size="8.5" fill="#333">LIVE — in daily use</text>
+    <text x="490" y="64" text-anchor="middle" font-size="8.5" fill="#333">LIVE: in daily use</text>
 
     <!-- platform -->
     <rect x="150" y="150" width="480" height="80" fill="#000"/>
@@ -692,16 +715,16 @@ Restart only the API (never Apache or MariaDB):
     <!-- future tiles -->
     <rect x="105" y="262" width="180" height="42" fill="#fff" stroke="#000" stroke-width="1.4" stroke-dasharray="6 3"/>
     <text x="195" y="280" text-anchor="middle" font-size="10" font-weight="700" fill="#000">Leave Form</text>
-    <text x="195" y="295" text-anchor="middle" font-size="8" fill="#333">future — same approval engine</text>
+    <text x="195" y="295" text-anchor="middle" font-size="8" fill="#333">future: same approval engine</text>
     <rect x="300" y="262" width="180" height="42" fill="#fff" stroke="#000" stroke-width="1.4" stroke-dasharray="6 3"/>
     <text x="390" y="280" text-anchor="middle" font-size="10" font-weight="700" fill="#000">Overtime (OT) Form</text>
-    <text x="390" y="295" text-anchor="middle" font-size="8" fill="#333">future — same approval engine</text>
+    <text x="390" y="295" text-anchor="middle" font-size="8" fill="#333">future: same approval engine</text>
     <rect x="495" y="262" width="180" height="42" fill="#fff" stroke="#000" stroke-width="1.4" stroke-dasharray="6 3"/>
     <text x="585" y="280" text-anchor="middle" font-size="10" font-weight="700" fill="#000">General Request Form</text>
-    <text x="585" y="295" text-anchor="middle" font-size="8" fill="#333">future — and more after that</text>
+    <text x="585" y="295" text-anchor="middle" font-size="8" fill="#333">future: and more after that</text>
   </svg>
   </div>
-  <div class="figcap">Figure 6 — Two form types live today; the platform underneath is ready for more</div>
+  <div class="figcap">Figure 6: Two form types live today; the platform underneath is ready for more</div>
 
   <h2>11.1 Why adding a form type is cheap here</h2>
   <ul>
@@ -709,24 +732,24 @@ Restart only the API (never Apache or MariaDB):
       code. Person and Material prove the pattern with two very different shapes (a movement pass with QR, and an
       itemized release list with photos).</li>
     <li><b>Approval chains are configuration.</b> A Leave Form that needs Superior first and then HR is just routing rows
-      in the assignment table — the approval screens, signatures, rejection reasons, and notifications work unchanged.</li>
+      in the assignment table; the approval screens, signatures, rejection reasons, and notifications work unchanged.</li>
     <li><b>Statuses are extensible.</b> If a new form needs an extra state, it is a seeded status row with flags, not a
       schema rewrite.</li>
   </ul>
   <h2>11.2 The recipe for a new form (using Leave Form as the example)</h2>
   <ol>
-    <li><b>Seed the form type</b> — one row (for example <code>LEAVE_FORM</code>) in the form-types table.</li>
-    <li><b>Add its specific fields</b> — a small child table (leave dates, leave type, reason) via a numbered migration
+    <li><b>Seed the form type</b>: one row (for example <code>LEAVE_FORM</code>) in the form-types table.</li>
+    <li><b>Add its specific fields</b>: a small child table (leave dates, leave type, reason) via a numbered migration
       plus its runner block, exactly like the material-items table was added for Material Gate Pass.</li>
-    <li><b>Create the stored procedure</b> — a create-procedure that validates the fields and reuses the shared
+    <li><b>Create the stored procedure</b>: a create-procedure that validates the fields and reuses the shared
       control-number generator, mirroring the existing material-pass procedure.</li>
-    <li><b>Configure the approval route</b> — rows in the routing table saying which steps a Leave Form passes through
+    <li><b>Configure the approval route</b>: rows in the routing table saying which steps a Leave Form passes through
       and who acts on each step.</li>
-    <li><b>Add the API surface</b> — a create endpoint and DTO in the API following the existing material-pass endpoint
+    <li><b>Add the API surface</b>: a create endpoint and DTO in the API following the existing material-pass endpoint
       as the template; lists, details, approvals, and notifications come free.</li>
-    <li><b>Add the frontend module</b> — one JavaScript file for the form screen plus a third card on the "New Request"
+    <li><b>Add the frontend module</b>: one JavaScript file for the form screen plus a third card on the "New Request"
       chooser, following <code>material-gatepass.js</code> as the template; add a print layout only if the form needs one.</li>
-    <li><b>UAT and deploy</b> — the same sign-off sheet and SSH deployment routine in this document apply.</li>
+    <li><b>UAT and deploy</b>: the same sign-off sheet and SSH deployment routine in this document apply.</li>
   </ol>
   <p>
     An <b>OT Form</b> follows the identical recipe (fields: date, hours, reason; route: Superior then HR), and a
@@ -736,48 +759,48 @@ Restart only the API (never Apache or MariaDB):
   <h2>11.3 Platform improvements worth scheduling alongside</h2>
   <table>
     <tr><th style="width:30%">Improvement</th><th>Why</th></tr>
-    <tr><td>Move hard-coded approver IDs into the routing tables</td><td>Personnel changes become data edits (this is finding C1 in Section 10 — do it before adding new forms so every form benefits).</td></tr>
+    <tr><td>Move hard-coded approver IDs into the routing tables</td><td>Personnel changes become data edits (this is finding C1 in Section 10; do it before adding new forms so every form benefits).</td></tr>
     <tr><td>Background job for overdue and expiry</td><td>Auto-flag overdue returns and expire stale approved passes (finding O2); the same job can send approval-reminder notifications (finding O1).</td></tr>
     <tr><td>HTTPS on the office server</td><td>Enables phone cameras for scanning everywhere and removes browser warnings; an internal certificate or company domain both work.</td></tr>
     <tr><td>Scheduled database backups</td><td>Backups currently accompany deployments; a nightly automatic dump protects against everything else.</td></tr>
     <tr><td>Email or Viber-style digests</td><td>Approvers who rarely open the app still learn that something is waiting for them.</td></tr>
-    <tr><td>Reports module</td><td>Monthly summaries per department, vehicle utilization, and gate traffic — the data is already collected.</td></tr>
+    <tr><td>Reports module</td><td>Monthly summaries per department, vehicle utilization, and gate traffic; the data is already collected.</td></tr>
     <tr><td>Single sign-on with the centralized dashboard</td><td>The Form Request tile already lives on the company dashboard; a shared login would remove the second password.</td></tr>
   </table>
 </div>
 
 <!-- ============ 12. APPENDIX ============ -->
 <div class="section">
-  <h1>12 &nbsp;Appendix — repository map and common commands</h1>
+  <h1>12 &nbsp;Appendix: repository map and common commands</h1>
   <h2>12.1 Repository layout</h2>
   <table>
     <tr><th style="width:34%">Path</th><th>Contents</th></tr>
     <tr><td><code>index.html</code></td><td>The single web page that hosts the entire app.</td></tr>
-    <tr><td><code>Frontend/Functions/</code></td><td>The live JavaScript modules — one file per feature (gate pass, material, approvals, scanner, calendar, admin, signatures, manual).</td></tr>
+    <tr><td><code>Frontend/Functions/</code></td><td>The live JavaScript modules, one file per feature (gate pass, material, approvals, scanner, calendar, admin, signatures, manual).</td></tr>
     <tr><td><code>Frontend/Design/</code>, <code>Frontend/Connectors/</code></td><td>Styles and the API client; <code>runtime-config.js</code> picks the right API address per environment.</td></tr>
-    <tr><td><code>Backend/</code></td><td>ASP.NET Core 8 solution — controllers in <code>Backend/Controllers/</code>, domain logic in <code>Backend/Project/</code>.</td></tr>
+    <tr><td><code>Backend/</code></td><td>ASP.NET Core 8 solution: controllers in <code>Backend/Controllers/</code>, domain logic in <code>Backend/Project/</code>.</td></tr>
     <tr><td><code>Database/</code></td><td><code>schema.sql</code>, seeds, stored procedures, numbered <code>Migrations/</code>, and the runner <code>setup-xampp.ps1</code>.</td></tr>
     <tr><td><code>Docs/</code></td><td>Planning documents, API contract, user manuals per role, and the server handoff log.</td></tr>
-    <tr><td><code>LocalData/</code></td><td>Ignored by Git — real employee data, credentials, and backups stay here, never in the repository.</td></tr>
+    <tr><td><code>LocalData/</code></td><td>Ignored by Git: real employee data, credentials, and backups stay here, never in the repository.</td></tr>
   </table>
   <h2>12.2 Commands used day to day</h2>
   <table>
     <tr><th style="width:44%">Command</th><th>Purpose</th></tr>
     <tr><td><code>start-local.bat</code></td><td>Run the full stack on a developer PC (database, API, frontend).</td></tr>
     <tr><td><code>deploy-xampp.bat</code></td><td>Build and copy the app into the local XAMPP for LAN testing.</td></tr>
-    <tr><td><code>Database\setup-xampp.ps1</code></td><td>Create or migrate the database — safe to re-run any time.</td></tr>
+    <tr><td><code>Database\setup-xampp.ps1</code></td><td>Create or migrate the database; safe to re-run any time.</td></tr>
     <tr><td><code>ssh -i ~/.ssh/id_ed25519_gatepass User@192.168.9.7</code></td><td>The only approved way into the live server (Section 9).</td></tr>
     <tr><td><code>curl http://192.168.9.7:5087/api/health</code></td><td>One-line production health check.</td></tr>
   </table>
   <h2>12.3 Related documents</h2>
   <ul>
-    <li><b>UAT Sign-Off Sheet</b> — the one-page acceptance checklist that accompanies this document.</li>
-    <li><b>User manuals</b> (per role, with screenshots) — <code>Docs/User_Manuals/FormRequest_Documentation/</code>, also available inside the app under Help.</li>
-    <li><b>Server handoff log</b> — <code>Docs/server access documentation.md</code> (canonical, update-in-place).</li>
-    <li><b>API contract and migration plans</b> — <code>Docs/API_CONTRACT.md</code>, <code>Docs/MIGRATION_PLAN.md</code>.</li>
+    <li><b>UAT Sign-Off Sheet</b>: the one-page acceptance checklist that accompanies this document.</li>
+    <li><b>User manuals</b> (per role, with screenshots): <code>Docs/User_Manuals/FormRequest_Documentation/</code>, also available inside the app under Help.</li>
+    <li><b>Server handoff log</b>: <code>Docs/server access documentation.md</code> (canonical, update-in-place).</li>
+    <li><b>API contract and migration plans</b>: <code>Docs/API_CONTRACT.md</code>, <code>Docs/MIGRATION_PLAN.md</code>.</li>
   </ul>
   <p style="margin-top:18px; color:#333; font-size:9px; text-align:center;">
-    Form Request System — System &amp; Architecture Documentation v1.0 • July 2026 • Moriroku Philippines, Inc. — Internal Document
+    Form Request System: System &amp; Architecture Documentation v1.1 • August 2026 • Moriroku Philippines, Inc. Internal Document
   </p>
 </div>
 
