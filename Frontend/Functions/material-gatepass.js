@@ -116,6 +116,9 @@ async function addAssociateRow(formTypeCode, values = {}) {
         applyAssociateEmployeeMode(row);
     }
     updateAssociatesEmptyHint(formTypeCode);
+    // UAT: focus the fresh row so companions can be chained via the keyboard
+    // (type → Enter → next row) as well as through the Add companion button.
+    row.querySelector('[data-associate-search]')?.focus();
 }
 
 // Phase 17 item 4: switch a companion row between directory-employee mode and
@@ -215,7 +218,23 @@ function handleAssociateSearchInput(rowId) {
 function handleAssociateSearchKeydown(event, rowId) {
     if (event.key !== 'Enter') return;
     event.preventDefault();
-    const search = document.getElementById(rowId)?.querySelector('[data-associate-search]');
+    const row = document.getElementById(rowId);
+    if (!row) return;
+    const formTypeCode = row.closest('#materialAssociatesBody')
+        ? 'MATERIAL_GATE_PASS'
+        : 'PERSON_GATE_PASS';
+    const search = row.querySelector('[data-associate-search]');
+    // UAT: Enter on a finished row spawns (and focuses) the next companion row.
+    // Non-employee rows are finished once a name is typed; employee rows once a
+    // directory pick is confirmed. Otherwise Enter confirms the top suggestion.
+    if (row.dataset.isEmployee === '0') {
+        if ((search?.value || '').trim()) addAssociateRow(formTypeCode);
+        return;
+    }
+    if (row.dataset.employeeId) {
+        addAssociateRow(formTypeCode);
+        return;
+    }
     const first = filterAssociateEmployees(search?.value)[0];
     if (first) selectAssociate(rowId, first.employeeRecordId);
 }

@@ -221,12 +221,8 @@
             </nav>
 
             <div class="border-t border-white/10">
-                <button id="changePasswordButton" type="button" class="w-full px-6 py-3 hover:bg-white/10 transition cursor-pointer text-left">
-                    <div class="flex items-center space-x-3 text-white px-2">
-                        <i class="fas fa-key text-lg w-8 text-left"></i>
-                        <span class="text-sm font-bold tracking-wide">Change Password</span>
-                    </div>
-                </button>
+                <!-- UAT: Change Password moved out of the sidebar — it now opens by
+                     clicking the profile chip in the top bar. -->
                 <button id="logoutButton" type="button" class="w-full px-6 py-4 border-t border-white/10 hover:bg-white/10 transition cursor-pointer text-left">
                     <div class="flex items-center space-x-3 text-white px-2">
                         <i class="fas fa-sign-out-alt text-xl w-8 text-left"></i>
@@ -272,13 +268,15 @@
                         </div>
                     </div>
 
-                    <div class="flex items-center space-x-2 md:border-l md:pl-6 border-gray-200">
+                    <!-- UAT: profile chip opens Change Password -->
+                    <button id="profileMenuButton" type="button" title="Change Password" class="flex items-center space-x-2 md:border-l md:pl-6 border-gray-200 rounded px-1 py-1 transition hover:bg-gray-50 focus:outline-none focus:ring-1 focus:ring-mpiBlue">
                         <i class="fas fa-user-circle text-gray-400 text-2xl md:text-xl"></i>
-                        <div class="flex flex-col hidden sm:flex">
+                        <div class="flex-col text-left hidden sm:flex">
                             <span id="navUserName" class="text-sm font-bold text-gray-700 leading-tight">User Name</span>
                             <span id="navUserRole" class="text-[10px] text-gray-500">System Administrator</span>
                         </div>
-                    </div>
+                        <i class="fas fa-key text-[10px] text-gray-300 hidden sm:inline"></i>
+                    </button>
                 </div>
             </header>
 
@@ -565,8 +563,9 @@
                                 <textarea id="gpPurpose" class="w-full border border-gray-300 p-2.5 rounded focus:ring-1 focus:ring-mpiBlue focus:border-mpiBlue transition text-sm h-20 resize-none" required></textarea>
                             </div>
 
-                            <!-- Associates / Companions (Phase 11 req5, Phase 17 items 1+4) -->
-                            <div class="overflow-hidden rounded-lg border border-gray-200">
+                            <!-- Associates / Companions (Phase 11 req5, Phase 17 items 1+4).
+                                 No overflow-hidden here: it clipped the employee suggestion dropdown. -->
+                            <div class="rounded-lg border border-gray-200">
                                 <div class="flex items-center justify-between border-b bg-gray-50 px-4 py-3">
                                     <div>
                                         <h3 class="text-sm font-bold text-gray-800">Associates / Companions</h3>
@@ -722,8 +721,9 @@
                                 </div>
                             </div>
 
-                            <!-- Associates / Companions (Phase 11 req5) -->
-                            <div class="overflow-hidden rounded-lg border border-gray-200">
+                            <!-- Associates / Companions (Phase 11 req5).
+                                 No overflow-hidden here: it clipped the employee suggestion dropdown. -->
+                            <div class="rounded-lg border border-gray-200">
                                 <div class="flex items-center justify-between border-b bg-gray-50 px-4 py-3">
                                     <div>
                                         <h3 class="text-sm font-bold text-gray-800">Additional Companions</h3>
@@ -1582,7 +1582,7 @@
     <script src="Frontend/Functions/mock-data.js?v=20260709-phase1312.2"></script>
     <script src="Frontend/Connectors/api-client.js?v=20260709-phase1312.2"></script>
     <script src="Frontend/Functions/signature.js?v=20260709-phase1312"></script>
-    <script src="Frontend/Functions/material-gatepass.js?v=20260804-phase18.2"></script>
+    <script src="Frontend/Functions/material-gatepass.js?v=20260804-phase18.4"></script>
     <script src="Frontend/Functions/modal.js?v=20260804-phase18.2"></script>
     <script src="Frontend/Functions/gatepass.js?v=20260804-phase18.2"></script>
     <script src="Frontend/Functions/approvals.js?v=20260804-phase18.2"></script>
@@ -1591,7 +1591,7 @@
     <script src="Frontend/Functions/navigation.js?v=20260804-phase17"></script>
     <script src="Frontend/Functions/usermanual.js?v=20260804-phase18.2"></script>
     <script src="Frontend/Functions/calendar.js?v=20260804-phase18.2"></script>
-    <script src="Frontend/Functions/auth.js?v=20260804-phase18-auth"></script>
+    <script src="Frontend/Functions/auth.js?v=20260804-phase18.4"></script>
     <script src="Frontend/Functions/app.js?v=20260712-perf1"></script>
 </body>
 </html>

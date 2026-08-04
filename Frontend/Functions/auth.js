@@ -328,7 +328,9 @@ async function logout() {
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('loginForm')?.addEventListener('submit', handleLogin);
     document.getElementById('logoutButton')?.addEventListener('click', logout);
-    document.getElementById('changePasswordButton')?.addEventListener('click', openChangePasswordModal);
+    // UAT: the sidebar Change Password entry was removed; the top-bar profile
+    // chip is the single trigger now.
+    document.getElementById('profileMenuButton')?.addEventListener('click', openChangePasswordModal);
     document.getElementById('changePasswordCloseButton')?.addEventListener('click', closeChangePasswordModal);
     document.getElementById('changePasswordCancelButton')?.addEventListener('click', closeChangePasswordModal);
     document.getElementById('changePasswordForm')?.addEventListener('submit', handleChangePassword);
