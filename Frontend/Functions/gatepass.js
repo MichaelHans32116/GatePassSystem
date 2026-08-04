@@ -432,8 +432,8 @@ function updateRequestorScopeNotice() {
         notice.innerText = !hasCompanions
             ? ''
             : isRequestorIncluded()
-                ? 'Kasama ka — you are on the list, so this pass covers you and the companions above.'
-                : 'Para sa iba lang — you are not on the list, so you stay inside and only the companions above go out. Add yourself as a companion if you are going too.';
+                ? 'This pass covers you and the companions listed above.'
+                : 'This pass covers the companions above only. Add yourself if you are going out too.';
     }
     updateServiceTripHint();
 }
