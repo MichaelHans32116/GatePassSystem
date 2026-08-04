@@ -46,7 +46,9 @@ function setupRoleAccess(user) {
                 document.getElementById('navItemApply').style.display = 'none';
                 document.getElementById('navGroupApprovals').style.display = 'none';
                 document.getElementById('navGroupAdmin').style.display = 'none';
-                switchSection('dashBoard');
+                // Phase 17 item 14: security lands straight on the QR scanner;
+                // the dashboard stays one tap away via its View Dashboard button.
+                switchSection('guardScan');
             }
             else if (user.role === 'System Admin') {
                 document.getElementById('navGroupApprovals').style.display = 'none';

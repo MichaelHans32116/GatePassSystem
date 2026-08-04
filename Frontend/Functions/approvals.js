@@ -325,6 +325,20 @@ function updateApprovalQueueDisplay(toApprove) {
         badge.classList.add('hidden');
     }
 
+    // Phase 17 item 11: approvers get a dashboard box with their pending count.
+    const approvalCard = document.getElementById('approvalCountCard');
+    const approvalCount = document.getElementById('cntToApprove');
+    if (approvalCount) approvalCount.innerText = toApprove.length;
+    if (approvalCard && currentUser) {
+        const isApprover = isDatabaseSession()
+            ? (currentUser.permissions || []).some(permission =>
+                ['gatepass.approve.superior', 'gatepass.approve.president', 'gatepass.note.pas'].includes(permission))
+            : (currentUser.role === 'Immediate Superior'
+                || currentUser.role === 'President'
+                || currentUser.canNoteGatePass === true);
+        approvalCard.classList.toggle('hidden', !isApprover);
+    }
+
     const startIndex = (approvalCurrentPage - 1) * window.GLOBAL_PAGE_SIZE;
     const paginatedApprovals = toApprove.slice(startIndex, startIndex + window.GLOBAL_PAGE_SIZE);
 

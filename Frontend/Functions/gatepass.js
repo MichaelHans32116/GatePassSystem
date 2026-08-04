@@ -22,6 +22,27 @@ const gatePassStatusLabels = {
 let myPassesCurrentPage = 1;
 window.changeMyPassesPage = function(page) { myPassesCurrentPage = page; renderStandardDashboard(); };
 
+// Phase 17 item 10: active stat-card filter for the dashboard table
+// ('' = show everything; clicking the active card again clears it).
+var dashboardStatFilter = '';
+
+function passMatchesStatFilter(pass, filterKey) {
+    if (!filterKey) return true;
+    if (filterKey === 'pending') return pass.status.startsWith('Pending');
+    if (filterKey === 'approved') return ['Approved', 'Outside', 'Overdue'].includes(pass.status);
+    if (filterKey === 'completed') return ['Returned', 'Closed'].includes(pass.status);
+    return true;
+}
+
+function filterDashboardByStat(filterKey) {
+    dashboardStatFilter = dashboardStatFilter === filterKey ? '' : filterKey;
+    myPassesCurrentPage = 1;
+    renderStandardDashboard();
+    document.getElementById('myPassesTableBody')
+        ?.closest('.bg-white')
+        ?.scrollIntoView({ behavior: 'smooth', block: 'start' });
+}
+
 function isDatabaseSession() {
     return ApiClient.isDatabaseSession();
 }
@@ -703,8 +724,11 @@ async function loadQrToken(pass) {
 
 async function renderStandardDashboard() {
     renderMyEmployeeQr();
+    const hideNewRequest = currentUser.role === 'President';
     document.getElementById('btnNewRequest').style.display =
-        currentUser.role === 'President' ? 'none' : 'block';
+        hideNewRequest ? 'none' : 'block';
+    const mobileNewRequest = document.getElementById('btnNewRequestMobile');
+    if (mobileNewRequest) mobileNewRequest.classList.toggle('hidden', hideNewRequest);
 
     const dashboardSearch = (document.getElementById('myPassSearch')?.value || '')
         .trim()
@@ -712,7 +736,7 @@ async function renderStandardDashboard() {
     const myPasses = isDatabaseSession()
         ? gatePasses
         : gatePasses.filter(pass => pass.userId === currentUser.id);
-    const visiblePasses = dashboardSearch
+    const searchedPasses = dashboardSearch
         ? myPasses.filter(pass => [
             pass.controlNo,
             pass.id,
@@ -723,6 +747,17 @@ async function renderStandardDashboard() {
             pass.userDept
         ].some(value => String(value || '').toLowerCase().includes(dashboardSearch)))
         : myPasses;
+    // Phase 17 item 10: stat cards filter the table; highlight the active one.
+    const visiblePasses = searchedPasses.filter(pass =>
+        passMatchesStatFilter(pass, dashboardStatFilter));
+    [['statCardPending', 'pending'], ['statCardApproved', 'approved'], ['statCardCompleted', 'completed']]
+        .forEach(([cardId, filterKey]) => {
+            const card = document.getElementById(cardId);
+            if (!card) return;
+            const isActive = dashboardStatFilter === filterKey;
+            card.classList.toggle('ring-2', isActive);
+            card.classList.toggle('ring-mpiBlue', isActive);
+        });
     document.getElementById('cntPending').innerText =
         myPasses.filter(pass => pass.status.startsWith('Pending')).length;
     document.getElementById('cntApproved').innerText =
@@ -904,6 +939,7 @@ window.loadAllGatePasses = loadAllGatePasses;
 window.getGatePassDetail = getGatePassDetail;
 window.loadQrToken = loadQrToken;
 window.renderStandardDashboard = renderStandardDashboard;
+window.filterDashboardByStat = filterDashboardByStat;
 window.renderMyEmployeeQr = renderMyEmployeeQr;
 window.toggleEmployeeQrDialog = toggleEmployeeQrDialog;
 window.closeEmployeeQrDialog = closeEmployeeQrDialog;
