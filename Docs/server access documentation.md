@@ -362,3 +362,38 @@ Backend:
 - Staging folder `C:\GatePassDeploy` removed afterwards.
 
 Apache, MariaDB, firewall, and network settings were not touched.
+
+
+CORRECTION — WHERE THE LIVE API ACTUALLY RUNS
+----------------------------------------------
+The `GatePassApi` scheduled task runs:
+
+    powershell.exe -NoProfile -ExecutionPolicy Bypass -File "C:\GatePassSystem\Api\start-api.ps1"
+
+So **`C:\GatePassSystem\Api` is the live backend**. Confirm with:
+
+    ssh -i ~/.ssh/id_ed25519_gatepass User@192.168.9.7 "powershell -Command \"(Get-ScheduledTask -TaskName 'GatePassApi').Actions | Format-List\""
+
+`C:\Users\User\Desktop\GatePassSystem\Backend` also holds a full copy of the
+API and looks like the deploy target, but **nothing runs it**. Some handoff
+notes point there; they are wrong. Copying assemblies only into the Desktop
+folder leaves the live API on the old build while everything looks healthy,
+because `/api/health` keeps returning 200 from the old process.
+
+That happened on 2026-08-04: migration 025 grew `SP_CreateGatePass` to 20
+parameters while the running API still sent 19, so every submit returned
+HTTP 500 on `POST /api/gate-pass-requests` even though health, the frontend,
+and the database all verified clean. Fixed by copying the four assemblies into
+`C:\GatePassSystem\Api` and restarting the task.
+
+Lesson for any deploy that changes a stored procedure signature: the API and
+the procedure must move together. After deploying, verify the counts match:
+
+    SELECT COUNT(*) FROM information_schema.PARAMETERS
+    WHERE SPECIFIC_NAME='SP_CreateGatePass' AND SPECIFIC_SCHEMA='gate_pass_system';
+
+`/api/health` returning 200 is NOT sufficient evidence that a backend deploy
+landed — check the assembly timestamps in `C:\GatePassSystem\Api`.
+
+Backup of the live API folder before the 2026-08-04 swap:
+`C:\GatePassBackups\20260804-phase19-1\api-live` (98 files).
