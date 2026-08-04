@@ -457,12 +457,40 @@ public sealed class GatePassService(
             return (resolved, "A maximum of 20 associates is allowed.");
         }
 
+        var seenOutsiderNames = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
         foreach (var item in requested)
         {
+            // Phase 17 item 4: outside companions (visitors, OJTs) carry no
+            // directory record — they are stored by name only.
+            if (!item.IsEmployee)
+            {
+                var outsiderName = item.FullName?.Trim();
+                if (string.IsNullOrWhiteSpace(outsiderName))
+                {
+                    return (resolved,
+                        "Enter a name for each non-employee companion.");
+                }
+
+                if (!seenOutsiderNames.Add(outsiderName))
+                {
+                    return (resolved,
+                        "The same companion was added more than once.");
+                }
+
+                resolved.Add(new AssociateRecord
+                {
+                    LineNo = lineNo++,
+                    EmployeeId = null,
+                    Name = outsiderName,
+                    DepartmentId = null
+                });
+                continue;
+            }
+
             if (item.EmployeeId <= 0)
             {
                 return (resolved,
-                    "Each associate must be selected from the employee directory.");
+                    "Each employee associate must be selected from the employee directory.");
             }
 
             if (!seenEmployeeIds.Add(item.EmployeeId))
@@ -502,6 +530,13 @@ public sealed class GatePassService(
             string.IsNullOrWhiteSpace(request.Purpose))
         {
             return "Destination and purpose are required.";
+        }
+
+        // Phase 17 item 1: a pass filed for other people only must actually
+        // name those people.
+        if (!request.IncludesRequestor && request.Associates.Count == 0)
+        {
+            return "Add at least one associate when the requestor is not going out.";
         }
 
         if (request.ExpectedOutAt == default)

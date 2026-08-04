@@ -50,6 +50,20 @@ public sealed class GatePassRepository(
                 commandType: CommandType.StoredProcedure,
                 cancellationToken: cancellationToken));
 
+        // Phase 17 item 1: SP_CreateGatePass predates this flag, so it is
+        // persisted separately instead of widening the procedure signature.
+        if (!request.IncludesRequestor)
+        {
+            await connection.ExecuteAsync(new CommandDefinition(
+                """
+                UPDATE tbl_gate_pass_requests
+                SET is_requestor_included = FALSE
+                WHERE gate_pass_id = @GatePassId;
+                """,
+                new { record.GatePassId },
+                cancellationToken: cancellationToken));
+        }
+
         await InsertAssociatesAsync(
             connection,
             null,
@@ -302,6 +316,7 @@ public sealed class GatePassRepository(
                 records.*,
                 request_row.requester_employee_id AS RequesterEmployeeId,
                 request_row.will_return AS WillReturn,
+                request_row.is_requestor_included AS IncludesRequestor,
                 request_row.vehicle_usage_code AS VehicleUsageCode,
                 request_row.private_vehicle_details AS PrivateVehicleDetails,
                 request_row.vehicle_trip_type_code AS VehicleTripTypeCode,
@@ -792,6 +807,7 @@ public sealed class GatePassRepository(
             CreatedAt = source.CreatedAt,
             UpdatedAt = source.UpdatedAt,
             WillReturn = source.WillReturn,
+            IncludesRequestor = source.IncludesRequestor,
             VehicleUsageCode = source.VehicleUsageCode,
             PrivateVehicleDetails = source.PrivateVehicleDetails,
             VehicleTripTypeCode = source.VehicleTripTypeCode,

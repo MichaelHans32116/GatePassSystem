@@ -31,6 +31,11 @@ public sealed class CreateGatePassRequest
     [StringLength(20)]
     public string? VehicleTripTypeCode { get; init; }
 
+    // Phase 17 item 1: false when the requestor files the pass for other
+    // people only and does not go out with them. Defaults to true so older
+    // clients keep the original "requestor is aboard" behavior.
+    public bool IncludesRequestor { get; init; } = true;
+
     // Phase 11 / Requirement 5: optional additional associates/companions.
     // The directory-selected companions who accompany the requester. These
     // are stored line_no=2..N; line_no=1 is the primary (see service).
@@ -84,10 +89,13 @@ public sealed class MaterialGatePassItemRequest
 
 public sealed class AssociateRequest
 {
-    // Companions are chosen from the employee directory, so they carry an
-    // employee_record_id. The service resolves name/department from the
-    // directory; FullName here is accepted only as an optional display hint.
+    // Employee companions carry an employee_record_id and the service
+    // resolves name/department from the directory. Phase 17 item 4:
+    // IsEmployee=false marks outside companions (visitors, OJTs) — they have
+    // no EmployeeId and FullName becomes the stored name instead.
     public long EmployeeId { get; init; }
+
+    public bool IsEmployee { get; init; } = true;
 
     [StringLength(255)]
     public string? FullName { get; init; }

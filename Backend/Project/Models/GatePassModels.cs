@@ -61,6 +61,11 @@ public class GatePassRecord
 public sealed class GatePassDetail : GatePassRecord
 {
     public bool WillReturn { get; init; }
+
+    // Phase 17 item 1: false when the pass covers other people only and the
+    // requestor stays inside.
+    public bool IncludesRequestor { get; init; } = true;
+
     public string VehicleUsageCode { get; init; } = string.Empty;
     public string? PrivateVehicleDetails { get; init; }
     public long? VehicleId { get; init; }
