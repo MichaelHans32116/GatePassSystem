@@ -31,11 +31,36 @@ public sealed class UserRepository(IDatabaseConnectionFactory connectionFactory)
             ON account_status.account_status_code = ua.account_status_code
         """;
 
-    public Task<AuthUser?> FindForLoginAsync(
+    public Task<IReadOnlyList<AuthUser>> FindForLoginAsync(
         string username,
         CancellationToken cancellationToken = default) =>
-        QueryUserAsync(
-            $"{UserSelect} WHERE ua.username = @Username LIMIT 1;",
+        QueryUsersAsync(
+            $"""
+            {UserSelect}
+            WHERE (
+                   UPPER(TRIM(ua.username)) = UPPER(TRIM(@Username))
+                OR UPPER(TRIM(COALESCE(e.full_name, ua.display_name))) = UPPER(TRIM(@Username))
+                OR UPPER(TRIM(COALESCE(e.full_name, ua.display_name)))
+                    LIKE CONCAT(UPPER(TRIM(@Username)), ' %')
+                OR FIND_IN_SET(
+                    UPPER(TRIM(@Username)),
+                    REPLACE(
+                        REPLACE(
+                            UPPER(TRIM(COALESCE(e.full_name, ua.display_name))),
+                            '.',
+                            ''
+                        ),
+                        ' ',
+                        ','
+                    )
+                ) > 0
+            )
+            ORDER BY
+                (UPPER(TRIM(ua.username)) = UPPER(TRIM(@Username))) DESC,
+                (UPPER(TRIM(COALESCE(e.full_name, ua.display_name))) = UPPER(TRIM(@Username))) DESC,
+                ua.user_id
+            LIMIT 25;
+            """,
             new { Username = username },
             cancellationToken);
 
@@ -63,20 +88,121 @@ public sealed class UserRepository(IDatabaseConnectionFactory connectionFactory)
             cancellationToken: cancellationToken));
     }
 
+    public async Task<bool> ChangePasswordAsync(
+        long accountId,
+        string passwordHash,
+        DateTimeOffset changedAt,
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection = await connectionFactory.OpenConnectionAsync(cancellationToken);
+        await using var transaction = await connection.BeginTransactionAsync(cancellationToken);
+
+        try
+        {
+            var affected = await connection.ExecuteAsync(new CommandDefinition(
+                """
+                UPDATE tbl_user_accounts
+                SET password_hash = @PasswordHash,
+                    must_change_password = FALSE,
+                    failed_login_count = 0,
+                    locked_until = NULL,
+                    last_password_change_at = @ChangedAt
+                WHERE user_id = @AccountId;
+                """,
+                new
+                {
+                    AccountId = accountId,
+                    PasswordHash = passwordHash,
+                    ChangedAt = changedAt.UtcDateTime
+                },
+                transaction: transaction,
+                cancellationToken: cancellationToken));
+
+            if (affected != 1)
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                return false;
+            }
+
+            var persistedHash = await connection.ExecuteScalarAsync<string?>(new CommandDefinition(
+                "SELECT password_hash FROM tbl_user_accounts WHERE user_id = @AccountId;",
+                new { AccountId = accountId },
+                transaction: transaction,
+                cancellationToken: cancellationToken));
+
+            if (!string.Equals(persistedHash, passwordHash, StringComparison.Ordinal))
+            {
+                await transaction.RollbackAsync(cancellationToken);
+                return false;
+            }
+
+            await connection.ExecuteAsync(new CommandDefinition(
+                """
+                INSERT INTO tbl_audit_logs (
+                    actor_user_id,
+                    action_code,
+                    entity_type,
+                    entity_id,
+                    details_json
+                ) VALUES (
+                    @AccountId,
+                    'PASSWORD_CHANGE',
+                    'USER_ACCOUNT',
+                    @AccountId,
+                    JSON_OBJECT('changedBySelf', TRUE)
+                );
+                """,
+                new { AccountId = accountId },
+                transaction: transaction,
+                cancellationToken: cancellationToken));
+
+            await transaction.CommitAsync(cancellationToken);
+            return true;
+        }
+        catch
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
+    }
+
     private async Task<AuthUser?> QueryUserAsync(
+        string userSql,
+        object parameters,
+        CancellationToken cancellationToken)
+    {
+        var users = await QueryUsersAsync(userSql, parameters, cancellationToken);
+        return users.SingleOrDefault();
+    }
+
+    private async Task<IReadOnlyList<AuthUser>> QueryUsersAsync(
         string userSql,
         object parameters,
         CancellationToken cancellationToken)
     {
         await using var connection = await connectionFactory.OpenConnectionAsync(cancellationToken);
 
-        var user = await connection.QuerySingleOrDefaultAsync<AuthUserRow>(
-            new CommandDefinition(userSql, parameters, cancellationToken: cancellationToken));
-
-        if (user is null)
+        var userRows = (await connection.QueryAsync<AuthUserRow>(
+            new CommandDefinition(userSql, parameters, cancellationToken: cancellationToken))).AsList();
+        if (userRows.Count == 0)
         {
-            return null;
+            return [];
         }
+
+        var users = new List<AuthUser>(userRows.Count);
+        foreach (var user in userRows)
+        {
+            users.Add(await LoadUserAsync(connection, user, cancellationToken));
+        }
+
+        return users;
+    }
+
+    private static async Task<AuthUser> LoadUserAsync(
+        System.Data.Common.DbConnection connection,
+        AuthUserRow user,
+        CancellationToken cancellationToken)
+    {
 
         var roles = (await connection.QueryAsync<string>(new CommandDefinition(
             """

@@ -120,16 +120,17 @@
 
                 <form id="loginForm" class="w-full">
                 <div class="mb-5">
-                    <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2"><i class="fas fa-user mr-1 text-mpiBlue"></i> Username / ID</label>
-                    <input type="text" id="empId" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:bg-white focus:border-mpiBlue focus:ring-2 focus:ring-mpiLight transition" placeholder="Enter your ID" required>
+                    <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2"><i class="fas fa-user mr-1 text-mpiBlue"></i> First Name / Employee ID</label>
+                    <input type="text" id="empId" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:bg-white focus:border-mpiBlue focus:ring-2 focus:ring-mpiLight transition" placeholder="e.g. LORD, DAN, or LORD DAN" autocomplete="username" required>
+                    <p class="text-[11px] text-gray-500 mt-1.5">Not case-sensitive. Your old Employee ID also continues to work.</p>
                 </div>
                 <div class="mb-8">
                     <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2"><i class="fas fa-lock mr-1 text-mpiBlue"></i> Password</label>
                     <div class="relative">
-                        <input type="password" id="empPass" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:bg-white focus:border-mpiBlue focus:ring-2 focus:ring-mpiLight transition pr-10" placeholder="Enter your password" required>
+                        <input type="password" id="empPass" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:bg-white focus:border-mpiBlue focus:ring-2 focus:ring-mpiLight transition pr-10" placeholder="Enter your password" autocomplete="current-password" required>
                         <i id="eyeIcon" class="fas fa-eye absolute right-4 top-1/2 transform -translate-y-1/2 text-gray-400 cursor-pointer hover:text-mpiBlue transition" onclick="togglePassword()"></i>
                     </div>
-                    <p class="text-xs text-mpiBlue mt-2 font-medium">Pass Hint: Date hired (MMDDYYYY)</p>
+                    <p class="text-xs text-mpiBlue mt-2 font-medium">Default password: Date hired (MMDDYYYY). Use your new password after changing it.</p>
                 </div>
                 <button type="submit" class="w-full bg-mpiBlue text-white font-bold py-3.5 px-4 rounded-lg shadow-md hover:bg-mpiDark hover:shadow-lg transition-all flex items-center justify-center text-lg">
                     <i class="fas fa-sign-in-alt mr-2"></i> Sign In
@@ -219,12 +220,20 @@
                 </div>
             </nav>
 
-            <button id="logoutButton" type="button" class="w-full p-6 border-t border-white/10 hover:bg-white/10 transition cursor-pointer text-left">
-                <div class="flex items-center space-x-3 text-white px-2">
-                    <i class="fas fa-sign-out-alt text-xl w-8 text-left"></i>
-                    <span class="text-lg font-bold tracking-wide">Log Out</span>
-                </div>
-            </button>
+            <div class="border-t border-white/10">
+                <button id="changePasswordButton" type="button" class="w-full px-6 py-3 hover:bg-white/10 transition cursor-pointer text-left">
+                    <div class="flex items-center space-x-3 text-white px-2">
+                        <i class="fas fa-key text-lg w-8 text-left"></i>
+                        <span class="text-sm font-bold tracking-wide">Change Password</span>
+                    </div>
+                </button>
+                <button id="logoutButton" type="button" class="w-full px-6 py-4 border-t border-white/10 hover:bg-white/10 transition cursor-pointer text-left">
+                    <div class="flex items-center space-x-3 text-white px-2">
+                        <i class="fas fa-sign-out-alt text-xl w-8 text-left"></i>
+                        <span class="text-lg font-bold tracking-wide">Log Out</span>
+                    </div>
+                </button>
+            </div>
         </aside>
 
         <!-- MAIN CONTENT AREA -->
@@ -1560,6 +1569,47 @@
         </div>
     </div>
 
+    <!-- Change Password Modal -->
+    <div id="changePasswordModal" class="fixed inset-0 z-[9998] hidden flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm" aria-hidden="true">
+        <div class="w-full max-w-md rounded-2xl bg-white shadow-2xl overflow-hidden" onclick="event.stopPropagation()">
+            <div class="px-5 py-4 border-b border-gray-100 flex items-center justify-between gap-3 bg-white">
+                <div class="flex items-center gap-3">
+                    <div class="w-10 h-10 rounded-full bg-mpiBlue/10 flex items-center justify-center text-mpiBlue">
+                        <i class="fas fa-key text-lg"></i>
+                    </div>
+                    <div>
+                        <h3 class="font-bold text-gray-800 text-lg">Change Password</h3>
+                        <p class="text-xs text-gray-500">You will sign in again after saving.</p>
+                    </div>
+                </div>
+                <button type="button" id="changePasswordCloseButton" class="rounded-full bg-gray-100 px-3 py-2 text-xs font-bold text-gray-600 hover:bg-gray-200" aria-label="Close change password"><i class="fas fa-times"></i></button>
+            </div>
+
+            <form id="changePasswordForm" class="p-5 space-y-4">
+                <div>
+                    <label for="currentPassword" class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">Current Password</label>
+                    <input type="password" id="currentPassword" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:outline-none focus:border-mpiBlue focus:ring-2 focus:ring-mpiLight" autocomplete="current-password" maxlength="128" required>
+                </div>
+                <div>
+                    <label for="newPassword" class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">New Password</label>
+                    <input type="password" id="newPassword" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:outline-none focus:border-mpiBlue focus:ring-2 focus:ring-mpiLight" autocomplete="new-password" minlength="8" maxlength="128" required>
+                    <p class="text-[11px] text-gray-500 mt-1.5">Use 8 to 128 characters. Passwords are case-sensitive.</p>
+                </div>
+                <div>
+                    <label for="confirmPassword" class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-1.5">Confirm New Password</label>
+                    <input type="password" id="confirmPassword" class="w-full border border-gray-300 rounded-lg px-3 py-2.5 focus:outline-none focus:border-mpiBlue focus:ring-2 focus:ring-mpiLight" autocomplete="new-password" minlength="8" maxlength="128" required>
+                </div>
+
+                <div id="changePasswordError" class="hidden rounded-lg border border-red-200 bg-red-50 p-3 text-sm font-medium text-red-700"></div>
+
+                <div class="flex justify-end gap-2 pt-2 border-t border-gray-100">
+                    <button type="button" id="changePasswordCancelButton" class="text-sm font-medium text-gray-600 px-4 py-2 rounded-lg hover:bg-gray-100">Cancel</button>
+                    <button type="submit" id="changePasswordSubmitButton" class="text-sm font-bold bg-mpiBlue text-white px-5 py-2 rounded-lg hover:bg-mpiDark shadow-sm">Save Password</button>
+                </div>
+            </form>
+        </div>
+    </div>
+
     <!-- Custom Confirm Modal -->
     <div id="appConfirmModal" class="fixed inset-0 z-[9999] hidden items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm transition-opacity opacity-0" aria-hidden="true">
         <div class="w-full max-w-sm rounded-2xl bg-white shadow-2xl flex flex-col overflow-hidden transform scale-95 transition-transform" id="appConfirmModalContent">
@@ -1592,7 +1642,7 @@
     <script src="Frontend/Functions/navigation.js?v=20260804-phase17"></script>
     <script src="Frontend/Functions/usermanual.js?v=20260709-manual3"></script>
     <script src="Frontend/Functions/calendar.js?v=20260804-phase17"></script>
-    <script src="Frontend/Functions/auth.js?v=20260712-splash3"></script>
+    <script src="Frontend/Functions/auth.js?v=20260804-phase18-auth"></script>
     <script src="Frontend/Functions/app.js?v=20260712-perf1"></script>
 </body>
 </html>

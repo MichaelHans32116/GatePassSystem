@@ -4,7 +4,7 @@ namespace FormRequestSystem.Project.Repositories;
 
 public interface IUserRepository
 {
-    Task<AuthUser?> FindForLoginAsync(
+    Task<IReadOnlyList<AuthUser>> FindForLoginAsync(
         string username,
         CancellationToken cancellationToken = default);
 
@@ -15,6 +15,12 @@ public interface IUserRepository
     Task UpdateLastLoginAsync(
         long accountId,
         DateTimeOffset loggedInAt,
+        CancellationToken cancellationToken = default);
+
+    Task<bool> ChangePasswordAsync(
+        long accountId,
+        string passwordHash,
+        DateTimeOffset changedAt,
         CancellationToken cancellationToken = default);
 }
 

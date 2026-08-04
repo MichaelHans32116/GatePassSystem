@@ -29,10 +29,12 @@ dotnet run --project Backend/Tools/EmployeeImporter -- `
   --apply
 ```
 
-Only active employees are inserted into a fresh database. They receive an
-account whose username is the Employee ID. The
-initial password is Date Hired in `MMDDYYYY` format, stored only as a PBKDF2
-hash, and the account is marked to require a password change.
+Only active employees are inserted into a fresh database. The Employee ID is
+kept as the account's stable internal username and remains a login fallback.
+Employees may sign in with their recorded name, a leading name phrase, or an
+individual name token; name matching is case-insensitive. The initial password
+is Date Hired in `MMDDYYYY` format, stored only as a PBKDF2 hash, and the account
+is marked to require a password change.
 
 Inactive workbook rows are not inserted into a fresh database. If a later
 workbook marks an employee who already exists in the system as inactive, the

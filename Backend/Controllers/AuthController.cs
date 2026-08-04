@@ -1,4 +1,4 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using FormRequestSystem.Api.Infrastructure;
 using FormRequestSystem.Project.DTOs.Auth;
 using FormRequestSystem.Project.Services;
@@ -70,8 +70,45 @@ public sealed class AuthController(
     }
 
     [Authorize]
+    [EnableRateLimiting("Auth")]
+    [HttpPost("change-password")]
+    public async Task<ActionResult<ApiResponse<bool>>> ChangePassword(
+        [FromBody] ChangePasswordRequest request,
+        CancellationToken cancellationToken)
+    {
+        var result = await authService.ChangePasswordAsync(
+            CurrentUserId,
+            request,
+            cancellationToken);
+
+        if (result.IsSuccess)
+        {
+            logger.LogInformation(
+                "Password changed for account {AccountId}. traceId={TraceId}",
+                CurrentUserId,
+                HttpContext.TraceIdentifier);
+            return Success(true, "Password changed successfully.");
+        }
+
+        logger.LogWarning(
+            "Password change rejected for account {AccountId}. code={ErrorCode} traceId={TraceId}",
+            CurrentUserId,
+            result.ErrorCode,
+            HttpContext.TraceIdentifier);
+
+        var status = result.ErrorCode == "PASSWORD_SAVE_FAILED"
+            ? StatusCodes.Status500InternalServerError
+            : StatusCodes.Status400BadRequest;
+
+        return StatusCode(status, new ApiErrorResponse(
+            result.ErrorCode ?? "PASSWORD_CHANGE_FAILED",
+            result.ErrorMessage ?? "Password could not be changed.",
+            null,
+            HttpContext.TraceIdentifier));
+    }
+
+    [Authorize]
     [HttpPost("logout")]
     public IActionResult Logout() =>
         NoContent();
 }
-

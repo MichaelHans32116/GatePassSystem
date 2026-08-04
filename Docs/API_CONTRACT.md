@@ -12,10 +12,15 @@ Request:
 
 ```json
 {
-  "username": "MPI-001",
+  "username": "SAMPLE USER",
   "password": "user-entered-password"
 }
 ```
+
+For employee accounts, `username` accepts the recorded name, a leading name
+phrase, an individual space-delimited name token, or the legacy Employee ID.
+Matching is case-insensitive. If several employees share a name token, the
+password selects the correct account.
 
 Response:
 
@@ -42,6 +47,22 @@ Accounts can have multiple roles. For example, an employee can remain an
 ### GET `/auth/me`
 
 Returns the current authenticated user.
+
+### POST `/auth/change-password`
+
+Requires a valid bearer token. The current password is verified before the
+PBKDF2 hash is transactionally replaced and audited.
+
+```json
+{
+  "currentPassword": "current-password",
+  "newPassword": "new-private-password",
+  "confirmPassword": "new-private-password"
+}
+```
+
+The new password must contain 8 to 128 characters. A successful change clears
+`mustChangePassword`, failed-login counters, and an active account lock.
 
 ### POST `/auth/logout`
 

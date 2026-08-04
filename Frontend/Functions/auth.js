@@ -144,6 +144,10 @@ function showAuthenticatedApp(user, showSignedInToast = true) {
         showToast(`Signed in as ${user.name}`);
     }
 
+    if (user.mustChangePassword) {
+        showToast('Your account is still using its initial password. Use Change Password in the menu to replace it.', 'warning');
+    }
+
 }
 
 async function refreshAuthenticatedProfile() {
@@ -205,7 +209,92 @@ async function restoreAuthenticatedSession() {
     }
 }
 
+function showChangePasswordError(message) {
+    const error = document.getElementById('changePasswordError');
+    if (!error) return;
+    error.textContent = message;
+    error.classList.remove('hidden');
+}
+
+function openChangePasswordModal() {
+    const modal = document.getElementById('changePasswordModal');
+    const form = document.getElementById('changePasswordForm');
+    const error = document.getElementById('changePasswordError');
+    if (!modal || !form) return;
+
+    form.reset();
+    if (error) {
+        error.textContent = '';
+        error.classList.add('hidden');
+    }
+    modal.classList.remove('hidden');
+    modal.setAttribute('aria-hidden', 'false');
+    document.getElementById('currentPassword')?.focus();
+}
+
+function closeChangePasswordModal() {
+    const modal = document.getElementById('changePasswordModal');
+    const form = document.getElementById('changePasswordForm');
+    if (modal) {
+        modal.classList.add('hidden');
+        modal.setAttribute('aria-hidden', 'true');
+    }
+    form?.reset();
+}
+
+async function handleChangePassword(event) {
+    event.preventDefault();
+
+    const currentPassword = document.getElementById('currentPassword')?.value || '';
+    const newPassword = document.getElementById('newPassword')?.value || '';
+    const confirmPassword = document.getElementById('confirmPassword')?.value || '';
+    const submitButton = document.getElementById('changePasswordSubmitButton');
+
+    if (!currentPassword) {
+        showChangePasswordError('Current password is required.');
+        return;
+    }
+    if (!newPassword.trim() || newPassword.length < 8 || newPassword.length > 128) {
+        showChangePasswordError('New password must be 8 to 128 characters.');
+        return;
+    }
+    if (newPassword !== confirmPassword) {
+        showChangePasswordError('New password and confirmation do not match.');
+        return;
+    }
+
+    if (submitButton) {
+        submitButton.disabled = true;
+        submitButton.textContent = 'Saving...';
+        submitButton.classList.add('opacity-60', 'cursor-wait');
+    }
+
+    try {
+        await ApiClient.data('/auth/change-password', {
+            method: 'POST',
+            body: JSON.stringify({ currentPassword, newPassword, confirmPassword })
+        });
+        closeChangePasswordModal();
+        await logout();
+        showToast('Password changed and saved. Sign in again using your new password.', 'success');
+    } catch (error) {
+        if (error instanceof ApiError && error.status === 401) return;
+        showChangePasswordError(
+            error instanceof ApiError
+                ? error.message
+                : 'Unable to save the password. Please check the API connection.'
+        );
+    } finally {
+        if (submitButton) {
+            submitButton.disabled = false;
+            submitButton.textContent = 'Save Password';
+            submitButton.classList.remove('opacity-60', 'cursor-wait');
+        }
+    }
+}
+
 async function logout() {
+    closeChangePasswordModal();
     if (ApiClient.hasAccessToken()) {
         try {
             await ApiClient.request('/auth/logout', { method: 'POST' });
@@ -239,12 +328,19 @@ async function logout() {
 document.addEventListener('DOMContentLoaded', () => {
     document.getElementById('loginForm')?.addEventListener('submit', handleLogin);
     document.getElementById('logoutButton')?.addEventListener('click', logout);
+    document.getElementById('changePasswordButton')?.addEventListener('click', openChangePasswordModal);
+    document.getElementById('changePasswordCloseButton')?.addEventListener('click', closeChangePasswordModal);
+    document.getElementById('changePasswordCancelButton')?.addEventListener('click', closeChangePasswordModal);
+    document.getElementById('changePasswordForm')?.addEventListener('submit', handleChangePassword);
+    document.getElementById('changePasswordModal')?.addEventListener('click', closeChangePasswordModal);
     restoreAuthenticatedSession();
 });
 
 window.togglePassword = togglePassword;
 window.handleLogin = handleLogin;
 window.logout = logout;
+window.openChangePasswordModal = openChangePasswordModal;
+window.closeChangePasswordModal = closeChangePasswordModal;
 window.refreshAuthenticatedProfile = refreshAuthenticatedProfile;
 window.renderRequesterDepartmentSelectors = renderRequesterDepartmentSelectors;
 window.getRequesterDepartmentId = getRequesterDepartmentId;
