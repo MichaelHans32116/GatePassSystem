@@ -1749,50 +1749,19 @@ window.saveFixedScheduleForm = saveFixedScheduleForm;
 window.openEditFixedScheduleForm = openEditFixedScheduleForm;
 window.deleteFixedSchedule = deleteFixedSchedule;
 
-function openServiceScheduleRequestModal() {
-    const modal = document.getElementById('serviceScheduleRequestModal');
-    if (!modal) return;
-
-    // Reset form
-    document.getElementById('serviceScheduleRequestForm')?.reset();
-
-    // Default to today's date
-    const today = new Date().toISOString().split('T')[0];
-    const dateInput = document.getElementById('serviceRequestDate');
-    if (dateInput) dateInput.value = today;
-
-    // Populate Vehicles
-    const vehicleSelect = document.getElementById('serviceRequestVehicle');
-    if (vehicleSelect) {
-        vehicleSelect.innerHTML = '';
-        (databaseVehicles || []).forEach(v => {
-            const opt = document.createElement('option');
-            opt.value = v.id;
-            opt.textContent = `${v.name} (${v.plate}) — ${v.status || v.availabilityStatusCode || 'Available'}`;
-            vehicleSelect.appendChild(opt);
-        });
-        const crv = (databaseVehicles || []).find(v => v.name?.toUpperCase().includes('CRV'));
-        if (crv) vehicleSelect.value = crv.id;
-        vehicleSelect.disabled = true;
+// Phase 17 item 3: the in-place service-schedule modal is retired — the
+// button now routes to the standard New Request form (pre-set for a company
+// vehicle) so schedule requests follow the normal approval flow instead of
+// the broken auto-approve path.
+async function openServiceScheduleRequestModal() {
+    if (typeof switchSection === 'function') await switchSection('applyPass');
+    if (typeof selectRequestFormType === 'function') selectRequestFormType('PERSON_GATE_PASS');
+    const vehicleToggle = document.getElementById('gpNeedVehicle');
+    if (vehicleToggle && !vehicleToggle.checked) {
+        vehicleToggle.checked = true;
+        if (typeof toggleVehicleFields === 'function') toggleVehicleFields();
     }
-
-    // Populate Drivers
-    const driverSelect = document.getElementById('serviceRequestDriver');
-    if (driverSelect) {
-        driverSelect.innerHTML = '';
-        (databaseDrivers || []).forEach(d => {
-            const opt = document.createElement('option');
-            opt.value = d.driverId;
-            opt.textContent = `${d.fullName} — Available`;
-            driverSelect.appendChild(opt);
-        });
-        const jt = (databaseDrivers || []).find(d => d.fullName?.toUpperCase().includes('TURRECHA'));
-        if (jt) driverSelect.value = jt.driverId;
-        driverSelect.disabled = true;
-    }
-
-    modal.classList.remove('hidden');
-    modal.classList.add('flex');
+    showToast('Fill out the request form — Company Vehicle is already ticked for this service schedule.');
 }
 
 function closeServiceScheduleRequestModal() {
