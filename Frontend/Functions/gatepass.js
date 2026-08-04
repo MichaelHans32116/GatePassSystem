@@ -8,7 +8,7 @@ const gatePassStatusLabels = {
     PENDING_SUPERIOR: 'Pending Superior',
     PENDING_HRAD_ASSIGN: 'Pending HRAD Assignment',
     PENDING_PRESIDENT: 'Pending President',
-    PENDING_PAS: 'Pending PAS',
+    PENDING_PAS: 'Pending HRAD',
     APPROVED: 'Approved',
     OUTSIDE: 'Outside',
     OVERDUE: 'Overdue',
@@ -193,6 +193,9 @@ function mapApiGatePass(record) {
         formTypeCode: record.formTypeCode || 'PERSON_GATE_PASS',
         formName: record.formName || 'Person Gate Pass',
         formDate: record.formDate || record.expectedOutAt,
+        // Phase 19.1 item 6: the day the pass is FOR, as picked by the requestor.
+        // Older rows have no pass_date, so fall back to the filing date.
+        passDate: record.passDate || record.formDate || record.expectedOutAt,
         userId: record.requesterUserId,
         userName: record.fullName,
         userDept: record.departmentName,
@@ -369,7 +372,7 @@ function requiresPresidentApproval(user, hasCompanyVehicle) {
 function getInitialRequestStatus(user, hasCompanyVehicle) {
     if (requiresSuperiorApproval(user)) return 'Pending Superior';
     if (hasCompanyVehicle) return 'Pending HRAD Assignment';
-    return 'Pending PAS';
+    return 'Pending HRAD';
 }
 
 function updateApprovalRoutePreview() {
@@ -378,9 +381,9 @@ function updateApprovalRoutePreview() {
     if (!routeText || !currentUser) return;
 
     const steps = [];
-    if (requiresSuperiorApproval(currentUser)) steps.push('Immediate Superior');
+    if (requiresSuperiorApproval(currentUser)) steps.push('Manager');
     if (isVehicleNeeded) steps.push('HRAD Assignment');
-    steps.push('PAS');
+    steps.push('HRAD');
     let text = steps.join(' -> ');
     if (isVehicleNeeded) {
         text += ' -> President signs the printed form';
@@ -388,21 +391,60 @@ function updateApprovalRoutePreview() {
     routeText.innerText = text;
 }
 
-// Phase 17 item 1: whether the requestor goes out with this pass.
-function isRequestorIncluded() {
-    const picked = document.querySelector('input[name="gpRequestorScope"]:checked');
-    return (picked?.value || 'included') !== 'others';
+// Phase 19.1 item 1: the "Kasama ako / Para sa iba lang" radio is gone. Whether
+// the requestor goes out is read straight off the companion list instead:
+//   no companions        -> the requestor is going out alone
+//   requestor listed     -> the requestor goes out with the companions
+//   requestor not listed -> the requestor stays inside; only the companions go
+function personAssociateRows() {
+    const body = document.getElementById('personAssociatesBody');
+    if (!body) return [];
+    return [...body.querySelectorAll('.associate-row')]
+        .filter(row => (row.querySelector('[data-associate-search]')?.value || '').trim());
 }
 
-function handleRequestorScopeChange() {
-    const included = isRequestorIncluded();
-    const hint = document.getElementById('personAssociatesHint');
-    if (hint) {
-        hint.innerText = included
-            ? 'You (the requester) are the primary associate. Add co-travellers leaving with you (max 19).'
-            : 'You stay inside: the pass covers only the associates below (max 19). Add everyone who is going out.';
+// Rows remember the employee CODE (e.g. GA120) picked from the directory, which
+// is what currentUser.id holds — the row's dataset.employeeId is the internal
+// record id and cannot be compared against it directly.
+function requestorEmployeeCode() {
+    return String(currentUser?.id || '').trim().toLowerCase();
+}
+
+function isRequestorListedAsCompanion() {
+    const code = requestorEmployeeCode();
+    if (!code) return false;
+    return personAssociateRows().some(row =>
+        String(row.dataset.employeeCode || '').trim().toLowerCase() === code
+    );
+}
+
+// Phase 17 item 1 flag, now derived instead of picked.
+function isRequestorIncluded() {
+    if (personAssociateRows().length === 0) return true;
+    return isRequestorListedAsCompanion();
+}
+
+function updateRequestorScopeNotice() {
+    const notice = document.getElementById('personRequestorScopeNotice');
+    const hasCompanions = personAssociateRows().length > 0;
+    if (notice) {
+        notice.classList.toggle('hidden', !hasCompanions);
+        notice.innerText = !hasCompanions
+            ? ''
+            : isRequestorIncluded()
+                ? 'Kasama ka — you are on the list, so this pass covers you and the companions above.'
+                : 'Para sa iba lang — you are not on the list, so you stay inside and only the companions above go out. Add yourself as a companion if you are going too.';
     }
     updateServiceTripHint();
+}
+
+// Phase 19.1 item 6: default the "Date of Gate Pass" picker to today.
+function initializePersonGatePassDate() {
+    const input = document.getElementById('gpPassDate');
+    if (!input) return;
+    const now = new Date();
+    const localDate = new Date(now.getTime() - now.getTimezoneOffset() * 60000);
+    input.value = localDate.toISOString().slice(0, 10);
 }
 
 // Phase 17 item 6: mark service/sundo trips, especially when the requestor
@@ -496,9 +538,15 @@ async function submitGatePass(e) {
         : null;
     const requesterDepartmentId =
         getRequesterDepartmentId?.('PERSON_GATE_PASS') || null;
+    const passDate = document.getElementById('gpPassDate')?.value || '';
 
     if (!currentUser?.departmentId && !requesterDepartmentId) {
-        showToast('Select the requesting department.', 'error');
+        showToast('No requesting department is linked to your account. Ask HRAD to set it.', 'error');
+        return;
+    }
+
+    if (!passDate) {
+        showToast('Select the date this gate pass is for.', 'error');
         return;
     }
 
@@ -513,9 +561,17 @@ async function submitGatePass(e) {
     }
     const associates = typeof collectAssociates === 'function' ? collectAssociates('PERSON_GATE_PASS') : [];
     const includesRequestor = isRequestorIncluded();
+    // The requestor is never stored as a companion row — the API rejects that.
+    // Their own line on the list only decides includesRequestor, so strip it
+    // back out before sending (Phase 19.1 item 1).
+    const requestorCode = requestorEmployeeCode();
+    const payloadAssociates = associates.filter(item =>
+        !(requestorCode &&
+          String(item.employeeCode || '').trim().toLowerCase() === requestorCode)
+    );
 
-    if (!includesRequestor && associates.length === 0) {
-        showToast('Add at least one associate — this request is for other people only.', 'error');
+    if (!includesRequestor && payloadAssociates.length === 0) {
+        showToast('Add at least one companion — this request is for other people only.', 'error');
         return;
     }
 
@@ -540,6 +596,7 @@ async function submitGatePass(e) {
         requesterDepartmentId,
         destination: document.getElementById('gpDestination').value.trim(),
         purpose: document.getElementById('gpPurpose').value.trim(),
+        passDate,
         expectedOutAt: expectedOut.toISOString(),
         expectedInAt: expectedIn?.toISOString() || null,
         willReturn,
@@ -549,7 +606,7 @@ async function submitGatePass(e) {
         privateVehicleDetails,
         driverId,
         includesRequestor,
-        associates
+        associates: payloadAssociates
     };
 
     submitButton.disabled = true;
@@ -558,7 +615,8 @@ async function submitGatePass(e) {
         const created = await ApiClient.post('/gate-pass-requests', payload);
         form.reset();
         if (typeof resetAssociateRows === 'function') resetAssociateRows('PERSON_GATE_PASS');
-        handleRequestorScopeChange();
+        initializePersonGatePassDate();
+        updateRequestorScopeNotice();
         toggleVehicleFields();
         showToast(`Request ${created.gatePass.controlNo || created.gatePass.gatePassNo} submitted.`);
         await refreshApplicationState('submit-person-request');
@@ -595,6 +653,7 @@ function submitMockGatePass(e) {
         userName: currentUser.name,
         userDept: currentUser.dept,
         dateFiled: new Date().toLocaleDateString(),
+        passDate: document.getElementById('gpPassDate')?.value || null,
         destination: document.getElementById('gpDestination').value,
         expectedOut: document.getElementById('gpExpectedOut').value,
         expectedIn: willReturnBool ? (document.getElementById('gpExpectedIn').value || 'N/A') : 'N/A',
@@ -933,7 +992,8 @@ window.requiresPresidentApproval = requiresPresidentApproval;
 window.getInitialRequestStatus = getInitialRequestStatus;
 window.updateApprovalRoutePreview = updateApprovalRoutePreview;
 window.isRequestorIncluded = isRequestorIncluded;
-window.handleRequestorScopeChange = handleRequestorScopeChange;
+window.updateRequestorScopeNotice = updateRequestorScopeNotice;
+window.initializePersonGatePassDate = initializePersonGatePassDate;
 window.updateServiceTripHint = updateServiceTripHint;
 window.toggleVehicleFields = toggleVehicleFields;
 window.submitGatePass = submitGatePass;

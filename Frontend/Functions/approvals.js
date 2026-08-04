@@ -261,7 +261,7 @@ async function renderApprovalQueue() {
 
     if (isDatabaseSession()) {
         const canApprove = currentUser.permissions.some(permission =>
-            ['gatepass.approve.superior', 'gatepass.approve.president', 'gatepass.note.pas'].includes(permission)
+            ['gatepass.approve.superior', 'gatepass.approve.president', 'gatepass.note.pas', 'fleet.manage'].includes(permission)
         );
         if (!canApprove) {
             databaseApprovalQueue = [];
@@ -306,7 +306,7 @@ async function renderApprovalQueue() {
     }
 
     let toApprove = [];
-    if (currentUser.role === 'Immediate Superior') {
+    if (currentUser.role === 'Manager') {
         toApprove = toApprove.concat(gatePasses.filter(pass =>
             pass.status === 'Pending Superior' && pass.userDept === currentUser.dept
         ));
@@ -336,8 +336,8 @@ function updateApprovalQueueDisplay(toApprove) {
     if (approvalCard && currentUser) {
         const isApprover = isDatabaseSession()
             ? (currentUser.permissions || []).some(permission =>
-                ['gatepass.approve.superior', 'gatepass.approve.president', 'gatepass.note.pas'].includes(permission))
-            : (currentUser.role === 'Immediate Superior'
+                ['gatepass.approve.superior', 'gatepass.approve.president', 'gatepass.note.pas', 'fleet.manage'].includes(permission))
+            : (currentUser.role === 'Manager'
                 || currentUser.role === 'President'
                 || currentUser.canNoteGatePass === true);
         approvalCard.classList.toggle('hidden', !isApprover);
@@ -349,7 +349,7 @@ function updateApprovalQueueDisplay(toApprove) {
     document.getElementById('approvalList').innerHTML = paginatedApprovals.map(pass => `
         <div class="bg-white border p-4 rounded shadow-sm flex flex-col justify-between">
             <div class="mb-3">
-                <div class="mb-2 flex items-start justify-between gap-2"><div><span class="text-[9px] font-bold uppercase tracking-wide ${pass.formTypeCode === 'MATERIAL_GATE_PASS' ? 'text-amber-600' : 'text-mpiBlue'}">${materialEscape(pass.formName || 'Form Request')}</span><h3 class="font-bold text-sm">${materialEscape(pass.userName)}</h3></div><span class="whitespace-nowrap rounded bg-yellow-100 px-1 text-[9px]">${materialEscape(pass.status)}</span></div>
+                <div class="mb-2 flex items-start justify-between gap-2"><div><span class="text-[9px] font-bold uppercase tracking-wide ${pass.formTypeCode === 'MATERIAL_GATE_PASS' ? 'text-amber-600' : 'text-mpiBlue'}">${materialEscape(pass.formName || 'Gate Pass Request')}</span><h3 class="font-bold text-sm">${materialEscape(pass.userName)}</h3></div><span class="whitespace-nowrap rounded bg-yellow-100 px-1 text-[9px]">${materialEscape(pass.status)}</span></div>
                 <p class="mb-1 font-mono text-[10px] font-bold text-gray-500">Control: ${materialEscape(pass.controlNo || pass.id)}</p>
                 <p class="text-xs text-gray-500 mb-1">${pass.formTypeCode === 'MATERIAL_GATE_PASS' ? `For: ${materialEscape(pass.authorizedEmployeeName || 'N/A')}` : `Destination: ${materialEscape(pass.destination)}`}</p>
                 <p class="text-xs text-gray-500">Department: ${materialEscape(pass.formTypeCode === 'MATERIAL_GATE_PASS' ? (pass.authorizedDepartmentName || pass.userDept || 'N/A') : (pass.userDept || 'N/A'))}</p>

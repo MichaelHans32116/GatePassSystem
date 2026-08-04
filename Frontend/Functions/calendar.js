@@ -1033,7 +1033,7 @@ async function exportScheduleExcel(format) {
 
     const weekNum = schedGetWeekNumber(monday);
     const wb = new ExcelJS.Workbook();
-    wb.creator = 'MPI Form Request System';
+    wb.creator = 'MPI Gate Pass Request System';
     wb.created = new Date();
 
     if (format === 'vehicle' || format === 'both') {

@@ -19,11 +19,11 @@ function umRoleIs(labels) {
     return labels.indexOf(u.role) >= 0;
 }
 function umCanRequest() {
-    return umRoleIs(['Associate', 'Driver', 'Immediate Superior']) ||
+    return umRoleIs(['Associate', 'Driver', 'Manager']) ||
         umHasRoleCode(['ASSOCIATE', 'DRIVER', 'IMMEDIATE_SUPERIOR']);
 }
 function umIsApprover() {
-    return umRoleIs(['Immediate Superior', 'President']) ||
+    return umRoleIs(['Manager', 'President']) ||
         umHasRoleCode(['IMMEDIATE_SUPERIOR', 'PRESIDENT']);
 }
 function umIsHrad() {
@@ -81,9 +81,9 @@ function umManuals() {
                     '<div class="grid sm:grid-cols-2 gap-3"><div class="border border-gray-200 rounded p-3"><b>Person Gate Pass</b><p class="text-xs text-gray-500 mt-1">For personnel leaving the premises. QR Time Out / Time In. May include a company vehicle.</p></div><div class="border border-gray-200 rounded p-3"><b>Material Gate Pass</b><p class="text-xs text-gray-500 mt-1">For releasing items, with an itemized release list.</p></div></div>' +
                     '<p class="text-xs text-gray-500 mt-3"><b>Trip type</b> (company vehicle): <i>Hatid at Sundo</i> (round trip), <i>Hatid lang</i> (drop-off), or <i>Sundo lang</i> (pick-up). The requester\'s choice is final and is locked at assignment.</p>' },
                 { t: 'Roles', h:
-                    '<ul class="space-y-1 text-sm"><li><b>Requester</b>: creates requests.</li><li><b>Immediate Superior</b>: first digital approver; skipped when the requester is an immediate superior.</li><li><b>HRAD</b>: assigns the company vehicle, driver, and schedule.</li><li><b>PAS</b>: final digital noting.</li><li><b>President</b>: final physical signature on printed company vehicle forms.</li><li><b>Security Guard</b>: scans QR; Time Out / In.</li><li><b>System Administrator</b>: users, master lists, audit logs.</li></ul>' },
+                    '<ul class="space-y-1 text-sm"><li><b>Requester</b>: creates requests.</li><li><b>Manager</b>: first digital approver; skipped when the requester is a manager.</li><li><b>HRAD</b>: assigns the company vehicle, driver, and schedule.</li><li><b>PAS</b>: final digital noting.</li><li><b>President</b>: final physical signature on printed company vehicle forms.</li><li><b>Security Guard</b>: scans QR; Time Out / In.</li><li><b>System Administrator</b>: users, master lists, audit logs.</li></ul>' },
                 { t: 'Approval Flow', h:
-                    '<ol class="list-decimal ml-5 space-y-1 text-sm"><li>The requester submits the request.</li><li>The Immediate Superior approves. This step is skipped when the requester is an immediate superior.</li><li>HRAD Assignment follows, for company vehicle requests only.</li><li>PAS Noting is the final digital step; the request then becomes APPROVED and the QR code is issued.</li><li>For a company vehicle, the President signs the printed form by hand as the final approval.</li></ol>' +
+                    '<ol class="list-decimal ml-5 space-y-1 text-sm"><li>The requester submits the request.</li><li>The Manager approves. This step is skipped when the requester is a manager.</li><li>HRAD Assignment follows, for company vehicle requests only.</li><li>PAS Noting is the final digital step; the request then becomes APPROVED and the QR code is issued.</li><li>For a company vehicle, the President signs the printed form by hand as the final approval.</li></ol>' +
                     '<p class="text-sm mt-2">There is no digital President approval step; the President signs the printed company vehicle form physically.</p>' +
                     '<p class="text-sm mt-2"><b>Pending to Approved:</b> it stays <b>Pending</b> on the calendar until fully approved, then the "Pending" label disappears and the QR code is issued.</p>' },
                 { t: 'System Architecture', h:
@@ -101,7 +101,7 @@ function umManuals() {
             slides: [
                 { t: 'Requester Guide', h: '<p>For any employee who needs to leave the premises, use a vehicle, or release items. Follow these steps in order.</p>' },
                 { t: 'Step 1: Log in', h: '<p>Log in with your <b>name</b> or <b>Employee ID</b> and your <b>password</b>. You may type your full name, a leading part of your name, or any individual part of your name; capitalization does not matter. To change your password, click the profile chip (your name and avatar) at the top right of the screen to open the Change Password dialog.</p>' + umImg('r1-login', 'Login screen') },
-                { t: 'Step 2: Choose the type', h: '<p>On the dashboard, choose the gate pass type: <b>Person</b>, <b>Vehicle</b>, or <b>Material</b>. On a mobile phone, the New Form Request button appears at the top of the dashboard.</p>' + umImg('r2-dashboard', 'Dashboard with Gate Pass buttons') },
+                { t: 'Step 2: Choose the type', h: '<p>On the dashboard, choose the gate pass type: <b>Person</b>, <b>Vehicle</b>, or <b>Material</b>. On a mobile phone, the Gate Pass Request button appears at the top of the dashboard.</p>' + umImg('r2-dashboard', 'Dashboard with Gate Pass buttons') },
                 { t: 'Step 3: Fill in the details', h: '<p>Enter the name, date, time, <b>purpose</b>, and <b>destination</b>. If a company vehicle is needed, select the <b>trip type</b>. In the Associates section, choose <b>Kasama ako</b> if you are going out too (the default), or <b>Para sa iba lang</b> if you stay inside and the pass covers only the listed associates; at least one associate is then required. Tick the <b>Employee</b> checkbox on a companion row to pick from the employee directory, or leave it unticked and type the name of an outside companion such as a visitor or an OJT. Pressing Enter on a finished row adds the next companion row.</p>' + umImg('r3-request-form', 'Request form filled in') },
                 { t: 'Step 4: Submit', h: '<p>Click <b>Submit</b> and wait for approval from your superior or the person in charge.</p>' },
                 { t: 'Step 5: Check the status', h: '<p>Open <b>My Requests</b> to see whether the request is <b>Pending</b>, <b>Approved</b>, or <b>Rejected</b>. You may also tap a statistic card on the dashboard to filter the request table; tapping the same card again clears the filter.</p>' + umImg('r4-my-requests', 'My Requests list') },
@@ -110,10 +110,10 @@ function umManuals() {
         },
         {
             id: 'approver', title: 'Approver Guide', icon: 'fa-check-double',
-            desc: 'For Immediate Superiors: reviewing, signing, and approving digitally.',
+            desc: 'For Managers: reviewing, signing, and approving digitally.',
             access: umIsApprover,
             slides: [
-                { t: 'Approver Guide', h: '<p>For an Immediate Superior: you decide whether to permit an employee\'s request digitally. For a company vehicle, the President signs the final printed form physically.</p>' },
+                { t: 'Approver Guide', h: '<p>For an Manager: you decide whether to permit an employee\'s request digitally. For a company vehicle, the President signs the final printed form physically.</p>' },
                 { t: 'Step 1: Open the Approval Dashboard', h: '<p>Log in and go to the <b>Approval Dashboard</b> to see pending requests. Users with approval duties also see a <b>For Your Approval</b> card on the main dashboard showing the pending approval count; tapping it opens the Approvals page.</p>' + umImg('ap1-dashboard', 'Approval dashboard with pending requests') },
                 { t: 'Step 2: Click Review', h: '<p>Click <b>Review</b> beside the requester\'s name to open the request.</p>' + umImg('ap2-review-click', 'Reviewing a request in the list') },
                 { t: 'Step 3: Read the details', h: '<p>Check the destination, purpose, and (if any) the schedule in the Document Review view.</p>' + umImg('ap3-review-details', 'Document review with request details') },

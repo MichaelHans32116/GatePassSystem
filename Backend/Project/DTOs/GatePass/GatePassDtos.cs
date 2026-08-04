@@ -36,6 +36,11 @@ public sealed class CreateGatePassRequest
     // clients keep the original "requestor is aboard" behavior.
     public bool IncludesRequestor { get; init; } = true;
 
+    // Phase 19.1 item 6: which day the gate pass is for. The printed form only
+    // carried Date Filed before this. Optional — older clients that omit it
+    // fall back to the filing date inside SP_CreateGatePass.
+    public DateOnly? PassDate { get; init; }
+
     // Phase 11 / Requirement 5: optional additional associates/companions.
     // The directory-selected companions who accompany the requester. These
     // are stored line_no=2..N; line_no=1 is the primary (see service).

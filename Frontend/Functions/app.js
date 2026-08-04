@@ -142,10 +142,16 @@ function resetRequestForms() {
     document.getElementById('applyForm')?.reset();
     document.getElementById('materialApplyForm')?.reset();
     document.getElementById('materialItemsBody')?.replaceChildren();
+    // Companion rows are built by JS, so form.reset() never clears them — and
+    // since Phase 19.1 they decide who the pass covers, so a stale row left over
+    // from a previous session would silently change the next request.
+    resetAssociateRows?.('PERSON_GATE_PASS');
+    resetAssociateRows?.('MATERIAL_GATE_PASS');
     toggleVehicleFields?.();
     initializeMaterialGatePassForm?.();
+    initializePersonGatePassDate?.();
     resetAllSignatureState?.();
-    renderRequesterDepartmentSelectors?.();
+    updateRequestorScopeNotice?.();
 }
 
 function getVisibleSectionId() {

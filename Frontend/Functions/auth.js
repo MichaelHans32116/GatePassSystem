@@ -22,7 +22,9 @@ function resolveInterfaceRole(roles) {
     if (roleSet.has('SECURITY')) return 'Security';
     if (roleSet.has('PRESIDENT')) return 'President';
     if (roleSet.has('PAS_NOTER')) return 'PAS Noter';
-    if (roleSet.has('IMMEDIATE_SUPERIOR')) return 'Immediate Superior';
+    // Phase 19.1 item 3: the IMMEDIATE_SUPERIOR role code stays, but everything
+    // the user sees now calls the step "Manager".
+    if (roleSet.has('IMMEDIATE_SUPERIOR')) return 'Manager';
     if (roleSet.has('DRIVER')) return 'Driver';
     return 'Associate';
 }
@@ -34,7 +36,7 @@ function resolveInterfaceRoleLabel(roles) {
     if (roleSet.has('SYSTEM_ADMIN')) labels.push('System Admin');
     if (roleSet.has('SECURITY')) labels.push('Security');
     if (roleSet.has('PRESIDENT')) labels.push('President');
-    if (roleSet.has('IMMEDIATE_SUPERIOR')) labels.push('Immediate Superior');
+    if (roleSet.has('IMMEDIATE_SUPERIOR')) labels.push('Manager');
     if (roleSet.has('PAS_NOTER')) labels.push('PAS');
     if (roleSet.has('DRIVER')) labels.push('Driver');
 
@@ -72,50 +74,19 @@ function updateAuthenticatedShell(user) {
     document.getElementById('navUserRole').innerText = user.roleLabel || user.role;
 }
 
-function renderRequesterDepartmentSelectors() {
-    const requestable = currentUser?.requestableDepartments || [];
-    const needsSelection = !currentUser?.departmentId && requestable.length > 0;
-    const options = [
-        '<option value="">-- Select department --</option>',
-        ...requestable.map(department =>
-            `<option value="${escapeHtml(department.departmentId)}">${escapeHtml(department.departmentName)}</option>`
-        )
-    ].join('');
-
-    [
-        ['personRequesterDepartmentGroup', 'personRequesterDepartment'],
-        ['materialRequesterDepartmentGroup', 'materialRequesterDepartment']
-    ].forEach(([groupId, selectId]) => {
-        const group = document.getElementById(groupId);
-        const select = document.getElementById(selectId);
-        group?.classList.toggle('hidden', !needsSelection);
-        if (!select) return;
-        select.required = needsSelection;
-        select.disabled = !needsSelection;
-        if (needsSelection) {
-            const previous = select.value;
-            select.innerHTML = options;
-            if (requestable.some(item =>
-                String(item.departmentId) === previous
-            )) {
-                select.value = previous;
-            }
-        } else {
-            select.innerHTML = '';
-        }
-    });
-}
-
-function getRequesterDepartmentId(formTypeCode) {
+// Phase 19.1 item 4: the "Requesting Department" picker is gone from both request
+// forms. Accounts with a home department always used it implicitly; shared
+// accounts that have no home department now fall back to their first requestable
+// department instead of being asked, since the column is still NOT NULL.
+function getRequesterDepartmentId() {
     if (currentUser?.departmentId) {
         return currentUser.departmentId;
     }
 
-    const selectId = formTypeCode === 'MATERIAL_GATE_PASS'
-        ? 'materialRequesterDepartment'
-        : 'personRequesterDepartment';
-    const selected = Number(document.getElementById(selectId)?.value);
-    return Number.isFinite(selected) && selected > 0 ? selected : null;
+    const fallback = Number(
+        (currentUser?.requestableDepartments || [])[0]?.departmentId
+    );
+    return Number.isFinite(fallback) && fallback > 0 ? fallback : null;
 }
 
 function showAuthenticatedApp(user, showSignedInToast = true) {
@@ -125,7 +96,6 @@ function showAuthenticatedApp(user, showSignedInToast = true) {
     // An authenticated session is always the private calendar (with the past-records
     // toggle), even if this browser previously opened the public guest calendar.
     window.isGuestCalendarView = false;
-    renderRequesterDepartmentSelectors();
     document.getElementById('loginView').style.opacity = '0';
 
     setTimeout(() => {
@@ -189,7 +159,7 @@ async function handleLogin(e) {
     } catch (error) {
         ApiClient.clearAccessToken();
         showToast(
-            error instanceof ApiError ? error.message : 'Unable to connect to the Form Request API.',
+            error instanceof ApiError ? error.message : 'Unable to connect to the Gate Pass Request API.',
             'error'
         );
     } finally {
@@ -344,5 +314,4 @@ window.logout = logout;
 window.openChangePasswordModal = openChangePasswordModal;
 window.closeChangePasswordModal = closeChangePasswordModal;
 window.refreshAuthenticatedProfile = refreshAuthenticatedProfile;
-window.renderRequesterDepartmentSelectors = renderRequesterDepartmentSelectors;
 window.getRequesterDepartmentId = getRequesterDepartmentId;

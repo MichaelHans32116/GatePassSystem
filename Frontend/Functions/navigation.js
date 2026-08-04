@@ -69,7 +69,7 @@ function setupRoleAccess(user) {
                 switchSection('dashBoard');
             }
             else {
-                // Associates / Immediate Superiors / HR
+                // Associates / Managers / HR
                 document.getElementById('navGroupSecurity').style.display = 'none';
 
                 if (user.role === 'Associate' || user.role === 'Driver') {
@@ -107,7 +107,7 @@ async function switchSection(targetId) {
             }
 
             const titles = {
-                'dashBoard':'Overview Dashboard', 'applyPass':'New Form Request',
+                'dashBoard':'Overview Dashboard', 'applyPass':'Gate Pass Request',
                 'approvals':'Workflow Approvals', 'guardScan':'Security QR Scanner',
                 'fleetManagement': 'Vehicles & Drivers',
                 'scheduleCalendar': 'Vehicle Schedule Calendar',

@@ -421,6 +421,9 @@ CREATE TABLE IF NOT EXISTS tbl_gate_pass_requests (
     form_type_code VARCHAR(40) NOT NULL DEFAULT 'PERSON_GATE_PASS',
     control_no VARCHAR(20) NOT NULL UNIQUE,
     form_date DATE NOT NULL,
+    -- Phase 19.1 item 6: the day the gate pass is FOR, which is not always the
+    -- day it was filed. Display-only; see Migrations/025.
+    pass_date DATE NULL,
     requester_user_id BIGINT UNSIGNED NOT NULL,
     requester_employee_id BIGINT UNSIGNED NOT NULL,
     requester_department_id BIGINT UNSIGNED NOT NULL,
@@ -848,6 +851,7 @@ SELECT
     gpr.form_type_code,
     form_type.form_name,
     gpr.form_date,
+    gpr.pass_date,
     gpr.requester_user_id,
     gpr.requester_employee_id,
     gpr.prepared_by_signature_file_id,

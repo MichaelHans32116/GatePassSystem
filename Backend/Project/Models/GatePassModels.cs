@@ -21,6 +21,10 @@ public class GatePassRecord
     public string FormTypeCode { get; init; } = "PERSON_GATE_PASS";
     public string FormName { get; init; } = "Person Gate Pass";
     public DateTime FormDate { get; init; }
+
+    // Phase 19.1 item 6: the day the pass is FOR, as picked by the requestor.
+    // Null on rows created before the column existed.
+    public DateOnly? PassDate { get; init; }
     public long RequesterUserId { get; init; }
     public long RequesterEmployeeId { get; init; }
     public long? PreparedBySignatureFileId { get; init; }

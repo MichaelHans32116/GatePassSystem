@@ -93,16 +93,20 @@ async function addAssociateRow(formTypeCode, values = {}) {
     row.className = 'associate-row flex items-start gap-2 px-4 py-2';
     row.id = rowId;
     row.dataset.employeeId = values.employeeId ? String(values.employeeId) : '';
+    row.dataset.employeeCode = values.employeeCode || '';
     row.dataset.departmentId = values.departmentId ? String(values.departmentId) : '';
     row.dataset.name = values.name || '';
     // Phase 17 item 4: '1' = directory employee, '0' = outside companion
     // (visitor / OJT) stored by typed name only.
+    // Phase 19.1 item 2: this used to be a bare "Employee" checkbox — an
+    // unticked box reading as "not an employee" confused users, so the two
+    // states are now spelled out in a dropdown.
     row.dataset.isEmployee = values.isEmployee === false ? '0' : '1';
     row.innerHTML = `
-        <label class="mt-2 flex shrink-0 cursor-pointer select-none items-center gap-1.5" title="Uncheck for visitors / OJTs who are not company employees">
-            <input type="checkbox" data-associate-employee checked onchange="toggleAssociateEmployee('${rowId}')" class="h-3.5 w-3.5 rounded border-gray-300 text-mpiBlue focus:ring-mpiBlue">
-            <span class="text-[10px] font-semibold text-gray-600">Employee</span>
-        </label>
+        <select data-associate-kind onchange="toggleAssociateEmployee('${rowId}')" class="mt-1 w-32 shrink-0 rounded border border-gray-300 bg-white p-2 text-[11px] font-semibold text-gray-700 focus:border-mpiBlue focus:ring-1 focus:ring-mpiBlue" title="Employee = pick from the company directory. Non-employee = visitors / OJTs typed by name.">
+            <option value="employee">Employee</option>
+            <option value="others">Non-employee</option>
+        </select>
         <div class="relative flex-1">
             <input type="text" autocomplete="off" data-associate-search class="w-full rounded border border-gray-300 bg-white p-2 text-xs focus:border-mpiBlue focus:ring-1 focus:ring-mpiBlue" placeholder="Type employee ID or name..." value="${materialEscape(values.name || '')}" oninput="handleAssociateSearchInput('${rowId}')" onfocus="showAssociateSuggestions('${rowId}')" onkeydown="handleAssociateSearchKeydown(event, '${rowId}')">
             <div data-associate-suggestions class="absolute z-30 mt-1 hidden max-h-48 w-full overflow-y-auto rounded border border-gray-200 bg-white shadow-lg"></div>
@@ -111,11 +115,12 @@ async function addAssociateRow(formTypeCode, values = {}) {
         <button type="button" onclick="removeAssociateRow('${rowId}', '${formTypeCode}')" class="rounded p-2 text-red-500 hover:bg-red-50" title="Remove companion"><i class="fas fa-trash"></i></button>`;
     body.appendChild(row);
     if (row.dataset.isEmployee === '0') {
-        const employeeToggle = row.querySelector('[data-associate-employee]');
-        if (employeeToggle) employeeToggle.checked = false;
+        const kindSelect = row.querySelector('[data-associate-kind]');
+        if (kindSelect) kindSelect.value = 'others';
         applyAssociateEmployeeMode(row);
     }
     updateAssociatesEmptyHint(formTypeCode);
+    if (formTypeCode !== 'MATERIAL_GATE_PASS') updateRequestorScopeNotice?.();
     // UAT: focus the fresh row so companions can be chained via the keyboard
     // (type → Enter → next row) as well as through the Add companion button.
     row.querySelector('[data-associate-search]')?.focus();
@@ -134,8 +139,11 @@ function applyAssociateEmployeeMode(row) {
             : 'Type visitor / OJT full name...';
     }
     if (meta) {
+        const isPersonForm = !row.closest('#materialAssociatesBody');
         meta.innerText = isEmployee
-            ? 'Select an active employee.'
+            ? isPersonForm
+                ? 'Select an active employee — pick yourself here if you are going out too.'
+                : 'Select an active employee.'
             : 'Non-employee companion — the name is saved exactly as typed.';
     }
     box?.classList.add('hidden');
@@ -144,10 +152,11 @@ function applyAssociateEmployeeMode(row) {
 function toggleAssociateEmployee(rowId) {
     const row = document.getElementById(rowId);
     if (!row) return;
-    const checkbox = row.querySelector('[data-associate-employee]');
+    const kindSelect = row.querySelector('[data-associate-kind]');
     const search = row.querySelector('[data-associate-search]');
-    row.dataset.isEmployee = checkbox?.checked ? '1' : '0';
+    row.dataset.isEmployee = kindSelect?.value === 'others' ? '0' : '1';
     row.dataset.employeeId = '';
+    row.dataset.employeeCode = '';
     row.dataset.departmentId = '';
     if (row.dataset.isEmployee === '1') {
         // Back to employee mode: the typed text must be re-picked from the
@@ -158,6 +167,7 @@ function toggleAssociateEmployee(rowId) {
         row.dataset.name = (search?.value || '').trim();
     }
     applyAssociateEmployeeMode(row);
+    if (!row.closest('#materialAssociatesBody')) updateRequestorScopeNotice?.();
 }
 
 function removeAssociateRow(rowId, formTypeCode) {
@@ -165,6 +175,7 @@ function removeAssociateRow(rowId, formTypeCode) {
     clearTimeout(associateSearchTimers[rowId]);
     delete associateSearchTimers[rowId];
     updateAssociatesEmptyHint(formTypeCode);
+    if (formTypeCode !== 'MATERIAL_GATE_PASS') updateRequestorScopeNotice?.();
 }
 
 function renderAssociateSuggestions(rowId) {
@@ -202,12 +213,15 @@ function handleAssociateSearchInput(rowId) {
     // Non-employee rows are plain text: whatever is typed IS the name.
     if (row.dataset.isEmployee === '0') {
         row.dataset.name = (row.querySelector('[data-associate-search]')?.value || '').trim();
+        if (!row.closest('#materialAssociatesBody')) updateRequestorScopeNotice?.();
         return;
     }
     // Editing the text invalidates a prior selection.
     row.dataset.employeeId = '';
+    row.dataset.employeeCode = '';
     row.dataset.departmentId = '';
     row.dataset.name = '';
+    if (!row.closest('#materialAssociatesBody')) updateRequestorScopeNotice?.();
     renderAssociateSuggestions(rowId);
     showAssociateSuggestions(rowId);
     const value = row.querySelector('[data-associate-search]')?.value || '';
@@ -261,9 +275,13 @@ function selectAssociate(rowId, employeeRecordId) {
     const employee = associateDirectoryCache.find(e => Number(e.employeeRecordId) === Number(employeeRecordId));
     if (!employee) return;
 
-    // Prevent adding yourself as a companion
+    // Phase 19.1 item 1: on the person form, picking yourself IS the signal that
+    // you are going out with the companions — that replaced the old
+    // "Kasama ako / Para sa iba lang" radio. The material form keeps the old
+    // rule: there the requestor is the preparer, not a traveller.
+    const isPersonForm = !row.closest('#materialAssociatesBody');
     const activeUser = typeof currentUser !== 'undefined' ? currentUser : null;
-    if (activeUser && employee.employeeId && employee.employeeId === activeUser.id) {
+    if (!isPersonForm && activeUser && employee.employeeId && employee.employeeId === activeUser.id) {
         alert('You cannot add yourself as a companion.');
         const search = row.querySelector('[data-associate-search]');
         if (search) search.value = '';
@@ -287,6 +305,9 @@ function selectAssociate(rowId, employeeRecordId) {
         }
     }
     row.dataset.employeeId = String(employee.employeeRecordId);
+    // The employee CODE (e.g. GA120) is what currentUser.id holds, so keep it on
+    // the row for the "am I on this list?" check in gatepass.js.
+    row.dataset.employeeCode = employee.employeeId || '';
     row.dataset.departmentId = employee.departmentId != null ? String(employee.departmentId) : '';
     row.dataset.name = employee.fullName || '';
     const search = row.querySelector('[data-associate-search]');
@@ -295,6 +316,7 @@ function selectAssociate(rowId, employeeRecordId) {
     if (search) search.value = `${employee.fullName} (${employee.employeeId})`;
     if (meta) meta.innerText = [employee.departmentName, employee.positionName].filter(Boolean).join(' · ') || 'Active employee selected.';
     box?.classList.add('hidden');
+    if (isPersonForm) updateRequestorScopeNotice?.();
 }
 
 // Collect confirmed companion rows as {employeeId, departmentId, name, isEmployee}.
@@ -314,6 +336,8 @@ function collectAssociates(formTypeCode) {
             if (!row.dataset.employeeId || !row.dataset.name) return null;
             return {
                 employeeId: Number(row.dataset.employeeId),
+                // Carried for the person form's requestor check; the API ignores it.
+                employeeCode: row.dataset.employeeCode || '',
                 departmentId: row.dataset.departmentId ? Number(row.dataset.departmentId) : null,
                 fullName: row.dataset.name,
                 isEmployee: true
@@ -349,6 +373,7 @@ function resetAssociateRows(formTypeCode) {
     const body = document.getElementById(associateBodyId(formTypeCode));
     if (body) body.innerHTML = '';
     updateAssociatesEmptyHint(formTypeCode);
+    if (formTypeCode !== 'MATERIAL_GATE_PASS') updateRequestorScopeNotice?.();
 }
 
 function selectRequestFormType(formTypeCode) {
@@ -370,10 +395,11 @@ function selectRequestFormType(formTypeCode) {
         isMaterial ? 'New Material Gate Pass' : 'New Person Gate Pass';
 
     if (isMaterial) {
-        renderRequesterDepartmentSelectors?.();
         initializeMaterialGatePassForm();
         loadMaterialEmployees();
     } else {
+        initializePersonGatePassDate?.();
+        updateRequestorScopeNotice?.();
         updateApprovalRoutePreview?.();
     }
 }
@@ -406,11 +432,11 @@ function updateMaterialRouteText() {
     const isSuperior = (activeUser?.roles || []).includes('IMMEDIATE_SUPERIOR');
     const needsVehicle = document.getElementById('matNeedVehicle')?.checked;
     if (isSuperior) {
-        routeText.innerText = needsVehicle ? 'HRAD Assignment → PAS' : 'PAS';
+        routeText.innerText = needsVehicle ? 'HRAD Assignment -> HRAD' : 'HRAD';
     } else {
         routeText.innerText = needsVehicle
-            ? 'Immediate Superior → HRAD Assignment → PAS'
-            : 'Immediate Superior → PAS';
+            ? 'Manager -> HRAD Assignment -> HRAD'
+            : 'Manager -> HRAD';
     }
 }
 

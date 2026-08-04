@@ -11,6 +11,7 @@ CREATE PROCEDURE SP_CreateGatePass(
     IN p_prepared_by_signature_file_id BIGINT UNSIGNED,
     IN p_destination VARCHAR(255),
     IN p_purpose TEXT,
+    IN p_pass_date DATE,
     IN p_expected_out_at DATETIME,
     IN p_expected_in_at DATETIME,
     IN p_will_return BOOLEAN,
@@ -73,6 +74,7 @@ BEGIN
         form_type_code,
         control_no,
         form_date,
+        pass_date,
         requester_user_id,
         requester_employee_id,
         requester_department_id,
@@ -97,6 +99,9 @@ BEGIN
         'PERSON_GATE_PASS',
         v_control_no,
         v_form_date,
+        -- Phase 19.1 item 6: which day the pass is FOR. Display-only; the
+        -- control number and every schedule check still key off v_form_date.
+        COALESCE(p_pass_date, v_form_date),
         p_requester_user_id,
         p_requester_employee_id,
         p_requester_department_id,

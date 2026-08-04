@@ -39,6 +39,8 @@ public sealed class GatePassRepository(
                         request.PreparedBySignatureFileId,
                     p_destination = request.Destination,
                     p_purpose = request.Purpose,
+                    p_pass_date =
+                        request.PassDate?.ToDateTime(TimeOnly.MinValue),
                     p_expected_out_at = request.ExpectedOutAt.UtcDateTime,
                     p_expected_in_at = request.ExpectedInAt?.UtcDateTime,
                     p_will_return = request.WillReturn,
@@ -771,6 +773,7 @@ public sealed class GatePassRepository(
             FormTypeCode = source.FormTypeCode,
             FormName = source.FormName,
             FormDate = source.FormDate,
+            PassDate = source.PassDate,
             RequesterUserId = source.RequesterUserId,
             RequesterEmployeeId = source.RequesterEmployeeId,
             PreparedBySignatureFileId = source.PreparedBySignatureFileId,

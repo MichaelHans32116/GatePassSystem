@@ -20,19 +20,33 @@ function getGuardRemarksText(p) {
 
 // ----- Decision Remarks / Feedback (rejection reason + per-step comments) -----
 const APPROVAL_STEP_LABELS = {
-    SUPERIOR: 'Immediate Superior',
+    SUPERIOR: 'Manager',
     PRESIDENT: 'President',
-    PAS: 'PAS / HR Admin',
+    PAS: 'HRAD / HR Admin',
     HRAD_ASSIGN: 'HRAD Assignment'
 };
 
-// Phase 17 items 8/12/13: the President no longer approves inside the system.
-// Company-vehicle passes print his name under the PRESIDENT line so the
-// physical form can be signed by hand.
-var PRESIDENT_PRINTED_NAME = 'TOMOAKI MAEKAWA';
-
+// Phase 17 items 8/12/13: the President no longer approves inside the system —
+// company-vehicle passes are signed by hand on the printed form.
+// Phase 19.1 item 5: the pre-printed president NAME is gone. The slot is left
+// blank and captioned "President & Gen. Manager" so whoever signs it can.
 function passNeedsPresidentInk(pass) {
     return pass?.vehicleUsageCode === 'COMPANY' || !!pass?.vehicle;
+}
+
+// Phase 19.1 item 6: the day the pass is FOR, which is not always the day it was
+// filed. pass_date arrives as a plain YYYY-MM-DD, so parse it at local midnight —
+// appending Z the way the datetime formatters do would shift it a day in PH time.
+function formatPassDate(value) {
+    const raw = String(value ?? '').slice(0, 10);
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return value ? String(value) : 'N/A';
+    const parsed = new Date(`${raw}T00:00:00`);
+    if (Number.isNaN(parsed.getTime())) return raw;
+    return parsed.toLocaleDateString([], {
+        year: 'numeric',
+        month: 'short',
+        day: 'numeric'
+    });
 }
 
 function approvalStepLabel(code) {
@@ -1150,7 +1164,7 @@ async function renderMaterialBundle(pass) {
                                 <strong>Noted By:</strong>
                                 <div ${superior.imageAttribute} class="material-signature-image"></div>
                                 <span ${superior.nameAttribute}></span>
-                                <small>Immediate Superior</small>
+                                <small>Manager</small>
                             </div>
                             <div>
                                 <strong>Approved By:</strong>
@@ -1160,10 +1174,9 @@ async function renderMaterialBundle(pass) {
                             </div>
                             ${passNeedsPresidentInk(pass) ? `
                             <div>
-                                <strong>Final Approval:</strong>
                                 <div class="material-signature-image"></div>
-                                <span>${materialEscape(PRESIDENT_PRINTED_NAME)}</span>
-                                <small>President — physical signature</small>
+                                <span></span>
+                                <small>President &amp; Gen. Manager</small>
                             </div>` : '<div></div>'}
                         </div>
 
@@ -1298,6 +1311,7 @@ function renderDigitalView(p) {
                 core.push(fieldRow('Authorized Person', p.authorizedEmployeeName));
                 core.push(fieldRow('Authorized Department', p.authorizedDepartmentName || p.userDept));
             } else {
+                core.push(fieldRow('Date of Gate Pass', formatPassDate(p.passDate)));
                 core.push(fieldRow('Destination', p.destination));
                 core.push(fieldRow('Purpose', p.purpose));
                 core.push(fieldRow('From (Expected Out)', p.expectedOut));
@@ -1355,9 +1369,9 @@ function renderDigitalView(p) {
             // --- Signatures summary ---
             const sigRows = [];
             if (p.signatures) {
-                if (p.signatures.imm) sigRows.push(fieldRow(isMaterial ? 'Noted By (Immediate Superior)' : 'Approved By (Immediate Superior)', p.signatures.imm.name));
+                if (p.signatures.imm) sigRows.push(fieldRow(isMaterial ? 'Noted By (Manager)' : 'Approved By (Manager)', p.signatures.imm.name));
                 if (p.signatures.pres) sigRows.push(fieldRow('Approved By (President)', p.signatures.pres.name));
-                if (p.signatures.pas) sigRows.push(fieldRow(isMaterial ? 'Approved By (PAS)' : 'Noted By (PAS)', p.signatures.pas.name));
+                if (p.signatures.pas) sigRows.push(fieldRow(isMaterial ? 'Approved By (HRAD)' : 'Noted By (HRAD)', p.signatures.pas.name));
             }
             if (sigRows.length) {
                 sections.push(`<div class="digital-subsection"><div class="digital-subsection-title">Approvals</div><div class="digital-field-grid">${sigRows.join('')}</div></div>`);
@@ -1448,6 +1462,7 @@ async function viewPass(id, isReviewing = false) {
             };
 
             setVal('vDateF', isMaterial ? p.dateFiled : compactPersonDateFiled(p.dateFiled));
+            setVal('vPassDate', formatPassDate(p.passDate));
             setVal('vControlNo', printableControlNo(p.controlNo));
             const viewAssociateNames = getAssociateNames(p);
             setVal('vName', viewAssociateNames[0] || p.userName);
@@ -1530,15 +1545,6 @@ async function viewPass(id, isReviewing = false) {
             await handleSig(p.signatures.imm, 'sigImm');
             await handleSig(p.signatures.pres, 'sigPres');
             await handleSig(p.signatures.pas, 'sigPAS');
-            // Phase 17 items 8/13: no digital President step — company-vehicle
-            // passes print the President's name for the physical signature.
-            if (!isMaterial && !p.signatures.pres && passNeedsPresidentInk(p)) {
-                const presNameEl = document.getElementById('sigPresName');
-                if (presNameEl) {
-                    presNameEl.innerText = PRESIDENT_PRINTED_NAME;
-                    presNameEl.classList.remove('hidden');
-                }
-            }
             if (isMaterial) {
                 await handleSig(p.signatures.imm, 'sigMatSuperior');
                 await handleSig(p.signatures.pas, 'sigMatPas');
@@ -1677,7 +1683,7 @@ async function viewPass(id, isReviewing = false) {
 
             // System Admin Progress Tracker
             const wf = document.getElementById('workflowTracker');
-            if (currentUser.role === 'System Admin' || ['President','Immediate Superior','PAS Noter','PAS / HR Admin'].includes(currentUser.role)) {
+            if (currentUser.role === 'System Admin' || ['President','Manager','HRAD Noter','HRAD / HR Admin'].includes(currentUser.role)) {
                 wf.classList.remove('hidden');
                 let stepsHTML = '';
 
@@ -1698,7 +1704,7 @@ async function viewPass(id, isReviewing = false) {
                     stepsHTML += `<span class="${hasPres}"><i class="fas ${p.signatures.pres ? 'fa-check-circle' : 'fa-circle'}"></i> ${stepNo++}. President</span>`;
                     stepsHTML += ` <i class="fas fa-chevron-right text-gray-300 mx-2"></i> `;
                 }
-                stepsHTML += `<span class="${hasPAS}"><i class="fas ${p.signatures.pas ? 'fa-check-circle' : 'fa-circle'}"></i> ${stepNo}. ${isMaterial ? 'PAS Approval' : 'PAS'}</span>`;
+                stepsHTML += `<span class="${hasPAS}"><i class="fas ${p.signatures.pas ? 'fa-check-circle' : 'fa-circle'}"></i> ${stepNo}. ${isMaterial ? 'HRAD Approval' : 'HRAD'}</span>`;
 
                 document.getElementById('workflowSteps').innerHTML = stepsHTML;
             } else {
@@ -1958,7 +1964,7 @@ async function viewPass(id, isReviewing = false) {
                             targetContainerId = isMaterial ? 'sigMatSuperior' : 'sigImm';
                         } else if (p.status === 'Pending President') {
                             targetContainerId = 'sigPres';
-                        } else if (p.status === 'Pending PAS') {
+                        } else if (p.status === 'Pending HRAD') {
                             targetContainerId = isMaterial ? 'sigMatPas' : 'sigPAS';
                         }
                     }
@@ -2075,6 +2081,7 @@ async function renderPersonGatePassClone(p) {
     };
 
     setVal('#vDateF', p.formTypeCode === 'MATERIAL_GATE_PASS' ? p.dateFiled : compactPersonDateFiled(p.dateFiled));
+    setVal('#vPassDate', formatPassDate(p.passDate));
     setVal('#vControlNo', printableControlNo(p.controlNo));
     const cloneAssociateNames = getAssociateNames(p);
     const clonePages = buildAssociateNamePages(cloneAssociateNames);
@@ -2146,15 +2153,6 @@ async function renderPersonGatePassClone(p) {
     await handleSig(p.signatures.imm, '#sigImm');
     await handleSig(p.signatures.pres, '#sigPres');
     await handleSig(p.signatures.pas, '#sigPAS');
-    // Phase 17 items 8/13: print the President's name for the physical
-    // signature on company-vehicle passes (mirrors viewPass).
-    if (p.formTypeCode !== 'MATERIAL_GATE_PASS' && !p.signatures.pres && passNeedsPresidentInk(p)) {
-        const clonePresName = clone.querySelector('#sigPresName');
-        if (clonePresName) {
-            clonePresName.innerText = PRESIDENT_PRINTED_NAME;
-            clonePresName.classList.remove('hidden');
-        }
-    }
 
     const guardRow = clone.querySelector('.guard-status-row');
     if (guardRow && ['Approved', 'Outside', 'Overdue', 'Returned', 'Closed'].includes(p.status)) {
@@ -2377,20 +2375,19 @@ async function renderMaterialGatePassClone(p) {
                     <strong style="display: block; text-align: left; font-size: 7px;">Noted By:</strong>
                     <div class="sig-wrapper sig-mat-superior material-signature-image" style="height: 6.2mm; display: flex; align-items: end; justify-content: center; margin-bottom: 0.25mm;"></div>
                     <span class="name sig-mat-superior-name" style="display: block; border-top: 1px solid #111827; border-bottom: none; padding-top: 0.25mm; text-align: center; font-size: 7.5px; font-weight: 700; text-transform: uppercase;"></span>
-                    <small style="display: block; text-align: center; font-size: 5.4px; margin-top: 0.35mm;">Immediate Superior</small>
+                    <small style="display: block; text-align: center; font-size: 5.4px; margin-top: 0.35mm;">Manager</small>
                 </div>
                 <div style="position: relative; min-height: 13.2mm;">
                     <strong style="display: block; text-align: left; font-size: 7px;">Approved By:</strong>
                     <div class="sig-wrapper sig-mat-pas material-signature-image" style="height: 6.2mm; display: flex; align-items: end; justify-content: center; margin-bottom: 0.25mm;"></div>
                     <span class="name sig-mat-pas-name" style="display: block; border-top: 1px solid #111827; border-bottom: none; padding-top: 0.25mm; text-align: center; font-size: 7.5px; font-weight: 700; text-transform: uppercase;"></span>
-                    <small style="display: block; text-align: center; font-size: 5.4px; margin-top: 0.35mm;">Personnel &amp; Admin Section</small>
+                    <small style="display: block; text-align: center; font-size: 5.4px; margin-top: 0.35mm;">HRAD</small>
                 </div>
                 ${passNeedsPresidentInk(p) ? `
                 <div style="position: relative; min-height: 13.2mm;">
-                    <strong style="display: block; text-align: left; font-size: 7px;">Final Approval:</strong>
                     <div class="material-signature-image" style="height: 6.2mm;"></div>
-                    <span style="display: block; border-top: 1px solid #111827; border-bottom: none; padding-top: 0.25mm; text-align: center; font-size: 7.5px; font-weight: 700; text-transform: uppercase;">${materialEscape(PRESIDENT_PRINTED_NAME)}</span>
-                    <small style="display: block; text-align: center; font-size: 5.4px; margin-top: 0.35mm;">President — physical signature</small>
+                    <span style="display: block; border-top: 1px solid #111827; border-bottom: none; padding-top: 0.25mm; text-align: center; font-size: 7.5px; font-weight: 700; text-transform: uppercase;">&nbsp;</span>
+                    <small style="display: block; text-align: center; font-size: 5.4px; margin-top: 0.35mm;">President &amp; Gen. Manager</small>
                 </div>` : '<div></div>'}
             </div>
 
