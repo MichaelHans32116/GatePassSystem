@@ -354,6 +354,10 @@
             letter-spacing: 0.1px;
         }
         .person-print-form #vName {
+            /* Phase 19.7: one step down from Tailwind's text-xs (12px). Kept here
+               rather than on the element so the primary and the companions below
+               can only ever change together. */
+            font-size: 10px;
             line-height: 1.02;
             white-space: normal;
             overflow: hidden;
@@ -371,7 +375,7 @@
            uppercase). Companions used to print smaller and capitalized, which read
            as a different field rather than the same list. */
         .person-associate-compact {
-            font-size: 12px;
+            font-size: 10px;
             line-height: 1.05;
             white-space: nowrap;
             overflow: hidden;
