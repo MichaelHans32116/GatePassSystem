@@ -21,7 +21,8 @@ Double-click `start-local.bat`, or run:
 ```
 
 This checks XAMPP MariaDB, builds and starts the ASP.NET API on port `5087`,
-serves the vanilla frontend on port `5500`, verifies `/api/health`, and opens
+serves the Form Request frontend on its dedicated port `5502`, verifies
+`/api/health`, and opens
 the frontend. Do not open `index.html` directly because the API expects an
 HTTP origin.
 

@@ -7,7 +7,7 @@ release). Vanilla JS frontend, ASP.NET Core 8 API, MariaDB via XAMPP.
 ## Commands
 
 - `start-local.bat` / `.\start-local.ps1` â€” full local run: XAMPP MariaDB +
-  API (port 5087) + frontend (port 5500). Use `-ExposeLan` for same-Wi-Fi
+  API (port 5087) + FRS frontend (port 5502). Use `-ExposeLan` for same-Wi-Fi
   device testing. Never open `index.html` directly â€” the API needs an HTTP
   origin.
 - `deploy-xampp.bat` / `.\deploy-xampp.ps1` â€” builds API, copies frontend to

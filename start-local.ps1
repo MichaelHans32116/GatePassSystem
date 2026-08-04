@@ -7,6 +7,7 @@
 
 $ErrorActionPreference = 'Stop'
 $repo = Split-Path -Parent $MyInvocation.MyCommand.Path
+$frontendPort = 5502
 $apiHealthUrl = 'http://127.0.0.1:5087'
 $apiListenUrl = if ($ExposeLan) {
     'http://0.0.0.0:5087'
@@ -16,7 +17,7 @@ $apiListenUrl = if ($ExposeLan) {
 $frontendUrl = if ($UseXamppApache) {
     'http://127.0.0.1/FormRequestSystem/'
 } else {
-    'http://127.0.0.1:5500'
+    "http://127.0.0.1:$frontendPort"
 }
 $mysql = 'C:\xampp\mysql\bin\mysql.exe'
 $mysqld = 'C:\xampp\mysql\bin\mysqld.exe'
@@ -195,8 +196,8 @@ if ($UseXamppApache) {
         throw 'XAMPP PHP was not found under C:\xampp\php.'
     }
 
-    if (-not (Test-LocalPort 5500)) {
-        $phpBindAddress = if ($ExposeLan) { '0.0.0.0:5500' } else { '127.0.0.1:5500' }
+    if (-not (Test-LocalPort $frontendPort)) {
+        $phpBindAddress = if ($ExposeLan) { "0.0.0.0:$frontendPort" } else { "127.0.0.1:$frontendPort" }
         $phpArguments = "-S $phpBindAddress -t `"$repo`""
         Start-Process -FilePath $php `
             -ArgumentList $phpArguments `
@@ -252,7 +253,7 @@ if ($ExposeLan) {
         $lanFrontend = if ($UseXamppApache) {
             "http://$address/FormRequestSystem/"
         } else {
-            "http://${address}:5500"
+            "http://${address}:$frontendPort"
         }
         Write-Host "LAN frontend: $lanFrontend"
     }

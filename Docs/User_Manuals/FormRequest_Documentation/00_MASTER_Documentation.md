@@ -165,7 +165,7 @@ be used directly as the image.
 - **The digital approval workflow** is step-based (`SUPERIOR` → `HRAD_ASSIGN` →
   `PAS`), with each step recorded in the audit history. The President's final
   company-vehicle approval is a physical signature on the printed form.
-- **Deployment:** local (XAMPP + API on port 5087 + front end on 5500) or on the
+- **Deployment:** local (XAMPP + API on port 5087 + FRS front end on 5502) or on the
   LAN (e.g., `http://192.168.x.x/FormRequestSystem/`).
 
 ---
