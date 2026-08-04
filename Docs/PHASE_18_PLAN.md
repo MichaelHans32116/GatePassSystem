@@ -52,6 +52,22 @@
 - Hardened name login candidate selection and invalidated existing sessions after a
   password change with a password-version JWT claim.
 
+## Phase 18.4–18.5 — UAT round-2 fixes (same day)
+
+- 18.4 (backend): HRAD assignment now hard-blocks a double-booked DRIVER, not
+  just the vehicle — fixed runs (explicit driver or the vehicle's default
+  driver) and other passes' blocking reservations both count. Fixed-schedule
+  conflict checks in ApprovalRepository and FleetRepository.ReserveAsync now
+  convert UTC reservation times to Philippine wall-clock (+8h) before
+  comparing, so afternoon fixed runs (e.g. 4:30–5:30 PM) are actually caught.
+  The /fleet/schedule feed backfills a fixed run's driver from the vehicle's
+  default driver so the HRAD modal's driver availability turns "Away".
+  Restart the local API after pulling this.
+- 18.5 (frontend): companion suggestion dropdown is no longer clipped by the
+  card's overflow; Enter chains companion rows (select → Enter → fresh focused
+  row) alongside the Add companion button; Change Password moved off the
+  sidebar to the top-bar profile chip.
+
 ## Final verification evidence
 
 - [x] Pass 1 — API, importer, and tracked regression projects compile; JavaScript
@@ -61,3 +77,14 @@
   deleted after the test.
 - [x] Pass 3 — browser smoke test, cache-busted local routing, and clean release
   candidate review before push.
+
+## Phase 18.4 — Current HRAD Vehicle Assigners
+
+- Import the verified minimum employee record for GA412, Myla Mae C. Abarquez,
+  from `employees_export_2026-07-07.xlsx` without copying unrelated HR data.
+- Preserve GA139, Roxanne G. Encinada (Ma'am Ro), and make GA139/GA412 active,
+  equal-priority HRAD assigners for Person and Material company-vehicle requests.
+- Create GA412's initial account with PBKDF2, require a password change, and never
+  overwrite an existing changed password on migration reruns.
+- Apply the idempotent migration to local and live `gate_pass_system` only after a
+  disposable clone test and a live-database backup.

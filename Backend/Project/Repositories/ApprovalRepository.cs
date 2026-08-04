@@ -466,13 +466,15 @@ public sealed class ApprovalRepository(
                     var fixedConflicts = await connection.ExecuteScalarAsync<int>(
                         new CommandDefinition(
                             """
+                            -- Reservations are stored in UTC while fixed schedules keep
+                            -- Philippine wall-clock times, so shift +8h before comparing.
                             SELECT COUNT(*)
                             FROM tbl_fixed_vehicle_schedules schedule
                             WHERE schedule.vehicle_id = @VehicleId
                               AND schedule.is_active = TRUE
-                              AND schedule.day_of_week = DAYOFWEEK(@ReservedFrom) - 1
-                              AND schedule.start_time < CAST(@ReservedUntil AS TIME)
-                              AND schedule.end_time > CAST(@ReservedFrom AS TIME);
+                              AND schedule.day_of_week = DAYOFWEEK(DATE_ADD(@ReservedFrom, INTERVAL 8 HOUR)) - 1
+                              AND schedule.start_time < CAST(DATE_ADD(@ReservedUntil, INTERVAL 8 HOUR) AS TIME)
+                              AND schedule.end_time > CAST(DATE_ADD(@ReservedFrom, INTERVAL 8 HOUR) AS TIME);
                             """,
                             new
                             {
@@ -513,6 +515,67 @@ public sealed class ApprovalRepository(
                     {
                         throw new VehicleReservationConflictException(
                             "The selected vehicle is already booked for one of the requested schedule windows.");
+                    }
+
+                    // Phase 18.4: the driver must be free too — a driver already
+                    // out on a fixed run (explicit or as a vehicle's default
+                    // driver) or on another pass's reservation cannot be
+                    // double-booked onto this trip.
+                    if (driverId.HasValue && driverId.Value > 0)
+                    {
+                        var driverFixedConflicts = await connection.ExecuteScalarAsync<int>(
+                            new CommandDefinition(
+                                """
+                                SELECT COUNT(*)
+                                FROM tbl_fixed_vehicle_schedules schedule
+                                JOIN tbl_vehicles vehicle
+                                  ON vehicle.vehicle_id = schedule.vehicle_id
+                                WHERE schedule.is_active = TRUE
+                                  AND COALESCE(schedule.driver_id, vehicle.default_driver_id) = @DriverId
+                                  AND schedule.day_of_week = DAYOFWEEK(DATE_ADD(@ReservedFrom, INTERVAL 8 HOUR)) - 1
+                                  AND schedule.start_time < CAST(DATE_ADD(@ReservedUntil, INTERVAL 8 HOUR) AS TIME)
+                                  AND schedule.end_time > CAST(DATE_ADD(@ReservedFrom, INTERVAL 8 HOUR) AS TIME);
+                                """,
+                                new
+                                {
+                                    DriverId = driverId.Value,
+                                    window.ReservedFrom,
+                                    window.ReservedUntil
+                                },
+                                transaction,
+                                cancellationToken: cancellationToken));
+
+                        var driverReservationConflicts = await connection.ExecuteScalarAsync<int>(
+                            new CommandDefinition(
+                                """
+                                SELECT COUNT(*)
+                                FROM tbl_vehicle_reservations reservation
+                                JOIN tbl_reservation_statuses status_row
+                                  ON status_row.reservation_status_code = reservation.reservation_status_code
+                                WHERE reservation.driver_id = @DriverId
+                                  AND reservation.gate_pass_id <> @GatePassId
+                                  AND status_row.blocks_availability = TRUE
+                                  AND reservation.reserved_from < @ReservedUntil
+                                  AND COALESCE(
+                                      reservation.reserved_until,
+                                      '9999-12-31 23:59:59'
+                                  ) > @ReservedFrom;
+                                """,
+                                new
+                                {
+                                    GatePassId = gatePassId,
+                                    DriverId = driverId.Value,
+                                    window.ReservedFrom,
+                                    window.ReservedUntil
+                                },
+                                transaction,
+                                cancellationToken: cancellationToken));
+
+                        if (driverFixedConflicts > 0 || driverReservationConflicts > 0)
+                        {
+                            throw new VehicleReservationConflictException(
+                                "The selected driver is already scheduled for one of the requested windows. Assign a different driver.");
+                        }
                     }
                 }
 

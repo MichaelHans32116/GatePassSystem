@@ -16,8 +16,14 @@
     {
       "name": "formrequest-frontend",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "5599", "--directory", "C:/Users/Michael Hans/OneDrive/Desktop/GatePassSystem"],
-      "port": 5599
+      "runtimeArgs": ["-m", "http.server", "5502", "--directory", "C:/Users/ivanlaurente/Desktop/Hans Files/GatePassSystem"],
+      "port": 5502
+    },
+    {
+      "name": "formrequest-api",
+      "runtimeExecutable": "dotnet",
+      "runtimeArgs": ["run", "--project", "C:/Users/ivanlaurente/Desktop/Hans Files/GatePassSystem/Backend/FormRequestSystem.Api.csproj"],
+      "port": 5087
     }
   ]
 }

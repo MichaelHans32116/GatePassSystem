@@ -406,13 +406,15 @@ public sealed class FleetRepository(
             var fixedConflicts = await connection.ExecuteScalarAsync<int>(
                 new CommandDefinition(
                     """
+                    -- Reservations are stored in UTC while fixed schedules keep
+                    -- Philippine wall-clock times, so shift +8h before comparing.
                     SELECT COUNT(*)
                     FROM tbl_fixed_vehicle_schedules fs
                     WHERE fs.vehicle_id = @VehicleId
                       AND fs.is_active = TRUE
-                      AND fs.day_of_week = DAYOFWEEK(@ReservedFrom) - 1
-                      AND fs.start_time < CAST(COALESCE(@ReservedUntil, '23:59:59') AS TIME)
-                      AND fs.end_time > CAST(@ReservedFrom AS TIME);
+                      AND fs.day_of_week = DAYOFWEEK(DATE_ADD(@ReservedFrom, INTERVAL 8 HOUR)) - 1
+                      AND fs.start_time < CAST(COALESCE(DATE_ADD(@ReservedUntil, INTERVAL 8 HOUR), '23:59:59') AS TIME)
+                      AND fs.end_time > CAST(DATE_ADD(@ReservedFrom, INTERVAL 8 HOUR) AS TIME);
                     """,
                     new
                     {
@@ -556,7 +558,7 @@ public sealed class FleetRepository(
                     vehicle.vehicle_name AS VehicleName,
                     vehicle.plate_number AS PlateNumber,
                     vehicle.vehicle_type AS VehicleType,
-                    fs.driver_id AS DriverId,
+                    COALESCE(fs.driver_id, vehicle.default_driver_id) AS DriverId,
                     driver.full_name AS DriverName,
                     dates.dt AS ScheduleDate,
                     fs.start_time AS StartTime,
@@ -585,7 +587,7 @@ public sealed class FleetRepository(
                     ON vehicle.vehicle_id = fs.vehicle_id
                    AND vehicle.is_active = TRUE
                 LEFT JOIN tbl_drivers driver
-                    ON driver.driver_id = fs.driver_id
+                    ON driver.driver_id = COALESCE(fs.driver_id, vehicle.default_driver_id)
 
                 ORDER BY ScheduleDate, StartTime, VehicleName;
                 """,
