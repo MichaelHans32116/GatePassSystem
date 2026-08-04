@@ -320,3 +320,45 @@ DEPLOYMENT UPDATE
 - Verified `http://192.168.9.7/FormRequestSystem/index.html` returns HTTP 200.
 Last updated: 2026-07-03
 
+
+
+DEPLOYMENT — 2026-08-04 (Phase 19.1, client review round)
+----------------------------------------------------------
+Deployed with plain short `ssh` / `scp` only, per
+`HRAD-Ticketing-System/Documents/Warnings/FALCON_DEV_TESTING_WARNING.md`:
+no long inline PowerShell, no hidden windows, no forced process kills, no
+scripted web logins or cookie handling.
+
+Backups taken first, all under `C:\GatePassBackups\20260804-phase19-1`:
+- `gate_pass_system.sql` — mysqldump with `--routines` (194 KB)
+- `frontend\` — xcopy of `C:\xampp\htdocs\FormRequestSystem` (142 files)
+- `backend\`  — xcopy of `C:\Users\User\Desktop\GatePassSystem\Backend` (69 files)
+
+Database:
+- Confirmed the live `view_gate_pass_records` definition still matched
+  migration 018 before replacing it, so no server-side drift was overwritten.
+- Applied `Database/Migrations/025_gate_pass_pass_date.sql`, then re-sourced
+  `Database/procedures.sql`.
+- Verified afterwards: schema version `025`, every existing request row
+  backfilled with `pass_date`, and `SP_CreateGatePass` exposes `p_pass_date`.
+
+Frontend:
+- `scp` of `index.html` plus the nine changed files in `Frontend/Functions/`
+  (app, approvals, auth, calendar, gatepass, material-gatepass, modal,
+  navigation, usermanual).
+- Verified `http://192.168.9.7/FormRequestSystem/index.html` returns 200 with
+  the new title, nine `?v=...phase19.1` assets, no scope radio, the
+  `gpPassDate` field, and the MANAGER / PRESIDENT & GEN. MANAGER captions.
+
+Backend:
+- Copied only `FormRequestSystem.Api.dll/.pdb` and
+  `FormRequestSystem.Project.dll/.pdb`. Deliberately NOT a `/MIR` mirror —
+  `appsettings.json`, `Data\signatures`, and the rest of the folder were left
+  untouched so no server-specific config or stored signature could be lost.
+- Sequence, each as its own short command: `Stop-ScheduledTask GatePassApi`
+  → `copy /Y` the four files → `Start-ScheduledTask GatePassApi`.
+- Verified: task `Running`, `http://192.168.9.7:5087/api/health` returns 200
+  `database: Connected`, `/api/vehicles` returns 200.
+- Staging folder `C:\GatePassDeploy` removed afterwards.
+
+Apache, MariaDB, firewall, and network settings were not touched.
