@@ -59,15 +59,23 @@
         /* Print Styles - Gate pass top-centered on the page with cutline */
         @media print {
             @page { margin: 0; }
+            /* Phase 19.8: html/body used to be height:100%. With @page{margin:0}
+               that resolves to a full 297mm sheet, so the flow always filled page
+               one exactly and the trailing margin under the form tipped onto a
+               second, blank sheet. height:auto lets the flow be only as tall as
+               the pass (about 125mm), which cannot spill. Batch print still
+               paginates off .a4-wrapper's explicit 297mm boxes. */
             html {
                 width: 100%;
-                height: 100%;
+                height: auto !important;
+                min-height: 0 !important;
                 background: white !important;
                 overflow: visible !important;
             }
             body {
                 width: 100%;
-                height: 100%;
+                height: auto !important;
+                min-height: 0 !important;
                 background: white !important;
                 overflow: visible !important;
                 display: block !important;
@@ -121,6 +129,20 @@
                 overflow: visible !important;
                 flex-shrink: 0 !important;
                 position: relative;
+            }
+            /* One pass = one sheet, always. Batch print hides #printableArea and
+               paginates through .a4-wrapper instead, so this only ever applies to
+               the single-document path. */
+            #printableArea {
+                break-after: avoid !important;
+                page-break-after: avoid !important;
+            }
+            /* Hidden print containers must stay collapsed - an empty but laid-out
+               box below the form is enough to open a second sheet. */
+            #printableArea.hidden,
+            #materialPrintableArea.hidden,
+            #multiPrintableArea.hidden {
+                display: none !important;
             }
             #printableArea::after {
                 content: "";
