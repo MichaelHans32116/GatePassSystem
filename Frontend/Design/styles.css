@@ -365,15 +365,19 @@
         }
         /* Bug 2: enlarge the additional-companion names on the associate pass so a
            group is easy to read. A page shows the primary associate plus up to four
-           companions, so the taller lines still fit the NAME OF ASSOCIATES cell. */
+           companions, so the taller lines still fit the NAME OF ASSOCIATES cell.
+           Phase 19.6: every name in NAME OF ASSOCIATES now renders identically -
+           same size, weight, and casing as #vName (Tailwind text-xs / bold /
+           uppercase). Companions used to print smaller and capitalized, which read
+           as a different field rather than the same list. */
         .person-associate-compact {
-            font-size: 8px;
-            line-height: 1.18;
+            font-size: 12px;
+            line-height: 1.05;
             white-space: nowrap;
             overflow: hidden;
             text-overflow: ellipsis;
-            text-transform: capitalize;
-            font-weight: 600;
+            text-transform: uppercase;
+            font-weight: 700;
         }
         /* Phase 17 item 2: others-only passes print the requestor on a separate
            line, divided from the NAME OF ASSOCIATES list by a rule. */
@@ -1300,7 +1304,8 @@
             margin-top: 0.2mm;
             font-size: 5.7px;
         }
-        .a4-wrapper.is-batch-print .person-print-form .person-associate-compact {
+        .a4-wrapper.is-batch-print .person-print-form .person-associate-compact,
+        .a4-wrapper.is-batch-print .person-print-form #vName {
             font-size: 7px;
             line-height: 1.12;
         }
