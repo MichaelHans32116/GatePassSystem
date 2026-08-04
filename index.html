@@ -1147,15 +1147,6 @@
                                 </div>
                             </td>
                             <td class="person-approval-cell align-top h-14 relative w-1/4 border-l-0">
-                                <div class="person-signature-stage">
-                                    <div id="sigPres" class="w-full flex justify-center items-end"></div>
-                                </div>
-                                <div class="absolute bottom-1 w-full text-center leading-none">
-                                    <span id="sigPresName" class="font-bold text-[8px] uppercase underline hidden block mb-[1px]"></span>
-                                    <span class="text-[7px]">PRESIDENT</span>
-                                </div>
-                            </td>
-                            <td class="person-approval-cell align-top h-14 relative w-1/4">
                                 <div class="text-[7px] uppercase absolute top-1 left-1">NOTED BY</div>
                                 <div class="person-signature-stage">
                                     <div id="sigPAS" class="w-full flex justify-center items-end"></div>
@@ -1163,6 +1154,16 @@
                                 <div class="absolute bottom-1 w-full text-center leading-none">
                                     <span id="sigPASName" class="font-bold text-[8px] uppercase underline hidden block mb-[1px]"></span>
                                     <span class="text-[7px]">PAS</span>
+                                </div>
+                            </td>
+                            <td class="person-approval-cell align-top h-14 relative w-1/4">
+                                <div class="text-[7px] uppercase absolute top-1 left-1">FINAL APPROVAL</div>
+                                <div class="person-signature-stage">
+                                    <div id="sigPres" class="w-full flex justify-center items-end"></div>
+                                </div>
+                                <div class="absolute bottom-1 w-full text-center leading-none">
+                                    <span id="sigPresName" class="font-bold text-[8px] uppercase underline hidden block mb-[1px]"></span>
+                                    <span class="text-[7px]">PRESIDENT (PHYSICAL SIGNATURE)</span>
                                 </div>
                             </td>
                         </tr>
@@ -1517,58 +1518,6 @@
         </div>
     </div>
 
-    <!-- Service Schedule Request Form Modal (President's direct booking) -->
-    <div id="serviceScheduleRequestModal" class="fixed inset-0 z-[90] hidden items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm">
-        <div class="w-full max-w-md rounded-2xl bg-white shadow-2xl flex flex-col">
-            <div class="px-5 py-4 border-b border-gray-200 flex justify-between items-center bg-gray-50/50 rounded-t-2xl">
-                <h3 class="font-bold text-gray-800">Request Service Schedule</h3>
-                <button type="button" onclick="closeServiceScheduleRequestModal()" class="rounded-full bg-gray-100 px-3 py-2 text-xs font-bold text-gray-600 transition hover:bg-gray-200"><i class="fas fa-times"></i></button>
-            </div>
-            <form id="serviceScheduleRequestForm" onsubmit="saveServiceScheduleRequest(event)" class="p-5 space-y-4">
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Date</label>
-                    <input type="date" id="serviceRequestDate" class="w-full border border-gray-300 rounded px-3 py-2 text-xs focus:outline-none focus:border-mpiBlue" required>
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Start Time</label>
-                        <input type="time" id="serviceRequestStartTime" class="w-full border border-gray-300 rounded px-3 py-2 text-xs focus:outline-none focus:border-mpiBlue" required>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">End Time</label>
-                        <input type="time" id="serviceRequestEndTime" class="w-full border border-gray-300 rounded px-3 py-2 text-xs focus:outline-none focus:border-mpiBlue" required>
-                    </div>
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Destination</label>
-                    <input type="text" id="serviceRequestDestination" placeholder="e.g. Head Office, Client Site..." class="w-full border border-gray-300 rounded px-3 py-2 text-xs focus:outline-none focus:border-mpiBlue" required>
-                </div>
-                <div>
-                    <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Purpose</label>
-                    <input type="text" id="serviceRequestPurpose" placeholder="e.g. Business Meeting, Site Inspection..." class="w-full border border-gray-300 rounded px-3 py-2 text-xs focus:outline-none focus:border-mpiBlue" required>
-                </div>
-                <div class="grid grid-cols-2 gap-3">
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Vehicle</label>
-                        <select id="serviceRequestVehicle" class="w-full border border-gray-300 rounded px-3 py-2 text-xs focus:outline-none focus:border-mpiBlue" required>
-                            <!-- Dynamically populated -->
-                        </select>
-                    </div>
-                    <div>
-                        <label class="block text-xs font-bold text-gray-500 uppercase mb-1">Driver</label>
-                        <select id="serviceRequestDriver" class="w-full border border-gray-300 rounded px-3 py-2 text-xs focus:outline-none focus:border-mpiBlue" required>
-                            <!-- Dynamically populated -->
-                        </select>
-                    </div>
-                </div>
-                <div class="flex justify-end gap-2 pt-2 border-t">
-                    <button type="button" onclick="closeServiceScheduleRequestModal()" class="text-xs text-gray-600 px-3 py-1.5 rounded border border-gray-300 hover:bg-gray-100 transition">Cancel</button>
-                    <button type="submit" class="text-xs bg-mpiBlue text-white font-bold px-4 py-1.5 rounded hover:bg-mpiDark transition">Submit Request</button>
-                </div>
-            </form>
-        </div>
-    </div>
-
     <!-- Change Password Modal -->
     <div id="changePasswordModal" class="fixed inset-0 z-[9998] hidden flex items-center justify-center bg-slate-950/60 p-4 backdrop-blur-sm" aria-hidden="true">
         <div class="w-full max-w-md rounded-2xl bg-white shadow-2xl overflow-hidden" onclick="event.stopPropagation()">
@@ -1629,19 +1578,19 @@
         </div>
     </div>
 
-    <script src="Frontend/runtime-config.js?v=20260709-phase1312.2"></script>
+    <script src="Frontend/runtime-config.js?v=20260804-phase18.2"></script>
     <script src="Frontend/Functions/mock-data.js?v=20260709-phase1312.2"></script>
     <script src="Frontend/Connectors/api-client.js?v=20260709-phase1312.2"></script>
     <script src="Frontend/Functions/signature.js?v=20260709-phase1312"></script>
-    <script src="Frontend/Functions/material-gatepass.js?v=20260804-phase17"></script>
-    <script src="Frontend/Functions/modal.js?v=20260804-phase17"></script>
-    <script src="Frontend/Functions/gatepass.js?v=20260804-phase17"></script>
-    <script src="Frontend/Functions/approvals.js?v=20260804-phase17"></script>
+    <script src="Frontend/Functions/material-gatepass.js?v=20260804-phase18.2"></script>
+    <script src="Frontend/Functions/modal.js?v=20260804-phase18.2"></script>
+    <script src="Frontend/Functions/gatepass.js?v=20260804-phase18.2"></script>
+    <script src="Frontend/Functions/approvals.js?v=20260804-phase18.2"></script>
     <script src="Frontend/Functions/scanner.js?v=20260709-phase1312"></script>
     <script src="Frontend/Functions/admin.js?v=20260709-phase1312.2"></script>
     <script src="Frontend/Functions/navigation.js?v=20260804-phase17"></script>
-    <script src="Frontend/Functions/usermanual.js?v=20260709-manual3"></script>
-    <script src="Frontend/Functions/calendar.js?v=20260804-phase17"></script>
+    <script src="Frontend/Functions/usermanual.js?v=20260804-phase18.2"></script>
+    <script src="Frontend/Functions/calendar.js?v=20260804-phase18.2"></script>
     <script src="Frontend/Functions/auth.js?v=20260804-phase18-auth"></script>
     <script src="Frontend/Functions/app.js?v=20260712-perf1"></script>
 </body>

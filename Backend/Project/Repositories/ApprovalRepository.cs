@@ -99,6 +99,69 @@ public sealed class ApprovalRepository(
         return items.AsList();
     }
 
+    public async Task<ApprovalDecisionContext?> GetDecisionContextAsync(
+        long gatePassId,
+        long actorUserId,
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection =
+            await connectionFactory.OpenConnectionAsync(cancellationToken);
+
+        return await connection.QueryFirstOrDefaultAsync<ApprovalDecisionContext>(
+            new CommandDefinition(
+                """
+                SELECT
+                    request_row.gate_pass_id AS GatePassId,
+                    request_row.form_type_code AS FormTypeCode,
+                    request_row.will_return AS WillReturn,
+                    request_row.vehicle_usage_code AS VehicleUsageCode,
+                    request_row.vehicle_trip_type_code AS VehicleTripTypeCode,
+                    step.approval_step_code AS ApprovalStepCode
+                FROM tbl_gate_pass_requests request_row
+                JOIN tbl_gate_pass_approval_steps step
+                  ON step.gate_pass_id = request_row.gate_pass_id
+                 AND step.approval_status_code = 'PENDING'
+                WHERE request_row.gate_pass_id = @GatePassId
+                  AND request_row.requester_user_id <> @ActorUserId
+                  AND (
+                      request_row.gate_pass_status_code = CONCAT('PENDING_', step.approval_step_code)
+                      OR (
+                          request_row.gate_pass_status_code = 'ON_HOLD'
+                          AND step.approval_step_code = 'HRAD_ASSIGN'
+                      )
+                  )
+                  AND (
+                      step.assigned_approver_user_id = @ActorUserId
+                      OR (
+                          step.approval_step_code = 'PAS'
+                          AND EXISTS (
+                              SELECT 1
+                              FROM tbl_user_roles actor_role
+                              JOIN tbl_role_permissions role_permission
+                                ON role_permission.role_id = actor_role.role_id
+                              JOIN tbl_permissions permission_row
+                                ON permission_row.permission_id = role_permission.permission_id
+                              WHERE actor_role.user_id = @ActorUserId
+                                AND actor_role.is_active = TRUE
+                                AND permission_row.permission_code = 'gatepass.note.pas'
+                          )
+                          AND EXISTS (
+                              SELECT 1
+                              FROM tbl_approval_assignments assignment
+                              WHERE assignment.approver_user_id = @ActorUserId
+                                AND assignment.approval_step_code = 'PAS'
+                                AND assignment.form_type_code = request_row.form_type_code
+                                AND assignment.is_active = TRUE
+                          )
+                      )
+                  )
+                ORDER BY step.sequence_no
+                LIMIT 1;
+                """,
+                new { GatePassId = gatePassId, ActorUserId = actorUserId },
+                cancellationToken: cancellationToken));
+    }
+
     public async Task<ApprovalMutation?> DecideAsync(
         long gatePassId,
         long actorUserId,
@@ -131,6 +194,9 @@ public sealed class ApprovalRepository(
                     SELECT
                         request_row.gate_pass_id AS GatePassId,
                         request_row.form_type_code AS FormTypeCode,
+                        request_row.will_return AS WillReturn,
+                        request_row.vehicle_usage_code AS VehicleUsageCode,
+                        request_row.vehicle_trip_type_code AS VehicleTripTypeCode,
                         request_row.gate_pass_status_code AS CurrentStatus,
                         request_row.expected_out_at AS ExpectedOutAt,
                         request_row.expected_in_at AS ExpectedInAt,
@@ -296,8 +362,41 @@ public sealed class ApprovalRepository(
             // 2. Handle Vehicle/Driver assignment on HR approval
             if (current.ApprovalStepCode == "HRAD_ASSIGN" && approve)
             {
+                if (!string.Equals(
+                        current.VehicleUsageCode,
+                        "COMPANY",
+                        StringComparison.OrdinalIgnoreCase) ||
+                    !vehicleId.HasValue || vehicleId.Value <= 0)
+                {
+                    throw new VehicleReservationConflictException(
+                        "Select the company vehicle before forwarding.");
+                }
+
                 var resolvedExpectedOutAt = expectedOutAt ?? current.ExpectedOutAt;
                 var resolvedExpectedInAt = expectedInAt ?? current.ExpectedInAt;
+                if (!resolvedExpectedOutAt.HasValue || !resolvedExpectedInAt.HasValue ||
+                    resolvedExpectedInAt <= resolvedExpectedOutAt)
+                {
+                    throw new VehicleReservationConflictException(
+                        "Set a valid HRAD schedule start and end before forwarding.");
+                }
+
+                var authoritativeTripType = string.IsNullOrWhiteSpace(current.VehicleTripTypeCode)
+                    ? tripType?.Trim().ToUpperInvariant()
+                    : current.VehicleTripTypeCode.Trim().ToUpperInvariant();
+                var dropOffOnly =
+                    current.FormTypeCode == "MATERIAL_GATE_PASS" || !current.WillReturn;
+                var validTripType = dropOffOnly
+                    ? authoritativeTripType == "HATID"
+                    : authoritativeTripType is "BOTH" or "HATID" or "SUNDO";
+                if (!validTripType)
+                {
+                    throw new VehicleReservationConflictException(
+                        dropOffOnly
+                            ? "This request only allows Hatid lang."
+                            : "Select Hatid at Sundo, Hatid lang, or Sundo lang.");
+                }
+
                 var resolvedSecondaryExpectedOutAt = secondaryExpectedOutAt;
                 var resolvedSecondaryExpectedInAt = secondaryExpectedInAt;
                 var hasSecondaryWindow =
@@ -331,6 +430,92 @@ public sealed class ApprovalRepository(
                     }
                 }
 
+                var reservationWindows = new List<(DateTime ReservedFrom, DateTime ReservedUntil)>
+                {
+                    (primaryWindowOutAt.Value, primaryWindowInAt!.Value)
+                };
+                if (hasSecondaryWindow)
+                {
+                    reservationWindows.Add((
+                        resolvedSecondaryExpectedOutAt!.Value,
+                        resolvedSecondaryExpectedInAt!.Value));
+                }
+
+                var selectableVehicle = await connection.QuerySingleOrDefaultAsync<bool?>(
+                    new CommandDefinition(
+                        """
+                        SELECT status_row.is_selectable
+                        FROM tbl_vehicles vehicle
+                        JOIN tbl_vehicle_statuses status_row
+                          ON status_row.vehicle_status_code = vehicle.vehicle_status_code
+                        WHERE vehicle.vehicle_id = @VehicleId
+                          AND vehicle.is_active = TRUE
+                        FOR UPDATE;
+                        """,
+                        new { VehicleId = vehicleId.Value },
+                        transaction,
+                        cancellationToken: cancellationToken));
+                if (selectableVehicle != true)
+                {
+                    throw new VehicleReservationConflictException(
+                        "The selected company vehicle is not available.");
+                }
+
+                foreach (var window in reservationWindows)
+                {
+                    var fixedConflicts = await connection.ExecuteScalarAsync<int>(
+                        new CommandDefinition(
+                            """
+                            SELECT COUNT(*)
+                            FROM tbl_fixed_vehicle_schedules schedule
+                            WHERE schedule.vehicle_id = @VehicleId
+                              AND schedule.is_active = TRUE
+                              AND schedule.day_of_week = DAYOFWEEK(@ReservedFrom) - 1
+                              AND schedule.start_time < CAST(@ReservedUntil AS TIME)
+                              AND schedule.end_time > CAST(@ReservedFrom AS TIME);
+                            """,
+                            new
+                            {
+                                VehicleId = vehicleId.Value,
+                                window.ReservedFrom,
+                                window.ReservedUntil
+                            },
+                            transaction,
+                            cancellationToken: cancellationToken));
+
+                    var activeConflicts = await connection.ExecuteScalarAsync<int>(
+                        new CommandDefinition(
+                            """
+                            SELECT COUNT(*)
+                            FROM tbl_vehicle_reservations reservation
+                            JOIN tbl_reservation_statuses status_row
+                              ON status_row.reservation_status_code = reservation.reservation_status_code
+                            WHERE reservation.vehicle_id = @VehicleId
+                              AND reservation.gate_pass_id <> @GatePassId
+                              AND status_row.blocks_availability = TRUE
+                              AND reservation.reserved_from < @ReservedUntil
+                              AND COALESCE(
+                                  reservation.reserved_until,
+                                  '9999-12-31 23:59:59'
+                              ) > @ReservedFrom;
+                            """,
+                            new
+                            {
+                                GatePassId = gatePassId,
+                                VehicleId = vehicleId.Value,
+                                window.ReservedFrom,
+                                window.ReservedUntil
+                            },
+                            transaction,
+                            cancellationToken: cancellationToken));
+
+                    if (fixedConflicts > 0 || activeConflicts > 0)
+                    {
+                        throw new VehicleReservationConflictException(
+                            "The selected vehicle is already booked for one of the requested schedule windows.");
+                    }
+                }
+
                 await connection.ExecuteAsync(new CommandDefinition(
                     """
                     UPDATE tbl_gate_pass_requests
@@ -357,71 +542,49 @@ public sealed class ApprovalRepository(
                         GatePassId = gatePassId,
                         VehicleId = vehicleId,
                         DriverId = driverId,
-                        TripType = tripType,
+                        TripType = authoritativeTripType,
                         ExpectedOutAt = resolvedExpectedOutAt,
                         ExpectedInAt = resolvedExpectedInAt
                     },
                     transaction,
                     cancellationToken: cancellationToken));
 
-                if (vehicleId.HasValue && vehicleId.Value > 0)
+                await connection.ExecuteAsync(new CommandDefinition(
+                    "DELETE FROM tbl_vehicle_reservations WHERE gate_pass_id = @GatePassId;",
+                    new { GatePassId = gatePassId },
+                    transaction,
+                    cancellationToken: cancellationToken));
+
+                foreach (var reservationWindow in reservationWindows)
                 {
-                    // Clean up any existing reservation first to avoid duplicates
                     await connection.ExecuteAsync(new CommandDefinition(
-                        "DELETE FROM tbl_vehicle_reservations WHERE gate_pass_id = @GatePassId;",
-                        new { GatePassId = gatePassId },
+                        """
+                        INSERT INTO tbl_vehicle_reservations (
+                            gate_pass_id,
+                            vehicle_id,
+                            driver_id,
+                            reserved_from,
+                            reserved_until,
+                            reservation_status_code
+                        ) VALUES (
+                            @GatePassId,
+                            @VehicleId,
+                            @DriverId,
+                            @ReservedFrom,
+                            @ReservedUntil,
+                            'PENDING'
+                        );
+                        """,
+                        new
+                        {
+                            GatePassId = gatePassId,
+                            VehicleId = vehicleId.Value,
+                            DriverId = driverId,
+                            reservationWindow.ReservedFrom,
+                            reservationWindow.ReservedUntil
+                        },
                         transaction,
                         cancellationToken: cancellationToken));
-
-                    var reservationWindows = new List<(DateTime ReservedFrom, DateTime? ReservedUntil)>
-                    {
-                        (
-                            primaryWindowOutAt ?? throw new InvalidOperationException(
-                                "Primary HRAD schedule window is required."),
-                            primaryWindowInAt
-                        )
-                    };
-
-                    if (hasSecondaryWindow)
-                    {
-                        reservationWindows.Add(
-                            (
-                                resolvedSecondaryExpectedOutAt!.Value,
-                                resolvedSecondaryExpectedInAt
-                            ));
-                    }
-
-                    foreach (var reservationWindow in reservationWindows)
-                    {
-                        await connection.ExecuteAsync(new CommandDefinition(
-                            """
-                            INSERT INTO tbl_vehicle_reservations (
-                                gate_pass_id,
-                                vehicle_id,
-                                driver_id,
-                                reserved_from,
-                                reserved_until,
-                                reservation_status_code
-                            ) VALUES (
-                                @GatePassId,
-                                @VehicleId,
-                                @DriverId,
-                                @ReservedFrom,
-                                @ReservedUntil,
-                                'PENDING'
-                            );
-                            """,
-                            new
-                            {
-                                GatePassId = gatePassId,
-                                VehicleId = vehicleId.Value,
-                                DriverId = driverId,
-                                ReservedFrom = reservationWindow.ReservedFrom,
-                                ReservedUntil = reservationWindow.ReservedUntil
-                            },
-                            transaction,
-                            cancellationToken: cancellationToken));
-                    }
                 }
             }
 
@@ -644,6 +807,9 @@ public sealed class ApprovalRepository(
     {
         public long GatePassId { get; init; }
         public string FormTypeCode { get; init; } = "PERSON_GATE_PASS";
+        public bool WillReturn { get; init; }
+        public string VehicleUsageCode { get; init; } = "NONE";
+        public string? VehicleTripTypeCode { get; init; }
         public string CurrentStatus { get; init; } = string.Empty;
         public DateTime? ExpectedOutAt { get; init; }
         public DateTime? ExpectedInAt { get; init; }

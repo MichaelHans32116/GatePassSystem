@@ -11,6 +11,7 @@ public sealed class AuthUser
     public string AccountStatus { get; init; } = string.Empty;
     public bool AccountAllowsLogin { get; init; }
     public bool MustChangePassword { get; init; }
+    public DateTime? LastPasswordChangeAt { get; init; }
     public long? DepartmentId { get; init; }
     public string? Department { get; init; }
     public string? Position { get; init; }

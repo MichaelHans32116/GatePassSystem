@@ -16,6 +16,7 @@ public sealed class UserRepository(IDatabaseConnectionFactory connectionFactory)
             ua.account_status_code AS AccountStatus,
             account_status.allows_login AS AccountAllowsLogin,
             ua.must_change_password AS MustChangePassword,
+            ua.last_password_change_at AS LastPasswordChangeAt,
             d.department_id AS DepartmentId,
             d.department_code AS DepartmentCode,
             d.department_name AS Department,
@@ -34,14 +35,16 @@ public sealed class UserRepository(IDatabaseConnectionFactory connectionFactory)
     public Task<IReadOnlyList<AuthUser>> FindForLoginAsync(
         string username,
         CancellationToken cancellationToken = default) =>
-        QueryUsersAsync(
+        QueryLoginCandidatesAsync(
             $"""
             {UserSelect}
             WHERE (
                    UPPER(TRIM(ua.username)) = UPPER(TRIM(@Username))
                 OR UPPER(TRIM(COALESCE(e.full_name, ua.display_name))) = UPPER(TRIM(@Username))
-                OR UPPER(TRIM(COALESCE(e.full_name, ua.display_name)))
-                    LIKE CONCAT(UPPER(TRIM(@Username)), ' %')
+                OR LEFT(
+                    UPPER(TRIM(COALESCE(e.full_name, ua.display_name))),
+                    CHAR_LENGTH(TRIM(@Username)) + 1
+                ) = CONCAT(UPPER(TRIM(@Username)), ' ')
                 OR FIND_IN_SET(
                     UPPER(TRIM(@Username)),
                     REPLACE(
@@ -63,6 +66,17 @@ public sealed class UserRepository(IDatabaseConnectionFactory connectionFactory)
             """,
             new { Username = username },
             cancellationToken);
+
+    public async Task<DateTime?> GetLastPasswordChangeAtAsync(
+        long accountId,
+        CancellationToken cancellationToken = default)
+    {
+        await using var connection = await connectionFactory.OpenConnectionAsync(cancellationToken);
+        return await connection.ExecuteScalarAsync<DateTime?>(new CommandDefinition(
+            "SELECT last_password_change_at FROM tbl_user_accounts WHERE user_id = @AccountId;",
+            new { AccountId = accountId },
+            cancellationToken: cancellationToken));
+    }
 
     public Task<AuthUser?> GetCurrentUserAsync(
         long accountId,
@@ -198,6 +212,36 @@ public sealed class UserRepository(IDatabaseConnectionFactory connectionFactory)
         return users;
     }
 
+    private async Task<IReadOnlyList<AuthUser>> QueryLoginCandidatesAsync(
+        string userSql,
+        object parameters,
+        CancellationToken cancellationToken)
+    {
+        await using var connection = await connectionFactory.OpenConnectionAsync(cancellationToken);
+        var rows = (await connection.QueryAsync<AuthUserRow>(new CommandDefinition(
+            userSql,
+            parameters,
+            cancellationToken: cancellationToken))).AsList();
+        return rows.Select(ToCandidate).ToArray();
+    }
+
+    private static AuthUser ToCandidate(AuthUserRow user) => new()
+    {
+        AccountId = user.AccountId,
+        EmployeeRecordId = user.EmployeeRecordId,
+        EmployeeId = user.EmployeeId,
+        Username = user.Username,
+        DisplayName = user.DisplayName,
+        PasswordHash = user.PasswordHash,
+        AccountStatus = user.AccountStatus,
+        AccountAllowsLogin = user.AccountAllowsLogin,
+        MustChangePassword = user.MustChangePassword,
+        LastPasswordChangeAt = user.LastPasswordChangeAt,
+        DepartmentId = user.DepartmentId,
+        Department = user.Department,
+        Position = user.Position
+    };
+
     private static async Task<AuthUser> LoadUserAsync(
         System.Data.Common.DbConnection connection,
         AuthUserRow user,
@@ -280,6 +324,7 @@ public sealed class UserRepository(IDatabaseConnectionFactory connectionFactory)
             AccountStatus = user.AccountStatus,
             AccountAllowsLogin = user.AccountAllowsLogin,
             MustChangePassword = user.MustChangePassword,
+            LastPasswordChangeAt = user.LastPasswordChangeAt,
             DepartmentId = user.DepartmentId,
             Department = user.Department,
             Position = user.Position,
@@ -301,6 +346,7 @@ public sealed class UserRepository(IDatabaseConnectionFactory connectionFactory)
         public string AccountStatus { get; init; } = string.Empty;
         public bool AccountAllowsLogin { get; init; }
         public bool MustChangePassword { get; init; }
+        public DateTime? LastPasswordChangeAt { get; init; }
         public long? DepartmentId { get; init; }
         public string? DepartmentCode { get; init; }
         public string? Department { get; init; }

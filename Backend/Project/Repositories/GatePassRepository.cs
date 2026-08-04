@@ -21,9 +21,13 @@ public sealed class GatePassRepository(
     {
         await using var connection =
             await connectionFactory.OpenConnectionAsync(cancellationToken);
+        await using var transaction =
+            await connection.BeginTransactionAsync(cancellationToken);
 
-        var record = await connection.QuerySingleAsync<GatePassRecord>(
-            new CommandDefinition(
+        try
+        {
+            var record = await connection.QuerySingleAsync<GatePassRecord>(
+                new CommandDefinition(
                 "SP_CreateGatePass",
                 new
                 {
@@ -38,6 +42,7 @@ public sealed class GatePassRepository(
                     p_expected_out_at = request.ExpectedOutAt.UtcDateTime,
                     p_expected_in_at = request.ExpectedInAt?.UtcDateTime,
                     p_will_return = request.WillReturn,
+                    p_is_requestor_included = request.IncludesRequestor,
                     p_vehicle_usage_code = request.VehicleUsageCode,
                     p_vehicle_trip_type_code = request.VehicleTripTypeCode,
                     p_vehicle_id = request.VehicleId,
@@ -48,30 +53,24 @@ public sealed class GatePassRepository(
                     p_trace_id = traceId
                 },
                 commandType: CommandType.StoredProcedure,
+                transaction: transaction,
                 cancellationToken: cancellationToken));
 
-        // Phase 17 item 1: SP_CreateGatePass predates this flag, so it is
-        // persisted separately instead of widening the procedure signature.
-        if (!request.IncludesRequestor)
-        {
-            await connection.ExecuteAsync(new CommandDefinition(
-                """
-                UPDATE tbl_gate_pass_requests
-                SET is_requestor_included = FALSE
-                WHERE gate_pass_id = @GatePassId;
-                """,
-                new { record.GatePassId },
-                cancellationToken: cancellationToken));
+            await InsertAssociatesAsync(
+                connection,
+                transaction,
+                record.GatePassId,
+                associates,
+                cancellationToken);
+
+            await transaction.CommitAsync(cancellationToken);
+            return record;
         }
-
-        await InsertAssociatesAsync(
-            connection,
-            null,
-            record.GatePassId,
-            associates,
-            cancellationToken);
-
-        return record;
+        catch
+        {
+            await transaction.RollbackAsync(cancellationToken);
+            throw;
+        }
     }
 
     public async Task<GatePassRecord> CreateMaterialDraftAsync(

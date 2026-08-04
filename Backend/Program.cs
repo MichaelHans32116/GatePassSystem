@@ -98,6 +98,10 @@ var defaultOrigins = new[]
     "http://192.168.9.7",
     "http://localhost:5500",
     "http://127.0.0.1:5500",
+    "http://localhost:5502",
+    "http://127.0.0.1:5502",
+    "http://localhost:5599",
+    "http://127.0.0.1:5599",
     "http://192.168.9.7:5500",
     "http://localhost:8080",
     "http://127.0.0.1:8080",
@@ -163,6 +167,32 @@ builder.Services
             ValidAudience = jwtOptions.Audience,
             ValidateLifetime = true,
             ClockSkew = TimeSpan.FromMinutes(1)
+        };
+        options.Events = new JwtBearerEvents
+        {
+            OnTokenValidated = async context =>
+            {
+                var accountIdValue = context.Principal?.FindFirst(
+                    System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
+                var tokenPasswordVersion = context.Principal?.FindFirst(
+                    "password_version")?.Value;
+                if (!long.TryParse(accountIdValue, out var accountId) ||
+                    !long.TryParse(tokenPasswordVersion, out var tokenVersion))
+                {
+                    context.Fail("The session token is missing its password version.");
+                    return;
+                }
+
+                var users = context.HttpContext.RequestServices.GetRequiredService<
+                    FormRequestSystem.Project.Repositories.IUserRepository>();
+                var currentVersion = await users.GetLastPasswordChangeAtAsync(
+                    accountId,
+                    context.HttpContext.RequestAborted);
+                if ((currentVersion?.Ticks ?? 0L) != tokenVersion)
+                {
+                    context.Fail("The session expired after a password change.");
+                }
+            }
         };
     });
 

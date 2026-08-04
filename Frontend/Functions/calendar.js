@@ -1764,41 +1764,4 @@ async function openServiceScheduleRequestModal() {
     showToast('Fill out the request form — Company Vehicle is already ticked for this service schedule.');
 }
 
-function closeServiceScheduleRequestModal() {
-    const modal = document.getElementById('serviceScheduleRequestModal');
-    if (!modal) return;
-    modal.classList.remove('flex');
-    modal.classList.add('hidden');
-}
-
-async function saveServiceScheduleRequest(event) {
-    event.preventDefault();
-    const date = document.getElementById('serviceRequestDate').value;
-    const startTime = document.getElementById('serviceRequestStartTime').value;
-    const endTime = document.getElementById('serviceRequestEndTime').value;
-    const destination = document.getElementById('serviceRequestDestination').value;
-    const purpose = document.getElementById('serviceRequestPurpose').value;
-    const vehicleId = Number(document.getElementById('serviceRequestVehicle').value);
-    const driverId = Number(document.getElementById('serviceRequestDriver').value);
-
-    try {
-        await ApiClient.post('/fleet/service-request', {
-            date,
-            startTime,
-            endTime,
-            destination,
-            purpose,
-            vehicleId,
-            driverId
-        });
-        showToast('Service schedule requested and auto-approved successfully.');
-        closeServiceScheduleRequestModal();
-        await loadAndRenderScheduleMonth();
-    } catch (err) {
-        showToast(err instanceof ApiError ? err.message : 'Failed to submit service schedule request.', 'error');
-    }
-}
-
 window.openServiceScheduleRequestModal = openServiceScheduleRequestModal;
-window.closeServiceScheduleRequestModal = closeServiceScheduleRequestModal;
-window.saveServiceScheduleRequest = saveServiceScheduleRequest;

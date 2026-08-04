@@ -83,11 +83,18 @@ Request:
   "expectedOutAt": "2026-06-17T13:00:00+08:00",
   "expectedInAt": "2026-06-17T16:00:00+08:00",
   "willReturn": true,
-  "needsVehicle": true,
+  "vehicleUsageCode": "COMPANY",
+  "vehicleTripTypeCode": "BOTH",
   "vehicleId": 1,
-  "manualVehicle": null,
   "driverId": 1,
-  "manualDriver": null
+  "includesRequestor": false,
+  "associates": [
+    {
+      "isEmployee": false,
+      "employeeId": null,
+      "fullName": "VISITOR SAMPLE"
+    }
+  ]
 }
 ```
 
@@ -98,7 +105,7 @@ Response:
   "id": 10,
   "gatePassNo": "GP-20260617-0001",
   "status": "PendingSuperior",
-  "approvalRoute": ["ImmediateSuperior", "President", "PAS"]
+  "approvalRoute": ["SUPERIOR", "HRAD_ASSIGN", "PAS"]
 }
 ```
 
@@ -146,8 +153,6 @@ Request:
 {
   "signatureFileId": 22,
   "comment": null,
-  "formTypeCode": "PERSON_GATE_PASS",
-  "willReturn": true,
   "tripType": "BOTH",
   "expectedOutAt": "2026-06-17T08:00:00+08:00",
   "expectedInAt": "2026-06-17T09:00:00+08:00",
@@ -161,11 +166,16 @@ Response:
 ```json
 {
   "requestId": 10,
-  "previousStatus": "PendingSuperior",
-  "newStatus": "PendingPresident",
-  "nextApproverRole": "President"
+  "previousStatus": "PENDING_HRAD_ASSIGN",
+  "newStatus": "PENDING_PAS",
+  "nextApprovalStep": "PAS"
 }
 ```
+
+The API loads `formTypeCode`, `willReturn`, vehicle usage, and the requester's
+trip type from the stored request. Client-supplied copies are not authoritative.
+Company-vehicle routes end digitally at PAS. The President is the final physical
+signatory on the printed form and is not a new digital approval step.
 
 ### POST `/approvals/{requestId}/reject`
 

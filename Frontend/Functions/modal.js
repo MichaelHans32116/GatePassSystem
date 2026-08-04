@@ -678,10 +678,16 @@ function getServiceTripIndicatorText(pass) {
     if (!pass || pass.formTypeCode === 'MATERIAL_GATE_PASS') return '';
     const hasCompanyVehicle = pass.vehicleUsageCode === 'COMPANY' || !!pass.vehicle;
     if (!hasCompanyVehicle) return '';
+    const tripType = String(pass.vehicleTripTypeCode || 'BOTH').toUpperCase();
+    const tripLabel = tripType === 'SUNDO'
+        ? 'SUNDO (PICK-UP ONLY)'
+        : tripType === 'HATID'
+            ? 'HATID (DROP-OFF ONLY)'
+            : 'HATID AT SUNDO';
     if (pass.includesRequestor === false) {
-        return 'SERVICE / SUNDO — REQUESTOR NOT ABOARD';
+        return `SERVICE — ${tripLabel} — REQUESTOR NOT ABOARD`;
     }
-    if (String(pass.vehicleTripTypeCode || '').toUpperCase() === 'SUNDO') {
+    if (tripType === 'SUNDO') {
         return 'SERVICE TRIP — SUNDO (PICK-UP) ONLY';
     }
     return '';
@@ -1152,6 +1158,13 @@ async function renderMaterialBundle(pass) {
                                 <span ${pas.nameAttribute}></span>
                                 <small>Personnel &amp; Admin Section</small>
                             </div>
+                            ${passNeedsPresidentInk(pass) ? `
+                            <div>
+                                <strong>Final Approval:</strong>
+                                <div class="material-signature-image"></div>
+                                <span>${materialEscape(PRESIDENT_PRINTED_NAME)}</span>
+                                <small>President — physical signature</small>
+                            </div>` : '<div></div>'}
                         </div>
 
                         <!-- GUARD TRACKING ROW FOR MATERIAL -->
@@ -2354,7 +2367,7 @@ async function renderMaterialGatePassClone(p) {
                 <span class="border-b border-gray-400 flex-grow pl-1 font-bold pb-0.5">${materialEscape(p.materialRemarks || p.purpose || '—')}</span>
             </div>
 
-            <div class="material-form-signatures pt-1" style="display: grid; grid-template-columns: repeat(3, 1fr); gap: 4mm; margin-top: 1.4mm; text-align: left; font-size: 6.4px; line-height: 1.05; border-top: 1px solid #111827;">
+            <div class="material-form-signatures pt-1" style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 2.5mm; margin-top: 1.4mm; text-align: left; font-size: 6.4px; line-height: 1.05; border-top: 1px solid #111827;">
                 <div style="position: relative; min-height: 13.2mm;">
                     <strong style="display: block; text-align: left; font-size: 7px;">Prepared By:</strong>
                     <div class="sig-wrapper sig-mat-prepared material-signature-image" style="height: 6.2mm; display: flex; align-items: end; justify-content: center; margin-bottom: 0.25mm;"></div>
@@ -2372,6 +2385,13 @@ async function renderMaterialGatePassClone(p) {
                     <span class="name sig-mat-pas-name" style="display: block; border-top: 1px solid #111827; border-bottom: none; padding-top: 0.25mm; text-align: center; font-size: 7.5px; font-weight: 700; text-transform: uppercase;"></span>
                     <small style="display: block; text-align: center; font-size: 5.4px; margin-top: 0.35mm;">Personnel &amp; Admin Section</small>
                 </div>
+                ${passNeedsPresidentInk(p) ? `
+                <div style="position: relative; min-height: 13.2mm;">
+                    <strong style="display: block; text-align: left; font-size: 7px;">Final Approval:</strong>
+                    <div class="material-signature-image" style="height: 6.2mm;"></div>
+                    <span style="display: block; border-top: 1px solid #111827; border-bottom: none; padding-top: 0.25mm; text-align: center; font-size: 7.5px; font-weight: 700; text-transform: uppercase;">${materialEscape(PRESIDENT_PRINTED_NAME)}</span>
+                    <small style="display: block; text-align: center; font-size: 5.4px; margin-top: 0.35mm;">President — physical signature</small>
+                </div>` : '<div></div>'}
             </div>
 
             <!-- GUARD TRACKING ROW FOR MATERIAL -->

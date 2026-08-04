@@ -12,6 +12,10 @@ public interface IUserRepository
         long accountId,
         CancellationToken cancellationToken = default);
 
+    Task<DateTime?> GetLastPasswordChangeAtAsync(
+        long accountId,
+        CancellationToken cancellationToken = default);
+
     Task UpdateLastLoginAsync(
         long accountId,
         DateTimeOffset loggedInAt,

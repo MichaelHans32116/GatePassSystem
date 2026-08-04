@@ -8,6 +8,11 @@ public interface IApprovalRepository
         long approverUserId,
         CancellationToken cancellationToken = default);
 
+    Task<ApprovalDecisionContext?> GetDecisionContextAsync(
+        long gatePassId,
+        long actorUserId,
+        CancellationToken cancellationToken = default);
+
     Task<ApprovalMutation?> DecideAsync(
         long gatePassId,
         long actorUserId,

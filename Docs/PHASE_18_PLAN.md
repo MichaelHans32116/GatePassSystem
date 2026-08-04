@@ -31,3 +31,33 @@
 - [x] Old password stops working; new password works and remains case-sensitive.
 - [x] Leading/trailing spaces are preserved as password characters instead of being silently removed.
 - [x] Login copy renders in the local browser; modal controls and frontend handlers are present and syntax-checked.
+
+## Phase 18.2 — UAT Hardening and End-to-End Closure
+
+- Fixed non-employee companion serialization (`fullName`) and prevented a requestor
+  from being added again as their own companion.
+- Made person/material draft creation atomic, including the requestor-included flag
+  and companion rows.
+- Removed the broken service-request endpoint/modal and routed schedule requests to
+  the working form flow.
+- Enforced HRAD vehicle assignment from authoritative stored request data and added
+  overlap checks for both legs of split schedules.
+- Preserved the 11:00 AM–1:00 PM vacancy by storing 10:00–11:00 and 1:00–2:00 as
+  separate reservation rows.
+- Updated the digital vehicle route to Superior → HRAD → PAS; the President is the
+  final physical signer on the printed company-vehicle form.
+- Corrected local preview API routing and aligned the offline mock route with the
+  production workflow.
+- Retired the unsafe EmployeeImporter login/password utility.
+- Hardened name login candidate selection and invalidated existing sessions after a
+  password change with a password-version JWT claim.
+
+## Final verification evidence
+
+- [x] Pass 1 — API, importer, and tracked regression projects compile; JavaScript
+  syntax and repository diff checks pass.
+- [x] Pass 2 — isolated MariaDB tests prove atomic rollback, overlap rejection before
+  replacement, and two-row split-window persistence. The synthetic database is
+  deleted after the test.
+- [x] Pass 3 — browser smoke test, cache-busted local routing, and clean release
+  candidate review before push.

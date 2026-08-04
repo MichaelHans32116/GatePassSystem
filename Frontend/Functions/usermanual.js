@@ -81,10 +81,10 @@ function umManuals() {
                     '<div class="grid sm:grid-cols-2 gap-3"><div class="border border-gray-200 rounded p-3"><b>Person Gate Pass</b><p class="text-xs text-gray-500 mt-1">For personnel leaving the premises. QR Time Out / Time In. May include a company vehicle.</p></div><div class="border border-gray-200 rounded p-3"><b>Material Gate Pass</b><p class="text-xs text-gray-500 mt-1">For releasing items, with an itemized release list.</p></div></div>' +
                     '<p class="text-xs text-gray-500 mt-3"><b>Trip type</b> (company vehicle): <i>Hatid at Sundo</i> (round trip), <i>Hatid lang</i> (drop-off), or <i>Sundo lang</i> (pick-up). The requester\'s choice is final and is locked at assignment.</p>' },
                 { t: 'Roles', h:
-                    '<ul class="space-y-1 text-sm"><li><b>Requester</b> — creates requests.</li><li><b>Immediate Superior</b> — first approver.</li><li><b>President</b> — executive approval.</li><li><b>PAS / HRAD</b> — final noting; assigns vehicle + schedule.</li><li><b>Security Guard</b> — scans QR; Time Out / In.</li><li><b>System Administrator</b> — users, master lists, audit logs.</li></ul>' },
+                    '<ul class="space-y-1 text-sm"><li><b>Requester</b> — creates requests.</li><li><b>Immediate Superior</b> — first digital approver.</li><li><b>HRAD</b> — assigns company vehicle and schedule.</li><li><b>PAS</b> — final digital noting.</li><li><b>President</b> — final physical signature on printed company-vehicle forms.</li><li><b>Security Guard</b> — scans QR; Time Out / In.</li><li><b>System Administrator</b> — users, master lists, audit logs.</li></ul>' },
                 { t: 'Approval Flow', h:
-                    '<pre class="text-[11px] leading-snug bg-gray-50 border border-gray-200 rounded p-3 overflow-x-auto text-gray-700">Requester -&gt; Immediate Superior -&gt; HRAD Assignment\n          -&gt; President -&gt; PAS Noting -&gt; APPROVED</pre>' +
-                    '<p class="text-sm mt-2">Not every step always applies (HRAD only for company vehicles; President when required; PAS is the final step).</p>' +
+                    '<pre class="text-[11px] leading-snug bg-gray-50 border border-gray-200 rounded p-3 overflow-x-auto text-gray-700">Requester -&gt; Immediate Superior -&gt; HRAD Assignment\n          -&gt; PAS Noting -&gt; APPROVED -&gt; President physical signature</pre>' +
+                    '<p class="text-sm mt-2">HRAD applies to company vehicles. PAS is the last system step; the President signs the printed company-vehicle form physically.</p>' +
                     '<p class="text-sm mt-2"><b>Pending &rarr; Approved:</b> it stays <b>Pending</b> on the calendar until fully approved, then the "Pending" label disappears and the QR code is issued.</p>' },
                 { t: 'System Architecture', h:
                     '<p class="text-sm">Three parts talk to each other:</p>' +
@@ -110,15 +110,15 @@ function umManuals() {
         },
         {
             id: 'approver', title: 'Approver Guide', icon: 'fa-check-double',
-            desc: 'For Superiors and the President — reviewing, signing, approving.',
+            desc: 'For Immediate Superiors — reviewing, signing, and approving digitally.',
             access: umIsApprover,
             slides: [
-                { t: 'Approver Guide', h: '<p>For an Immediate Superior or the President — you decide whether to permit an employee\'s request.</p>' },
+                { t: 'Approver Guide', h: '<p>For an Immediate Superior — you decide whether to permit an employee\'s request digitally. For a company vehicle, the President signs the final printed form physically.</p>' },
                 { t: 'Step 1 — Open the Approval Dashboard', h: '<p>Log in and go to the <b>Approval Dashboard</b> to see pending requests.</p>' + umImg('ap1-dashboard', 'Approval dashboard with pending requests') },
                 { t: 'Step 2 — Click Review', h: '<p>Click <b>Review</b> beside the requester\'s name to open the request.</p>' + umImg('ap2-review-click', 'Reviewing a request in the list') },
                 { t: 'Step 3 — Read the details', h: '<p>Check the destination, purpose, and (if any) the schedule in the Document Review view.</p>' + umImg('ap3-review-details', 'Document review with request details') },
                 { t: 'Step 4 — Sign', h: '<p>Apply your <b>e-signature</b> on the digital canvas — mouse or touchscreen.</p>' + umImg('ap4-signature-pad', 'Signature pad') },
-                { t: 'Step 5 — Approve or Reject', h: '<p>Click <b>Approve</b>. If it cannot proceed, click <b>Reject</b> and give a clear reason.</p>' + umImg('ap5-approve', 'Approve or Reject buttons') + '<p class="text-xs text-gray-500 mt-2">After you approve, it moves to the next step (HRAD / President / PAS) until the route is complete.</p>' },
+                { t: 'Step 5 — Approve or Reject', h: '<p>Click <b>Approve</b>. If it cannot proceed, click <b>Reject</b> and give a clear reason.</p>' + umImg('ap5-approve', 'Approve or Reject buttons') + '<p class="text-xs text-gray-500 mt-2">After you approve, it moves to the next applicable digital step (HRAD / PAS). President approval is a physical signature on the printed company-vehicle form.</p>' },
             ]
         },
         {
@@ -158,7 +158,7 @@ function umManuals() {
                 { t: 'Step 2 — User Management', h: '<p>Add employees, reset passwords, or deactivate resigned users.</p>' + umImg('ad2-user-management', 'User management page') },
                 { t: 'Step 3 — Master Lists', h: '<p>Update <b>Trucks</b>, <b>Drivers</b>, and <b>Destinations</b>.</p>' + umImg('ad3-master-lists', 'Master list settings') },
                 { t: 'Step 4 — Audit Trail', h: '<p>Use the <b>Audit Trail</b> to trace who approved or changed records.</p>' + umImg('ad4-audit-trail', 'Audit trail and system logs') },
-                { t: 'Technical setup (IT)', h: '<p class="text-sm">Front end: Vanilla JS + Tailwind. Back end: ASP.NET Core 8 (C#), Dapper, stored procedures. Database: MariaDB via XAMPP. Auth: Employee ID + password &rarr; JWT. Approval steps: SUPERIOR &rarr; HRAD_ASSIGN &rarr; PRESIDENT &rarr; PAS.</p>' },
+                { t: 'Technical setup (IT)', h: '<p class="text-sm">Front end: Vanilla JS + Tailwind. Back end: ASP.NET Core 8 (C#), Dapper, stored procedures. Database: MariaDB via XAMPP. Auth: Employee ID/name + password &rarr; JWT. Digital approval steps: SUPERIOR &rarr; HRAD_ASSIGN &rarr; PAS. President approval is recorded on the printed form.</p>' },
             ]
         },
     ];

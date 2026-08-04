@@ -161,6 +161,19 @@ public sealed class ApprovalQueueItem
     public DateTime? AppliedAt { get; init; }
 }
 
+public sealed class ApprovalDecisionContext
+{
+    public long GatePassId { get; init; }
+    public string FormTypeCode { get; init; } = "PERSON_GATE_PASS";
+    public bool WillReturn { get; init; }
+    public string VehicleUsageCode { get; init; } = "NONE";
+    public string? VehicleTripTypeCode { get; init; }
+    public string ApprovalStepCode { get; init; } = string.Empty;
+}
+
+public sealed class VehicleReservationConflictException(string message)
+    : InvalidOperationException(message);
+
 public sealed class GatePassScanRecord
 {
     public long ScanId { get; init; }

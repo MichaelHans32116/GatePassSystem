@@ -435,6 +435,11 @@ public sealed class GatePassService(
         var seenEmployeeIds = new HashSet<long>();
         var lineNo = 1;
 
+        // The requestor is represented by the request row, never by a
+        // companion row. Seeding the set also prevents an others-only pass
+        // from contradicting itself by adding the requestor as a companion.
+        seenEmployeeIds.Add(requester.EmployeeRecordId);
+
         // Material passes seed line_no=1 with the primary authorized employee.
         if (primaryEmployee is not null)
         {
@@ -488,19 +493,24 @@ public sealed class GatePassService(
                 continue;
             }
 
-            if (item.EmployeeId <= 0)
+            if (!item.EmployeeId.HasValue || item.EmployeeId.Value <= 0)
             {
                 return (resolved,
                     "Each employee associate must be selected from the employee directory.");
             }
 
-            if (!seenEmployeeIds.Add(item.EmployeeId))
+            if (item.EmployeeId.Value == requester.EmployeeRecordId)
+            {
+                return (resolved, "The requestor cannot also be added as a companion.");
+            }
+
+            if (!seenEmployeeIds.Add(item.EmployeeId.Value))
             {
                 return (resolved, "The same associate was added more than once.");
             }
 
             var employee = await employeeRepository.GetActiveEmployeeAsync(
-                item.EmployeeId,
+                item.EmployeeId.Value,
                 cancellationToken);
             if (employee is null)
             {

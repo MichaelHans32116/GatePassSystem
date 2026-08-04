@@ -14,6 +14,7 @@ CREATE PROCEDURE SP_CreateGatePass(
     IN p_expected_out_at DATETIME,
     IN p_expected_in_at DATETIME,
     IN p_will_return BOOLEAN,
+    IN p_is_requestor_included BOOLEAN,
     IN p_vehicle_usage_code VARCHAR(30),
     IN p_vehicle_trip_type_code VARCHAR(20),
     IN p_vehicle_id BIGINT UNSIGNED,
@@ -31,12 +32,6 @@ BEGIN
     DECLARE v_control_sequence INT UNSIGNED;
     DECLARE v_form_date DATE;
 
-    DECLARE EXIT HANDLER FOR SQLEXCEPTION
-    BEGIN
-        ROLLBACK;
-        RESIGNAL;
-    END;
-
     IF p_will_return = TRUE AND p_expected_in_at IS NULL THEN
         SIGNAL SQLSTATE '45000'
             SET MESSAGE_TEXT = 'Expected Time In is required when the associate will return.';
@@ -46,8 +41,6 @@ BEGIN
         SIGNAL SQLSTATE '45000'
             SET MESSAGE_TEXT = 'Expected Time In must be later than Expected Time Out.';
     END IF;
-
-    START TRANSACTION;
 
     SET v_form_date = DATE(p_expected_out_at);
 
@@ -90,6 +83,7 @@ BEGIN
         expected_out_at,
         expected_in_at,
         will_return,
+        is_requestor_included,
         vehicle_usage_code,
         vehicle_trip_type_code,
         vehicle_id,
@@ -113,6 +107,7 @@ BEGIN
         p_expected_out_at,
         p_expected_in_at,
         p_will_return,
+        COALESCE(p_is_requestor_included, TRUE),
         p_vehicle_usage_code,
         NULLIF(TRIM(p_vehicle_trip_type_code), ''),
         p_vehicle_id,
@@ -150,8 +145,6 @@ BEGIN
         'Gate pass draft created.',
         p_trace_id
     );
-
-    COMMIT;
 
     SELECT
         gate_pass_id,
@@ -191,12 +184,6 @@ BEGIN
     DECLARE v_quantity DECIMAL(12, 3);
     DECLARE v_unit VARCHAR(50);
 
-    DECLARE EXIT HANDLER FOR SQLEXCEPTION
-    BEGIN
-        ROLLBACK;
-        RESIGNAL;
-    END;
-
     IF p_form_date IS NULL THEN
         SIGNAL SQLSTATE '45000'
             SET MESSAGE_TEXT = 'Material gate pass date is required.';
@@ -223,8 +210,6 @@ BEGIN
         SIGNAL SQLSTATE '45000'
             SET MESSAGE_TEXT = 'Material gate pass must contain 1 to 20 items.';
     END IF;
-
-    START TRANSACTION;
 
     INSERT INTO tbl_form_control_sequences (
         control_date,
@@ -368,8 +353,6 @@ BEGIN
         'Material gate pass draft created.',
         p_trace_id
     );
-
-    COMMIT;
 
     SELECT *
     FROM view_gate_pass_records

@@ -290,13 +290,13 @@ function collectAssociates(formTypeCode) {
             if (row.dataset.isEmployee === '0') {
                 const name = (row.querySelector('[data-associate-search]')?.value || '').trim();
                 if (!name) return null;
-                return { employeeId: 0, departmentId: null, name, isEmployee: false };
+                return { employeeId: null, departmentId: null, fullName: name, isEmployee: false };
             }
             if (!row.dataset.employeeId || !row.dataset.name) return null;
             return {
                 employeeId: Number(row.dataset.employeeId),
                 departmentId: row.dataset.departmentId ? Number(row.dataset.departmentId) : null,
-                name: row.dataset.name,
+                fullName: row.dataset.name,
                 isEmployee: true
             };
         })

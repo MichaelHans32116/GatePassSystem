@@ -24,7 +24,11 @@ public sealed class JwtTokenService(
             new(JwtRegisteredClaimNames.Jti, Guid.NewGuid().ToString()),
             new(ClaimTypes.NameIdentifier, user.AccountId.ToString()),
             new(ClaimTypes.Name, user.DisplayName),
-            new("username", user.Username)
+            new("username", user.Username),
+            new(
+                "password_version",
+                (user.LastPasswordChangeAt?.Ticks ?? 0L).ToString(
+                    System.Globalization.CultureInfo.InvariantCulture))
         };
 
         if (!string.IsNullOrWhiteSpace(user.EmployeeId))

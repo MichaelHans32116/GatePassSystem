@@ -77,8 +77,8 @@ requester selects the trip type:
 |------|------------------------------|
 | **Requester (Associate)** | Creates gate pass requests for themselves. |
 | **Immediate Superior** | First to approve a subordinate's request. |
-| **President** | Executive approval when required (e.g., a company vehicle). |
-| **PAS / HRAD Noter** | Final noting; assigns the vehicle and schedule. |
+| **President** | Final physical signature on a printed company-vehicle form. |
+| **PAS / HRAD Noter** | HRAD assigns the vehicle/schedule; PAS performs the final digital noting. |
 | **Security Guard** | Scans the QR code; records Time Out / Time In. |
 | **System Administrator** | Manages users, master lists, and audit logs. |
 | **Driver** | May submit requests; can be assigned to a company vehicle. |
@@ -95,23 +95,24 @@ A request typically follows this path before it is approved:
   Requester
      │  (submit request)
      ▼
-  Immediate Superior ──(approve)──►  HRAD Assignment  ──►  President  ──►  PAS Noting  ──►  APPROVED
-     │                               (when a company        (when         (final
-     │                                vehicle is required)   required)      step)
+  Immediate Superior ──(approve)──►  HRAD Assignment  ──►  PAS Noting  ──►  APPROVED
+     │                               (when a company       (final digital step)
+     │                                vehicle is required)
      └──(reject)──►  REJECTED
 ```
 
 - Not every step is always included. It depends on the request:
   - **HRAD Assignment** — appears only when a **company vehicle** is required.
-  - **President** — when executive approval is required (e.g., a company vehicle,
-    or when the requester is themselves a superior).
   - **PAS Noting** — the final step before the request becomes **APPROVED**.
+- For a company vehicle, print the approved form after the digital route. The
+  **President signs that paper physically as the final approval**.
 - **Pending → Approved:** while approval is still in progress, the status remains
   **Pending** (it appears on the calendar marked "Pending"). Once fully **Approved**,
   the "Pending" label disappears and the pass receives a QR code.
 
 📷 **SCREENSHOT A1 — Approval Route Preview:** the small "Route" preview on the
-request form showing the path (Immediate Superior → HRAD → President → PAS).
+request form showing the digital path (Immediate Superior → HRAD → PAS), followed
+by the President's physical signature on the printed company-vehicle form.
 
 ---
 
@@ -161,8 +162,9 @@ be used directly as the image.
 
 - **Roles and permissions** are stored in the database (`tbl_roles`,
   `tbl_permissions`, `tbl_user_roles`), controlling who has access to what.
-- **The approval workflow** is step-based (`SUPERIOR` → `HRAD_ASSIGN` →
-  `PRESIDENT` → `PAS`), with each step recorded in the audit history.
+- **The digital approval workflow** is step-based (`SUPERIOR` → `HRAD_ASSIGN` →
+  `PAS`), with each step recorded in the audit history. The President's final
+  company-vehicle approval is a physical signature on the printed form.
 - **Deployment:** local (XAMPP + API on port 5087 + front end on 5500) or on the
   LAN (e.g., `http://192.168.x.x/FormRequestSystem/`).
 
@@ -211,7 +213,7 @@ or release items.
 
 ---
 
-## 7. User Manual — Approver (Superior and President)
+## 7. User Manual — Digital Approver (Immediate Superior)
 
 **Who you are:** the person with the authority to permit an employee's request.
 
@@ -233,8 +235,8 @@ or release items.
 5. Click **Approve**. If it cannot be approved, click **Reject** and provide a clear
    reason.
 
-> Once you approve, the request moves to the next step (HRAD/President/PAS) until the
-> full route is complete.
+> Once you approve, the request moves to the next applicable digital step (HRAD/PAS).
+> A company-vehicle form is printed after PAS and signed physically by the President.
 
 ---
 

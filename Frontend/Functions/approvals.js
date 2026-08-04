@@ -238,8 +238,12 @@ function approveCurrentMockPass() {
 
     if (pass.status === 'Pending Superior') {
         pass.signatures.imm = sigObj;
-        pass.status = pass.requiresPresidentApproval ? 'Pending President' : 'Pending PAS';
+        pass.status = pass.vehicle ? 'Pending HRAD Assignment' : 'Pending PAS';
+    } else if (pass.status === 'Pending HRAD Assignment') {
+        pass.status = 'Pending PAS';
     } else if (pass.status === 'Pending President') {
+        // Compatibility only for requests created before the President step
+        // became a physical signature on the printed company-vehicle form.
         pass.signatures.pres = sigObj;
         pass.status = 'Pending PAS';
     } else if (pass.status === 'Pending PAS') {

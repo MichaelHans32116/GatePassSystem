@@ -34,8 +34,31 @@ public sealed class ApprovalService(
                 "A rejection reason is required.");
         }
 
-        if (approve && request.VehicleId.HasValue)
+        var decisionContext = await approvalRepository.GetDecisionContextAsync(
+            gatePassId,
+            actorUserId,
+            cancellationToken);
+        if (decisionContext is null)
         {
+            return ServiceResult<ApprovalDecisionResult>.Failure(
+                "APPROVAL_NOT_AVAILABLE",
+                "This request is not available for your approval.");
+        }
+
+        var resolvedTripType = request.TripType?.Trim().ToUpperInvariant();
+        if (approve && decisionContext.ApprovalStepCode == "HRAD_ASSIGN")
+        {
+            if (!string.Equals(
+                    decisionContext.VehicleUsageCode,
+                    "COMPANY",
+                    StringComparison.OrdinalIgnoreCase) ||
+                !request.VehicleId.HasValue || request.VehicleId.Value <= 0)
+            {
+                return ServiceResult<ApprovalDecisionResult>.Failure(
+                    "VEHICLE_REQUIRED",
+                    "Select the company vehicle before forwarding.");
+            }
+
             if (!request.ExpectedOutAt.HasValue || !request.ExpectedInAt.HasValue)
             {
                 return ServiceResult<ApprovalDecisionResult>.Failure(
@@ -50,12 +73,15 @@ public sealed class ApprovalService(
                     "Schedule end must be later than schedule start.");
             }
 
-            var tripType = request.TripType?.Trim().ToUpperInvariant();
-            var formTypeCode = request.FormTypeCode?.Trim().ToUpperInvariant();
-            var willReturn = request.WillReturn == true;
+            resolvedTripType = string.IsNullOrWhiteSpace(decisionContext.VehicleTripTypeCode)
+                ? resolvedTripType
+                : decisionContext.VehicleTripTypeCode.Trim().ToUpperInvariant();
             var dropOffOnly =
-                string.Equals(formTypeCode, "MATERIAL_GATE_PASS", StringComparison.OrdinalIgnoreCase) ||
-                !willReturn;
+                string.Equals(
+                    decisionContext.FormTypeCode,
+                    "MATERIAL_GATE_PASS",
+                    StringComparison.OrdinalIgnoreCase) ||
+                !decisionContext.WillReturn;
             // Bug 1: when the associate returns, they may request Hatid at Sundo (BOTH),
             // Hatid lang (HATID, drop-off only) or Sundo lang (SUNDO, pick-up only).
             // A material pass or a no-return (time-out only) trip can only be a drop-off.
@@ -63,14 +89,14 @@ public sealed class ApprovalService(
                 ? new[] { "HATID" }
                 : new[] { "BOTH", "HATID", "SUNDO" };
 
-            if (string.IsNullOrWhiteSpace(tripType))
+            if (string.IsNullOrWhiteSpace(resolvedTripType))
             {
                 return ServiceResult<ApprovalDecisionResult>.Failure(
                     "TRIP_TYPE_REQUIRED",
                     "Select the trip type before forwarding.");
             }
 
-            if (Array.IndexOf(allowedTripTypes, tripType) < 0)
+            if (Array.IndexOf(allowedTripTypes, resolvedTripType) < 0)
             {
                 return ServiceResult<ApprovalDecisionResult>.Failure(
                     "INVALID_TRIP_TYPE",
@@ -84,7 +110,7 @@ public sealed class ApprovalService(
                 request.SecondaryExpectedInAt.HasValue;
 
             if (hasSecondaryWindow &&
-                !string.Equals(tripType, "BOTH", StringComparison.OrdinalIgnoreCase))
+                !string.Equals(resolvedTripType, "BOTH", StringComparison.OrdinalIgnoreCase))
             {
                 return ServiceResult<ApprovalDecisionResult>.Failure(
                     "SECONDARY_WINDOW_NOT_ALLOWED",
@@ -125,24 +151,34 @@ public sealed class ApprovalService(
             ? timeProvider.GetUtcNow().AddDays(7).UtcDateTime
             : null;
 
-        var mutation = await approvalRepository.DecideAsync(
-            gatePassId,
-            actorUserId,
-            approve,
-            request.Comment,
-            request.SignatureFileId,
-            qrHash,
-            qrExpiresAt,
-            request.VehicleId,
-            request.DriverId,
-            request.PutOnHold,
-            request.TripType,
-            request.ExpectedOutAt?.UtcDateTime,
-            request.ExpectedInAt?.UtcDateTime,
-            request.SecondaryExpectedOutAt?.UtcDateTime,
-            request.SecondaryExpectedInAt?.UtcDateTime,
-            traceId,
-            cancellationToken);
+        ApprovalMutation? mutation;
+        try
+        {
+            mutation = await approvalRepository.DecideAsync(
+                gatePassId,
+                actorUserId,
+                approve,
+                request.Comment,
+                request.SignatureFileId,
+                qrHash,
+                qrExpiresAt,
+                request.VehicleId,
+                request.DriverId,
+                request.PutOnHold,
+                resolvedTripType,
+                request.ExpectedOutAt?.UtcDateTime,
+                request.ExpectedInAt?.UtcDateTime,
+                request.SecondaryExpectedOutAt?.UtcDateTime,
+                request.SecondaryExpectedInAt?.UtcDateTime,
+                traceId,
+                cancellationToken);
+        }
+        catch (VehicleReservationConflictException exception)
+        {
+            return ServiceResult<ApprovalDecisionResult>.Failure(
+                "VEHICLE_UNAVAILABLE",
+                exception.Message);
+        }
 
         if (mutation is null)
         {

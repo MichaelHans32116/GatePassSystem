@@ -93,7 +93,7 @@ public sealed class AssociateRequest
     // resolves name/department from the directory. Phase 17 item 4:
     // IsEmployee=false marks outside companions (visitors, OJTs) — they have
     // no EmployeeId and FullName becomes the stored name instead.
-    public long EmployeeId { get; init; }
+    public long? EmployeeId { get; init; }
 
     public bool IsEmployee { get; init; } = true;
 

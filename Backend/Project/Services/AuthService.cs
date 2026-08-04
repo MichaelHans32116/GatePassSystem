@@ -18,15 +18,29 @@ public sealed class AuthService(
     {
         var username = request.Username.Trim();
         var candidates = await userRepository.FindForLoginAsync(username, cancellationToken);
-        var user = candidates.FirstOrDefault(candidate =>
-            passwordHasher.Verify(request.Password, candidate.PasswordHash));
+        var passwordMatches = candidates
+            .Where(candidate => passwordHasher.Verify(request.Password, candidate.PasswordHash))
+            .ToArray();
+        var matchedCandidate = passwordMatches.FirstOrDefault(candidate =>
+            candidate.AccountAllowsLogin);
 
-        if (user is null)
+        if (matchedCandidate is null && passwordMatches.Length == 0)
         {
             return LoginResult.Failure("INVALID_CREDENTIALS");
         }
 
-        if (!user.AccountAllowsLogin)
+        if (matchedCandidate is null)
+        {
+            return LoginResult.Failure("ACCOUNT_DISABLED");
+        }
+
+        // Candidate lookup intentionally returns only authentication fields.
+        // Hydrate roles/permissions once, after the correct active account is
+        // selected, instead of running several queries for every name match.
+        var user = await userRepository.GetCurrentUserAsync(
+            matchedCandidate.AccountId,
+            cancellationToken);
+        if (user is null || !user.AccountAllowsLogin)
         {
             return LoginResult.Failure("ACCOUNT_DISABLED");
         }

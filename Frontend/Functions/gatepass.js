@@ -417,9 +417,14 @@ function updateServiceTripHint() {
     const isServiceTrip = needsVehicle && (tripType === 'SUNDO' || !included);
     hintWrap.classList.toggle('hidden', !isServiceTrip);
     if (!isServiceTrip) return;
+    const tripLabel = tripType === 'SUNDO'
+        ? 'Sundo (pick-up only)'
+        : tripType === 'HATID'
+            ? 'Hatid (drop-off only)'
+            : 'Hatid at Sundo';
     hintText.innerText = !included
-        ? 'Service / sundo trip: the vehicle goes out for other associates while the requestor stays inside. This will be marked on the pass.'
-        : 'Sundo (pick-up) only: the vehicle goes out as a service trip. This will be marked on the pass.';
+        ? `${tripLabel} service trip: the vehicle goes out for other associates while the requestor stays inside. This will be marked on the pass.`
+        : 'Sundo (pick-up only): the vehicle goes out as a service trip. This will be marked on the pass.';
 }
 
 function toggleVehicleFields() {
