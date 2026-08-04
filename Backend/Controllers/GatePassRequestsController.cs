@@ -1,4 +1,4 @@
-﻿using FormRequestSystem.Api.Infrastructure;
+using FormRequestSystem.Api.Infrastructure;
 using FormRequestSystem.Api.Infrastructure.Authorization;
 using FormRequestSystem.Project.DTOs.GatePass;
 using FormRequestSystem.Project.Models;

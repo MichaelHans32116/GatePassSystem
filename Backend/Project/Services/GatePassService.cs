@@ -219,18 +219,30 @@ public sealed class GatePassService(
                 departmentError);
         }
 
-        var authorizedEmployee =
-            await employeeRepository.GetActiveEmployeeAsync(
-                request.AuthorizedEmployeeId,
-                cancellationToken);
-        if (authorizedEmployee is null)
+        // Phase 19.5 item 1: a non-employee carrier has no directory record, so
+        // the lookup is skipped and the typed name is stored on the request row.
+        var carrierName = request.AuthorizedPersonName?.Trim();
+        var isEmployeeCarrier =
+            request.AuthorizedEmployeeId.HasValue &&
+            request.AuthorizedEmployeeId.Value > 0;
+
+        EmployeeLookupRecord? authorizedEmployee = null;
+        if (isEmployeeCarrier)
         {
-            return ServiceResult<GatePassCreationResult>.Failure(
-                "AUTHORIZED_EMPLOYEE_NOT_FOUND",
-                "Select an active employee who will bring out the materials.");
+            authorizedEmployee =
+                await employeeRepository.GetActiveEmployeeAsync(
+                    request.AuthorizedEmployeeId!.Value,
+                    cancellationToken);
+            if (authorizedEmployee is null)
+            {
+                return ServiceResult<GatePassCreationResult>.Failure(
+                    "AUTHORIZED_EMPLOYEE_NOT_FOUND",
+                    "Select an active employee who will bring out the materials.");
+            }
+            carrierName = null;
         }
 
-        if (!authorizedEmployee.DepartmentId.HasValue)
+        if (authorizedEmployee is not null && !authorizedEmployee.DepartmentId.HasValue)
         {
             authorizedEmployee = new EmployeeLookupRecord
             {
@@ -335,7 +347,7 @@ public sealed class GatePassService(
                 submitted.GatePassNo,
                 submitted.ControlNo,
                 submitted.FormTypeCode,
-                AuthorizedEmployee = authorizedEmployee.EmployeeId,
+                AuthorizedEmployee = authorizedEmployee?.EmployeeId ?? carrierName,
                 ItemCount = request.Items.Count,
                 ApprovalRoute = routeCodes
             }),
@@ -584,9 +596,13 @@ public sealed class GatePassService(
     private static string? ValidateMaterial(
         CreateMaterialGatePassRequest request)
     {
-        if (request.AuthorizedEmployeeId <= 0)
+        // Phase 19.5 item 1: either a directory employee or a typed name.
+        var hasEmployee =
+            request.AuthorizedEmployeeId.HasValue &&
+            request.AuthorizedEmployeeId.Value > 0;
+        if (!hasEmployee && string.IsNullOrWhiteSpace(request.AuthorizedPersonName))
         {
-            return "Select the employee authorized to bring out the materials.";
+            return "Enter who will bring out the materials.";
         }
 
         if (request.FormDate == default)

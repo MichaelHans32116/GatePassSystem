@@ -51,7 +51,13 @@ public sealed class CreateGatePassRequest
 public sealed class CreateMaterialGatePassRequest
 {
     public long? RequesterDepartmentId { get; init; }
-    public long AuthorizedEmployeeId { get; init; }
+    // Phase 19.5 item 1: the carrier may be a directory employee OR a typed-in
+    // visitor / OJT. Exactly one of these two is set.
+    public long? AuthorizedEmployeeId { get; init; }
+
+    [StringLength(255)]
+    public string? AuthorizedPersonName { get; init; }
+
     public DateOnly FormDate { get; init; }
 
     [StringLength(1000)]

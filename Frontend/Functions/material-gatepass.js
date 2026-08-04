@@ -417,6 +417,10 @@ function initializeMaterialGatePassForm() {
         addMaterialItemRow();
     }
 
+    const carrierKind = document.getElementById('materialCarrierKind');
+    if (carrierKind) carrierKind.value = 'employee';
+    toggleMaterialCarrierKind();
+
     const vehCheck = document.getElementById('matNeedVehicle');
     if (vehCheck) vehCheck.checked = false;
     const vehFields = document.getElementById('matVehicleFields');
@@ -526,6 +530,7 @@ function renderMaterialEmployeeSuggestions() {
 }
 
 function showMaterialEmployeeSuggestions() {
+    if (!isMaterialCarrierEmployee()) return;
     const suggestions = document.getElementById('materialEmployeeSuggestions');
     if (!suggestions) return;
     renderMaterialEmployeeSuggestions();
@@ -626,9 +631,45 @@ function updateMaterialAuthorizedDepartment() {
         : 'Type and select an active employee.';
 }
 
+// Phase 19.5 item 1: the person carrying items out may be a non-employee
+// (visitor / OJT), so the field switches between a directory typeahead and a
+// plain name box - same two states as a companion row.
+function isMaterialCarrierEmployee() {
+    return document.getElementById('materialCarrierKind')?.value !== 'others';
+}
+
+function toggleMaterialCarrierKind() {
+    const isEmployee = isMaterialCarrierEmployee();
+    const search = document.getElementById('materialAuthorizedEmployeeSearch');
+    const meta = document.getElementById('materialAuthorizedDepartment');
+    const box = document.getElementById('materialEmployeeSuggestions');
+    clearSelectedMaterialEmployee();
+    if (search) {
+        search.value = '';
+        search.placeholder = isEmployee
+            ? 'Type employee ID or name...'
+            : 'Type visitor / OJT full name...';
+    }
+    if (meta) {
+        meta.innerText = isEmployee
+            ? 'Department appears after selecting an employee.'
+            : 'Non-employee carrier - the name is saved exactly as typed.';
+    }
+    box?.classList.add('hidden');
+}
+
 function validateMaterialAuthorizedEmployee() {
     const hidden = document.getElementById('materialAuthorizedEmployee');
     const search = document.getElementById('materialAuthorizedEmployeeSearch');
+    if (!isMaterialCarrierEmployee()) {
+        const typed = (search?.value || '').trim();
+        if (!typed) {
+            showToast('Enter the name of the person bringing out the items.', 'error');
+            search?.focus();
+            return null;
+        }
+        return { employeeRecordId: null, fullName: typed, isEmployee: false };
+    }
     const employee = materialEmployeeDirectory.find(item =>
         String(item.employeeRecordId) === hidden?.value
     );
@@ -959,7 +1000,10 @@ async function submitMaterialGatePass(event) {
         const needsVehicle = document.getElementById('matNeedVehicle')?.checked;
         const created = await ApiClient.post('/form-requests/material', {
             requesterDepartmentId,
-            authorizedEmployeeId: authorizedEmployee.employeeRecordId,
+            authorizedEmployeeId: authorizedEmployee.employeeRecordId || null,
+            authorizedPersonName: authorizedEmployee.employeeRecordId
+                ? null
+                : authorizedEmployee.fullName,
             formDate: document.getElementById('materialFormDate').value,
             remarks: document.getElementById('materialRemarks').value.trim() || null,
             vehicleUsageCode: needsVehicle ? 'COMPANY' : 'NONE',

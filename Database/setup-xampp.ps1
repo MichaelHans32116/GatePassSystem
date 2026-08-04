@@ -297,6 +297,14 @@ if ($databaseExists -eq 0) {
             Write-Host 'Applying database migration 025...' -ForegroundColor Yellow
             Invoke-MySqlSource 'Database\Migrations\025_gate_pass_pass_date.sql'
         }
+
+        $nonEmployeeCarrierApplied = Invoke-MySqlScalarInt `
+            "SELECT COUNT(*) FROM gate_pass_system.tbl_schema_versions WHERE version_no='026';"
+
+        if ($nonEmployeeCarrierApplied -eq 0) {
+            Write-Host 'Applying database migration 026...' -ForegroundColor Yellow
+            Invoke-MySqlSource 'Database\Migrations\026_material_non_employee_carrier.sql'
+        }
     }
 }
 

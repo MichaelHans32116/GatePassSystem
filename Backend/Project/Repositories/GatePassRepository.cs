@@ -77,7 +77,7 @@ public sealed class GatePassRepository(
 
     public async Task<GatePassRecord> CreateMaterialDraftAsync(
         RequesterContext requester,
-        EmployeeLookupRecord authorizedEmployee,
+        EmployeeLookupRecord? authorizedEmployee,
         CreateMaterialGatePassRequest request,
         IReadOnlyList<AssociateRecord> associates,
         string traceId,
@@ -101,9 +101,13 @@ public sealed class GatePassRepository(
                         p_prepared_by_signature_file_id =
                             request.PreparedBySignatureFileId,
                         p_authorized_employee_id =
-                            authorizedEmployee.EmployeeRecordId,
+                            authorizedEmployee?.EmployeeRecordId,
                         p_authorized_department_id =
-                            authorizedEmployee.DepartmentId!.Value,
+                            authorizedEmployee?.DepartmentId ?? requester.DepartmentId,
+                        p_authorized_person_name =
+                            authorizedEmployee is null
+                                ? request.AuthorizedPersonName?.Trim()
+                                : null,
                         p_form_date = request.FormDate.ToDateTime(TimeOnly.MinValue),
                         p_material_remarks = request.Remarks,
                         p_vehicle_usage_code = request.VehicleUsageCode,

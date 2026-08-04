@@ -1007,7 +1007,9 @@
         }
         .material-form-signatures {
             display: grid;
-            grid-template-columns: repeat(4, 1fr);
+            /* Phase 19.5 item 2: three signatories - the President has no role on
+               a Material gate pass, so the fourth column is gone. */
+            grid-template-columns: repeat(3, 1fr);
             gap: 2.5mm;
             margin-top: 2.2mm;
             text-align: left;

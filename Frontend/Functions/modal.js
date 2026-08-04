@@ -28,15 +28,38 @@ const APPROVAL_STEP_LABELS = {
 
 // Phase 17 items 8/12/13: the President no longer approves inside the system —
 // company-vehicle passes are signed by hand on the printed form.
-// Phase 19.1 item 5: the pre-printed president NAME is gone. The slot is left
-// blank and captioned "President & Gen. Manager" so whoever signs it can.
+// Phase 19.1 item 5 dropped the "FINAL APPROVAL" caption; Phase 19.5 item 5 puts
+// the NAME back. Only the signature is physical — the name is still pre-printed
+// under the "President & Gen. Manager" caption.
+var PRESIDENT_PRINTED_NAME = 'TOMOAKI MAEKAWA';
+
+// Phase 19.5 item 2: the President has no role on a Material gate pass at all,
+// so this is now Person-only. Material forms print no president line.
 function passNeedsPresidentInk(pass) {
+    if (String(pass?.formTypeCode || '') === 'MATERIAL_GATE_PASS') return false;
     return pass?.vehicleUsageCode === 'COMPANY' || !!pass?.vehicle;
 }
 
 // Phase 19.1 item 6: the day the pass is FOR, which is not always the day it was
 // filed. pass_date arrives as a plain YYYY-MM-DD, so parse it at local midnight —
 // appending Z the way the datetime formatters do would shift it a day in PH time.
+// Phase 19.5 item 3: the printed pass shows the driver without a middle name.
+// Driver records store the middle name as an initial ("GERONIMO M. LAMBINO II"),
+// so drop standalone single-letter tokens only. Dropping a whole middle WORD
+// would wreck compound surnames like "DELA CRUZ".
+function stripMiddleInitial(name) {
+    const raw = String(name ?? '').trim();
+    if (!raw) return raw;
+    const parts = raw.split(/\s+/);
+    if (parts.length < 3) return raw;
+    const kept = parts.filter((part, index) =>
+        index === 0 ||
+        index === parts.length - 1 ||
+        !/^[A-Za-z]\.?$/.test(part)
+    );
+    return kept.join(' ');
+}
+
 function formatPassDate(value) {
     const raw = String(value ?? '').slice(0, 10);
     if (!/^\d{4}-\d{2}-\d{2}$/.test(raw)) return value ? String(value) : 'N/A';
@@ -299,9 +322,9 @@ function normalizeHradTripTypeCode(value) {
 function hradTripTypeLabel(code) {
     const normalized = normalizeHradTripTypeCode(code);
     const labels = {
-        HATID: 'Hatid lang',
-        SUNDO: 'Sundo lang',
-        BOTH: 'Hatid at Sundo'
+        HATID: 'Drop Off',
+        SUNDO: 'Pick Up',
+        BOTH: 'Drop Off and Pick Up'
     };
     return labels[normalized] || (code ? String(code) : 'Company Vehicle Needed');
 }
@@ -1172,12 +1195,6 @@ async function renderMaterialBundle(pass) {
                                 <span ${pas.nameAttribute}></span>
                                 <small>Personnel &amp; Admin Section</small>
                             </div>
-                            ${passNeedsPresidentInk(pass) ? `
-                            <div>
-                                <div class="material-signature-image"></div>
-                                <span></span>
-                                <small>President &amp; Gen. Manager</small>
-                            </div>` : '<div></div>'}
                         </div>
 
                         <!-- GUARD TRACKING ROW FOR MATERIAL -->
@@ -1470,10 +1487,7 @@ async function viewPass(id, isReviewing = false) {
             if (vAssocExtra) vAssocExtra.innerHTML = renderCompactAssociateNames(viewAssociateNames.slice(1));
             // Phase 17 item 2: others-only passes print the requestor on their
             // own line (with a separating rule) above the associates list.
-            const showRequestorBlock = !isMaterial && p.includesRequestor === false;
-            const vRequestorBlock = document.getElementById('vRequestorBlock');
-            if (vRequestorBlock) vRequestorBlock.classList.toggle('hidden', !showRequestorBlock);
-            setVal('vRequestorName', showRequestorBlock ? (p.userName || '') : '');
+            setVal('vRequestorName', p.userName || '');
             setVal('vDest', p.destination);
             setVal('vPurp', p.purpose);
             setVal('vExpOut', p.expectedOut);
@@ -1486,7 +1500,7 @@ async function viewPass(id, isReviewing = false) {
                 if (p.vehicle.id === 'MANUAL') vehicleString = p.vehicle.name;
                 else vehicleString = `${p.vehicle.name} [${p.vehicle.plate}]`;
             }
-            setVal('vDriver', p.vehicle ? p.vehicle.driver : 'N/A');
+            setVal('vDriver', p.vehicle ? stripMiddleInitial(p.vehicle.driver) : 'N/A');
             setVal('vPlate', vehicleString);
             // Phase 17 item 6: service/sundo indicator on the printed form.
             const vServiceTripEl = document.getElementById('vServiceTrip');
@@ -1545,6 +1559,15 @@ async function viewPass(id, isReviewing = false) {
             await handleSig(p.signatures.imm, 'sigImm');
             await handleSig(p.signatures.pres, 'sigPres');
             await handleSig(p.signatures.pas, 'sigPAS');
+            // Phase 19.5 item 5: pre-print the President's name on the person
+            // pass; only the signature itself is added by hand.
+            if (!isMaterial && !p.signatures.pres && passNeedsPresidentInk(p)) {
+                const presNameEl = document.getElementById('sigPresName');
+                if (presNameEl) {
+                    presNameEl.innerText = PRESIDENT_PRINTED_NAME;
+                    presNameEl.classList.remove('hidden');
+                }
+            }
             if (isMaterial) {
                 await handleSig(p.signatures.imm, 'sigMatSuperior');
                 await handleSig(p.signatures.pas, 'sigMatPas');
@@ -2094,11 +2117,7 @@ async function renderPersonGatePassClone(p) {
     clone.dataset.associatePages = String(clonePages.length);
     // Phase 17 item 2: others-only passes print the requestor on their own
     // line above the associates list (mirrors viewPass).
-    const cloneShowRequestor =
-        p.formTypeCode !== 'MATERIAL_GATE_PASS' && p.includesRequestor === false;
-    const cloneRequestorBlock = clone.querySelector('#vRequestorBlock');
-    if (cloneRequestorBlock) cloneRequestorBlock.classList.toggle('hidden', !cloneShowRequestor);
-    setVal('#vRequestorName', cloneShowRequestor ? (p.userName || '') : '');
+    setVal('#vRequestorName', p.userName || '');
     setVal('#vDest', p.destination);
     setVal('#vPurp', p.purpose);
     setVal('#vExpOut', p.expectedOut);
@@ -2110,7 +2129,7 @@ async function renderPersonGatePassClone(p) {
         if (p.vehicle.id === 'MANUAL') vehicleString = p.vehicle.name;
         else vehicleString = `${p.vehicle.name} [${p.vehicle.plate}]`;
     }
-    setVal('#vDriver', p.vehicle ? p.vehicle.driver : 'N/A');
+    setVal('#vDriver', p.vehicle ? stripMiddleInitial(p.vehicle.driver) : 'N/A');
     setVal('#vPlate', vehicleString);
     // Phase 17 item 6: service/sundo indicator (mirrors viewPass).
     const cloneServiceTrip = clone.querySelector('#vServiceTrip');
@@ -2153,6 +2172,15 @@ async function renderPersonGatePassClone(p) {
     await handleSig(p.signatures.imm, '#sigImm');
     await handleSig(p.signatures.pres, '#sigPres');
     await handleSig(p.signatures.pas, '#sigPAS');
+    // Phase 19.5 item 5: mirrors viewPass — pre-printed president name on the
+    // person pass, physical signature only.
+    if (p.formTypeCode !== 'MATERIAL_GATE_PASS' && !p.signatures.pres && passNeedsPresidentInk(p)) {
+        const clonePresName = clone.querySelector('#sigPresName');
+        if (clonePresName) {
+            clonePresName.innerText = PRESIDENT_PRINTED_NAME;
+            clonePresName.classList.remove('hidden');
+        }
+    }
 
     const guardRow = clone.querySelector('.guard-status-row');
     if (guardRow && ['Approved', 'Outside', 'Overdue', 'Returned', 'Closed'].includes(p.status)) {
@@ -2383,12 +2411,6 @@ async function renderMaterialGatePassClone(p) {
                     <span class="name sig-mat-pas-name" style="display: block; border-top: 1px solid #111827; border-bottom: none; padding-top: 0.25mm; text-align: center; font-size: 7.5px; font-weight: 700; text-transform: uppercase;"></span>
                     <small style="display: block; text-align: center; font-size: 5.4px; margin-top: 0.35mm;">HRAD</small>
                 </div>
-                ${passNeedsPresidentInk(p) ? `
-                <div style="position: relative; min-height: 13.2mm;">
-                    <div class="material-signature-image" style="height: 6.2mm;"></div>
-                    <span style="display: block; border-top: 1px solid #111827; border-bottom: none; padding-top: 0.25mm; text-align: center; font-size: 7.5px; font-weight: 700; text-transform: uppercase;">&nbsp;</span>
-                    <small style="display: block; text-align: center; font-size: 5.4px; margin-top: 0.35mm;">President &amp; Gen. Manager</small>
-                </div>` : '<div></div>'}
             </div>
 
             <!-- GUARD TRACKING ROW FOR MATERIAL -->

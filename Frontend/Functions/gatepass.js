@@ -320,9 +320,9 @@ function normalizeRequestTripTypeCode(value) {
 }
 
 function requestTripTypeLabel(code) {
-    if (code === 'HATID') return 'Hatid Lang';
-    if (code === 'SUNDO') return 'Sundo Lang';
-    return 'Hatid at Sundo';
+    if (code === 'HATID') return 'Drop Off';
+    if (code === 'SUNDO') return 'Pick Up';
+    return 'Drop Off and Pick Up';
 }
 
 function updateRequestTripTypeOptions(willReturn) {
@@ -460,13 +460,13 @@ function updateServiceTripHint() {
     hintWrap.classList.toggle('hidden', !isServiceTrip);
     if (!isServiceTrip) return;
     const tripLabel = tripType === 'SUNDO'
-        ? 'Sundo (pick-up only)'
+        ? 'Pick Up only'
         : tripType === 'HATID'
-            ? 'Hatid (drop-off only)'
-            : 'Hatid at Sundo';
+            ? 'Drop Off only'
+            : 'Drop Off and Pick Up';
     hintText.innerText = !included
         ? `${tripLabel} service trip: the vehicle goes out for other associates while the requestor stays inside. This will be marked on the pass.`
-        : 'Sundo (pick-up only): the vehicle goes out as a service trip. This will be marked on the pass.';
+        : 'Pick Up only: the vehicle goes out as a service trip. This will be marked on the pass.';
 }
 
 function toggleVehicleFields() {

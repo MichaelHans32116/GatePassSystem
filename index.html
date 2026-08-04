@@ -36,7 +36,7 @@
             }
         }
     </script>
-    <link rel="stylesheet" href="Frontend/Design/styles.css?v=20260804-phase17">
+    <link rel="stylesheet" href="Frontend/Design/styles.css?v=20260804-phase19.5">
 </head>
 <body class="h-[100dvh] overflow-hidden flex flex-col font-sans text-sm md:text-base">
 
@@ -120,9 +120,9 @@
 
                 <form id="loginForm" class="w-full">
                 <div class="mb-5">
-                    <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2"><i class="fas fa-user mr-1 text-mpiBlue"></i> First Name / Employee ID</label>
+                    <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2"><i class="fas fa-user mr-1 text-mpiBlue"></i> First Name</label>
                     <input type="text" id="empId" class="w-full px-4 py-3 bg-gray-50 border border-gray-300 rounded-lg focus:outline-none focus:bg-white focus:border-mpiBlue focus:ring-2 focus:ring-mpiLight transition" placeholder="e.g. LORD, DAN, or LORD DAN" autocomplete="username" required>
-                    <p class="text-[11px] text-gray-500 mt-1.5">Not case-sensitive. Your old Employee ID also continues to work.</p>
+                    <p class="text-[11px] text-gray-500 mt-1.5">Not case-sensitive.</p>
                 </div>
                 <div class="mb-8">
                     <label class="block text-xs font-bold text-gray-600 uppercase tracking-wider mb-2"><i class="fas fa-lock mr-1 text-mpiBlue"></i> Password</label>
@@ -611,9 +611,9 @@
                                     <div id="employeeTripTypeField" class="hidden">
                                         <label class="block text-[11px] font-semibold text-gray-500 uppercase mb-1">Trip Type</label>
                                         <select id="gpTripType" class="w-full bg-white border border-gray-300 p-2 rounded text-sm focus:ring-1 focus:ring-mpiBlue" onchange="updateServiceTripHint()">
-                                            <option value="BOTH">Hatid at Sundo</option>
-                                            <option value="HATID">Hatid Lang</option>
-                                            <option value="SUNDO">Sundo Lang</option>
+                                            <option value="BOTH">Drop Off and Pick Up</option>
+                                            <option value="HATID">Drop Off</option>
+                                            <option value="SUNDO">Pick Up</option>
                                         </select>
                                     </div>
 
@@ -683,12 +683,20 @@
                                     <label class="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-2">Date <span class="text-red-500">*</span></label>
                                     <input type="date" id="materialFormDate" class="w-full rounded border border-gray-300 p-2.5 text-sm focus:border-mpiBlue focus:ring-1 focus:ring-mpiBlue" required>
                                 </div>
+                                <!-- Phase 19.5 item 1: the carrier may be a non-employee (visitor /
+                                     OJT), same as companions on the Person form. -->
                                 <div>
-                                    <label class="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-2">Employee Bringing Out Items <span class="text-red-500">*</span></label>
-                                    <div class="relative">
-                                        <input id="materialAuthorizedEmployeeSearch" type="text" autocomplete="off" class="w-full rounded border border-gray-300 bg-white p-2.5 text-sm focus:border-mpiBlue focus:ring-1 focus:ring-mpiBlue" placeholder="Type employee ID or name..." required oninput="handleMaterialEmployeeSearchInput(event)" onfocus="showMaterialEmployeeSuggestions()" onkeydown="handleMaterialEmployeeSearchKeydown(event)">
-                                        <input id="materialAuthorizedEmployee" type="hidden" required>
-                                        <div id="materialEmployeeSuggestions" class="absolute z-30 mt-1 hidden max-h-56 w-full overflow-y-auto rounded border border-gray-200 bg-white shadow-lg"></div>
+                                    <label class="block text-xs font-semibold uppercase tracking-wider text-gray-600 mb-2">Person Bringing Out Items <span class="text-red-500">*</span></label>
+                                    <div class="flex gap-2">
+                                        <select id="materialCarrierKind" onchange="toggleMaterialCarrierKind()" class="w-36 shrink-0 rounded border border-gray-300 bg-white p-2.5 text-sm font-semibold text-gray-700 focus:border-mpiBlue focus:ring-1 focus:ring-mpiBlue">
+                                            <option value="employee">Employee</option>
+                                            <option value="others">Non-employee</option>
+                                        </select>
+                                        <div class="relative flex-1">
+                                            <input id="materialAuthorizedEmployeeSearch" type="text" autocomplete="off" class="w-full rounded border border-gray-300 bg-white p-2.5 text-sm focus:border-mpiBlue focus:ring-1 focus:ring-mpiBlue" placeholder="Type employee ID or name..." required oninput="handleMaterialEmployeeSearchInput(event)" onfocus="showMaterialEmployeeSuggestions()" onkeydown="handleMaterialEmployeeSearchKeydown(event)">
+                                            <input id="materialAuthorizedEmployee" type="hidden">
+                                            <div id="materialEmployeeSuggestions" class="absolute z-30 mt-1 hidden max-h-56 w-full overflow-y-auto rounded border border-gray-200 bg-white shadow-lg"></div>
+                                        </div>
                                     </div>
                                     <p id="materialAuthorizedDepartment" class="mt-1 text-[11px] text-gray-500">Department appears after selecting an employee.</p>
                                 </div>
@@ -712,18 +720,12 @@
                                 </div>
                             </div>
 
-                            <!-- Associates / Companions (Phase 11 req5).
-                                 No overflow-hidden here: it clipped the employee suggestion dropdown. -->
-                            <div class="rounded-lg border border-gray-200">
-                                <div class="flex items-center justify-between border-b bg-gray-50 px-4 py-3">
-                                    <div>
-                                        <h3 class="text-sm font-bold text-gray-800">Additional Companions</h3>
-                                        <p class="text-[10px] text-gray-500">The employee selected above is the primary associate. Add co-carriers if more than one person brings out the items (max 19).</p>
-                                    </div>
-                                    <button type="button" onclick="addAssociateRow('MATERIAL_GATE_PASS')" class="rounded bg-mpiBlue px-3 py-2 text-xs font-bold text-white hover:bg-mpiDark"><i class="fas fa-user-plus mr-1"></i>Add companion</button>
-                                </div>
-                                <div id="materialAssociatesBody" class="divide-y divide-gray-100"></div>
-                                <p class="px-4 py-2 text-[10px] text-gray-400" id="materialAssociatesEmpty">No additional companions added.</p>
+                            <!-- Phase 19.5 item 2: Additional Companions removed from the Material
+                                 form. The body/empty nodes stay (display:none) because the shared
+                                 associate helpers still address them by id. -->
+                            <div class="hidden">
+                                <div id="materialAssociatesBody"></div>
+                                <p id="materialAssociatesEmpty"></p>
                             </div>
 
                             <!-- Photo Proofs -->
@@ -1053,10 +1055,6 @@
                                     <tr class="border-b-nested">
                                         <td rowspan="2" class="align-top border-r-nested" style="width: 65%; height: 22mm;">
                                             <!-- Phase 17 item 2: shown only when the requestor is NOT going out -->
-                                            <div id="vRequestorBlock" class="person-requestor-block hidden">
-                                                <div class="text-[7px] uppercase text-gray-500 font-semibold person-associates-label">REQUESTOR</div>
-                                                <div id="vRequestorName" class="person-requestor-name font-bold uppercase pl-1"></div>
-                                            </div>
                                             <div class="text-[7px] uppercase text-gray-500 font-semibold person-associates-label">NAME OF ASSOCIATES</div>
                                             <div id="vName" class="font-bold text-xs uppercase pl-1 pt-0.5"></div>
                                             <div id="vAssociatesExtra" class="person-associates-extra pl-1"></div>
@@ -1101,9 +1099,15 @@
                         </tr>
                         <!-- Destination -->
                         <tr>
-                            <td colspan="4" class="align-top h-10" style="border-bottom: 1.5px solid black !important;">
+                            <td colspan="3" class="align-top h-10" style="width: 72%; border-right: 1.5px solid black !important; border-bottom: 1.5px solid black !important;">
                                 <div class="text-[7px] uppercase text-gray-500 font-semibold">DESTINATION</div>
                                 <div id="vDest" class="font-bold text-xs pl-2 pt-1"></div>
+                            </td>
+                            <!-- Phase 19.5 item 3: the requester prints directly under the QR
+                                 block, on the same line as the destination. -->
+                            <td class="align-top h-10" style="width: 28%; border-bottom: 1.5px solid black !important;">
+                                <div class="text-[7px] uppercase text-gray-500 font-semibold">REQUESTED BY</div>
+                                <div id="vRequestorName" class="font-bold text-[9px] uppercase pl-1 pt-1 leading-tight"></div>
                             </td>
                         </tr>
                         <!-- From / To -->
@@ -1294,8 +1298,8 @@
                         <div>
                             <label class="block text-[10px] font-bold text-gray-500 uppercase mb-1">Trip Type</label>
                             <select id="hradTripType" class="w-full bg-white border border-gray-300 p-2 rounded text-xs focus:outline-none focus:border-mpiBlue disabled:bg-gray-100 disabled:text-gray-600 disabled:cursor-not-allowed" onchange="handleHradTripTypeChange(findGatePassRecord())">
-                                <option value="HATID">Hatid lang</option>
-                                <option value="BOTH">Hatid at Sundo</option>
+                                <option value="HATID">Drop Off</option>
+                                <option value="BOTH">Drop Off and Pick Up</option>
                             </select>
                             <p id="hradTripTypeLockedHint" class="text-[10px] text-gray-500 mt-1 hidden"><i class="fas fa-lock text-[9px] mr-0.5"></i>Set by the requester</p>
                         </div>
@@ -1580,9 +1584,9 @@
     <script src="Frontend/Functions/mock-data.js?v=20260709-phase1312.2"></script>
     <script src="Frontend/Connectors/api-client.js?v=20260709-phase1312.2"></script>
     <script src="Frontend/Functions/signature.js?v=20260709-phase1312"></script>
-    <script src="Frontend/Functions/material-gatepass.js?v=20260804-phase19.1"></script>
-    <script src="Frontend/Functions/modal.js?v=20260804-phase19.1"></script>
-    <script src="Frontend/Functions/gatepass.js?v=20260804-phase19.3"></script>
+    <script src="Frontend/Functions/material-gatepass.js?v=20260804-phase19.5"></script>
+    <script src="Frontend/Functions/modal.js?v=20260804-phase19.5"></script>
+    <script src="Frontend/Functions/gatepass.js?v=20260804-phase19.5"></script>
     <script src="Frontend/Functions/approvals.js?v=20260804-phase19.1"></script>
     <script src="Frontend/Functions/scanner.js?v=20260709-phase1312"></script>
     <script src="Frontend/Functions/admin.js?v=20260709-phase1312.2"></script>

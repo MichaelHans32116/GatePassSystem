@@ -1,4 +1,4 @@
-﻿using System.Text;
+using System.Text;
 using System.Threading.RateLimiting;
 using FormRequestSystem.Api.Infrastructure;
 using FormRequestSystem.Api.Infrastructure.Authorization;
@@ -15,6 +15,8 @@ using MySqlConnector;
 const string FrontendCorsPolicy = "FrontendCors";
 const string GeneralRateLimitPolicy = "General";
 const string AuthRateLimitPolicy = "Auth";
+
+Dapper.SqlMapper.AddTypeHandler(new FormRequestSystem.Api.Infrastructure.Data.SqlDateOnlyTypeHandler());
 
 var builder = WebApplication.CreateBuilder(args);
 

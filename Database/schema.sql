@@ -431,6 +431,9 @@ CREATE TABLE IF NOT EXISTS tbl_gate_pass_requests (
     prepared_by_signature_file_id BIGINT UNSIGNED NULL,
     authorized_employee_id BIGINT UNSIGNED NULL,
     authorized_department_id BIGINT UNSIGNED NULL,
+    -- Phase 19.5 item 1: typed name when the carrier is not a directory
+    -- employee (visitor / OJT). See Migrations/026.
+    authorized_person_name VARCHAR(255) NULL,
     destination VARCHAR(255) NOT NULL,
     purpose TEXT NOT NULL,
     material_remarks VARCHAR(1000) NULL,
@@ -861,7 +864,10 @@ SELECT
     requester_position.position_name,
     gpr.authorized_employee_id,
     authorized_employee.employee_id AS authorized_employee_no,
-    authorized_employee.full_name AS authorized_employee_name,
+    COALESCE(
+        authorized_employee.full_name,
+        gpr.authorized_person_name
+    ) AS authorized_employee_name,
     gpr.authorized_department_id,
     authorized_department.department_name AS authorized_department_name,
     gpr.destination,

@@ -17,7 +17,7 @@ public interface IGatePassRepository
 
     Task<GatePassRecord> CreateMaterialDraftAsync(
         RequesterContext requester,
-        EmployeeLookupRecord authorizedEmployee,
+        EmployeeLookupRecord? authorizedEmployee,
         CreateMaterialGatePassRequest request,
         IReadOnlyList<AssociateRecord> associates,
         string traceId,
