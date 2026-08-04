@@ -29,6 +29,7 @@ function setupRoleAccess(user) {
             document.getElementById('navGroupAdmin').style.display = 'block';
             document.getElementById('navGroupHRAD').style.display = 'none';
             document.getElementById('navItemDashboard').style.display = 'flex';
+            document.getElementById('navItemHistory').style.display = 'flex';
 
             const guestLogin = document.getElementById('navItemGuestLogin');
             if (guestLogin) guestLogin.style.display = 'none';
@@ -46,6 +47,7 @@ function setupRoleAccess(user) {
                 document.getElementById('navItemApply').style.display = 'none';
                 document.getElementById('navGroupApprovals').style.display = 'none';
                 document.getElementById('navGroupAdmin').style.display = 'none';
+                document.getElementById('navItemHistory').style.display = 'none';
                 // Phase 17 item 14: security lands straight on the QR scanner;
                 // the dashboard stays one tap away via its View Dashboard button.
                 switchSection('guardScan');
@@ -61,6 +63,7 @@ function setupRoleAccess(user) {
             else if (user.role === 'President') {
                 document.getElementById('navItemApply').style.display = 'none'; // No form for president
                 document.getElementById('navGroupSecurity').style.display = 'none';
+                document.getElementById('navGroupAdmin').style.display = 'none';
                 document.getElementById('navAdminLabel').innerText = "Department Logs";
                 document.getElementById('tab-users').style.display = 'none';
                 document.getElementById('tab-fleet').style.display = 'none';
@@ -75,8 +78,9 @@ function setupRoleAccess(user) {
                 if (user.role === 'Associate' || user.role === 'Driver') {
                     document.getElementById('navGroupApprovals').style.display = 'none';
                     document.getElementById('navGroupAdmin').style.display = 'none';
+                    document.getElementById('navItemHistory').style.display = 'none';
                 } else {
-                    document.getElementById('navGroupAdmin').style.display = 'block';
+                    document.getElementById('navGroupAdmin').style.display = 'none';
                     document.getElementById('navAdminLabel').innerText = "Department Logs";
                     document.getElementById('tab-users').style.display = 'none';
                     document.getElementById('tab-fleet').style.display = 'none';
@@ -93,9 +97,12 @@ function setupRoleAccess(user) {
         }
 
 async function switchSection(targetId) {
-            const sectionTargetId = targetId === 'fleetManagement'
-                ? 'adminPanel'
-                : targetId;
+            // fleetManagement and requestHistory are both views onto sec-adminPanel,
+            // each opening its own tab (see the switchAdminTab call below).
+            const sectionTargetId =
+                (targetId === 'fleetManagement' || targetId === 'requestHistory')
+                    ? 'adminPanel'
+                    : targetId;
             if (sectionTargetId !== 'guardScan') stopQrCamera?.();
             document.querySelectorAll('.nav-item').forEach(link => link.classList.remove('active'));
             const targetLink = document.querySelector(`.nav-item[data-target="${targetId}"]`);
@@ -112,6 +119,7 @@ async function switchSection(targetId) {
                 'fleetManagement': 'Vehicles & Drivers',
                 'scheduleCalendar': 'Vehicle Schedule Calendar',
                 'userManual': 'User Manual',
+                'requestHistory': 'Gate Pass Request History',
                 'adminPanel': currentUser && currentUser.role === 'System Admin' ? 'System Configuration' : 'Department Logs'
             };
             document.getElementById('pageTitle').innerText = titles[targetId] || 'System';
@@ -131,6 +139,13 @@ async function switchSection(targetId) {
             if(sectionTargetId === 'adminPanel') {
                 if(targetId === 'fleetManagement') {
                     switchAdminTab('fleet');
+                } else if(targetId === 'requestHistory') {
+                    switchAdminTab('logs');
+                    renderAdminLogs(1);
+                } else if(currentUser && currentUser.role === 'System Admin') {
+                    // System Configuration is now configuration only - history has
+                    // its own Main Menu entry.
+                    switchAdminTab('users');
                 } else {
                     switchAdminTab('logs');
                     renderAdminLogs(1);
@@ -142,13 +157,17 @@ async function switchSection(targetId) {
 
 
 function setNavigationForAdminTab(tabId) {
-            const navTarget = tabId === 'fleet' ? 'fleetManagement' : 'adminPanel';
+            const navTarget = tabId === 'fleet'
+                ? 'fleetManagement'
+                : tabId === 'logs' ? 'requestHistory' : 'adminPanel';
             document.querySelectorAll('.nav-item').forEach(link => link.classList.remove('active'));
             document.querySelector(`.nav-item[data-target="${navTarget}"]`)?.classList.add('active');
 
             const title = tabId === 'fleet'
                 ? 'Vehicles & Drivers'
-                : (currentUser && currentUser.role === 'System Admin' ? 'System Configuration' : 'Department Logs');
+                : tabId === 'logs'
+                    ? 'Gate Pass Request History'
+                    : (currentUser && currentUser.role === 'System Admin' ? 'System Configuration' : 'Department Logs');
             const titleEl = document.getElementById('pageTitle');
             if (titleEl) titleEl.innerText = title;
         }

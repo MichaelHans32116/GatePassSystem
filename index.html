@@ -46,7 +46,7 @@
             <div class="splash-logo flex items-center justify-center gap-4 sm:gap-5">
                 <img src="Frontend/Design/images/logo.png" alt="MPI Logo" class="h-14 sm:h-20 w-auto" width="480" height="227">
                 <span class="text-4xl sm:text-6xl font-extrabold tracking-tight leading-none">
-                    <span class="text-mpiDark">Form</span><span class="text-mpiBlue">Request</span>
+                    <span class="text-mpiDark">Gate Pass </span><span class="text-mpiBlue">Request</span>
                 </span>
             </div>
             <p class="splash-tagline mt-5 text-base sm:text-xl text-gray-400 font-medium tracking-wide">Request. Approve. Pass Through.</p>
@@ -179,6 +179,13 @@
 
                 <a href="#" class="nav-item px-6 py-3 transition text-white" data-target="scheduleCalendar" onclick="switchSection('scheduleCalendar')" id="navItemSchedule">
                     <i class="fas fa-calendar-alt w-6 text-left"></i> <span class="text-sm">Schedule Calendar</span>
+                </a>
+
+                <!-- Phase 19.10: the request history used to be reachable only as a tab
+                     inside System Configuration, which read as an IT-only screen. It is
+                     everyday data, so it gets its own Main Menu entry. -->
+                <a href="#" class="nav-item px-6 py-3 transition text-white" data-target="requestHistory" onclick="switchSection('requestHistory')" id="navItemHistory">
+                    <i class="fas fa-clock-rotate-left w-6 text-left"></i> <span class="text-sm">Request History</span>
                 </a>
 
                 <div id="navGroupApprovals" class="mt-4 block">
@@ -1590,7 +1597,7 @@
     <script src="Frontend/Functions/approvals.js?v=20260804-phase19.1"></script>
     <script src="Frontend/Functions/scanner.js?v=20260709-phase1312"></script>
     <script src="Frontend/Functions/admin.js?v=20260709-phase1312.2"></script>
-    <script src="Frontend/Functions/navigation.js?v=20260804-phase19.1"></script>
+    <script src="Frontend/Functions/navigation.js?v=20260804-phase19.10"></script>
     <script src="Frontend/Functions/usermanual.js?v=20260804-phase19.9"></script>
     <script src="Frontend/Functions/calendar.js?v=20260804-phase19.1"></script>
     <script src="Frontend/Functions/auth.js?v=20260804-phase19.1"></script>
