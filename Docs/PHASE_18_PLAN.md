@@ -88,3 +88,15 @@
   overwrite an existing changed password on migration reruns.
 - Apply the idempotent migration to local and live `gate_pass_system` only after a
   disposable clone test and a live-database backup.
+
+### Phase 18.4 verification
+
+- [x] Approved source workbook confirms GA139 Roxanne G. Encinada and GA412 Myla
+  Mae C. Abarquez identities and current employment records.
+- [x] Disposable database clone accepts Migration 024 twice without duplicates or
+  overwriting an existing password.
+- [x] Local and live databases were backed up before the migration.
+- [x] Local and live `gate_pass_system` contain active GA139/GA412 Person and
+  Material HRAD assignment rows at equal priority.
+- [x] Live verification reports zero duplicate HRAD assignment groups and preserves
+  the existing GA120 assignments.

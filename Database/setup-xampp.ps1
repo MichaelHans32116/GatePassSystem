@@ -281,6 +281,14 @@ if ($databaseExists -eq 0) {
             Write-Host 'Applying database migration 023...' -ForegroundColor Yellow
             Invoke-MySqlSource 'Database\Migrations\023_requestor_included_flag.sql'
         }
+
+        $hradVehicleAssignersApplied = Invoke-MySqlScalarInt `
+            "SELECT COUNT(*) FROM gate_pass_system.tbl_schema_versions WHERE version_no='024';"
+
+        if ($hradVehicleAssignersApplied -eq 0) {
+            Write-Host 'Applying database migration 024...' -ForegroundColor Yellow
+            Invoke-MySqlSource 'Database\Migrations\024_add_myla_ro_hrad_vehicle_assigners.sql'
+        }
     }
 }
 
