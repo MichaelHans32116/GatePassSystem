@@ -304,6 +304,13 @@ public sealed class ApprovalRepository(
                     resolvedSecondaryExpectedOutAt.HasValue &&
                     resolvedSecondaryExpectedInAt.HasValue;
 
+                // Phase 17 item 7: the reservation rows must keep the two
+                // real legs of a split schedule (e.g. 10-11 AM and 1-2 PM) so
+                // the calendar shows the gap in between as vacant. Only the
+                // request row below stores the widened envelope.
+                var primaryWindowOutAt = resolvedExpectedOutAt;
+                var primaryWindowInAt = resolvedExpectedInAt;
+
                 if (hasSecondaryWindow)
                 {
                     if (!resolvedExpectedOutAt.HasValue ||
@@ -369,9 +376,9 @@ public sealed class ApprovalRepository(
                     var reservationWindows = new List<(DateTime ReservedFrom, DateTime? ReservedUntil)>
                     {
                         (
-                            resolvedExpectedOutAt ?? throw new InvalidOperationException(
+                            primaryWindowOutAt ?? throw new InvalidOperationException(
                                 "Primary HRAD schedule window is required."),
-                            resolvedExpectedInAt
+                            primaryWindowInAt
                         )
                     };
 
