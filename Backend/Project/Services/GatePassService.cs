@@ -83,7 +83,13 @@ public sealed class GatePassService(
                 "COMPANY",
                 StringComparison.OrdinalIgnoreCase);
         var requiresSuperior = !isImmediateSuperior;
-        var requiresPresident = usesCompanyVehicle || isImmediateSuperior;
+
+        // Phase 17 items 8/12/13: the President no longer approves inside the
+        // system. Company-vehicle passes end at PAS digitally, then the
+        // printed form is signed physically by the President (Maekawa) as the
+        // final approver. requires_president_approval stays TRUE on those
+        // rows to record that the paper signature is still required.
+        var requiresPresident = usesCompanyVehicle;
 
         var routeCodes = new List<string>();
         if (requiresSuperior)
@@ -94,11 +100,6 @@ public sealed class GatePassService(
         if (usesCompanyVehicle)
         {
             routeCodes.Add("HRAD_ASSIGN");
-        }
-
-        if (requiresPresident)
-        {
-            routeCodes.Add("PRESIDENT");
         }
 
         routeCodes.Add("PAS");
