@@ -1129,7 +1129,7 @@ async function renderMaterialBundle(pass) {
                             </div>
                             <div class="col-span-7 flex items-end">
                                 <span class="font-semibold text-gray-500 w-[14%]">FROM:</span>
-                                <span class="border-b border-black flex-grow pl-1 font-bold">PERSONNEL &amp; ADMIN. SECTION</span>
+                                <span class="border-b border-black flex-grow pl-1 font-bold">HRAD</span>
                             </div>
                             <div class="col-span-5 flex items-end">
                                 <span class="font-semibold text-gray-500 w-[20%]">PAGE:</span>
@@ -1193,7 +1193,7 @@ async function renderMaterialBundle(pass) {
                                 <strong>Approved By:</strong>
                                 <div ${pas.imageAttribute} class="material-signature-image"></div>
                                 <span ${pas.nameAttribute}></span>
-                                <small>Personnel &amp; Admin Section</small>
+                                <small>HRAD</small>
                             </div>
                         </div>
 
@@ -2344,7 +2344,7 @@ async function renderMaterialGatePassClone(p) {
                 </div>
                 <div class="col-span-7 flex items-end">
                     <span class="font-semibold text-gray-500 w-[14%]">FROM:</span>
-                    <span class="border-b border-black flex-grow pl-1 font-bold">PERSONNEL &amp; ADMIN. SECTION</span>
+                    <span class="border-b border-black flex-grow pl-1 font-bold">HRAD</span>
                 </div>
                 <div class="col-span-5 flex items-end">
                     <span class="font-semibold text-gray-500 w-[20%]">PAGE:</span>
