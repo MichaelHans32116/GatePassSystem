@@ -375,6 +375,29 @@
             text-transform: capitalize;
             font-weight: 600;
         }
+        /* Phase 17 item 2: others-only passes print the requestor on a separate
+           line, divided from the NAME OF ASSOCIATES list by a rule. */
+        .person-requestor-block {
+            border-bottom: 1px solid #000;
+            margin-bottom: 0.6mm;
+            padding-bottom: 0.4mm;
+        }
+        .person-requestor-name {
+            font-size: 10px;
+            line-height: 1.05;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        /* Phase 17 item 6: service/sundo indicator under VEHICLE & PLATE. */
+        .person-service-indicator {
+            margin-top: 0.4mm;
+            padding-left: 4px;
+            font-size: 6px;
+            font-weight: 700;
+            line-height: 1.1;
+            letter-spacing: 0.02em;
+        }
         /* Material statement compact companions. */
         .material-associates-extra .person-associate-compact,
         .material-associates-extra {
@@ -1278,6 +1301,12 @@
         .a4-wrapper.is-batch-print .person-print-form .person-associate-compact {
             font-size: 7px;
             line-height: 1.12;
+        }
+        .a4-wrapper.is-batch-print .person-print-form .person-requestor-name {
+            font-size: 8.5px;
+        }
+        .a4-wrapper.is-batch-print .person-print-form .person-service-indicator {
+            font-size: 5.5px;
         }
         .a4-wrapper.has-multiple-passes .person-print-form .guard-status-row td {
             padding-top: 0.35mm !important;

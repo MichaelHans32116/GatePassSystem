@@ -95,7 +95,14 @@ async function addAssociateRow(formTypeCode, values = {}) {
     row.dataset.employeeId = values.employeeId ? String(values.employeeId) : '';
     row.dataset.departmentId = values.departmentId ? String(values.departmentId) : '';
     row.dataset.name = values.name || '';
+    // Phase 17 item 4: '1' = directory employee, '0' = outside companion
+    // (visitor / OJT) stored by typed name only.
+    row.dataset.isEmployee = values.isEmployee === false ? '0' : '1';
     row.innerHTML = `
+        <label class="mt-2 flex shrink-0 cursor-pointer select-none items-center gap-1.5" title="Uncheck for visitors / OJTs who are not company employees">
+            <input type="checkbox" data-associate-employee checked onchange="toggleAssociateEmployee('${rowId}')" class="h-3.5 w-3.5 rounded border-gray-300 text-mpiBlue focus:ring-mpiBlue">
+            <span class="text-[10px] font-semibold text-gray-600">Employee</span>
+        </label>
         <div class="relative flex-1">
             <input type="text" autocomplete="off" data-associate-search class="w-full rounded border border-gray-300 bg-white p-2 text-xs focus:border-mpiBlue focus:ring-1 focus:ring-mpiBlue" placeholder="Type employee ID or name..." value="${materialEscape(values.name || '')}" oninput="handleAssociateSearchInput('${rowId}')" onfocus="showAssociateSuggestions('${rowId}')" onkeydown="handleAssociateSearchKeydown(event, '${rowId}')">
             <div data-associate-suggestions class="absolute z-30 mt-1 hidden max-h-48 w-full overflow-y-auto rounded border border-gray-200 bg-white shadow-lg"></div>
@@ -103,7 +110,51 @@ async function addAssociateRow(formTypeCode, values = {}) {
         </div>
         <button type="button" onclick="removeAssociateRow('${rowId}', '${formTypeCode}')" class="rounded p-2 text-red-500 hover:bg-red-50" title="Remove companion"><i class="fas fa-trash"></i></button>`;
     body.appendChild(row);
+    if (row.dataset.isEmployee === '0') {
+        const employeeToggle = row.querySelector('[data-associate-employee]');
+        if (employeeToggle) employeeToggle.checked = false;
+        applyAssociateEmployeeMode(row);
+    }
     updateAssociatesEmptyHint(formTypeCode);
+}
+
+// Phase 17 item 4: switch a companion row between directory-employee mode and
+// free-text mode for non-employee companions (visitors, OJTs).
+function applyAssociateEmployeeMode(row) {
+    const isEmployee = row.dataset.isEmployee !== '0';
+    const search = row.querySelector('[data-associate-search]');
+    const meta = row.querySelector('[data-associate-meta]');
+    const box = row.querySelector('[data-associate-suggestions]');
+    if (search) {
+        search.placeholder = isEmployee
+            ? 'Type employee ID or name...'
+            : 'Type visitor / OJT full name...';
+    }
+    if (meta) {
+        meta.innerText = isEmployee
+            ? 'Select an active employee.'
+            : 'Non-employee companion — the name is saved exactly as typed.';
+    }
+    box?.classList.add('hidden');
+}
+
+function toggleAssociateEmployee(rowId) {
+    const row = document.getElementById(rowId);
+    if (!row) return;
+    const checkbox = row.querySelector('[data-associate-employee]');
+    const search = row.querySelector('[data-associate-search]');
+    row.dataset.isEmployee = checkbox?.checked ? '1' : '0';
+    row.dataset.employeeId = '';
+    row.dataset.departmentId = '';
+    if (row.dataset.isEmployee === '1') {
+        // Back to employee mode: the typed text must be re-picked from the
+        // directory, so clear it.
+        row.dataset.name = '';
+        if (search) search.value = '';
+    } else {
+        row.dataset.name = (search?.value || '').trim();
+    }
+    applyAssociateEmployeeMode(row);
 }
 
 function removeAssociateRow(rowId, formTypeCode) {
@@ -135,6 +186,7 @@ function renderAssociateSuggestions(rowId) {
 
 function showAssociateSuggestions(rowId) {
     const row = document.getElementById(rowId);
+    if (row?.dataset.isEmployee === '0') return; // free-text rows have no picker
     const box = row?.querySelector('[data-associate-suggestions]');
     if (!box) return;
     renderAssociateSuggestions(rowId);
@@ -144,6 +196,11 @@ function showAssociateSuggestions(rowId) {
 function handleAssociateSearchInput(rowId) {
     const row = document.getElementById(rowId);
     if (!row) return;
+    // Non-employee rows are plain text: whatever is typed IS the name.
+    if (row.dataset.isEmployee === '0') {
+        row.dataset.name = (row.querySelector('[data-associate-search]')?.value || '').trim();
+        return;
+    }
     // Editing the text invalidates a prior selection.
     row.dataset.employeeId = '';
     row.dataset.departmentId = '';
@@ -221,18 +278,29 @@ function selectAssociate(rowId, employeeRecordId) {
     box?.classList.add('hidden');
 }
 
-// Collect confirmed companion rows as {employeeId, departmentId, name}. Rows without a
-// confirmed selection are skipped (and reported once by the submit caller via validateAssociates).
+// Collect confirmed companion rows as {employeeId, departmentId, name, isEmployee}.
+// Employee rows need a confirmed directory pick; non-employee rows (visitors,
+// OJTs) only need a typed name. Unfinished rows are skipped here and reported
+// by the submit caller via hasUnconfirmedAssociateRows.
 function collectAssociates(formTypeCode) {
     const body = document.getElementById(associateBodyId(formTypeCode));
     if (!body) return [];
     return [...body.querySelectorAll('.associate-row')]
-        .filter(row => row.dataset.employeeId && row.dataset.name)
-        .map(row => ({
-            employeeId: Number(row.dataset.employeeId),
-            departmentId: row.dataset.departmentId ? Number(row.dataset.departmentId) : null,
-            name: row.dataset.name
-        }));
+        .map(row => {
+            if (row.dataset.isEmployee === '0') {
+                const name = (row.querySelector('[data-associate-search]')?.value || '').trim();
+                if (!name) return null;
+                return { employeeId: 0, departmentId: null, name, isEmployee: false };
+            }
+            if (!row.dataset.employeeId || !row.dataset.name) return null;
+            return {
+                employeeId: Number(row.dataset.employeeId),
+                departmentId: row.dataset.departmentId ? Number(row.dataset.departmentId) : null,
+                name: row.dataset.name,
+                isEmployee: true
+            };
+        })
+        .filter(Boolean);
 }
 
 function hasUnconfirmedAssociateRows(formTypeCode) {
@@ -240,6 +308,7 @@ function hasUnconfirmedAssociateRows(formTypeCode) {
     if (!body) return false;
     return [...body.querySelectorAll('.associate-row')]
         .some(row => {
+            if (row.dataset.isEmployee === '0') return false; // typed name is enough
             if (row.dataset.employeeId) return false; // already confirmed
             const inputVal = (row.querySelector('[data-associate-search]')?.value || '').trim();
             if (!inputVal) return false; // empty rows are silently skipped by collectAssociates
@@ -1022,6 +1091,7 @@ window.clearMaterialPreparedSignaturePad = clearMaterialPreparedSignaturePad;
 window.useMaterialPreparedDrawnSignature = useMaterialPreparedDrawnSignature;
 window.resetMaterialPreparedSignatureState = resetMaterialPreparedSignatureState;
 window.addAssociateRow = addAssociateRow;
+window.toggleAssociateEmployee = toggleAssociateEmployee;
 window.removeAssociateRow = removeAssociateRow;
 window.handleAssociateSearchInput = handleAssociateSearchInput;
 window.handleAssociateSearchKeydown = handleAssociateSearchKeydown;

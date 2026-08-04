@@ -36,7 +36,7 @@
             }
         }
     </script>
-    <link rel="stylesheet" href="Frontend/Design/styles.css?v=20260712-splash3">
+    <link rel="stylesheet" href="Frontend/Design/styles.css?v=20260804-phase17">
 </head>
 <body class="h-[100dvh] overflow-hidden flex flex-col font-sans text-sm md:text-base">
 
@@ -550,14 +550,27 @@
                                 <textarea id="gpPurpose" class="w-full border border-gray-300 p-2.5 rounded focus:ring-1 focus:ring-mpiBlue focus:border-mpiBlue transition text-sm h-20 resize-none" required></textarea>
                             </div>
 
-                            <!-- Associates / Companions (Phase 11 req5) -->
+                            <!-- Associates / Companions (Phase 11 req5, Phase 17 items 1+4) -->
                             <div class="overflow-hidden rounded-lg border border-gray-200">
                                 <div class="flex items-center justify-between border-b bg-gray-50 px-4 py-3">
                                     <div>
-                                        <h3 class="text-sm font-bold text-gray-800">Additional Companions</h3>
-                                        <p class="text-[10px] text-gray-500">You (the requester) are the primary associate. Add co-travellers leaving with you (max 19).</p>
+                                        <h3 class="text-sm font-bold text-gray-800">Associates / Companions</h3>
+                                        <p class="text-[10px] text-gray-500" id="personAssociatesHint">You (the requester) are the primary associate. Add co-travellers leaving with you (max 19).</p>
                                     </div>
                                     <button type="button" onclick="addAssociateRow('PERSON_GATE_PASS')" class="rounded bg-mpiBlue px-3 py-2 text-xs font-bold text-white hover:bg-mpiDark"><i class="fas fa-user-plus mr-1"></i>Add companion</button>
+                                </div>
+                                <div class="border-b bg-white px-4 py-3">
+                                    <label class="mb-2 block text-[11px] font-semibold uppercase text-gray-500">Who is this request for?</label>
+                                    <div class="flex flex-col gap-2 sm:flex-row sm:gap-6">
+                                        <label class="flex cursor-pointer items-center space-x-2">
+                                            <input type="radio" name="gpRequestorScope" value="included" checked class="h-4 w-4 text-mpiBlue focus:ring-mpiBlue" onchange="handleRequestorScopeChange()">
+                                            <span class="text-sm font-medium">Kasama ako — requestor goes out too</span>
+                                        </label>
+                                        <label class="flex cursor-pointer items-center space-x-2">
+                                            <input type="radio" name="gpRequestorScope" value="others" class="h-4 w-4 text-mpiBlue focus:ring-mpiBlue" onchange="handleRequestorScopeChange()">
+                                            <span class="text-sm font-medium">Para sa iba lang — requestor stays inside</span>
+                                        </label>
+                                    </div>
                                 </div>
                                 <div id="personAssociatesBody" class="divide-y divide-gray-100"></div>
                                 <p class="px-4 py-2 text-[10px] text-gray-400" id="personAssociatesEmpty">No additional companions added.</p>
@@ -588,12 +601,15 @@
                                     <!-- Trip Type Field (Visible for regular employees requesting) -->
                                     <div id="employeeTripTypeField" class="hidden">
                                         <label class="block text-[11px] font-semibold text-gray-500 uppercase mb-1">Trip Type</label>
-                                        <select id="gpTripType" class="w-full bg-white border border-gray-300 p-2 rounded text-sm focus:ring-1 focus:ring-mpiBlue">
+                                        <select id="gpTripType" class="w-full bg-white border border-gray-300 p-2 rounded text-sm focus:ring-1 focus:ring-mpiBlue" onchange="updateServiceTripHint()">
                                             <option value="BOTH">Hatid at Sundo</option>
                                             <option value="HATID">Hatid Lang</option>
                                             <option value="SUNDO">Sundo Lang</option>
                                         </select>
                                     </div>
+
+                                    <!-- Phase 17 item 6: service/sundo-only indicator -->
+                                    <p id="gpServiceTripHint" class="hidden rounded border border-amber-200 bg-amber-50 p-2 text-[11px] font-semibold text-amber-700"><i class="fas fa-shuttle-van mr-1"></i><span id="gpServiceTripHintText">Service / sundo trip</span></p>
 
                                     <!-- HRAD Assignment Fields (Visible for HRAD/Admin) -->
                                     <div id="hradVehicleAssignmentFields" class="flex-col space-y-4">
@@ -1028,6 +1044,11 @@
                                     <!-- Row 1: Name & Date -->
                                     <tr class="border-b-nested">
                                         <td rowspan="2" class="align-top border-r-nested" style="width: 65%; height: 22mm;">
+                                            <!-- Phase 17 item 2: shown only when the requestor is NOT going out -->
+                                            <div id="vRequestorBlock" class="person-requestor-block hidden">
+                                                <div class="text-[7px] uppercase text-gray-500 font-semibold person-associates-label">REQUESTOR</div>
+                                                <div id="vRequestorName" class="person-requestor-name font-bold uppercase pl-1"></div>
+                                            </div>
                                             <div class="text-[7px] uppercase text-gray-500 font-semibold person-associates-label">NAME OF ASSOCIATES</div>
                                             <div id="vName" class="font-bold text-xs uppercase pl-1 pt-0.5"></div>
                                             <div id="vAssociatesExtra" class="person-associates-extra pl-1"></div>
@@ -1053,6 +1074,8 @@
                                         <td class="align-top" style="width: 35%; height: 10mm;">
                                             <div class="text-[7px] uppercase text-gray-500 font-semibold">VEHICLE & PLATE</div>
                                             <div id="vPlate" class="font-bold text-[8px] pl-1 pt-0.5"></div>
+                                            <!-- Phase 17 item 6: service/sundo indicator -->
+                                            <div id="vServiceTrip" class="person-service-indicator hidden"></div>
                                         </td>
                                     </tr>
                                 </table>
@@ -1552,9 +1575,9 @@
     <script src="Frontend/Functions/mock-data.js?v=20260709-phase1312.2"></script>
     <script src="Frontend/Connectors/api-client.js?v=20260709-phase1312.2"></script>
     <script src="Frontend/Functions/signature.js?v=20260709-phase1312"></script>
-    <script src="Frontend/Functions/material-gatepass.js?v=20260709-phase1312"></script>
-    <script src="Frontend/Functions/modal.js?v=20260709-phase1312"></script>
-    <script src="Frontend/Functions/gatepass.js?v=20260709-phase1312"></script>
+    <script src="Frontend/Functions/material-gatepass.js?v=20260804-phase17"></script>
+    <script src="Frontend/Functions/modal.js?v=20260804-phase17"></script>
+    <script src="Frontend/Functions/gatepass.js?v=20260804-phase17"></script>
     <script src="Frontend/Functions/approvals.js?v=20260709-phase1312"></script>
     <script src="Frontend/Functions/scanner.js?v=20260709-phase1312"></script>
     <script src="Frontend/Functions/admin.js?v=20260709-phase1312.2"></script>

@@ -115,21 +115,25 @@ function mapGatePassAssociates(record) {
         .map(item => ({
             employeeId: item.employeeId ?? item.employeeRecordId ?? null,
             departmentId: item.departmentId ?? null,
-            name: (item.name || item.fullName || '').trim()
+            name: (item.name || item.fullName || '').trim(),
+            isEmployee: (item.employeeId ?? item.employeeRecordId ?? null) != null
         }))
         .filter(item => item.name);
     const isMaterial = (record.formTypeCode || 'PERSON_GATE_PASS') === 'MATERIAL_GATE_PASS';
     if (normalized.length > 0) {
         // Person passes store ONLY the additional companions (the requester is never
-        // an associate row), so the requester must lead the list as the primary name.
-        // Material passes already seed line_no=1 with the authorized employee.
-        if (!isMaterial) {
+        // an associate row), so the requester leads the list as the primary name —
+        // unless the pass is for others only (Phase 17 item 1), in which case the
+        // requester stays off the associates list and prints in their own
+        // "Requestor" line instead.
+        if (!isMaterial && record.includesRequestor !== false) {
             const requesterName = (record.fullName || '').trim();
             if (requesterName && normalized[0].name !== requesterName) {
                 normalized.unshift({
                     employeeId: null,
                     departmentId: record.authorizedDepartmentId || null,
-                    name: requesterName
+                    name: requesterName,
+                    isEmployee: true
                 });
             }
         }
@@ -191,6 +195,9 @@ function mapApiGatePass(record) {
         purpose: record.purpose,
         privateVehicleDetails: record.privateVehicleDetails || '',
         vehicleTripTypeCode: record.vehicleTripTypeCode || '',
+        vehicleUsageCode: record.vehicleUsageCode || (record.vehicleId || record.vehicleName ? 'COMPANY' : 'NONE'),
+        // Phase 17 item 1: false = filed for other people only, requestor stays in.
+        includesRequestor: record.includesRequestor !== false,
         vehicle,
         status,
         statusCode: record.gatePassStatusCode,
@@ -331,14 +338,16 @@ function requiresSuperiorApproval(user) {
     return !(user.roles || []).includes('IMMEDIATE_SUPERIOR');
 }
 
+// Phase 17 items 8/12/13: the President no longer approves inside the system.
+// Company-vehicle passes end at PAS digitally; the President signs the PRINTED
+// form as the final (physical) approver.
 function requiresPresidentApproval(user, hasCompanyVehicle) {
-    return (user.roles || []).includes('IMMEDIATE_SUPERIOR') ||
-        hasCompanyVehicle === true;
+    return hasCompanyVehicle === true;
 }
 
 function getInitialRequestStatus(user, hasCompanyVehicle) {
     if (requiresSuperiorApproval(user)) return 'Pending Superior';
-    if (requiresPresidentApproval(user, hasCompanyVehicle)) return 'Pending President';
+    if (hasCompanyVehicle) return 'Pending HRAD Assignment';
     return 'Pending PAS';
 }
 
@@ -350,9 +359,46 @@ function updateApprovalRoutePreview() {
     const steps = [];
     if (requiresSuperiorApproval(currentUser)) steps.push('Immediate Superior');
     if (isVehicleNeeded) steps.push('HRAD Assignment');
-    if (requiresPresidentApproval(currentUser, isVehicleNeeded)) steps.push('President');
     steps.push('PAS');
-    routeText.innerText = steps.join(' -> ');
+    let text = steps.join(' -> ');
+    if (isVehicleNeeded) {
+        text += ' -> President signs the printed form';
+    }
+    routeText.innerText = text;
+}
+
+// Phase 17 item 1: whether the requestor goes out with this pass.
+function isRequestorIncluded() {
+    const picked = document.querySelector('input[name="gpRequestorScope"]:checked');
+    return (picked?.value || 'included') !== 'others';
+}
+
+function handleRequestorScopeChange() {
+    const included = isRequestorIncluded();
+    const hint = document.getElementById('personAssociatesHint');
+    if (hint) {
+        hint.innerText = included
+            ? 'You (the requester) are the primary associate. Add co-travellers leaving with you (max 19).'
+            : 'You stay inside: the pass covers only the associates below (max 19). Add everyone who is going out.';
+    }
+    updateServiceTripHint();
+}
+
+// Phase 17 item 6: mark service/sundo trips, especially when the requestor
+// is not aboard the vehicle.
+function updateServiceTripHint() {
+    const hintWrap = document.getElementById('gpServiceTripHint');
+    const hintText = document.getElementById('gpServiceTripHintText');
+    if (!hintWrap || !hintText) return;
+    const needsVehicle = document.getElementById('gpNeedVehicle')?.checked === true;
+    const tripType = normalizeRequestTripTypeCode(document.getElementById('gpTripType')?.value);
+    const included = isRequestorIncluded();
+    const isServiceTrip = needsVehicle && (tripType === 'SUNDO' || !included);
+    hintWrap.classList.toggle('hidden', !isServiceTrip);
+    if (!isServiceTrip) return;
+    hintText.innerText = !included
+        ? 'Service / sundo trip: the vehicle goes out for other associates while the requestor stays inside. This will be marked on the pass.'
+        : 'Sundo (pick-up) only: the vehicle goes out as a service trip. This will be marked on the pass.';
 }
 
 function toggleVehicleFields() {
@@ -395,6 +441,7 @@ function toggleVehicleFields() {
 
     updateRequestTripTypeOptions(willReturn);
     updateApprovalRoutePreview();
+    updateServiceTripHint();
 }
 
 function localDateTimeFromTime(timeValue) {
@@ -435,10 +482,16 @@ async function submitGatePass(e) {
     }
 
     if (typeof hasUnconfirmedAssociateRows === 'function' && hasUnconfirmedAssociateRows('PERSON_GATE_PASS')) {
-        showToast('Pick an employee for every companion row, or remove the empty rows.', 'error');
+        showToast('Finish every companion row: pick an employee, type the visitor name, or remove empty rows.', 'error');
         return;
     }
     const associates = typeof collectAssociates === 'function' ? collectAssociates('PERSON_GATE_PASS') : [];
+    const includesRequestor = isRequestorIncluded();
+
+    if (!includesRequestor && associates.length === 0) {
+        showToast('Add at least one associate — this request is for other people only.', 'error');
+        return;
+    }
 
     let vehicleUsageCode = 'NONE';
     let vehicleId = null;
@@ -469,6 +522,7 @@ async function submitGatePass(e) {
         vehicleId,
         privateVehicleDetails,
         driverId,
+        includesRequestor,
         associates
     };
 
@@ -478,6 +532,7 @@ async function submitGatePass(e) {
         const created = await ApiClient.post('/gate-pass-requests', payload);
         form.reset();
         if (typeof resetAssociateRows === 'function') resetAssociateRows('PERSON_GATE_PASS');
+        handleRequestorScopeChange();
         toggleVehicleFields();
         showToast(`Request ${created.gatePass.controlNo || created.gatePass.gatePassNo} submitted.`);
         await refreshApplicationState('submit-person-request');
@@ -837,6 +892,9 @@ window.requiresSuperiorApproval = requiresSuperiorApproval;
 window.requiresPresidentApproval = requiresPresidentApproval;
 window.getInitialRequestStatus = getInitialRequestStatus;
 window.updateApprovalRoutePreview = updateApprovalRoutePreview;
+window.isRequestorIncluded = isRequestorIncluded;
+window.handleRequestorScopeChange = handleRequestorScopeChange;
+window.updateServiceTripHint = updateServiceTripHint;
 window.toggleVehicleFields = toggleVehicleFields;
 window.submitGatePass = submitGatePass;
 window.initializeGatePassForm = initializeGatePassForm;

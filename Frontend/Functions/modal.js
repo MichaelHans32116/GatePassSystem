@@ -26,6 +26,15 @@ const APPROVAL_STEP_LABELS = {
     HRAD_ASSIGN: 'HRAD Assignment'
 };
 
+// Phase 17 items 8/12/13: the President no longer approves inside the system.
+// Company-vehicle passes print his name under the PRESIDENT line so the
+// physical form can be signed by hand.
+var PRESIDENT_PRINTED_NAME = 'TOMOAKI MAEKAWA';
+
+function passNeedsPresidentInk(pass) {
+    return pass?.vehicleUsageCode === 'COMPANY' || !!pass?.vehicle;
+}
+
 function approvalStepLabel(code) {
     return APPROVAL_STEP_LABELS[String(code || '').toUpperCase()] || (code || 'Approver');
 }
@@ -570,12 +579,16 @@ function updateHradAssignmentSummary(pass) {
         assignedScheduleEl.innerText = formatHradAssignedScheduleSummary(window);
     }
     if (tripEl) {
-        tripEl.innerText = hradTripTypeLabel(
+        const tripLabel = hradTripTypeLabel(
             document.getElementById('hradTripType')?.value
             || pass?.vehicleTripTypeCode
             || pass?.tripTypeCode
             || getAllowedHradTripTypes(pass)[0]
         );
+        // Phase 17 item 6: flag service runs where the requestor stays inside.
+        tripEl.innerText = pass?.includesRequestor === false
+            ? `${tripLabel} — Service (requestor not aboard)`
+            : tripLabel;
     }
     if (vehicleAvailabilityEl && vehicleSelect) {
         const vehicle = (databaseVehicles || []).find(v => String(v.id) === String(vehicleSelect.value));
@@ -657,6 +670,21 @@ function renderCompactAssociateNames(names) {
     return names
         .map(name => `<div class="person-associate-compact">${escapeDocumentText(name)}</div>`)
         .join('');
+}
+
+// Phase 17 item 6: indicator text for vehicle trips that leave without the
+// requestor aboard (service/sundo runs). Empty string = no indicator.
+function getServiceTripIndicatorText(pass) {
+    if (!pass || pass.formTypeCode === 'MATERIAL_GATE_PASS') return '';
+    const hasCompanyVehicle = pass.vehicleUsageCode === 'COMPANY' || !!pass.vehicle;
+    if (!hasCompanyVehicle) return '';
+    if (pass.includesRequestor === false) {
+        return 'SERVICE / SUNDO — REQUESTOR NOT ABOARD';
+    }
+    if (String(pass.vehicleTripTypeCode || '').toUpperCase() === 'SUNDO') {
+        return 'SERVICE TRIP — SUNDO (PICK-UP) ONLY';
+    }
+    return '';
 }
 
 // Split associate names into pages of ASSOCIATE_NAMES_PER_PAGE; returns an array of
@@ -1262,8 +1290,13 @@ function renderDigitalView(p) {
                 core.push(fieldRow('From (Expected Out)', p.expectedOut));
                 core.push(fieldRow('To (Expected In)', p.expectedIn));
                 core.push(fieldRow('Will Return Today', p.willReturn ? 'Yes' : 'No'));
+                core.push(fieldRow('Requestor Included', p.includesRequestor === false
+                    ? 'No — for other associates only'
+                    : 'Yes'));
                 core.push(fieldRow('Vehicle & Plate', vehicleString));
                 core.push(fieldRow('Driver', driverString));
+                const serviceTripText = getServiceTripIndicatorText(p);
+                if (serviceTripText) core.push(fieldRow('Trip Mode', serviceTripText));
             }
             sections.push(`<div class="digital-field-grid">${core.join('')}</div>`);
 
@@ -1272,14 +1305,17 @@ function renderDigitalView(p) {
             // Material); show any additional companions so the complete list is always
             // readable here even when the printable form paginates them.
             const allAssociateNames = (typeof getAssociateNames === 'function') ? getAssociateNames(p) : [];
-            const extraCompanions = allAssociateNames.slice(1);
+            // Others-only passes (Phase 17 item 1) have no requester at index 0,
+            // so every name is a companion.
+            const othersOnly = !isMaterial && p.includesRequestor === false;
+            const extraCompanions = othersOnly ? allAssociateNames : allAssociateNames.slice(1);
             if (extraCompanions.length > 0) {
                 const items = extraCompanions
                     .map(name => `<li>${esc(name)}</li>`)
                     .join('');
                 sections.push(
                     `<div class="digital-subsection"><div class="digital-subsection-title">`
-                    + `Additional Companions (${extraCompanions.length})</div>`
+                    + `${othersOnly ? 'Associates Going Out' : 'Additional Companions'} (${extraCompanions.length})</div>`
                     + `<ul class="digital-remarks-list">${items}</ul></div>`
                 );
             }
@@ -1404,6 +1440,12 @@ async function viewPass(id, isReviewing = false) {
             setVal('vName', viewAssociateNames[0] || p.userName);
             const vAssocExtra = document.getElementById('vAssociatesExtra');
             if (vAssocExtra) vAssocExtra.innerHTML = renderCompactAssociateNames(viewAssociateNames.slice(1));
+            // Phase 17 item 2: others-only passes print the requestor on their
+            // own line (with a separating rule) above the associates list.
+            const showRequestorBlock = !isMaterial && p.includesRequestor === false;
+            const vRequestorBlock = document.getElementById('vRequestorBlock');
+            if (vRequestorBlock) vRequestorBlock.classList.toggle('hidden', !showRequestorBlock);
+            setVal('vRequestorName', showRequestorBlock ? (p.userName || '') : '');
             setVal('vDest', p.destination);
             setVal('vPurp', p.purpose);
             setVal('vExpOut', p.expectedOut);
@@ -1418,6 +1460,13 @@ async function viewPass(id, isReviewing = false) {
             }
             setVal('vDriver', p.vehicle ? p.vehicle.driver : 'N/A');
             setVal('vPlate', vehicleString);
+            // Phase 17 item 6: service/sundo indicator on the printed form.
+            const vServiceTripEl = document.getElementById('vServiceTrip');
+            if (vServiceTripEl) {
+                const serviceText = getServiceTripIndicatorText(p);
+                vServiceTripEl.classList.toggle('hidden', !serviceText);
+                vServiceTripEl.innerText = serviceText || '';
+            }
 
             if (isMaterial) {
                 await renderMaterialBundle(p);
@@ -1468,6 +1517,15 @@ async function viewPass(id, isReviewing = false) {
             await handleSig(p.signatures.imm, 'sigImm');
             await handleSig(p.signatures.pres, 'sigPres');
             await handleSig(p.signatures.pas, 'sigPAS');
+            // Phase 17 items 8/13: no digital President step — company-vehicle
+            // passes print the President's name for the physical signature.
+            if (!isMaterial && !p.signatures.pres && passNeedsPresidentInk(p)) {
+                const presNameEl = document.getElementById('sigPresName');
+                if (presNameEl) {
+                    presNameEl.innerText = PRESIDENT_PRINTED_NAME;
+                    presNameEl.classList.remove('hidden');
+                }
+            }
             if (isMaterial) {
                 await handleSig(p.signatures.imm, 'sigMatSuperior');
                 await handleSig(p.signatures.pas, 'sigMatPas');
@@ -2014,6 +2072,13 @@ async function renderPersonGatePassClone(p) {
     const cloneExtra = clone.querySelector('#vAssociatesExtra');
     if (cloneExtra) cloneExtra.innerHTML = renderCompactAssociateNames(clonePage.extra);
     clone.dataset.associatePages = String(clonePages.length);
+    // Phase 17 item 2: others-only passes print the requestor on their own
+    // line above the associates list (mirrors viewPass).
+    const cloneShowRequestor =
+        p.formTypeCode !== 'MATERIAL_GATE_PASS' && p.includesRequestor === false;
+    const cloneRequestorBlock = clone.querySelector('#vRequestorBlock');
+    if (cloneRequestorBlock) cloneRequestorBlock.classList.toggle('hidden', !cloneShowRequestor);
+    setVal('#vRequestorName', cloneShowRequestor ? (p.userName || '') : '');
     setVal('#vDest', p.destination);
     setVal('#vPurp', p.purpose);
     setVal('#vExpOut', p.expectedOut);
@@ -2027,6 +2092,13 @@ async function renderPersonGatePassClone(p) {
     }
     setVal('#vDriver', p.vehicle ? p.vehicle.driver : 'N/A');
     setVal('#vPlate', vehicleString);
+    // Phase 17 item 6: service/sundo indicator (mirrors viewPass).
+    const cloneServiceTrip = clone.querySelector('#vServiceTrip');
+    if (cloneServiceTrip) {
+        const cloneServiceText = getServiceTripIndicatorText(p);
+        cloneServiceTrip.classList.toggle('hidden', !cloneServiceText);
+        cloneServiceTrip.innerText = cloneServiceText || '';
+    }
 
     const handleSig = async (sigData, selector) => {
         const el = clone.querySelector(selector);
@@ -2061,6 +2133,15 @@ async function renderPersonGatePassClone(p) {
     await handleSig(p.signatures.imm, '#sigImm');
     await handleSig(p.signatures.pres, '#sigPres');
     await handleSig(p.signatures.pas, '#sigPAS');
+    // Phase 17 items 8/13: print the President's name for the physical
+    // signature on company-vehicle passes (mirrors viewPass).
+    if (p.formTypeCode !== 'MATERIAL_GATE_PASS' && !p.signatures.pres && passNeedsPresidentInk(p)) {
+        const clonePresName = clone.querySelector('#sigPresName');
+        if (clonePresName) {
+            clonePresName.innerText = PRESIDENT_PRINTED_NAME;
+            clonePresName.classList.remove('hidden');
+        }
+    }
 
     const guardRow = clone.querySelector('.guard-status-row');
     if (guardRow && ['Approved', 'Outside', 'Overdue', 'Returned', 'Closed'].includes(p.status)) {
