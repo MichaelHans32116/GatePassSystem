@@ -394,6 +394,7 @@ BEGIN
 
     IF p_next_status_code NOT IN (
         'PENDING_SUPERIOR',
+        'PENDING_HRAD_ASSIGN',
         'PENDING_PRESIDENT',
         'PENDING_PAS'
     ) THEN
@@ -486,6 +487,7 @@ BEGIN
 
     IF v_current_status NOT IN (
         'PENDING_SUPERIOR',
+        'PENDING_HRAD_ASSIGN',
         'PENDING_PRESIDENT',
         'PENDING_PAS'
     ) THEN

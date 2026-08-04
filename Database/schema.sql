@@ -434,6 +434,7 @@ CREATE TABLE IF NOT EXISTS tbl_gate_pass_requests (
     expected_out_at DATETIME NOT NULL,
     expected_in_at DATETIME NULL,
     will_return BOOLEAN NOT NULL DEFAULT TRUE,
+    is_requestor_included BOOLEAN NOT NULL DEFAULT TRUE,
     vehicle_usage_code VARCHAR(30) NOT NULL DEFAULT 'NONE',
     vehicle_id BIGINT UNSIGNED NULL,
     private_vehicle_details VARCHAR(255) NULL,
